@@ -27,7 +27,7 @@
         wx:for="{{group.items}}"
         wx:for-item="item"
         wx:for-index="ii"
-        wx:key="key"
+        wx:key="projectUid"
         class="item tappable"
         data-gi="{{gi}}"
         data-ii="{{ii}}"

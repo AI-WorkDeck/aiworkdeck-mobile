@@ -8,6 +8,7 @@
  */
 
 import { t } from './i18n'
+import { fromCatalog, sameProject, type CatalogProject, type ProjectLocation } from './project-catalog'
 
 export const BASE_URL = 'https://addin.aiworkdeck.com'
 
@@ -61,9 +62,10 @@ export interface LoginResult {
   user: AccountUser
 }
 
-/** 项目目录条目（桌面端推上云的镜像）。key 是桌面机本地库的项目 id，
- *  跨机同号不同物，必须连着 deviceId 一起用——上传时两个都要带。 */
+/** 统一项目身份与采集目标快照。旧 deviceId/key 保留作实际上传路由，不能按名称合并。 */
 export interface RelayProject {
+  projectUid?: string
+  locations?: ProjectLocation[]
   deviceId: string
   deviceName: string | null
   key: string
@@ -71,6 +73,9 @@ export interface RelayProject {
 }
 
 export interface MediaStatus {
+  projectUid?: string
+  fileUid?: string
+  fileId?: number
   clientMediaId: string
   delivered: boolean
   waitingSeconds: number
@@ -265,10 +270,20 @@ export function logout(): void {
 
 // ---------- 统一账户余额（dev-board#425/#429） ----------
 
+export interface SubscriptionBalance {
+  active: boolean
+  availableCents: number
+  monthlyLimitCents: number
+  monthlyUsedCents: number
+  weeklyLimitCents: number
+  weeklyUsedCents: number
+}
+
 export interface BillingBalance {
   balanceCents: number
   currency: 'CNY' | 'USD'
   plan: string | null
+  subscription?: SubscriptionBalance
 }
 
 /**
@@ -434,10 +449,24 @@ export function wxPhoneStart(code: string, ref: string): Promise<WxStartResult> 
 
 // ---------- 项目与上传 ----------
 
-/** 项目目录镜像，裸数组。空数组最常见的原因不是 bug：桌面端没开着，
- *  或桌面端还没用同一个手机号登录。 */
+/** 账号级云目录，裸数组。仅补旧记录的身份元数据，不修改其已锁定的上传地址。 */
 export function myProjects(): Promise<RelayProject[]> {
-  return request<RelayProject[]>('/api/mobile/projects', 'GET')
+  return request<CatalogProject[]>('/api/mobile/catalog', 'GET').then(items => {
+    const projects = items.map(fromCatalog)
+    const selected = getSelectedProject()
+    const match = selected && projects.find(p => sameProject(p, selected))
+    if (selected && match) setSelectedProject({ ...selected, projectUid: match.projectUid, locations: match.locations })
+    const queue: unknown = wx.getStorageSync('awd.queue')
+    if (Array.isArray(queue)) {
+      for (const row of queue) {
+        const target = projects.find(p => sameProject(p, { deviceId: row.deviceId, key: row.projectKey,
+          name: row.projectName, deviceName: null, projectUid: row.projectUid }))
+        if (target) row.projectUid = target.projectUid
+      }
+      wx.setStorageSync('awd.queue', queue)
+    }
+    return projects
+  })
 }
 
 /** 影像投递状态，裸数组。ids 为空直接返回 []，不发请求。 */

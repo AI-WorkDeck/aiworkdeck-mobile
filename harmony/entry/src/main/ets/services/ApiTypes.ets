@@ -1,4 +1,4 @@
-import { RelayProject } from '../model/Capture'
+import { RelayProject, ProjectLocation } from '../model/Capture'
 import { ApiError } from '../model/Envelope'
 
 /**
@@ -25,6 +25,9 @@ export interface LoginResult {
 }
 
 export interface MediaStatus {
+  projectUid?: string
+  fileUid?: string
+  fileId?: number
   clientMediaId: string
   delivered: boolean
   waitingSeconds: number
@@ -34,9 +37,24 @@ export interface MediaStatus {
 export interface MediaUsage {
   usedBytes: number
   quotaBytes: number
+  persistentUsedBytes?: number
+  persistentQuotaBytes?: number
+  persistentQuotaAvailable?: boolean
+}
+
+export interface SubscriptionBalance {
+  active: boolean
+  availableCents: number
+  monthlyLimitCents: number
+  monthlyUsedCents: number
+  weeklyLimitCents: number
+  weeklyUsedCents: number
 }
 
 export interface UploadResult {
+  projectUid?: string
+  fileUid?: string
+  fileId?: number
   code: number
   id: number
   clientMediaId: string
@@ -83,6 +101,7 @@ export function decodeRelayProject(o: Record<string, Object>): RelayProject | nu
   if (deviceId === undefined || key === undefined || name === undefined) return null
   const p: RelayProject = {
     deviceId: deviceId, deviceName: getString(o, 'deviceName'), key: key, name: name,
+    projectUid: getString(o, 'projectUid'), locations: decodeLocations(o['locations']),
   }
   return p
 }
@@ -139,6 +158,7 @@ export function decodeMediaStatuses(v: Object | null): MediaStatus[] {
       delivered: getBoolean(o, 'delivered') ?? false,
       waitingSeconds: getNumber(o, 'waitingSeconds') ?? 0,
       expiresAt: getString(o, 'expiresAt'),
+      projectUid: getString(o, 'projectUid'), fileUid: getString(o, 'fileUid'), fileId: getNumber(o, 'fileId'),
     }
     out.push(s)
   }
@@ -151,6 +171,9 @@ export function decodeMediaUsage(v: Object | null): MediaUsage {
   const u: MediaUsage = {
     usedBytes: getNumber(o, 'usedBytes') ?? 0,
     quotaBytes: getNumber(o, 'quotaBytes') ?? 0,
+    persistentUsedBytes: getNumber(o, 'persistentUsedBytes'),
+    persistentQuotaBytes: getNumber(o, 'persistentQuotaBytes'),
+    persistentQuotaAvailable: getBoolean(o, 'persistentQuotaAvailable'),
   }
   return u
 }
@@ -161,7 +184,64 @@ export function decodeUploadResult(o: Record<string, Object>, clientMediaId: str
     code: getNumber(o, 'code') ?? 0,
     id: getNumber(o, 'id') ?? 0,
     clientMediaId: getString(o, 'clientMediaId') ?? clientMediaId,
+    projectUid: getString(o, 'projectUid'), fileUid: getString(o, 'fileUid'), fileId: getNumber(o, 'fileId'),
     delivered: getBoolean(o, 'delivered') ?? false,
   }
   return r
+}
+
+function decodeLocations(value: Object | null | undefined): ProjectLocation[] {
+  const result: ProjectLocation[] = []
+  const entries: Object[] = asArray(value) ?? []
+  for (const entry of entries) {
+    const o: Record<string, Object> | null = asRecord(entry)
+    if (o === null) throw new ApiError(1, 'Invalid project location')
+    const kind: string | undefined = getString(o, 'kind')
+    const device: string | undefined = getString(o, 'deviceId')
+    const key: string | undefined = getString(o, 'key')
+    if (kind === undefined || device === undefined || key === undefined) throw new ApiError(1, 'Invalid project location')
+    const location: ProjectLocation = { kind: kind, deviceId: device, key: key,
+      deviceName: getString(o, 'deviceName'), online: getBoolean(o, 'online'), archiveOnly: getBoolean(o, 'archiveOnly') }
+    result.push(location)
+  }
+  return result
+}
+
+export function decodeCatalog(v: Object | null): RelayProject[] {
+  const entries: Object[] | null = asArray(v)
+  if (entries === null) throw new ApiError(1, 'Invalid project catalog')
+  const result: RelayProject[] = []
+  for (const entry of entries) {
+    const o: Record<string, Object> | null = asRecord(entry)
+    if (o === null) throw new ApiError(1, 'Invalid project')
+    const uid: string | undefined = getString(o, 'projectUid')
+    const name: string | undefined = getString(o, 'name')
+    const locations: ProjectLocation[] = decodeLocations(o['locations'])
+    const source: ProjectLocation | undefined = locations.find((l: ProjectLocation): boolean => l.kind === 'cloud' && l.archiveOnly !== true)
+      ?? locations.find((l: ProjectLocation): boolean => l.kind === 'desktop' && l.online === true)
+      ?? locations.find((l: ProjectLocation): boolean => l.kind === 'desktop') ?? locations[0]
+    if (uid === undefined || name === undefined || source === undefined) throw new ApiError(1, 'Invalid project')
+    const project: RelayProject = { deviceId: source.deviceId, key: source.key, deviceName: source.deviceName,
+      name: name, projectUid: uid, locations: locations }
+    result.push(project)
+  }
+  return result
+}
+
+/** Missing legacy subscription is distinct from an empty allowance. */
+export function decodeSubscriptionBalance(v: Object | null): SubscriptionBalance | null {
+  const root: Record<string, Object> | null = asRecord(v)
+  const o: Record<string, Object> | null = root === null ? null : asRecord(root['subscription'])
+  if (o === null) return null
+  const active: boolean | undefined = getBoolean(o, 'active')
+  const available: number | undefined = getNumber(o, 'availableCents')
+  const monthlyLimit: number | undefined = getNumber(o, 'monthlyLimitCents')
+  const monthlyUsed: number | undefined = getNumber(o, 'monthlyUsedCents')
+  const weeklyLimit: number | undefined = getNumber(o, 'weeklyLimitCents')
+  const weeklyUsed: number | undefined = getNumber(o, 'weeklyUsedCents')
+  if (active === undefined || available === undefined || monthlyLimit === undefined || monthlyUsed === undefined || weeklyLimit === undefined || weeklyUsed === undefined) {
+    throw new ApiError(1, 'Invalid subscription balance')
+  }
+  return { active: active, availableCents: available, monthlyLimitCents: monthlyLimit,
+    monthlyUsedCents: monthlyUsed, weeklyLimitCents: weeklyLimit, weeklyUsedCents: weeklyUsed }
 }

@@ -44,7 +44,7 @@ struct LibraryView: View {
         return projects.first { $0.id == id } ?? projects.first ?? .unknown
     }
     private var items: [CaptureItem] {
-        LibraryGrouping.items(model.items, in: viewing.id).filter { !audioOnly || $0.kind == .audio }
+        LibraryGrouping.items(model.items, in: viewing.id, project: fixedProject ?? (model.selectedProject?.id == viewing.id ? model.selectedProject : nil)).filter { !audioOnly || $0.kind == .audio }
     }
     private var days: [LibraryGrouping.DaySection] { LibraryGrouping.days(items) }
     private var tally: TransferTally { TransferTally.of(items) }

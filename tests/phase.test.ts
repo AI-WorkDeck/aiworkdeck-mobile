@@ -52,7 +52,7 @@ test('groupByDay newest first with title', () => {
 test('deleteWarning by worst phase', () => {
   assert.equal(deleteWarning(['arrived', 'arrived']), '删除 2 件本地原图？电脑上已有副本。')
   assert.equal(deleteWarning(['arrived', 'uploaded']),
-    '其中 1 件电脑还没取回。中转区 7 天后清理，电脑若未及时接收，这些影像将无法找回。')
+    '其中 1 件电脑还没取回。中转区 30 天后清理，电脑若未及时接收，这些影像将无法找回。')
   assert.equal(deleteWarning(['uploaded', 'failed', 'waiting']),
     '其中 2 件还没送出去。删了就没了，无法找回。')
 })

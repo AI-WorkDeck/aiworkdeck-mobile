@@ -1,6 +1,6 @@
 {
-  "serverCommit": "a5585a66cb87e01a4ba21a398a753be0fe3c3d61",
-  "sha256": "f8529687310fc74e3e0f4b43ecc32e0e65b0a95c51adf28a0aa0c893a4d41154",
-  "pulledAt": "2026-10-07T06:24:47.060Z",
-  "note": "钉自 /tmp/awd-duo-backend-1127 的干净工作区，照 serverCommit 可复现。"
+  "serverCommit": "d99440cf91fb25b70178c26b4cc6006401a1fffc",
+  "sha256": "17a7896ef417be71cb5d8e2507035414da21cad24e39bc7e287af8f2f98bd987",
+  "pulledAt": "2026-10-10T23:50:03.978Z",
+  "note": "钉自 /Users/zewei/.codex/worktrees/b135/1-2 checkba_cloud 的干净工作区，照 serverCommit 可复现。"
 }

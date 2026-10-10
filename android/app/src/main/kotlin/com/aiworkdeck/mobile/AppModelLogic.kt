@@ -14,7 +14,7 @@ const val DESKTOP_ONLINE_WINDOW_MS = 3 * 60 * 1000L
  * 没记项目的件（旧记录、选项目之前拍的）也算「别处」：它们同样不在当前项目的视图里。
  */
 fun otherPendingCount(items: List<CaptureItem>, selected: RelayProject?): Int =
-    items.count { it.project?.id != selected?.id && it.state != TransferState.arrived }
+    items.count { (if (selected == null) it.project != null else it.project?.matches(selected) != true) && it.state != TransferState.arrived }
 
 /**
  * 桌面端是否在线。[lastSeenMs] 是最近一次 `myProjects()` 成功、且返回里含当前项目所在

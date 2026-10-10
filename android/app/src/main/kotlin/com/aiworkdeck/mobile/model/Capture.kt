@@ -22,8 +22,28 @@ data class CaptureManifest(
 )
 
 @Serializable
-data class RelayProject(val deviceId: String, val deviceName: String? = null, val key: String, val name: String) {
-    val id: String get() = "$deviceId:$key"
+data class RelayProject(val deviceId: String, val deviceName: String? = null, val key: String, val name: String,
+                        val projectUid: String? = null, val locations: List<ProjectLocation>? = null) {
+    val id: String get() = projectUid ?: "$deviceId:$key"
+    fun matches(other: RelayProject): Boolean {
+        if (projectUid != null && other.projectUid != null) return projectUid == other.projectUid
+        val aliases = (locations.orEmpty().map { "${it.deviceId}:${it.key}" } + "$deviceId:$key").toSet()
+        return (other.locations.orEmpty().map { "${it.deviceId}:${it.key}" } + "${other.deviceId}:${other.key}").any { it in aliases }
+    }
+}
+
+@Serializable
+data class ProjectLocation(val kind: String, val deviceId: String, val key: String,
+                           val deviceName: String? = null, val online: Boolean? = null, val archiveOnly: Boolean? = null)
+
+@Serializable
+data class CatalogProject(val projectUid: String, val name: String, val locations: List<ProjectLocation>) {
+    fun toRelayProject(): RelayProject {
+        val source = locations.firstOrNull { it.kind == "cloud" && it.archiveOnly != true }
+            ?: locations.firstOrNull { it.kind == "desktop" && it.online == true }
+            ?: locations.firstOrNull { it.kind == "desktop" } ?: locations.first()
+        return RelayProject(source.deviceId, source.deviceName, source.key, name, projectUid, locations)
+    }
 }
 
 /** 落盘行，与 iOS StoredRow 同形。state 存正式名字符串。 */

@@ -1,4 +1,4 @@
-import { CaptureItem, RelayProject, projectId } from './Capture'
+import { CaptureItem, RelayProject, sameProject } from './Capture'
 import { TransferState } from './TransferState'
 
 /** 桌面端在线的判定窗口。项目列表由桌面端每分钟上报一次，三分钟没见着就当它离线了。 */
@@ -11,11 +11,11 @@ export const DESKTOP_ONLINE_WINDOW_MS: number = 180000
  * 没记项目的件（旧记录、选项目之前拍的）也算「别处」：它们同样不在当前项目的视图里。
  */
 export function otherPendingCount(items: CaptureItem[], selected: RelayProject | null): number {
-  const selectedId: string | null = selected === null ? null : projectId(selected)
   let n: number = 0
   for (const it of items) {
-    const own: string | null = it.project === null ? null : projectId(it.project)
-    if (own !== selectedId && it.state !== TransferState.arrived) n++
+    const matches: boolean = selected === null ? it.project === null :
+      (it.project !== null && sameProject(it.project, selected))
+    if (!matches && it.state !== TransferState.arrived) n++
   }
   return n
 }

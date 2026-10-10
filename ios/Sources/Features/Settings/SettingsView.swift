@@ -83,6 +83,9 @@ struct SettingsView: View {
                     group(tr("settings.archiveTarget")) {
                         infoRow(tr("home.eyebrow"), model.project.name)
                         infoRow(tr("settings.relay"), usageCaption)
+                        if let caption = persistentCaption {
+                            infoRow(tr("settings.persistent"), caption)
+                        }
                         Button(tr("settings.switchProject")) { showProjects = true }
                             .accessibilityIdentifier("settings.switchProject")
                             .font(T.F.small())
@@ -95,6 +98,11 @@ struct SettingsView: View {
                         // 还没读完时整行不渲染，见 BalanceState 上的注释。
                         if let caption = balanceCaption {
                             infoRow(tr("balance.title"), caption)
+                        }
+                        if case .ok(let b) = balanceState, let sub = b.subscription, sub.active {
+                            infoRow(tr("subscription.available"), credits(sub.availableCents))
+                            infoRow(tr("subscription.weekly"), "\(credits(sub.weeklyUsedCents)) / \(credits(sub.weeklyLimitCents))")
+                            infoRow(tr("subscription.monthly"), "\(credits(sub.monthlyUsedCents)) / \(credits(sub.monthlyLimitCents))")
                         }
                         // 充值入口与余额行分开算：NOT_CONNECTED 时行在、入口也要在
                         // （dev-board#535：触发 NOT_CONNECTED 的正是最该去充值把账户开出来的人）。
@@ -247,6 +255,21 @@ struct SettingsView: View {
     }
 
     /// 「已用 / 配额」。满了之后上传会被拒并提示去桌面端收件，这行让用户提前有数。
+    private func credits(_ cents: Int64) -> String {
+        tr("subscription.credits", ["amount": String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), Double(cents) / 100)])
+    }
+
+    private var persistentCaption: String? {
+        guard let used = usage?.persistentUsedBytes else { return nil }
+        let f = ByteCountFormatter()
+        f.countStyle = .binary
+        let usedText = f.string(fromByteCount: used)
+        guard usage?.persistentQuotaAvailable != false, let quota = usage?.persistentQuotaBytes else {
+            return tr("settings.quotaUnavailable", ["used": usedText])
+        }
+        return "\(usedText) / \(f.string(fromByteCount: quota))"
+    }
+
     private var usageCaption: String {
         guard let usage else { return "—" }
         let f = ByteCountFormatter()

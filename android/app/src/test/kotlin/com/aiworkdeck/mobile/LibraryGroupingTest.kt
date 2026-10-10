@@ -2,6 +2,8 @@ package com.aiworkdeck.mobile
 
 import com.aiworkdeck.mobile.model.LibraryGrouping
 import com.aiworkdeck.mobile.model.RelayProject
+import com.aiworkdeck.mobile.model.CatalogProject
+import com.aiworkdeck.mobile.model.ProjectLocation
 import com.aiworkdeck.mobile.model.TransferState
 import org.junit.Assert.*
 import org.junit.Test
@@ -10,6 +12,23 @@ import java.time.ZoneOffset
 
 class LibraryGroupingTest {
     private val zone = ZoneOffset.UTC
+
+    @Test fun catalogIdentityKeepsLegacyCapturesAndCloudProjects() {
+        val old = RelayProject(deviceId = "desk-a", key = "7", name = "Before")
+        val catalog = CatalogProject("uid", "After", listOf(
+            ProjectLocation("desktop", "desk-a", "7", online = false),
+            ProjectLocation("desktop", "desk-b", "9", online = true)))
+        val current = catalog.toRelayProject()
+        val item = TestItems.make(TransferState.uploaded, project = old)
+        assertEquals("desk-b", current.deviceId)
+        assertTrue(current.matches(old))
+        assertEquals(listOf("uid"), LibraryGrouping.projectsIn(listOf(item), current).map { it.id })
+        assertEquals(listOf(item), LibraryGrouping.itemsIn(listOf(item), "uid", current))
+        assertEquals("desk-a", item.project?.deviceId)
+        val cloud = CatalogProject("cloud-uid", "After", listOf(ProjectLocation("cloud", "cloud", "3", online = true))).toRelayProject()
+        assertEquals("cloud", cloud.deviceId)
+        assertFalse(cloud.matches(current))
+    }
 
     @Test fun groupByDayNewestFirstWithHeader() {
         val day1a = TestItems.make(TransferState.arrived, at = Instant.parse("2026-09-02T08:00:00Z"))

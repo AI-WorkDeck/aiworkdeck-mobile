@@ -2,6 +2,33 @@ import XCTest
 
 final class WorkspaceFlowTests: XCTestCase {
     @MainActor
+    func testCloudOnlyProjectHasWorkingFileEntryAndMixedProjectLocationPicker() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-AWDWorkspaceUITest", "-AWDCloudCatalogUITest"]
+        app.launch()
+        let cloud = app.buttons["workspace.project.cloud-only"]
+        XCTAssertTrue(cloud.waitForExistence(timeout: 10)); cloud.tap()
+        let file = app.buttons["workspace.file.1"]
+        XCTAssertTrue(file.waitForExistence(timeout: 5)); file.tap()
+        let confirm = app.buttons["workspace.confirmDownload"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        XCTAssertEqual(confirm.label, "Open cloud file")
+        confirm.tap()
+        XCTAssertTrue(app.otherElements["workspace.preview"].waitForExistence(timeout: 10))
+        app.buttons["Close"].firstMatch.tap()
+        let mixed = app.buttons["workspace.project.mixed"]
+        if !mixed.isHittable { app.navigationBars.buttons["Projects"].tap() }
+        XCTAssertTrue(mixed.waitForExistence(timeout: 5)); mixed.tap()
+        let locations = app.buttons["workspace.storageLocation"]
+        XCTAssertTrue(locations.waitForExistence(timeout: 5)); locations.tap()
+        app.buttons["Cloud storage"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["cloud-archive-document-1.pdf"].waitForExistence(timeout: 5))
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = "Unified project cloud file location"; shot.lifetime = .keepAlways; add(shot)
+    }
+
+    @MainActor
     func testLandscapeLoginControlsRemainReachableAfterShowingKeyboard() {
         defer { XCUIDevice.shared.orientation = .portrait }
         continueAfterFailure = false

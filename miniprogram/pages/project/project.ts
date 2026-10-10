@@ -14,20 +14,9 @@ interface ProjectGroup {
   items: RelayProject[]
 }
 
-/** 按 deviceId 分组，组内保持后端返回顺序；组头取 deviceName，取不到时兜底「桌面设备」。 */
-function groupByDevice(list: RelayProject[]): ProjectGroup[] {
-  const order: string[] = []
-  const map = new Map<string, ProjectGroup>()
-  for (const item of list) {
-    let group = map.get(item.deviceId)
-    if (!group) {
-      group = { deviceId: item.deviceId, deviceName: item.deviceName || '桌面设备', items: [] }
-      map.set(item.deviceId, group)
-      order.push(item.deviceId)
-    }
-    group.items.push(item)
-  }
-  return order.map((id) => map.get(id)!)
+/** 一个账号目录只列一次项目；实际存储地址留在模型中供上传路由使用。 */
+function catalogGroup(list: RelayProject[]): ProjectGroup[] {
+  return list.length ? [{ deviceId: 'catalog', deviceName: t('project.title'), items: list }] : []
 }
 
 Page({
@@ -73,7 +62,7 @@ Page({
     this.setData({ loading: true, errorMessage: '' })
     myProjects()
       .then((list) => {
-        this.setData({ loading: false, groups: groupByDevice(list) })
+        this.setData({ loading: false, groups: catalogGroup(list) })
       })
       .catch((err: ApiError) => {
         this.setData({ loading: false, errorMessage: err.message })

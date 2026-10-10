@@ -144,6 +144,13 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit) {
                     InfoRow(tr("home.eyebrow"), project?.name ?: DASH)
                     InfoRow(tr("settings.relay"), usageCaption(usage))
                     UsageBar(usage)
+                    usage?.persistentUsedBytes?.let { used ->
+                        val quota = usage?.persistentQuotaBytes
+                        val caption = if (quota != null && usage?.persistentQuotaAvailable != false)
+                            "${formatBytes(used)} / ${formatBytes(quota)}"
+                        else tr("settings.quotaUnavailable", mapOf("used" to formatBytes(used)))
+                        InfoRow(tr("settings.persistent"), caption)
+                    }
                     TextAction(tr("settings.switchProject"), color = Tk.L.accent) {
                         // 清掉选择即回选择页：Root 看到 selectedProject 变 null 自己路由
                         model.clearProjectSelection()
@@ -162,6 +169,11 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit) {
                     // 默认值不闪烁（N6）。
                     if (!hideBalanceRow) {
                         InfoRow(tr("balance.title"), balanceCaption(balance, balanceErrorKey))
+                    }
+                    balance?.subscription?.takeIf { it.active }?.let { sub ->
+                        InfoRow(tr("subscription.available"), creditsCaption(sub.availableCents))
+                        InfoRow(tr("subscription.weekly"), "${creditsCaption(sub.weeklyUsedCents)} / ${creditsCaption(sub.weeklyLimitCents)}")
+                        InfoRow(tr("subscription.monthly"), "${creditsCaption(sub.monthlyUsedCents)} / ${creditsCaption(sub.monthlyLimitCents)}")
                     }
                     // 安卓还没接通支付通道（微信开放平台 APP 支付未开通，dev-board#428），
                     // 契约 capabilities.recharge = "external"：入口照放，点开只说明去哪里充。
@@ -239,6 +251,9 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit) {
 }
 
 /** 「已用 / 配额」。满了之后上传会被拒并提示去桌面端收件，这行让用户提前有数。 */
+private fun creditsCaption(cents: Long): String = tr("subscription.credits",
+    mapOf("amount" to String.format(java.util.Locale.ROOT, "%.2f", cents / 100.0)))
+
 private fun usageCaption(usage: MediaUsage?): String {
     val u = usage ?: return DASH
     return tr("settings.usage", mapOf("used" to formatBytes(u.usedBytes), "quota" to formatBytes(u.quotaBytes)))

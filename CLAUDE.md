@@ -24,3 +24,5 @@
 - 小程序：`npm ci && npm run typecheck && npm test`
 - iOS：`cd ios && xcodegen generate && xcodebuild test -scheme Workdeck -only-testing:WorkdeckTests -destination "platform=iOS Simulator,name=<可用 iPhone>"`
 - 契约：`node contract/tools/check.mjs`
+
+统一项目目录与新旧身份兼容见 `docs/specs/2026-10-11-unified-project-catalog.md`（dev-board #1190）。项目名不作身份，已尝试传输的 deviceId/key 不随云目录更新改写。

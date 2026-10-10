@@ -98,8 +98,6 @@ fun ProjectPickerScreen(model: AppModel) {
                 }
                 projects.isEmpty() -> Column(verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
                     Text(tr("project.emptyTitle"), style = Fonts.body(), color = Tk.L.fg)
-                    // 说实话：列表来自桌面端的自动同步，前提是桌面端开着且登录同一账号。
-                    // 不要写「新建项目后刷新」——不满足前提时那句话怎么做都不会应验。
                     Text(tr("empty.projects"), style = Fonts.micro(), color = Tk.L.fgFaint)
                     Action(tr("project.reload")) { scope.launch { load() } }
                 }
@@ -112,6 +110,9 @@ fun ProjectPickerScreen(model: AppModel) {
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text(p.name, style = Fonts.body(), color = Tk.L.fg, maxLines = 1)
+                                p.projectUid?.let {
+                                    Text(tr("project.unifiedIdentity", mapOf("id" to it)), style = Fonts.nano(), color = Tk.L.fgFaint)
+                                }
                                 p.deviceName?.takeIf { it.isNotEmpty() }?.let {
                                     Text(it, style = Fonts.nano(), color = Tk.L.fgFaint)
                                 }

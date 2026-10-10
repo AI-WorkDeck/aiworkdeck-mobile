@@ -7,7 +7,13 @@ actor WorkspaceUITestSeed: ProjectFilesServing {
     static let isOn = ProcessInfo.processInfo.arguments.contains("-AWDWorkspaceUITest")
     private var preview: URL?
     func projects() async throws -> [RelayProject] {
-        [RelayProject(deviceId: "test-desktop", deviceName: "Test desktop", key: "alpha", name: "Alpha project"),
+        if ProcessInfo.processInfo.arguments.contains("-AWDCloudCatalogUITest") {
+            return [RelayProject(deviceId: "cloud", deviceName: nil, key: "cloud-only", name: "Cloud project", projectUid: "cloud-uid"),
+                    RelayProject(deviceId: "test-desktop", deviceName: "Test desktop", key: "mixed", name: "Mixed project", projectUid: "mixed-uid",
+                                 locations: [ProjectLocation(kind: "desktop", deviceId: "test-desktop", deviceName: "Test desktop", key: "mixed", online: true),
+                                             ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "cloud-archive", online: true, archiveOnly: true)])]
+        }
+        return [RelayProject(deviceId: "test-desktop", deviceName: "Test desktop", key: "alpha", name: "Alpha project"),
          RelayProject(deviceId: "test-desktop", deviceName: "Test desktop", key: "beta", name: "Beta project")]
     }
     func files(in project: RelayProject) async throws -> ProjectFileListing {

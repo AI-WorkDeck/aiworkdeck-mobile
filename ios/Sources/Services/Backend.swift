@@ -157,17 +157,63 @@ struct LoginResult: Decodable {
     let user: AccountUser
 }
 
-/// 项目目录条目（GET /api/mobile/projects）。**这是桌面端推上云的目录镜像**，
-/// key 是那台桌面机本地库的项目 id——跨机同号不同物，所以必须连着 deviceId 一起用，
-/// 上传时两个都要带。spec：docs/specs/2026-08-20-project-sync-relay.md。
-struct RelayProject: Decodable, Identifiable, Hashable, Sendable, Encodable {
+/// A cloud identity with explicit storage locations; legacy device/key snapshots remain valid.
+struct ProjectLocation: Codable, Hashable, Sendable {
+    let kind: String
+    let deviceId: String
+    let deviceName: String?
+    let key: String
+    let online: Bool?
+    var archiveOnly: Bool? = nil
+    var alias: String { deviceId + ":" + key }
+}
+
+struct RelayProject: Codable, Identifiable, Hashable, Sendable {
     let deviceId: String
     let deviceName: String?
     let key: String
     let name: String
+    let projectUid: String?
+    let locations: [ProjectLocation]?
 
-    var id: String { deviceId + ":" + key }
-    var identityCaption: String { tr("project.identity", ["key": key, "device": deviceId]) }
+    init(deviceId: String, deviceName: String?, key: String, name: String,
+         projectUid: String? = nil, locations: [ProjectLocation]? = nil) {
+        self.deviceId = deviceId; self.deviceName = deviceName; self.key = key; self.name = name
+        self.projectUid = projectUid; self.locations = locations
+    }
+
+    enum CodingKeys: String, CodingKey { case deviceId, deviceName, key, name, projectUid, locations }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name)
+        projectUid = try c.decodeIfPresent(String.self, forKey: .projectUid)
+        locations = try c.decodeIfPresent([ProjectLocation].self, forKey: .locations)
+        // Persisted snapshots retain the original upload route, including after a failed attempt.
+        if let device = try c.decodeIfPresent(String.self, forKey: .deviceId),
+           let localKey = try c.decodeIfPresent(String.self, forKey: .key) {
+            deviceId = device; key = localKey
+            deviceName = try c.decodeIfPresent(String.self, forKey: .deviceName)
+        } else if let location = locations?.first(where: { $0.kind == "cloud" && $0.archiveOnly != true })
+                    ?? locations?.first(where: { $0.kind == "desktop" && $0.online == true })
+                    ?? locations?.first(where: { $0.kind == "desktop" }) ?? locations?.first {
+            deviceId = location.deviceId; key = location.key; deviceName = location.deviceName
+        } else {
+            throw DecodingError.dataCorruptedError(forKey: .locations, in: c, debugDescription: "Project has no location")
+        }
+    }
+
+    var id: String { projectUid ?? legacyID }
+    var legacyID: String { deviceId + ":" + key }
+    var isCloud: Bool { deviceId == "cloud" }
+    var aliases: Set<String> { Set((locations ?? []).map(\.alias) + [legacyID]) }
+    func matches(_ other: RelayProject) -> Bool {
+        if let uid = projectUid, let otherUid = other.projectUid { return uid == otherUid }
+        return !aliases.isDisjoint(with: other.aliases)
+    }
+    var identityCaption: String {
+        if let projectUid { return tr("project.unifiedIdentity", ["id": projectUid]) }
+        return tr("project.identity", ["key": key, "device": deviceId])
+    }
 }
 
 struct CodeOnly: Decodable {
@@ -251,11 +297,10 @@ actor API {
 
     // MARK: 项目与上传
 
-    /// 项目目录（桌面端推上云的镜像）。**返回裸数组，不带 {code,message,data} 信封**，
-    /// 与 auth 那几个端点的形状不一样——照信封解会直接失败。
-    /// 空数组的最常见原因不是 bug：桌面端没开着、或桌面端还没登录同一个账号。
+    /// 账号级统一项目目录，裸数组；包含持久项目身份与实际存储位置。
+    /// 桌面离线时目录仍可见，在线状态由 locations.online 表达。
     func myProjects() async throws -> [RelayProject] {
-        try await getRaw("/api/mobile/projects", as: [RelayProject].self)
+        try await getRaw("/api/mobile/catalog", as: [RelayProject].self)
     }
 
     /// 上传一件现场影像到中转区（POST /api/mobile/media，单步 multipart）。
@@ -306,6 +351,9 @@ actor API {
     }
 
     struct MediaStatus: Decodable, Sendable {
+        var projectUid: String? = nil
+        var fileUid: String? = nil
+        var fileId: Int64? = nil
         let clientMediaId: String
         let delivered: Bool
         let waitingSeconds: Int64
@@ -316,6 +364,9 @@ actor API {
     struct MediaUsage: Decodable, Sendable {
         let usedBytes: Int64
         let quotaBytes: Int64
+        var persistentUsedBytes: Int64? = nil
+        var persistentQuotaBytes: Int64? = nil
+        var persistentQuotaAvailable: Bool? = nil
     }
 
     /// 云端中转区用量（GET /api/mobile/media/usage）。裸对象，无信封。
@@ -342,10 +393,20 @@ actor API {
 
     /// 统一账户余额（dev-board#425，GET /api/mobile/billing/balance）。整数分，币种由部署站点决定。
     /// plan 是计费档位（`paid`/`free`），不是套餐名——不要把它直接渲染给用户。
+    struct SubscriptionBalance: Decodable, Sendable {
+        let active: Bool
+        let availableCents: Int64
+        let monthlyLimitCents: Int64
+        let monthlyUsedCents: Int64
+        let weeklyLimitCents: Int64
+        let weeklyUsedCents: Int64
+    }
+
     struct BillingBalance: Decodable, Sendable {
         let balanceCents: Int64
         let currency: String
         let plan: String?
+        var subscription: SubscriptionBalance? = nil
     }
 
     /// 失败信封携带的机器可读判别位（dev-board#425 契约 `Envelope.kind`）。

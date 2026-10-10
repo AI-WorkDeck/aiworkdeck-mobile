@@ -16,12 +16,13 @@ final class AppModel {
 
     /// 当前项目的键。图集与计数只看它。
     var currentProjectID: String { selectedProject?.id ?? LibraryProject.unknownID }
-    var currentItems: [CaptureItem] { LibraryGrouping.items(items, in: currentProjectID) }
+    var currentItems: [CaptureItem] { LibraryGrouping.items(items, in: currentProjectID, project: selectedProject) }
     /// 三段计数，只数当前项目——进度跟着项目走。
     var tally: TransferTally { TransferTally.of(currentItems) }
     /// 别的项目里还没落盘的件数。队列页末尾提一句，免得它们被完全藏起来。
     var otherPendingCount: Int {
-        items.filter { $0.projectID != currentProjectID && $0.state != .arrived }.count
+        let currentIDs = Set(currentItems.map(\.id))
+        return items.filter { !currentIDs.contains($0.id) && $0.state != .arrived }.count
     }
     /// 桌面端连接。还没做配对，先恒定离线——**不要为了界面好看假装在线**，
     /// 那会让人以为照片已经在往电脑走。

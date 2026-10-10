@@ -1,5 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
-import { CaptureItem, MediaKind, RelayProject, projectId } from './model/Capture'
+import { CaptureItem, MediaKind, RelayProject, ProjectLocation, sameProject } from './model/Capture'
 import { TransferState } from './model/TransferState'
 import { Tally, tallyOf } from './model/TransferTally'
 import { isDesktopOnline, otherPendingCount } from './model/AppModelLogic'
@@ -159,17 +159,16 @@ export class AppModel {
     if (ServiceLocator.queue.consumeUnauthorized()) await this.signOut()
   }
 
-  /** 项目列表来自桌面端的定时上报：能读到且里面有当前项目那台机器，就认为它此刻开着。 */
+  /** 统一目录长期保留项目；在线状态只认来源位置的真实心跳。 */
   private async refreshDesktopOnline(): Promise<void> {
     const current: RelayProject | null = this.selectedProject
     if (current === null) return
     try {
       const projects: RelayProject[] = await ServiceLocator.backend.myProjects()
-      const seen: boolean = projects.some((p: RelayProject): boolean => p.deviceId === current.deviceId)
-      if (seen) {
-        this.desktopLastSeenMs = Date.now()
-        this.emit()
-      }
+      const seen: boolean = projects.some((p: RelayProject): boolean => (p.locations ?? []).some(
+        (l: ProjectLocation): boolean => l.kind === 'desktop' && l.deviceId === current.deviceId && l.online === true))
+      this.desktopLastSeenMs = seen ? Date.now() : null
+      this.emit()
     } catch (e) {
       if (e instanceof Unauthorized) {
         await this.signOut()
@@ -196,7 +195,9 @@ export class AppModel {
   async selectProject(p: RelayProject): Promise<void> {
     await ServiceLocator.prefs.setSelectedProject(p)
     this.selectedProject = p
-    this.desktopLastSeenMs = Date.now()
+    const online: boolean = (p.locations ?? []).some((l: ProjectLocation): boolean =>
+      l.kind === 'desktop' && l.deviceId === p.deviceId && l.online === true)
+    this.desktopLastSeenMs = online ? Date.now() : null
     this.route = Route.home
     this.emit()
     await this.refresh()
@@ -285,9 +286,9 @@ export class AppModel {
   }
 
   currentItems(): CaptureItem[] {
-    const selected: string | null = this.selectedProject === null ? null : projectId(this.selectedProject)
-    return this.items.filter((i: CaptureItem): boolean =>
-      (i.project === null ? null : projectId(i.project)) === selected)
+    const selected: RelayProject | null = this.selectedProject
+    return this.items.filter((i: CaptureItem): boolean => selected === null ? i.project === null
+      : (i.project !== null && sameProject(i.project, selected)))
   }
 
   otherPending(): number {

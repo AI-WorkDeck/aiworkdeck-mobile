@@ -38,7 +38,18 @@ export interface CaptureManifest {
   tsaToken?: string
 }
 
+export interface ProjectLocation {
+  kind: string
+  deviceId: string
+  deviceName?: string
+  key: string
+  online?: boolean
+  archiveOnly?: boolean
+}
+
 export interface RelayProject {
+  projectUid?: string
+  locations?: ProjectLocation[]
   deviceId: string
   deviceName?: string
   key: string
@@ -47,7 +58,16 @@ export interface RelayProject {
 
 /** 项目标识。设备 + 项目键，跨设备重名的项目不会被并成一个。 */
 export function projectId(p: RelayProject): string {
-  return `${p.deviceId}:${p.key}`
+  return p.projectUid ?? `${p.deviceId}:${p.key}`
+}
+
+export function sameProject(a: RelayProject, b: RelayProject): boolean {
+  if (a.projectUid !== undefined && b.projectUid !== undefined) return a.projectUid === b.projectUid
+  const left: string[] = (a.locations ?? []).map((l: ProjectLocation): string => `${l.deviceId}:${l.key}`)
+  left.push(`${a.deviceId}:${a.key}`)
+  const right: string[] = (b.locations ?? []).map((l: ProjectLocation): string => `${l.deviceId}:${l.key}`)
+  right.push(`${b.deviceId}:${b.key}`)
+  return left.some((id: string): boolean => right.includes(id))
 }
 
 /** 落盘行，与 iOS StoredRow 同形。state 存正式名字符串。 */

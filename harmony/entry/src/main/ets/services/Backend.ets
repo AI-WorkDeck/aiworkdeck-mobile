@@ -6,8 +6,8 @@ import { SessionStore } from './SessionStore'
 import { AccountRegion, appLanguageOf, baseUrlOf } from '../model/AccountRegion'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import {
-  LoginResult, MediaStatus, MediaUsage,
-  asRecord, decodeLoginResult, decodeMediaStatuses, decodeMediaUsage, decodeRelayProjects,
+  LoginResult, MediaStatus, MediaUsage, SubscriptionBalance, decodeSubscriptionBalance,
+  asRecord, decodeLoginResult, decodeMediaStatuses, decodeMediaUsage, decodeCatalog,
 } from './ApiTypes'
 
 const CONNECT_TIMEOUT_MS: number = 15000
@@ -73,7 +73,11 @@ export class Backend {
   }
 
   async myProjects(): Promise<RelayProject[]> {
-    return decodeRelayProjects(await this.bare('/api/mobile/projects'))
+    return decodeCatalog(await this.bare('/api/mobile/catalog'))
+  }
+
+  async subscriptionBalance(): Promise<SubscriptionBalance | null> {
+    return decodeSubscriptionBalance(await this.bare('/api/mobile/billing/balance'))
   }
 
   async mediaUsage(): Promise<MediaUsage> {

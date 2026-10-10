@@ -2,6 +2,7 @@ package com.aiworkdeck.mobile.services
 
 import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.model.RelayProject
+import com.aiworkdeck.mobile.model.CatalogProject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
@@ -47,7 +48,7 @@ class Backend(
     /** 本机有没有会话。只判断「有没有」，是否还有效由第一次真实请求的 401 发现。 */
     fun hasSession(): Boolean = session.current() != null
 
-    suspend fun myProjects(): List<RelayProject> = bare("/api/mobile/projects")
+    suspend fun myProjects(): List<RelayProject> = bare<List<CatalogProject>>("/api/mobile/catalog").map { it.toRelayProject() }
     suspend fun mediaUsage(): MediaUsage = bare("/api/mobile/media/usage")
     /** 统一账户余额。成功回裸对象、失败回信封，两者都是 JsonObject，靠 bare() 里探 code 字段区分。 */
     suspend fun billingBalance(): BillingBalance = bare("/api/mobile/billing/balance")
