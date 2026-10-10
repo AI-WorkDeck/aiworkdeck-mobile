@@ -120,7 +120,7 @@ struct WorkspaceView: View {
             // A restored capture destination remains usable offline, even when
             // the desktop no longer advertises it in the current directory.
             projects = loaded
-            if let current = model.selectedProject, !projects.contains(where: { $0.id == current.id }) {
+            if let current = model.selectedProject, !projects.contains(where: { $0.matches(current) }) {
                 projects.append(current)
             }
             if selected == nil { selected = model.selectedProject }
@@ -157,6 +157,14 @@ private struct ProjectContentsView: View {
     @State private var generation = UUID()
     @State private var scrollID: String?
     @State private var download: DownloadSelection?
+    @State private var locationID: String?
+
+    private var storageProject: RelayProject {
+        guard let location = project.locations?.first(where: { $0.alias == (locationID ?? project.legacyID) }) else { return project }
+        return RelayProject(deviceId: location.deviceId, deviceName: location.deviceName, key: location.key,
+                            name: project.name, projectUid: project.projectUid, locations: project.locations)
+    }
+    private var storageKey: String { project.id + ":" + storageProject.legacyID }
 
     private struct DownloadSelection: Identifiable {
         let file: RemoteProjectFile
@@ -165,7 +173,7 @@ private struct ProjectContentsView: View {
     }
 
     private var visibleFiles: [RemoteProjectFile] {
-        guard loadedProjectID == project.id else { return [] }
+        guard loadedProjectID == storageKey else { return [] }
         return (listing?.files ?? []).filter {
             query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) || $0.path.localizedCaseInsensitiveContains(query)
         }
@@ -187,8 +195,8 @@ private struct ProjectContentsView: View {
                 files
             }
         }
-        .task(id: project.id) {
-            if loadedProjectID != project.id {
+        .task(id: storageKey) {
+            if loadedProjectID != storageKey {
                 query = ""; scrollID = nil
                 await load()
             }
@@ -200,10 +208,22 @@ private struct ProjectContentsView: View {
 
     private var files: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if let locations = project.locations, locations.count > 1 {
+                Picker(tr("workspace.storageLocation"), selection: Binding(
+                    get: { storageProject.legacyID }, set: { locationID = $0 }
+                )) {
+                    ForEach(locations, id: \.alias) { location in
+                        Text(location.kind == "cloud" ? tr("project.cloud") : (location.deviceName ?? location.deviceId))
+                            .tag(location.alias)
+                    }
+                }
+                .padding(.horizontal)
+                .accessibilityIdentifier("workspace.storageLocation")
+            }
             TextField(tr("workspace.searchFiles"), text: $query)
                 .textFieldStyle(.roundedBorder).padding(.horizontal)
                 .accessibilityIdentifier("workspace.fileSearch")
-            if listing?.truncated == true, loadedProjectID == project.id {
+            if listing?.truncated == true, loadedProjectID == storageKey {
                 Text(tr("workspace.limit")).font(.caption).foregroundStyle(.secondary).padding()
             }
             if loading { ProgressView(tr("workspace.loading")).padding() }
@@ -214,7 +234,7 @@ private struct ProjectContentsView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(visibleFiles) { file in
-                        Button { download = DownloadSelection(file: file, project: project) } label: {
+                        Button { download = DownloadSelection(file: file, project: storageProject) } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "doc")
                                 VStack(alignment: .leading, spacing: 4) {
@@ -235,7 +255,7 @@ private struct ProjectContentsView: View {
                         Divider()
                     }
                     if !loading, error == nil, visibleFiles.isEmpty {
-                        ContentUnavailableView(tr(query.isEmpty ? "workspace.noFiles" : "workspace.noMatches"), systemImage: "doc", description: Text(tr("workspace.desktopHint")))
+                        ContentUnavailableView(tr(query.isEmpty ? "workspace.noFiles" : "workspace.noMatches"), systemImage: "doc", description: Text(tr(storageProject.isCloud ? "workspace.cloudHint" : "workspace.desktopHint")))
                     }
                 }
                 .scrollTargetLayout()
@@ -247,15 +267,16 @@ private struct ProjectContentsView: View {
 
     private func load() async {
         let request = UUID()
-        let target = project
+        let target = storageProject
+        let targetKey = storageKey
         generation = request
         loading = true; error = nil
-        if loadedProjectID != target.id { listing = nil }
+        if loadedProjectID != targetKey { listing = nil }
         do {
             let result = try await client.files(in: target)
             try Task.checkCancellation()
             guard generation == request else { return }
-            listing = result; loadedProjectID = target.id
+            listing = result; loadedProjectID = targetKey
         } catch is CancellationError {
             guard generation == request else { return }
         } catch {
@@ -287,11 +308,11 @@ private struct FileDownloadView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 16) {
                         Text(file.path).font(.subheadline).foregroundStyle(.secondary)
-                        if busy { ProgressView(tr("workspace.downloading")) }
+                        if busy { ProgressView(tr(project.isCloud ? "workspace.cloudDownload" : "workspace.downloading")) }
                         if let error { Text(error).foregroundStyle(T.S.failed) }
                         if let quote, !approved {
-                            Text(tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)]))
-                            Button(tr("workspace.download")) { approved = true; Task { await download() } }
+                            Text(project.isCloud ? tr("workspace.cloudHint") : tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)]))
+                            Button(tr(project.isCloud ? "workspace.cloudOpen" : "workspace.download")) { approved = true; Task { await download() } }
                                 .buttonStyle(.borderedProminent)
                                 .accessibilityIdentifier("workspace.confirmDownload")
                                 .disabled(busy)
@@ -323,7 +344,7 @@ private struct FileDownloadView: View {
 
     private func loadQuote() async {
         busy = true; error = nil
-        do { quote = try await client.quote(for: file) }
+        do { quote = project.isCloud ? ProjectFileQuote(credits: 0, balanceCents: nil) : try await client.quote(for: file) }
         catch { self.error = error.localizedDescription }
         busy = false
     }

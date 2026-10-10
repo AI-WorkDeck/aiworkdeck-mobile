@@ -30,6 +30,11 @@
     <view class="rule"></view>
   </block>
 
+  <view wx:for="{{subscriptionRows}}" wx:key="label" class="row">
+    <text class="row__label">{{item.label}}</text>
+    <text class="row__value">{{item.value}}</text>
+  </view>
+
   <!-- 版本 -->
   <view class="row">
     <text class="row__label">{{versionLabel}}</text>

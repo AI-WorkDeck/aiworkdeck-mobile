@@ -139,7 +139,7 @@ export struct ProjectPicker {
                   .fontColor(Tk.L.fg)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
-                Text(p.deviceName !== undefined && p.deviceName.length > 0 ? p.deviceName : p.deviceId)
+                Text(p.projectUid !== undefined ? tr('project.unifiedIdentity', { 'id': p.projectUid }) : (p.deviceName ?? p.deviceId))
                   .fontSize(Tk.Ty.nano)
                   .fontColor(Tk.L.fgFaint)
                   .maxLines(1)

@@ -149,12 +149,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 项目列表来自桌面端的定时上报：能读到且里面有当前项目那台机器，就认为它此刻开着。 */
+    /** 统一目录长期保留项目；在线状态只认来源位置的真实心跳。 */
     private suspend fun refreshDesktopOnline() {
         val current = _selectedProject.value ?: return
         try {
             val projects = backend.myProjects()
-            if (projects.any { it.deviceId == current.deviceId }) lastProjectsSeenAt = System.currentTimeMillis()
+            lastProjectsSeenAt = if (projects.any { project -> project.locations.orEmpty().any {
+                it.kind == "desktop" && it.deviceId == current.deviceId && it.online == true
+            } }) System.currentTimeMillis() else null
         } catch (e: Unauthorized) {
             signOut()
             return
@@ -176,8 +178,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun selectProject(project: RelayProject) {
         prefs.selectedProject = project
         _selectedProject.value = project
-        lastProjectsSeenAt = System.currentTimeMillis()
-        _desktopOnline.value = true
+        val online = project.locations.orEmpty().any { it.kind == "desktop" && it.deviceId == project.deviceId && it.online == true }
+        lastProjectsSeenAt = if (online) System.currentTimeMillis() else null
+        _desktopOnline.value = online
         viewModelScope.launch {
             refresh()
             UploadWorker.enqueue(getApplication<Application>())
@@ -309,7 +312,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val all = try { evidence.loadAll() } catch (_: Exception) { return }
         val selected = _selectedProject.value
         _items.value = all
-        _currentItems.value = all.filter { it.project?.id == selected?.id }
+        _currentItems.value = all.filter { if (selected == null) it.project == null else it.project?.matches(selected) == true }
         _tally.value = TransferTally.of(_currentItems.value)
         _otherPendingCount.value = otherPendingCount(all, selected)
     }

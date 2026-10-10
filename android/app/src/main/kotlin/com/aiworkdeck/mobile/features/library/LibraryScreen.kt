@@ -99,7 +99,7 @@ fun LibraryScreen(
     val projects = LibraryGrouping.projectsIn(all, current)
     // 正在看的项目：优先用手动切过的那个；它若已经没有记录了（比如刚被删空）就退回第一项
     val viewing = projects.firstOrNull { it.id == viewingId } ?: projects.firstOrNull()
-    val items = LibraryGrouping.itemsIn(all, viewing?.id).filter { !audioOnly || it.kind == MediaKind.audio }
+    val items = LibraryGrouping.itemsIn(all, viewing?.id, current).filter { !audioOnly || it.kind == MediaKind.audio }
     val days = LibraryGrouping.groupByDay(items)
     val selectedItems = items.filter { selected.contains(it.id) }
     val isGrid = viewMode == VIEW_GRID

@@ -30,8 +30,11 @@ object LibraryGrouping {
      * 正在看的那个项目里的件。没记项目的件归到 `"unknown"` 桶——它们确实存在，
      * 只是不知道归谁，藏起来比放错地方更糟。
      */
-    fun itemsIn(items: List<CaptureItem>, projectId: String?): List<CaptureItem> =
-        items.filter { (it.project?.id ?: UNKNOWN_PROJECT) == projectId }
+    fun itemsIn(items: List<CaptureItem>, projectId: String?, current: RelayProject? = null): List<CaptureItem> {
+        val reference = current?.takeIf { it.id == projectId } ?: items.firstOrNull { it.project?.id == projectId }?.project
+        return items.filter { if (reference != null && it.project != null) reference.matches(it.project)
+            else (it.project?.id ?: UNKNOWN_PROJECT) == projectId }
+    }
 
     const val UNKNOWN_PROJECT = "unknown"
 
@@ -49,6 +52,7 @@ object LibraryGrouping {
         val seen = LinkedHashMap<String, String>()
         for (it in items) {
             val p = it.project
+            if (p != null && current?.matches(p) == true) continue
             if (p == null) seen.putIfAbsent(UNKNOWN_PROJECT, tr("library.unknownProject")) else seen.putIfAbsent(p.id, p.name)
         }
         current?.let { seen.remove(it.id) }

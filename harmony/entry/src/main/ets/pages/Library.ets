@@ -533,7 +533,7 @@ export struct Library {
     this.viewingId = viewing === null ? '' : viewing.id
     this.viewingName = viewing === null ? '' : viewing.name
 
-    const items: CaptureItem[] = itemsIn(model.items, viewing === null ? null : viewing.id)
+    const items: CaptureItem[] = itemsIn(model.items, viewing === null ? null : viewing.id, model.selectedProject)
       .filter((it: CaptureItem): boolean => !this.audioOnly || it.kind === MediaKind.audio)
     this.sections = groupByDay(items)
     this.count = items.length

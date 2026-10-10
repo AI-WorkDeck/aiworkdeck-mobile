@@ -375,6 +375,47 @@ final class ProjectFilesTests: XCTestCase {
         await service.close()
     }
 
+    func testCatalogAndCloudOnlyFileReadNeverChargesOrAcknowledgesRelay() async throws {
+        var paths: [String] = []
+        ProjectFilesURLProtocol.handler = { request in
+            let path = request.url!.path
+            paths.append(path)
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-Session-Id"), "test-account-a")
+            if path == "/api/mobile/catalog" {
+                return .json(#"[{"projectUid":"cloud-uid","name":"Cloud","locations":[{"kind":"cloud","deviceId":"cloud","key":"3","online":true}]}]"#)
+            }
+            if path.hasSuffix("/files") {
+                return .json(#"{"files":[{"id":"23","uid":"file-uid","source":"cloud","name":"a.pdf","path":"a.pdf","size":3},{"id":"24","uid":"desktop-file","source":"desktop","name":"desktop.pdf","path":"desktop.pdf","size":3}],"count":2,"truncated":false}"#)
+            }
+            XCTAssertEqual(path, "/api/mobile/catalog/cloud-uid/files/file-uid/content")
+            return .binary(Data([1, 2, 3]))
+        }
+        let service = client()
+        let projects = try await service.projects()
+        let listing = try await service.files(in: projects[0])
+        XCTAssertEqual(listing.files.count, 1, "Cloud location must not route desktop bytes to cloud content")
+        let pull = try await service.preparePull(project: projects[0], file: listing.files[0])
+        let url = try await service.download(pull)
+        XCTAssertEqual(try Data(contentsOf: url), Data([1, 2, 3]))
+        XCTAssertEqual(paths.count, 3)
+        XCTAssertFalse(paths.contains { $0.contains("/transfer/") })
+        await service.close()
+    }
+
+    func testLegacyPendingPullKeepsUUIDAndRouteAfterCatalogUpgrade() async throws {
+        let upgraded = RelayProject(deviceId: "desktop-a", deviceName: "Mac", key: "7", name: "Matter",
+                                    projectUid: "uid", locations: [ProjectLocation(kind: "desktop", deviceId: "desktop-a", deviceName: nil, key: "7", online: true)])
+        let service = client()
+        let old = try await service.preparePull(project: project, file: file)
+        let retry = try await service.preparePull(project: upgraded, file: file)
+        XCTAssertEqual(old.requestID, retry.requestID)
+        XCTAssertEqual(retry.project.deviceId, "desktop-a")
+        let anotherDevice = RelayProject(deviceId: "desktop-b", deviceName: nil, key: "8", name: "Matter", projectUid: "uid")
+        let other = try await service.preparePull(project: anotherDevice, file: file)
+        XCTAssertNotEqual(old.requestID, other.requestID, "Legacy numeric file IDs on different devices are unrelated")
+        await service.close()
+    }
+
     private static func body(of request: URLRequest) throws -> [String: Any] {
         var data = request.httpBody ?? Data()
         if let stream = request.httpBodyStream {

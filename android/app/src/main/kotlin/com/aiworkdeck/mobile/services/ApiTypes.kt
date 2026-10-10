@@ -25,15 +25,26 @@ data class MediaStatus(
     val delivered: Boolean,
     val waitingSeconds: Long,
     val expiresAt: String? = null,
+    val projectUid: String? = null,
+    val fileUid: String? = null,
+    val fileId: Long? = null,
 )
 
 @Serializable
-data class MediaUsage(val usedBytes: Long, val quotaBytes: Long)
+data class MediaUsage(val usedBytes: Long, val quotaBytes: Long,
+    val persistentUsedBytes: Long? = null, val persistentQuotaBytes: Long? = null,
+    val persistentQuotaAvailable: Boolean? = null)
+
+@Serializable
+data class SubscriptionBalance(val active: Boolean, val availableCents: Long,
+    val monthlyLimitCents: Long, val monthlyUsedCents: Long,
+    val weeklyLimitCents: Long, val weeklyUsedCents: Long)
 
 /** 统一账户余额（dev-board#425/#429）。金额整数分；plan 是计费档位（paid/free），
  * 不是套餐名，上游没给这个字段时才是 null——不得直接渲染给用户。 */
 @Serializable
-data class BillingBalance(val balanceCents: Long, val currency: String, val plan: String? = null)
+data class BillingBalance(val balanceCents: Long, val currency: String, val plan: String? = null,
+    val subscription: SubscriptionBalance? = null)
 
 /**
  * 信封 code=1 时 /api/mobile/billing 系列接口附带的机器可读判别位（dev-board#425 复审 C2）。
@@ -51,4 +62,5 @@ enum class EnvelopeKind {
 }
 
 @Serializable
-data class UploadResult(val code: Int, val id: Long, val clientMediaId: String, val delivered: Boolean)
+data class UploadResult(val code: Int, val id: Long, val clientMediaId: String, val delivered: Boolean,
+                        val projectUid: String? = null, val fileUid: String? = null, val fileId: Long? = null)

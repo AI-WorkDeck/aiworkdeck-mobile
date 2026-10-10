@@ -6,7 +6,7 @@ import { Tk } from '../design/Tokens'
 import { formatBytes } from '../model/Format'
 import { RelayProject } from '../model/Capture'
 import { Unauthorized } from '../model/Envelope'
-import { AccountUser, MediaUsage } from '../services/ApiTypes'
+import { AccountUser, MediaUsage, SubscriptionBalance } from '../services/ApiTypes'
 import { ServiceLocator } from '../services/ServiceLocator'
 import { billingAvailableIn, regionLabelKey } from '../model/AccountRegion'
 import { errorText, toast } from './Feedback'
@@ -42,6 +42,7 @@ export struct Settings {
   @State saveToAlbum: boolean = false
   @State projectName: string = DASH
   @State usage: MediaUsage | null = null
+  @State subscription: SubscriptionBalance | null = null
   private token: number = -1
   /** 这一屏还在不在。异步回调回来时组件可能已经销毁，往里写 @State 是错误日志甚至崩溃。 */
   private alive: boolean = false
@@ -54,6 +55,11 @@ export struct Settings {
       if (!this.alive) return
       this.saveToAlbum = v
     }).catch((): void => {})
+    if (billingAvailableIn(ServiceLocator.region)) {
+      ServiceLocator.backend.subscriptionBalance().then((s: SubscriptionBalance | null): void => {
+        if (this.alive) this.subscription = s
+      }).catch((): void => { if (this.alive) this.subscription = null })
+    }
     // 进页面拉一次用量。读不到就留占位「—」，比一条报错更符合这行信息的分量；
     // 但会话失效是另一回事——和选项目页同口径，回登录页，别让人对着一屏死数据点
     AppModel.shared.mediaUsage().then((u: MediaUsage): void => {
@@ -168,6 +174,9 @@ export struct Settings {
       .color(Tk.L.accent)
       .backgroundColor(Tk.L.sunken)
       .width('100%')
+    if (this.usage?.persistentUsedBytes !== undefined) {
+      this.infoRow(tr('settings.persistent'), this.persistentCaption())
+    }
     Text(tr('settings.switchProject'))
       .fontSize(Tk.Ty.small)
       .fontColor(Tk.L.accent)
@@ -187,6 +196,11 @@ export struct Settings {
       this.infoRow(tr('settings.region'), tr(regionLabelKey(ServiceLocator.region)))
     }
     this.infoRow(tr('settings.server'), hostOf(ServiceLocator.baseUrl()))
+    if (this.subscription?.active === true) {
+      this.infoRow(tr('subscription.available'), this.credits(this.subscription.availableCents))
+      this.infoRow(tr('subscription.weekly'), `${this.credits(this.subscription.weeklyUsedCents)} / ${this.credits(this.subscription.weeklyLimitCents)}`)
+      this.infoRow(tr('subscription.monthly'), `${this.credits(this.subscription.monthlyUsedCents)} / ${this.credits(this.subscription.monthlyLimitCents)}`)
+    }
     // 国际站计费未开通（dev-board#664）：国际区不放充值入口
     if (RECHARGE_CHANNEL !== 'false' && billingAvailableIn(ServiceLocator.region)) {
       Text(tr('recharge.entry'))
@@ -262,6 +276,20 @@ export struct Settings {
   }
 
   /** 「已用 / 配额」。满了之后上传会被拒并提示去桌面端收件，这行让用户提前有数。 */
+  private credits(cents: number): string {
+    return tr('subscription.credits', { 'amount': (cents / 100).toFixed(2) })
+  }
+
+  private persistentCaption(): string {
+    const u: MediaUsage | null = this.usage
+    if (u === null || u.persistentUsedBytes === undefined) return DASH
+    const used: string = formatBytes(u.persistentUsedBytes)
+    if (u.persistentQuotaBytes === undefined || u.persistentQuotaAvailable === false) {
+      return tr('settings.quotaUnavailable', { 'used': used })
+    }
+    return `${used} / ${formatBytes(u.persistentQuotaBytes)}`
+  }
+
   private usageCaption(): string {
     const u: MediaUsage | null = this.usage
     if (u === null) return DASH

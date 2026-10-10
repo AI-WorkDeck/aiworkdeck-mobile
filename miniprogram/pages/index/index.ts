@@ -267,7 +267,7 @@ Page({
     // 只看当前项目：最近缩略图与三段计数都跟着项目走
     const project = getSelectedProject()
     if (!project) return
-    const pid = projectId({ deviceId: project.deviceId, projectKey: project.key })
+    const pid = projectId({ deviceId: project.deviceId, projectKey: project.key, projectUid: project.projectUid })
     const latest = listItems(pid)[0]
     const recent: RecentDisplay | null = latest
       ? {

@@ -6,7 +6,10 @@ enum LibraryGrouping {
     static func projects(in items: [CaptureItem], current: RelayProject?) -> [LibraryProject] {
         var seen: [String: LibraryProject] = [:]
         for i in items {
-            if let p = i.project { seen[p.id] = LibraryProject(p) }
+            if let p = i.project {
+                let resolved = current.flatMap { $0.matches(p) ? $0 : nil } ?? p
+                seen[resolved.id] = LibraryProject(resolved)
+            }
             else { seen[LibraryProject.unknownID] = .unknown }
         }
         var out: [LibraryProject] = []
@@ -20,8 +23,12 @@ enum LibraryGrouping {
         return out
     }
 
-    static func items(_ items: [CaptureItem], in projectID: String) -> [CaptureItem] {
-        items.filter { $0.projectID == projectID }
+    static func items(_ items: [CaptureItem], in projectID: String, project: RelayProject? = nil) -> [CaptureItem] {
+        let reference = project ?? items.compactMap(\.project).first { $0.id == projectID }
+        return items.filter { item in
+            if let reference, let own = item.project { return reference.matches(own) }
+            return item.projectID == projectID
+        }
     }
 
     struct DaySection: Identifiable {

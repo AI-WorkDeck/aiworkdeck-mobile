@@ -52,7 +52,7 @@ actor ProjectFilesService: ProjectFilesServing {
     deinit { try? FileManager.default.removeItem(at: cacheDirectory) }
 
     func projects() async throws -> [RelayProject] {
-        let data = try await response(request("/api/mobile/projects"))
+        let data = try await response(request("/api/mobile/catalog"))
         if let envelope = try? JSONDecoder().decode(CodeOnly.self, from: data), envelope.code != 0 {
             throw APIError(message: envelope.message ?? tr("files.error.response"))
         }
@@ -60,6 +60,16 @@ actor ProjectFilesService: ProjectFilesServing {
     }
 
     func files(in project: RelayProject) async throws -> ProjectFileListing {
+        if project.isCloud, let uid = project.projectUid {
+            let data = try await response(request("/api/mobile/catalog/\(uid)/files"))
+            if let envelope = try? JSONDecoder().decode(CodeOnly.self, from: data), envelope.code != 0 {
+                throw APIError(message: envelope.message ?? tr("files.error.response"))
+            }
+            let listing = try decode(CatalogFiles.self, data)
+            let files = listing.files.filter { $0.source == nil || $0.source == "cloud" }
+            return ProjectFileListing(files: files, count: files.count,
+                                      totalCount: nil, truncated: listing.truncated)
+        }
         let created: Created = try await json("/api/mobile/transfer/list", body: [
             "deviceId": project.deviceId, "projectKey": project.key, "requestId": UUID().uuidString,
         ])
@@ -76,11 +86,11 @@ actor ProjectFilesService: ProjectFilesServing {
 
     func preparePull(project: RelayProject, file: RemoteProjectFile) throws -> ProjectFilePull {
         try ensureOpen()
-        if let preview = previews.values.first(where: { $0.pull.project.id == project.id && $0.pull.file.id == file.id }) {
+        if let preview = previews.values.first(where: { $0.pull.matches(project: project, file: file) }) {
             return preview.pull
         }
         try loadLedger()
-        if let pending = ledger?.values.first(where: { $0.pull.project.id == project.id && $0.pull.file.id == file.id }) {
+        if let pending = ledger?.values.first(where: { $0.pull.matches(project: project, file: file) }) {
             return pending.pull
         }
         let pull = ProjectFilePull(project: project, file: file)
@@ -156,6 +166,24 @@ actor ProjectFilesService: ProjectFilesServing {
             ledger?[key] = Pending(pull: pull)
             try saveLedger()
         }
+        if pull.project.isCloud {
+            guard let projectUID = pull.project.projectUid, let fileUID = pull.file.uid else { throw failure("files.error.response") }
+            let source = try await saveContent(path: "/api/mobile/catalog/\(projectUID)/files/\(fileUID)/content",
+                                               name: pull.file.name, expectedSize: pull.file.size)
+            var saved = false
+            defer {
+                if !saved { try? FileManager.default.removeItem(at: source); bytesOnDisk -= pull.file.size }
+            }
+            try ensureOpen()
+            try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+            let destination = cacheDirectory.appendingPathComponent(source.lastPathComponent)
+            ledger?[key] = nil
+            try saveLedger()
+            try FileManager.default.moveItem(at: source, to: destination)
+            previews[pull.requestID] = Preview(pull: pull, url: destination, size: pull.file.size)
+            saved = true
+            return destination
+        }
         var id: Int64
         if let existing = ledger?[key]?.transferID { id = existing }
         else {
@@ -181,7 +209,7 @@ actor ProjectFilesService: ProjectFilesServing {
             }
             guard let size = transfer.fileSize else { throw failure("files.error.response") }
             try validateSize(size)
-            let url = try await saveContent(id: id, name: pull.file.name, expectedSize: size)
+            let url = try await saveContent(path: "/api/mobile/transfer/\(id)/content", name: pull.file.name, expectedSize: size)
             ledger?[key]?.previewFile = url.lastPathComponent
             ledger?[key]?.previewSize = size
             try saveLedger()
@@ -212,9 +240,9 @@ actor ProjectFilesService: ProjectFilesServing {
         return destination
     }
 
-    private func saveContent(id: Int64, name: String, expectedSize: Int64) async throws -> URL {
+    private func saveContent(path: String, name: String, expectedSize: Int64) async throws -> URL {
         try ensureOpen()
-        let (stream, response) = try await session.bytes(for: request("/api/mobile/transfer/\(id)/content"), delegate: noRedirect)
+        let (stream, response) = try await session.bytes(for: request(path), delegate: noRedirect)
         defer { stream.task.cancel() }
         try ensureOpen()
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode),
@@ -355,6 +383,12 @@ actor ProjectFilesService: ProjectFilesServing {
 
     private func failure(_ key: String) -> APIError { APIError(message: tr(key)) }
 
+    private struct CatalogFiles: Decodable {
+        let files: [RemoteProjectFile]
+        let count: Int?
+        let totalCount: Int?
+        let truncated: Bool?
+    }
     private struct Created: Decodable { let id: Int64 }
     private struct TransferResponse: Decodable { let transfer: Transfer }
     private struct Transfer: Decodable {

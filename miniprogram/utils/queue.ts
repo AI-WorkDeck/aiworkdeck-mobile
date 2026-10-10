@@ -30,6 +30,7 @@ export interface QueueItem {
   saved: boolean
   deviceId: string
   projectKey: string
+  projectUid?: string
   projectName: string
   /** ISO8601 */
   capturedAt: string
@@ -151,6 +152,7 @@ export function enqueueCapture(
     saved: false,
     deviceId: project.deviceId,
     projectKey: project.key,
+    projectUid: project.projectUid,
     projectName: project.name,
     capturedAt: now.toISOString(),
     state: 'waiting',

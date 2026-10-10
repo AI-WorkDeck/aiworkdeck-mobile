@@ -1,5 +1,5 @@
 import { ContractStates } from 'contract'
-import { CaptureItem, RelayProject, projectId } from './Capture'
+import { CaptureItem, RelayProject, projectId, sameProject } from './Capture'
 import { TransferState, TransferPhase, TransferStateOps } from './TransferState'
 import { tr } from '../design/L10n'
 
@@ -70,8 +70,11 @@ function bucketOf(it: CaptureItem): string {
 }
 
 /** 正在看的那个项目里的件。 */
-export function itemsIn(items: CaptureItem[], choiceId: string | null): CaptureItem[] {
-  return items.filter((it: CaptureItem): boolean => bucketOf(it) === choiceId)
+export function itemsIn(items: CaptureItem[], choiceId: string | null, current: RelayProject | null = null): CaptureItem[] {
+  const reference: RelayProject | null = current !== null && projectId(current) === choiceId ? current :
+    (items.find((it: CaptureItem): boolean => bucketOf(it) === choiceId)?.project ?? null)
+  return items.filter((it: CaptureItem): boolean => reference !== null && it.project !== null
+    ? sameProject(reference, it.project) : bucketOf(it) === choiceId)
 }
 
 /**
@@ -83,7 +86,7 @@ export function projectsIn(items: CaptureItem[], current: RelayProject | null): 
   const seen: Map<string, string> = new Map<string, string>()
   for (const it of items) {
     const id: string = bucketOf(it)
-    if (id === currentId || seen.has(id)) continue
+    if (id === currentId || seen.has(id) || (current !== null && it.project !== null && sameProject(current, it.project))) continue
     const p: RelayProject | null = it.project
     seen.set(id, p === null ? tr('library.unknownProject') : p.name)
   }

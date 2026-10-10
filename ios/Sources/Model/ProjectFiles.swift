@@ -12,6 +12,12 @@ struct RemoteProjectFile: Codable, Identifiable, Hashable, Sendable {
     let name: String
     let path: String
     let size: Int64
+    var uid: String? = nil
+    var source: String? = nil
+    func matches(_ other: RemoteProjectFile) -> Bool {
+        if let uid, let otherUID = other.uid { return uid == otherUID }
+        return id == other.id
+    }
 }
 
 struct ProjectFileListing: Sendable {
@@ -50,6 +56,11 @@ struct ProjectFilePull: Codable, Sendable {
         self.project = project
         self.file = file
         self.requestID = requestID
+    }
+    func matches(project: RelayProject, file: RemoteProjectFile) -> Bool {
+        guard self.project.matches(project) else { return false }
+        if self.file.uid != nil && file.uid != nil { return self.file.matches(file) }
+        return self.project.legacyID == project.legacyID && self.file.id == file.id
     }
 }
 

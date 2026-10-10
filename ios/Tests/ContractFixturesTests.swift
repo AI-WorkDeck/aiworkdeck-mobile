@@ -127,6 +127,21 @@ final class ContractFixturesTests: XCTestCase {
     /// billing.json 的 balance 段驱动 `API.decodeBillingBalance`——这是 `API.billingBalance()`
     /// 真正在用的判读函数，覆盖裸对象分支（二轮复审 N4：以前这段判读代码一行测试都没有覆盖过，
     /// 见 Backend.swift 上 `decodeBillingBalance` 的注释）。
+    func testSubscriptionAllowanceAndUnknownPersistentQuotaStaySeparateFromCash() throws {
+        let data = Data(#"{"balanceCents":0,"currency":"CNY","plan":"paid","subscription":{"active":true,"availableCents":2500,"monthlyLimitCents":14900,"monthlyUsedCents":2000,"weeklyLimitCents":4500,"weeklyUsedCents":2000}}"#.utf8)
+        guard case .ok(let balance) = API.decodeBillingBalance(status: 200, data: data) else {
+            return XCTFail("subscription response must decode")
+        }
+        XCTAssertEqual(balance.balanceCents, 0)
+        XCTAssertEqual(balance.subscription?.availableCents, 2500)
+        XCTAssertEqual(balance.subscription?.monthlyLimitCents, 14900)
+        let usage = try JSONDecoder().decode(API.MediaUsage.self, from: Data(#"{"usedBytes":9,"quotaBytes":209715200,"persistentUsedBytes":42,"persistentQuotaBytes":null,"persistentQuotaAvailable":false}"#.utf8))
+        XCTAssertEqual(usage.usedBytes, 9)
+        XCTAssertEqual(usage.persistentUsedBytes, 42)
+        XCTAssertNil(usage.persistentQuotaBytes)
+        XCTAssertEqual(usage.persistentQuotaAvailable, false)
+    }
+
     func testBillingBalanceDecodeFixtures() throws {
         for k in try billingSection("balance") {
             let name = k["name"] as! String

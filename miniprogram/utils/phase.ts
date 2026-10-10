@@ -51,8 +51,8 @@ export function tallyTotal(tl: Tally): number {
 }
 
 /** 项目标识：key 是桌面机本地 id，跨机同号不同物，必须连 deviceId。与 iOS RelayProject.id 同构。 */
-export function projectId(p: { deviceId: string; projectKey: string }): string {
-  return `${p.deviceId}:${p.projectKey}`
+export function projectId(p: { deviceId: string; projectKey: string; projectUid?: string }): string {
+  return p.projectUid ?? `${p.deviceId}:${p.projectKey}`
 }
 
 export interface DaySection<T> {
@@ -100,9 +100,9 @@ export function deleteWarning(states: QueueState[]): string {
 /** 可切换的项目：当前项目永远第一（哪怕还没拍），其余有记录的按名称排。 */
 export function projectsIn(
   items: Array<{ deviceId: string; projectKey: string; projectName: string }>,
-  current: { deviceId: string; key: string; name: string },
+  current: { deviceId: string; key: string; name: string; projectUid?: string },
 ): Array<{ id: string; name: string }> {
-  const curId = projectId({ deviceId: current.deviceId, projectKey: current.key })
+  const curId = projectId({ deviceId: current.deviceId, projectKey: current.key, projectUid: current.projectUid })
   const seen = new Map<string, string>()
   for (const it of items) seen.set(projectId(it), it.projectName)
   seen.delete(curId)

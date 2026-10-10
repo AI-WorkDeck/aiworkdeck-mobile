@@ -41,12 +41,28 @@ class BackendTest {
         assertEquals("sess-1", session.current())
     }
 
+    @Test fun subscriptionAllowanceIsSeparateFromZeroCashAndUnknownStorageQuota() = runTest {
+        server.enqueue(MockResponse().setBody("""{"balanceCents":0,"currency":"CNY","plan":"paid","subscription":{"active":true,"availableCents":2500,"monthlyLimitCents":14900,"monthlyUsedCents":2000,"weeklyLimitCents":4500,"weeklyUsedCents":2000}}"""))
+        val balance = backend.billingBalance()
+        assertEquals(0L, balance.balanceCents)
+        assertEquals(2500L, balance.subscription?.availableCents)
+        assertEquals(14900L, balance.subscription?.monthlyLimitCents)
+        server.enqueue(MockResponse().setBody("""{"usedBytes":9,"quotaBytes":209715200,"persistentUsedBytes":42,"persistentQuotaBytes":null,"persistentQuotaAvailable":false}"""))
+        val usage = backend.mediaUsage()
+        assertEquals(9L, usage.usedBytes)
+        assertEquals(42L, usage.persistentUsedBytes)
+        assertNull(usage.persistentQuotaBytes)
+        assertEquals(false, usage.persistentQuotaAvailable)
+    }
+
     @Test fun myProjectsDecodesBareArray() = runTest {
-        server.enqueue(MockResponse().setBody("""[{"deviceId":"d1","key":"k1","name":"n1"}]"""))
+        server.enqueue(MockResponse().setBody("""[{"projectUid":"uid","name":"n1","locations":[{"kind":"desktop","deviceId":"d1","key":"k1","online":true}]}]"""))
 
         val projects = backend.myProjects()
 
-        assertEquals(listOf(RelayProject("d1", null, "k1", "n1")), projects)
+        assertEquals("uid", projects.single().id)
+        assertEquals("d1", projects.single().deviceId)
+        assertEquals("/api/mobile/catalog", server.takeRequest().path)
     }
 
     @Test fun unauthorizedEnvelopeThrowsAndClearsSession() = runTest {

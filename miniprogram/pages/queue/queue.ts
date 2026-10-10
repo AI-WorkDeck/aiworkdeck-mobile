@@ -158,7 +158,7 @@ Page({
   refresh() {
     const project = getSelectedProject()
     if (!project) return
-    const pid = projectId({ deviceId: project.deviceId, projectKey: project.key })
+    const pid = projectId({ deviceId: project.deviceId, projectKey: project.key, projectUid: project.projectUid })
     const all = listItems(pid)
     const pick = (f: (it: QueueItem) => boolean) => all.filter(f).map(toDisplayItem)
     const sections: Section[] = [

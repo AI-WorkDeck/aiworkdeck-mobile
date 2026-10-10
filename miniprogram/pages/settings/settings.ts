@@ -26,6 +26,10 @@ interface AppGlobal {
 const CAN_RECHARGE: boolean = (CAPS.recharge as string | false) !== false
 
 /** 金额格式化按契约统一口径（contract/schema/billing.schema.json），不在这里重写。 */
+function credits(cents: number): string {
+  return t('subscription.credits', { amount: (cents / 100).toFixed(2) })
+}
+
 function formatBalance(b: BillingBalance): string {
   return t('balance.amount', { amount: formatMoney(b.balanceCents, b.currency) })
 }
@@ -50,6 +54,7 @@ Page({
     // 未知态（还没拉到结果）不渲染，避免先出现空壳行再消失的首帧闪烁（与项目页原来同一口径）
     balanceVisible: false,
     balanceText: '',
+    subscriptionRows: [] as { label: string, value: string }[],
     // 充值入口跟余额行分开算：NOT_CONNECTED 时行在、入口也要在（dev-board#535）
     rechargeVisible: false,
     rechargeText: t('recharge.entry'),
@@ -81,6 +86,11 @@ Page({
         this.setData({
           balanceVisible: true,
           balanceText: formatBalance(b),
+          subscriptionRows: b.subscription?.active ? [
+            { label: t('subscription.available'), value: credits(b.subscription.availableCents) },
+            { label: t('subscription.weekly'), value: `${credits(b.subscription.weeklyUsedCents)} / ${credits(b.subscription.weeklyLimitCents)}` },
+            { label: t('subscription.monthly'), value: `${credits(b.subscription.monthlyUsedCents)} / ${credits(b.subscription.monthlyLimitCents)}` },
+          ] : [],
           rechargeVisible: CAN_RECHARGE,
           openHint: '',
         })
@@ -88,6 +98,7 @@ Page({
       .catch((err: ApiError) => {
         const plan = balanceRowForError(err.kind, CAN_RECHARGE)
         this.setData({
+          subscriptionRows: [],
           balanceVisible: plan.showRow,
           balanceText: plan.textKey ? t(plan.textKey) : '',
           rechargeVisible: plan.showRecharge,
