@@ -4,6 +4,7 @@
     "pages/gallery/gallery",
     "pages/login/login",
     "pages/project/project",
+    "pages/files/files",
     "pages/queue/queue",
     "pages/recharge/recharge",
     "pages/settings/settings",

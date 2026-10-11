@@ -32,6 +32,7 @@ struct WorkdeckApp: App {
 }
 
 private struct RootView: View {
+    @State private var showingProjects = false
     @Environment(AppModel.self) private var model
 
     var body: some View {
@@ -49,9 +50,20 @@ private struct RootView: View {
                 // 那两处的深色是功能性的，不是主题偏好。
                 LoginView().environment(model)
                     .preferredColorScheme(.light)
-            } else {
+            } else if showingProjects {
                 WorkspaceView().environment(model)
+            } else {
+                CaptureFlowView(onClose: { showingProjects = true }).environment(model)
             }
+        }
+        .task(id: "\(model.accountGeneration)-\(model.didRestore)-\(model.isSignedIn)") {
+            if model.didRestore { await model.refreshBackupConsent() }
+        }
+        .sheet(isPresented: Binding(get: { model.showBackupPrompt }, set: { model.showBackupPrompt = $0 })) {
+            BackupConsentView().environment(model)
+        }
+        .onChange(of: model.isSignedIn) { _, signedIn in
+            showingProjects = false
         }
         .animation(T.A.base, value: model.isSignedIn)
         .animation(T.A.base, value: model.selectedProject)
@@ -150,7 +162,7 @@ struct CaptureFlowView: View {
 
     private var capture: some View {
         HomeView(
-            paused: route != nil,
+            paused: route != nil || model.showBackupPrompt,
             onOpenLibrary: { route = .library },
             onOpenQueue: { route = .queue },
             onOpenSettings: { route = .settings }

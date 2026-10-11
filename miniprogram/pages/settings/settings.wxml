@@ -35,6 +35,12 @@
     <text class="row__value">{{item.value}}</text>
   </view>
 
+  <view class="row tappable" bindtap="onBackup">
+    <text class="row__label">{{backupTitle}}</text>
+    <text class="row__value">{{backupText}}</text>
+  </view>
+  <view class="rule"></view>
+
   <!-- 版本 -->
   <view class="row">
     <text class="row__label">{{versionLabel}}</text>

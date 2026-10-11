@@ -126,7 +126,7 @@ Page({
     this.setData({ wxLoggingIn: true })
     wxPhoneLogin(detail.code)
       .then(() => {
-        wx.reLaunch({ url: '/pages/project/project' })
+        wx.reLaunch({ url: '/pages/index/index' })
       })
       .catch((err: ApiError) => {
         this.setData({ wxLoggingIn: false, smsOpen: true })
@@ -177,7 +177,7 @@ Page({
     this.setData({ loggingIn: true }, () => this.refreshButtons())
     verifyLoginCode(this.data.phone, this.data.code)
       .then(() => {
-        wx.reLaunch({ url: '/pages/project/project' })
+        wx.reLaunch({ url: '/pages/index/index' })
       })
       .catch((err: ApiError) => {
         this.setData({ loggingIn: false }, () => this.refreshButtons())

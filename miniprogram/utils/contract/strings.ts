@@ -1127,5 +1127,97 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
   "workspace.storageLocation": {
     "zh-Hans": "文件存储位置",
     "en": "File location"
+  },
+  "workspace.unsupportedPreview": {
+    "zh-Hans": "仅支持图片、DOCX、PPTX、XLSX、PDF、音频和视频预览，此文件不会传输。",
+    "en": "Only images, DOCX, PPTX, XLSX, PDF, audio and video can be previewed. This file will not be transferred."
+  },
+  "workspace.folderRoot": {
+    "zh-Hans": "项目根目录",
+    "en": "Project root"
+  },
+  "workspace.folderUp": {
+    "zh-Hans": "返回上一级",
+    "en": "Parent folder"
+  },
+  "home.selectProject": {
+    "zh-Hans": "选择项目",
+    "en": "Choose a project"
+  },
+  "project.files": {
+    "zh-Hans": "浏览文件",
+    "en": "Browse files"
+  },
+  "files.root": {
+    "zh-Hans": "项目根目录",
+    "en": "Project root"
+  },
+  "files.parent": {
+    "zh-Hans": "上级文件夹",
+    "en": "Parent folder"
+  },
+  "files.empty": {
+    "zh-Hans": "此文件夹暂无文件",
+    "en": "This folder is empty"
+  },
+  "files.unsupported": {
+    "zh-Hans": "手机端不支持此文件类型，未发起传输",
+    "en": "This file type is not supported on mobile. No transfer was started."
+  },
+  "files.desktopRequired": {
+    "zh-Hans": "仅当桌面端在线时才可以调取；订阅并同意文件云端备份后，可调取已完成备份的文件。",
+    "en": "Files are available only while the desktop is online. An active subscription and consent to cloud file backup allow access to files already backed up."
+  },
+  "files.previewFailed": {
+    "zh-Hans": "预览失败，请重试",
+    "en": "Preview failed. Try again."
+  },
+  "files.platformUnsupported": {
+    "zh-Hans": "当前微信版本无法预览此格式，未发起传输，请使用 iOS App 或桌面端",
+    "en": "This format cannot be previewed in WeChat. No transfer was started. Use the iOS app or desktop."
+  },
+  "backup.title": {
+    "zh-Hans": "文件云端备份",
+    "en": "Cloud file backup"
+  },
+  "backup.message": {
+    "zh-Hans": "是否开启文件云端备份？开启后，桌面端会将项目中支持手机预览的图片、DOCX、PPTX、XLSX、PDF、音频和视频上传到你的账户云空间。订阅有效期间，即使桌面端离线，也能调取已完成备份的文件。默认关闭，你可以随时在设置中关闭。",
+    "en": "Enable cloud file backup? Your desktop will upload supported project images, DOCX, PPTX, XLSX, PDF, audio and video to your account’s cloud storage. With an active subscription, files already backed up remain available while your desktop is offline. Backup is off by default and can be turned off in Settings."
+  },
+  "backup.enable": {
+    "zh-Hans": "同意并开启",
+    "en": "Agree and enable"
+  },
+  "backup.decline": {
+    "zh-Hans": "暂不开启",
+    "en": "Not now"
+  },
+  "backup.enabled": {
+    "zh-Hans": "已开启",
+    "en": "Enabled"
+  },
+  "backup.disabled": {
+    "zh-Hans": "未开启",
+    "en": "Disabled"
+  },
+  "backup.subscriptionRequired": {
+    "zh-Hans": "文件云端备份需要有效订阅；未开启时，仅当桌面端在线才可以调取文件。",
+    "en": "Cloud file backup requires an active subscription. When backup is off, files are available only while your desktop is online."
+  },
+  "backup.disable": {
+    "zh-Hans": "关闭云端备份",
+    "en": "Turn off cloud backup"
+  },
+  "backup.disableMessage": {
+    "zh-Hans": "关闭后将删除自动备份副本，桌面端原件不受影响。是否关闭？",
+    "en": "Turning this off deletes automatic backup copies and keeps the desktop originals. Turn off backup?"
+  },
+  "backup.pending": {
+    "zh-Hans": "已同意备份；文件须在桌面端完成上传后才可离线调取。",
+    "en": "Backup consent saved. Files become available offline after your desktop finishes uploading them."
+  },
+  "backup.error": {
+    "zh-Hans": "云备份设置暂不可用，请重试。",
+    "en": "Cloud backup settings are unavailable. Please try again."
   }
 }

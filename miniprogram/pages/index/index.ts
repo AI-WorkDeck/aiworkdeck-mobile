@@ -1,3 +1,4 @@
+import { promptBackupOnFirstUse } from '../../utils/backup-consent'
 /**
  * 主界面 —— 取景器优先（与 iOS 端同期重构对齐，取证拍摄流程两端逐像素一致）。
  *
@@ -117,6 +118,7 @@ Page({
   unsubscribe: null as (() => void) | null,
   /** 本页是不是当前可见页。bindstop 的恢复只在可见时做，页面被盖住时重挂没有意义。 */
   visible: false,
+  pageReady: false,
   pollTimer: null as number | null,
   recordTimer: null as number | null,
   wmTimer: null as number | null,
@@ -138,20 +140,16 @@ Page({
   },
 
   onShow() {
-    // 守门：无会话去登录，有会话无选中项目去项目选择。守门没过就不渲染真数据。
+    // 登录后始终先展示采集页；选择项目留到用户准备采集时。
     if (!getSession()) {
       wx.reLaunch({ url: '/pages/login/login' })
       return
     }
+    void promptBackupOnFirstUse()
     const project = getSelectedProject()
-    if (!project) {
-      wx.reLaunch({ url: '/pages/project/project' })
-      return
-    }
-
     this.setData({
-      project: { name: project.name, archivePath: todayArchivePath() },
-      archiveTo: t('home.archiveTo', { path: todayArchivePath() }),
+      project: { name: project?.name ?? t('home.selectProject'), archivePath: todayArchivePath() },
+      archiveTo: project ? t('home.archiveTo', { path: todayArchivePath() }) : '',
     })
 
     // 录音态与真实 recorder 对齐：页面被 reLaunch 重建等场景下不残留假录制中
@@ -181,6 +179,11 @@ Page({
     // 启动时未登录的话 recoverOnLaunch 不动队列；守门通过说明已登录，
     // 这里把遗留的待上传项带起来（幂等，单飞锁挡重复）。
     processQueue()
+  },
+
+  onReady() {
+    this.pageReady = true
+    if (this.visible) this.mountCamera()
   },
 
   onHide() {
@@ -237,7 +240,10 @@ Page({
    * 已有的做法（见 onOpenCameraSetting 的注释：wx:if 先卸再挂，让 camera 组件重新初始化）。
    */
   mountCamera() {
-    if (!this.data.cameraMounted) this.setData({ cameraMounted: true })
+    if (this.pageReady && this.visible && !this.data.cameraMounted) {
+      this.cameraCtx = null
+      this.setData({ cameraMounted: true })
+    }
   },
 
   /** 卸掉原生组件，顺手丢掉绑在它上面的 CameraContext；denied 态保留，别把权限提示闪没了。 */
@@ -344,7 +350,9 @@ Page({
       wx.showToast({ title: '请先停止当前录制', icon: 'none' })
       return
     }
-    this.setData({ mode, modeNote: MODE_NOTES[mode] })
+    this.unmountCamera()
+    this.setData({ mode, modeNote: MODE_NOTES[mode], cameraState: 'pending' })
+    if (mode !== 'audio') wx.nextTick(() => this.mountCamera())
   },
 
   // ---------- 快门 ----------
@@ -352,7 +360,7 @@ Page({
   onShutter() {
     if (isRecording()) { stopRecording(); return }
     const project = getSelectedProject()
-    if (!project) return
+    if (!project) { this.onSwitchProject(); return }
     wx.vibrateShort({ type: 'light' })
 
     const mode = this.data.mode
@@ -579,7 +587,7 @@ Page({
   async onSystemCapture() {
     if (this.data.recording) return
     const project = getSelectedProject()
-    if (!project) return
+    if (!project) { this.onSwitchProject(); return }
 
     const media = await this.chooseFromSystem(['image', 'video'])
     if (!media) return

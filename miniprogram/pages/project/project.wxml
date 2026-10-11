@@ -34,6 +34,7 @@
         bindtap="onSelectProject"
       >
         <text class="item__name">{{item.name}}</text>
+        <text class="item__files" data-gi="{{gi}}" data-ii="{{ii}}" catchtap="onOpenFiles">{{filesText}}</text>
         <image class="item__chevron" src="{{Icon.chevron}}" mode="aspectFit" />
       </view>
       <view class="rule"></view>

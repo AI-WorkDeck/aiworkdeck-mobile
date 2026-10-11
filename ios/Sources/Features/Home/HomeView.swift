@@ -31,6 +31,11 @@ struct HomeView: View {
     private let stamper = LocationStamper.shared
     @State private var mode: CapMode = .photo
     @State private var showFlash = false
+    @State private var visiblePreviews: Set<UUID> = []
+
+    private var shouldRunCamera: Bool {
+        !visiblePreviews.isEmpty && !paused && scenePhase == .active && mode != .audio && !recorder.isRecording
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -71,7 +76,6 @@ struct HomeView: View {
             }
 #endif
             if recorder.isRecording { mode = .audio }
-            else if mode != .audio { await camera.start() }
         }
         .onChange(of: mode) { _, m in
             // 离开录像档就把麦克风还回去：只有录像收声需要它，留着就会在下一次
@@ -80,27 +84,24 @@ struct HomeView: View {
             switch m {
             case .photo:
                 camera.mode = .photo
-                Task { await camera.start() }
             case .video:
                 camera.mode = .video
-                Task { await camera.start() }
             case .audio:
                 // 录音不需要取景，停掉相机会话省电；切回来再启
                 camera.stop()
             }
         }
-        .onChange(of: paused) { _, p in
-            if p {
-                if !camera.isRecording { camera.stop() }
-            } else if mode != .audio, !recorder.isRecording {
-                Task { await camera.start() }
-            }
+        // A sheet's task can run before its preview is attached to a window.
+        // Drive startup from actual visibility and foreground state, including
+        // the return from the first permission prompt and full-screen covers.
+        .task(id: shouldRunCamera) {
+            if shouldRunCamera { await camera.start() }
+            else if !camera.isRecording { camera.stop() }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
                 if recorder.isRecording { mode = .audio }
-                else if !paused, mode != .audio { Task { await camera.start() } }
                 Task {
                     await recorder.resumeIfInterrupted()
                     await recorder.recoverPending()
@@ -236,11 +237,16 @@ struct HomeView: View {
                         .clipped()
                 }
                 .overlay(alignment: .bottomLeading) { watermark }
-            } else if camera.permissionDenied {
-                denied
             } else {
-                CameraPreview(session: camera.session, device: camera.device, revision: camera.configurationRevision)
+                CameraPreview(session: camera.session, device: camera.device, revision: camera.configurationRevision,
+                              onVisibilityChanged: { id, visible in
+                                  if visible { visiblePreviews.insert(id) }
+                                  else { visiblePreviews.remove(id) }
+                              })
                     .overlay(alignment: .bottomLeading) { watermark }
+                    .overlay {
+                        if camera.permissionDenied { denied.frame(maxWidth: .infinity, maxHeight: .infinity).background(Color.black) }
+                    }
             }
 
             // 快门白闪：唯一的「拍到了」即时反馈，比任何提示都快

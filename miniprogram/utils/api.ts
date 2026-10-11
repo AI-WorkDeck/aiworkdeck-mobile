@@ -8,6 +8,7 @@
  */
 
 import { t } from './i18n'
+import { BACKUP_CONSENT_VERSION } from './contract/capabilities'
 import { fromCatalog, sameProject, type CatalogProject, type ProjectLocation } from './project-catalog'
 
 export const BASE_URL = 'https://addin.aiworkdeck.com'
@@ -88,7 +89,19 @@ export function getSession(): string | null {
   return typeof v === 'string' && v ? v : null
 }
 
+function clearFilePreviews(): void {
+  const pulls = wx.getStorageSync('awd.filePulls') || {}
+  for (const row of Object.values(pulls) as { path?: string }[]) {
+    if (row.path) wx.getFileSystemManager().unlink({ filePath: row.path, fail: () => {} })
+  }
+  wx.removeStorageSync('awd.filePulls')
+}
+
 export function setSession(v: string | null): void {
+  if (getSession() !== v) {
+    clearFilePreviews()
+    setSelectedProject(null)
+  }
   if (v) {
     wx.setStorageSync(KEY_SESSION, v)
   } else {
@@ -193,9 +206,9 @@ function authHeader(): Record<string, string> {
 
 function request<T>(
   url: string,
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PUT',
   data?: Record<string, unknown>,
-  opts: { bare?: boolean } = {},
+  opts: { bare?: boolean; rootEnvelope?: boolean } = {},
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     wx.request({
@@ -204,11 +217,12 @@ function request<T>(
       data,
       header: {
         ...authHeader(),
-        ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+        ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}),
       },
       success: (res) => {
         try {
-          resolve(readEnvelope<T>(res.statusCode, res.data, opts))
+          const value = readEnvelope<T>(res.statusCode, res.data, opts)
+          resolve(opts.rootEnvelope ? res.data as T : value)
         } catch (e) {
           reject(e)
         }
@@ -534,4 +548,47 @@ export function uuid(): string {
     const v = c === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
+}
+
+/** File transfer endpoints keep successful payload fields alongside code. */
+export function fileRequest<T>(path: string, data?: Record<string, unknown>, bare = false): Promise<T> {
+  return request<T>(path, data ? 'POST' : 'GET', data, { bare, rootEnvelope: true })
+}
+export function downloadProjectContent(path: string, expectedSize: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let contentType = ''
+    const task = wx.downloadFile({ url: BASE_URL + path, header: authHeader(),
+      success: result => {
+        if (result.statusCode !== 200 || contentType !== 'application/octet-stream') { reject(new ApiError(-1, t('files.error.transferFailed'))); return }
+        wx.getFileSystemManager().getFileInfo({ filePath: result.tempFilePath,
+          success: info => {
+            if (info.size === expectedSize) resolve(result.tempFilePath)
+            else reject(new ApiError(-1, t('files.error.response')))
+          }, fail: () => reject(new ApiError(-1, t('files.error.response'))),
+        })
+      }, fail: () => reject(new ApiError(-1, t('files.error.transferFailed'))),
+    })
+    task.onHeadersReceived(({ header }) => {
+      for (const name of Object.keys(header)) {
+        if (name.toLowerCase() === 'content-type') contentType = String(header[name]).split(';')[0].trim().toLowerCase()
+      }
+      if (contentType !== 'application/octet-stream') task.abort()
+    })
+    task.onProgressUpdate(progress => {
+      if (progress.totalBytesWritten > expectedSize || progress.totalBytesExpectedToWrite > expectedSize) task.abort()
+    })
+  })
+}
+
+export interface BackupConsent {
+  enabled: boolean
+  decided: boolean
+  subscriptionActive: boolean
+  consentVersion: string | null
+}
+export function backupConsent(): Promise<BackupConsent> {
+  return request<BackupConsent>('/api/mobile/backup-consent', 'GET', undefined, { bare: true })
+}
+export function setBackupConsent(enabled: boolean): Promise<BackupConsent> {
+  return request<BackupConsent>('/api/mobile/backup-consent', 'PUT', { enabled, consentVersion: BACKUP_CONSENT_VERSION }, { bare: true })
 }
