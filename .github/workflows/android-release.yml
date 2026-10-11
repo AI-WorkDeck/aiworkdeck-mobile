@@ -21,6 +21,8 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: "21" }
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
 
       # 密钥库明文只落在 runner 的临时目录（$RUNNER_TEMP，job 结束即回收），不进工作区、不进产物。
