@@ -1,1 +1,3 @@
-First public release. Capture photo, video and audio on site; each file is hashed with SHA-256 on device, stamped with time and location, queued, and filed into the matching project folder on your desktop.
+1. Find cloud, desktop, and mobile projects in a unified list with stable project and file identities.
+2. View subscription monthly and weekly allowances separately from your prepaid balance, with clearer cloud storage and temporary relay usage.
+3. Improve cloud project archiving and file access while retaining unassigned photo and audio capture.
