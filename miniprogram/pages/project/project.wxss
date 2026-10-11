@@ -71,3 +71,5 @@
   height: 32rpx;
   flex-shrink: 0;
 }
+
+.item__files { margin-left: auto; padding: var(--s3); color: var(--accent); font-size: var(--t-small); }

@@ -1,3 +1,3 @@
-1. Find cloud, desktop, and mobile projects in a unified list with stable project and file identities.
-2. View subscription monthly and weekly allowances separately from your prepaid balance, with clearer cloud storage and temporary relay usage.
-3. Improve cloud project archiving and file access while retaining unassigned photo and audio capture.
+1. Open directly to photo, video and audio capture after signing in, with improved camera startup on first entry.
+2. Browse project folders, including empty folders, and identify unsupported file types before transfer.
+3. Choose whether to enable cloud file backup. Active subscribers who explicitly enable it can preview backed-up files while their computer is offline; otherwise, the app guides you to an online computer.

@@ -1,0 +1,19 @@
+<nav-bar title="{{title}}" show-back="{{true}}" />
+<view class="page" style="padding-bottom: {{metrics.bottomInset}}px;">
+  <view class="folder"><text>{{folder || rootText}}</text></view>
+  <view wx:if="{{folder}}" class="status__btn tappable" bindtap="onParent">{{parentText}}</view>
+  <view wx:if="{{loading || busy}}" class="status__text">{{loadingText}}</view>
+  <view wx:if="{{error}}" class="status">
+    <text class="status__text">{{error}}</text>
+    <view class="status__btn tappable" bindtap="loadFiles">{{retryText}}</view>
+  </view>
+  <text wx:if="{{truncated}}" class="status__text">{{limitText}}</text>
+  <video wx:if="{{videoPath}}" src="{{videoPath}}" controls binderror="onPreviewError" />
+  <view wx:if="{{audioPlaying}}" class="status__btn tappable" bindtap="onStopAudio">{{audioText}} ■</view>
+  <text wx:if="{{!loading && !error && entries.length === 0}}" class="status__text">{{emptyText}}</text>
+  <view wx:for="{{entries}}" wx:key="key" class="file-row tappable" data-index="{{index}}" bindtap="onEntry">
+    <text class="file-row__icon">{{item.folder ? '▣' : '▤'}}</text>
+    <text class="file-row__name">{{item.name}}</text>
+    <text wx:if="{{item.folder}}">›</text>
+  </view>
+</view>

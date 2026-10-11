@@ -14,5 +14,7 @@
     "recharge":           { "ios": "iap", "miniprogram": "virtual", "android": "external", "harmony": "external" },
     "intlAccount":        { "ios": true,  "miniprogram": false,     "android": true,  "harmony": true,
                             "degradedNotice": "cap.noIntlAccount" }
-  }
+  },
+  "previewExtensions": {"ios": ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tif", "tiff", "docx", "pptx", "xlsx", "pdf", "m4a", "mp3", "wav", "aac", "caf", "aif", "aiff", "mp4", "mov", "m4v"], "miniprogram": ["jpg", "jpeg", "png", "gif", "docx", "pptx", "xlsx", "pdf", "m4a", "mp3", "wav", "aac", "mp4"]},
+  "backupConsentVersion": "2026-10-11"
 }

@@ -40,7 +40,7 @@ final class ProjectFilesLoopbackTests: XCTestCase {
             let file = try XCTUnwrap(listing.files.first { $0.id == fixture.fileID })
             XCTAssertEqual(file.name, fixture.fileName)
             XCTAssertEqual(file.size, fixture.size)
-            let quote = try await client.quote(for: file)
+            let quote = try await client.quote(for: file, in: project)
             XCTAssertGreaterThanOrEqual(quote.credits, 0)
             // Explicit test consent. All billing is replaced by the Java fixture's in-memory mock.
             let pull = try await client.preparePull(project: project, file: file)

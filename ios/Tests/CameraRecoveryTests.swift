@@ -1,5 +1,6 @@
 import AVFoundation
 import XCTest
+import UIKit
 @testable import Workdeck
 
 /// 相机会话的存活策略（dev-board#461）。
@@ -28,6 +29,20 @@ final class CameraRecoveryTests: XCTestCase {
         super.setUp()
         control = FakeControl()
         recovery = CameraRecovery(control: control)
+    }
+
+    func testPreviewReportsWindowAttachmentBeforeCameraStartupAndDetachmentOnClose() {
+        let preview = CameraPreview.PreviewView()
+        var visibility: [Bool] = []
+        preview.onVisibilityChanged = { _, visible in visibility.append(visible) }
+        XCTAssertTrue(visibility.isEmpty, "Constructing a capture screen must not start the camera before presentation")
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 640))
+        window.addSubview(preview)
+        XCTAssertEqual(visibility, [true])
+        preview.removeFromSuperview()
+        XCTAssertEqual(visibility, [true, false])
+        window.addSubview(preview)
+        XCTAssertEqual(visibility, [true, false, true], "Reopening capture must issue a fresh start without mode switching")
     }
 
     // MARK: - 媒体服务重置

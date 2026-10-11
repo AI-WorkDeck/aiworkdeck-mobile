@@ -1,3 +1,4 @@
+import { chooseBackupConsent } from '../../utils/backup-consent'
 /**
  * 「我的」页（dev-board#535）。
  *
@@ -9,7 +10,7 @@
  * 余额行与充值入口的显隐规则一律走契约（contract/schema/billing.schema.json 的 UI 映射，
  * 实现在 utils/money.ts 的 balanceRowForError），按 kind 分支，不匹配 message 措辞。
  */
-import { billingBalance, getPhone, logout, maskPhone } from '../../utils/api'
+import { billingBalance, getPhone, logout, maskPhone, backupConsent, setBackupConsent, getSession } from '../../utils/api'
 import type { ApiError, BillingBalance } from '../../utils/api'
 import type { Metrics } from '../../utils/layout'
 import { t } from '../../utils/i18n'
@@ -63,6 +64,7 @@ Page({
     versionLabel: t('settings.version'),
     versionText: '',
     signOutText: t('common.signOut'),
+    backupTitle: t('backup.title'), backupText: '', backupBusy: false,
   },
 
   onLoad() {
@@ -77,6 +79,7 @@ Page({
   onShow() {
     // 从充值页返回也走这里：付完钱回来余额要是新的
     this.loadBalance()
+    this.loadBackup()
   },
 
   /** 成功显示金额、充值入口按本端能力显隐；失败一律按 kind 走 balanceRowForError。 */
@@ -105,6 +108,31 @@ Page({
           openHint: plan.textKey === 'balance.notConnected' ? t('recharge.openHint') : '',
         })
       })
+  },
+
+  async loadBackup() {
+    const session = getSession()
+    try {
+      const state = await backupConsent()
+      if (session === getSession()) this.setData({ backupText: t(state.enabled ? 'backup.enabled' : 'backup.disabled') })
+    } catch { if (session === getSession()) this.setData({ backupText: t('backup.error') }) }
+  },
+
+  async onBackup() {
+    if (this.data.backupBusy) return
+    const session = getSession()
+    this.setData({ backupBusy: true })
+    try {
+      const state = await backupConsent()
+      if (session !== getSession()) return
+      if (state.enabled) {
+        const result = await wx.showModal({ title: t('backup.disable'), content: t('backup.disableMessage') })
+        if (result.confirm && session === getSession()) await setBackupConsent(false)
+      } else { await chooseBackupConsent(state) }
+      if (session === getSession()) await this.loadBackup()
+    } catch {
+      if (session === getSession()) wx.showToast({ icon: 'none', title: t('backup.error') })
+    } finally { this.setData({ backupBusy: false }) }
   },
 
   onRecharge() {

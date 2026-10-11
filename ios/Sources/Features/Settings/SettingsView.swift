@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var balanceState: BalanceState = .unknown
     @State private var showRecharge = false
     @State private var showProjects = false
+    @State private var showBackup = false
 
     /// 本端走内购（契约 capabilities.recharge = "iap"）。取这个值而不是写死 true：
     /// 契约改成别的通道时这一行会跟着变，界面不会偷偷留着一个错的入口。
@@ -93,6 +94,16 @@ struct SettingsView: View {
                             .frame(minHeight: T.touchMin, alignment: .leading)
                     }
 
+                    group(tr("backup.title")) {
+                        if let consent = model.backupConsent {
+                            Text(tr(consent.enabled ? "backup.enabled" : "backup.disabled"))
+                        }
+                        if let error = model.backupError { Text(error).foregroundStyle(T.S.failed) }
+                        Button(tr("backup.title")) { showBackup = true }
+                            .accessibilityIdentifier("settings.backup")
+                            .frame(minHeight: T.touchMin)
+                    }
+
                     group(tr("settings.account")) {
                         infoRow(tr("settings.signedIn"), model.account?.displayName ?? "—")
                         // 还没读完时整行不渲染，见 BalanceState 上的注释。
@@ -147,7 +158,7 @@ struct SettingsView: View {
             .task {
 #if DEBUG
                 // 截图模式不打网络请求：等超时只会截到一行「—」
-                if Shot.isOn {
+                if Shot.isOn || WorkspaceUITestSeed.isOn {
                     usage = API.MediaUsage(usedBytes: Shot.usage.used, quotaBytes: Shot.usage.quota)
                     return
                 }
@@ -166,6 +177,7 @@ struct SettingsView: View {
                     Button(tr("common.close"), action: onClose).accessibilityIdentifier("settings.close")
                 }
             }
+            .sheet(isPresented: $showBackup) { BackupConsentView().environment(model) }
             .sheet(isPresented: $showProjects) {
                 ProjectPickerView(onClose: { showProjects = false }).environment(model)
             }
@@ -205,7 +217,7 @@ struct SettingsView: View {
 #if DEBUG
         // 截图模式不打网络请求。余额行留在 .unknown（整行不渲染）——
         // 上架截图上摆一个编出来的余额，等于对着审核和用户报一个假数。
-        if Shot.isOn { return }
+        if Shot.isOn || WorkspaceUITestSeed.isOn { return }
 #endif
         guard AccountRegion.current.billingEnabled else { return }
         if let result = try? await API.shared.billingBalance() {

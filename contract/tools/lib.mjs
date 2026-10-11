@@ -101,7 +101,10 @@ function renderTsStrings(c) {
 function renderTsCaps(c, client) {
   const caps = Object.fromEntries(Object.entries(c.caps.capabilities).map(([k, v]) => [k, v[client]]))
   const notice = Object.fromEntries(Object.entries(c.caps.capabilities).filter(([, v]) => v.degradedNotice).map(([k, v]) => [k, v.degradedNotice]))
-  return H('//') + `export const CLIENT = ${q(client)}
+  return H('//') + `export const BACKUP_CONSENT_VERSION = ${q(c.caps.backupConsentVersion)}
+export const PREVIEW_EXTENSIONS: readonly string[] = ${q(c.caps.previewExtensions.ios)}
+export const MINIPROGRAM_PREVIEW_EXTENSIONS: readonly string[] = ${q(c.caps.previewExtensions.miniprogram)}
+export const CLIENT = ${q(client)}
 export const CAPS = ${JSON.stringify(caps, null, 2)} as const
 export const DEGRADED_NOTICE: Record<string, string> = ${q(notice)}
 `
@@ -212,6 +215,8 @@ function renderSwiftCaps(c) {
   const v = (x) => x === null ? 'nil' : typeof x === 'string' ? q(x) : String(x)
   const caps = c.caps.capabilities
   return H('//') + `enum ContractCapabilities {
+    static let backupConsentVersion = ${q(c.caps.backupConsentVersion)}
+    static let previewExtensions: [String] = ${q(c.caps.previewExtensions.ios)}
     static let client = "ios"
     static let backgroundUpload: Bool = ${caps.backgroundUpload.ios}
     static let maxVideoSeconds: Int? = ${v(caps.maxVideoSeconds.ios)}

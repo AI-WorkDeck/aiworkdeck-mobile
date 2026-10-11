@@ -1,0 +1,6 @@
+@import '../project/project.wxss';
+.folder { padding: var(--s4) 0; color: var(--fg-muted); font-size: var(--t-small); overflow-wrap: anywhere; }
+.file-row { display: flex; align-items: center; gap: var(--s3); padding: var(--s4) 0; border-bottom: 1px solid var(--rule); }
+.file-row__icon { color: var(--accent); }
+.file-row__name { flex: 1; color: var(--fg); font-size: var(--t-body); overflow-wrap: anywhere; }
+video { width: 100%; }

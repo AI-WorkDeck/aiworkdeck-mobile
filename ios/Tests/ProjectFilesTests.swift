@@ -29,6 +29,157 @@ final class ProjectFilesTests: XCTestCase {
                             session: session, pollingInterval: 1, pollingAttempts: 3, recoveryRoot: root)
     }
 
+    func testUnsupportedFilesNeverQuotePrepareOrTransferIncludingRestoredPulls() async throws {
+        ProjectFilesURLProtocol.handler = { _ in XCTFail("Unsupported file must not make any request"); throw URLError(.badURL) }
+        let service = client()
+        for name in ["notes.txt", "archive.zip", "legacy.doc", "script.js", "photo.jpg.exe"] {
+            let unsupported = RemoteProjectFile(id: name, name: name, path: name, size: 3)
+            do { _ = try await service.quote(for: unsupported, in: project); XCTFail("Expected rejection") } catch {}
+            do { _ = try await service.preparePull(project: project, file: unsupported); XCTFail("Expected rejection") } catch {}
+            do { _ = try await service.download(ProjectFilePull(project: project, file: unsupported)); XCTFail("Expected rejection") } catch {}
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: root.path), "Unsupported files must not create a pending transfer")
+        await service.close()
+    }
+
+    func testConsentDeclineUsesPutAndPersistsServerDecisionOnly() async throws {
+        ProjectFilesURLProtocol.handler = { request in
+            XCTAssertEqual(request.url?.path, "/api/mobile/backup-consent")
+            XCTAssertEqual(request.httpMethod, "PUT")
+            let body = try Self.body(of: request)
+            XCTAssertEqual(body["enabled"] as? Bool, false)
+            XCTAssertEqual(body["consentVersion"] as? String, "2026-10-11")
+            return .json(#"{"enabled":false,"decided":true,"subscriptionActive":false,"consentVersion":"2026-10-11"}"#)
+        }
+        let service = client()
+        let consent = try await service.setBackupConsent(enabled: false)
+        XCTAssertTrue(consent.decided)
+        XCTAssertFalse(consent.canReadCloud)
+        await service.close()
+    }
+
+    func testOnlineDesktopListingIncludesCloudOnlyFilesAndPrefersLocalCopy() async throws {
+        let online = RelayProject(deviceId: "desktop-a", deviceName: "Mac", key: "7", name: "Matter", projectUid: "uid",
+                                  locations: [ProjectLocation(kind: "desktop", deviceId: "desktop-a", deviceName: "Mac", key: "7", online: true)])
+        ProjectFilesURLProtocol.handler = { request in
+            switch request.url!.path {
+            case "/api/mobile/transfer/list": return .json(#"{"code":0,"id":10}"#)
+            case "/api/mobile/transfer/10":
+                return .json(#"{"code":0,"transfer":{"id":10,"kind":"LIST","status":"DONE","files":[{"id":"local","uid":"same","name":"local.pdf","path":"local.pdf","size":3}],"truncated":false}}"#)
+            case "/api/mobile/backup-consent":
+                return .json(#"{"enabled":true,"decided":true,"subscriptionActive":true,"consentVersion":null}"#)
+            case "/api/mobile/catalog/uid/files":
+                return .json(#"{"files":[{"id":"cloud-copy","uid":"same","name":"local.pdf","path":"local.pdf","size":3,"source":"cloud"},{"id":"local","uid":"only","name":"only.pdf","path":"only.pdf","size":3,"source":"cloud"}]}"#)
+            default: XCTFail("Unexpected route"); throw URLError(.badURL)
+            }
+        }
+        let service = client()
+        let listing = try await service.files(in: online)
+        XCTAssertEqual(listing.files.map(\.uid), ["same", "only"])
+        XCTAssertEqual(Set(listing.files.map(\.rowID)).count, 2)
+        await service.close()
+    }
+
+    func testExpiredSubscriptionBlocksCloudContentEvenForRestoredPull() async throws {
+        var paths: [String] = []
+        ProjectFilesURLProtocol.handler = { request in
+            paths.append(request.url!.path)
+            return .json(#"{"enabled":true,"decided":true,"subscriptionActive":false,"consentVersion":"2026-10-11"}"#)
+        }
+        let service = client()
+        let cloud = RelayProject(deviceId: "cloud", deviceName: nil, key: "cloud", name: "Cloud", projectUid: "uid")
+        let stored = ProjectFilePull(project: cloud, file: RemoteProjectFile(id: "f", name: "test.pdf", path: "test.pdf", size: 3, uid: "file-uid", source: "cloud"))
+        do { _ = try await service.download(stored); XCTFail("Expected subscription requirement") } catch {}
+        XCTAssertEqual(paths, ["/api/mobile/backup-consent"])
+        await service.close()
+    }
+
+    func testRejectedConsentWriteDoesNotBecomeADecision() async throws {
+        ProjectFilesURLProtocol.handler = { _ in .json(#"{"code":401,"message":"Expired session"}"#) }
+        let service = client()
+        do { _ = try await service.setBackupConsent(enabled: false); XCTFail("Failed writes cannot be treated as decided") } catch {}
+        await service.close()
+    }
+
+    func testRefreshingOfflineDetailsRecognizesDesktopReconnection() async throws {
+        var online = false
+        var lists = 0
+        ProjectFilesURLProtocol.handler = { request in
+            switch request.url!.path {
+            case "/api/mobile/catalog":
+                return .json("[{\"projectUid\":\"uid\",\"name\":\"Matter\",\"locations\":[{\"kind\":\"desktop\",\"deviceId\":\"desktop-a\",\"key\":\"7\",\"online\":\(online)}]}]")
+            case "/api/mobile/catalog/uid/files":
+                return .json(#"{"files":[{"id":"file","name":"one.pdf","path":"one.pdf","size":3,"source":"desktop","deviceId":"desktop-a","projectKey":"7"}]}"#)
+            case "/api/mobile/transfer/list": lists += 1; return .json(#"{"code":0,"id":10}"#)
+            case "/api/mobile/transfer/10":
+                return .json(#"{"code":0,"transfer":{"id":10,"kind":"LIST","status":"DONE","files":[{"id":"file","name":"one.pdf","path":"one.pdf","size":3}],"truncated":false}}"#)
+            case "/api/mobile/transfer/quote": return .json(#"{"code":0,"credits":1}"#)
+            default: XCTFail("Unexpected route"); throw URLError(.badURL)
+            }
+        }
+        let service = client()
+        let offline = RelayProject(deviceId: "desktop-a", deviceName: "Mac", key: "7", name: "Matter", projectUid: "uid",
+                                   locations: [ProjectLocation(kind: "desktop", deviceId: "desktop-a", deviceName: "Mac", key: "7", online: false)])
+        let first = try await service.files(in: offline)
+        XCTAssertEqual(lists, 0)
+        do { _ = try await service.quote(for: first.files[0], in: offline); XCTFail("Expected offline requirement") } catch {}
+        online = true
+        let refreshed = try await service.files(in: offline)
+        XCTAssertEqual(lists, 1)
+        let quote = try await service.quote(for: refreshed.files[0], in: offline)
+        XCTAssertEqual(quote.credits, 1)
+        await service.close()
+    }
+
+    func testOfflineMetadataIncludesEmptyFoldersButCannotQuoteOrPullDesktopBytes() async throws {
+        var paths: [String] = []
+        ProjectFilesURLProtocol.handler = { request in
+            paths.append(request.url!.path)
+            if request.url!.path == "/api/mobile/catalog" { return .json("[]") }
+            return .json(#"{"files":[{"id":"file","name":"file.pdf","path":"Folder/file.pdf","size":3,"source":"desktop","deviceId":"desktop-a","projectKey":"7"},{"id":"empty","name":"Empty","path":"Empty","size":0,"isFolder":true,"source":"desktop","deviceId":"desktop-a","projectKey":"7"}]}"#)
+        }
+        let service = client()
+        let offline = RelayProject(deviceId: "desktop-a", deviceName: "Mac", key: "7", name: "Matter", projectUid: "uid",
+                                   locations: [ProjectLocation(kind: "desktop", deviceId: "desktop-a", deviceName: "Mac", key: "7", online: false)])
+        let listing = try await service.files(in: offline)
+        XCTAssertEqual(listing.files.map(\.id), ["file", "empty"])
+        XCTAssertEqual(ProjectFileDirectory(files: listing.files).folders(in: "").map(\.path), ["Empty", "Folder"])
+        do { _ = try await service.quote(for: listing.files[0], in: offline); XCTFail("Offline desktop cannot quote") } catch {}
+        do { _ = try await service.download(ProjectFilePull(project: offline, file: listing.files[0])); XCTFail("Offline desktop cannot transfer") } catch {}
+        XCTAssertEqual(paths, ["/api/mobile/catalog", "/api/mobile/catalog/uid/files"])
+        await service.close()
+    }
+
+    func testOfflineBackupRetainsDesktopIdentityAndRejectsOtherLocations() async throws {
+        ProjectFilesURLProtocol.handler = { request in
+            if request.url!.path == "/api/mobile/backup-consent" {
+                return .json(#"{"enabled":true,"decided":true,"subscriptionActive":true,"consentVersion":null}"#)
+            }
+            if request.url!.path == "/api/mobile/catalog" { return .json("[]") }
+            XCTAssertEqual(request.url!.path, "/api/mobile/catalog/uid/files")
+            return .json(#"{"files":[{"id":"a","uid":"a-uid","name":"one.pdf","path":"Folder/one.pdf","size":3,"source":"backup","deviceId":"desktop-a","projectKey":"7"},{"id":"b","name":"other.pdf","path":"other.pdf","size":3,"source":"backup","deviceId":"desktop-b","projectKey":"7"}]}"#)
+        }
+        let service = client()
+        let offline = RelayProject(deviceId: "desktop-a", deviceName: "Mac", key: "7", name: "Matter", projectUid: "uid",
+                                   locations: [ProjectLocation(kind: "desktop", deviceId: "desktop-a", deviceName: "Mac", key: "7", online: false)])
+        let listing = try await service.files(in: offline)
+        XCTAssertEqual(listing.files.map(\.id), ["a"])
+        await service.close()
+    }
+
+    func testBackupReadDoesNotReuseAnEarlierDesktopPullRoute() async throws {
+        let service = client()
+        let desktopFile = RemoteProjectFile(id: "f", name: "test.pdf", path: "test.pdf", size: 3, uid: "uid", source: "desktop")
+        let backupFile = RemoteProjectFile(id: "f", name: "test.pdf", path: "test.pdf", size: 3, uid: "uid", source: "backup")
+        let desktop = try await service.preparePull(project: project, file: desktopFile)
+        let backup = try await service.preparePull(project: project, file: backupFile)
+        XCTAssertNotEqual(desktop.requestID, backup.requestID)
+        XCTAssertEqual(backup.file.source, "backup")
+        let desktopRetry = try await service.preparePull(project: project, file: desktopFile)
+        XCTAssertEqual(desktopRetry.requestID, desktop.requestID)
+        await service.close()
+    }
+
     func testQuoteIsReadOnlyAndUsesFixedLoginSnapshot() async throws {
         var requests: [URLRequest] = []
         ProjectFilesURLProtocol.handler = { request in
@@ -36,7 +187,7 @@ final class ProjectFilesTests: XCTestCase {
             return .json(#"{"code":0,"credits":2,"balanceCents":null}"#)
         }
         let service = client()
-        let quote = try await service.quote(for: file)
+        let quote = try await service.quote(for: file, in: project)
         XCTAssertEqual(quote.credits, 2)
         XCTAssertNil(quote.balanceCents)
         let pull = try await service.preparePull(project: project, file: file)
@@ -55,7 +206,7 @@ final class ProjectFilesTests: XCTestCase {
             .json(#"{"code":4010,"message":"Session expired","credits":0,"balanceCents":9999}"#)
         }
         let service = client()
-        do { _ = try await service.quote(for: file); XCTFail("Expected rejected envelope") }
+        do { _ = try await service.quote(for: file, in: project); XCTFail("Expected rejected envelope") }
         catch { XCTAssertEqual(error.localizedDescription, "Session expired") }
         do { _ = try await service.projects(); XCTFail("Expected rejected envelope") }
         catch { XCTAssertEqual(error.localizedDescription, "Session expired") }
@@ -188,7 +339,7 @@ final class ProjectFilesTests: XCTestCase {
         let service = client()
         let oversized = RemoteProjectFile(id: "large", name: "large.pdf", path: "large.pdf",
                                           size: ProjectFilesService.maximumPreviewBytes + 1)
-        do { _ = try await service.quote(for: oversized); XCTFail("Expected limit") } catch {}
+        do { _ = try await service.quote(for: oversized, in: project); XCTFail("Expected limit") } catch {}
         do { _ = try await service.download(ProjectFilePull(project: project, file: oversized)); XCTFail("Expected limit") } catch {}
         await service.close()
     }
@@ -248,7 +399,7 @@ final class ProjectFilesTests: XCTestCase {
         await service.close()
         do { _ = try await service.projects(); XCTFail("Expected closed") } catch {}
         do { _ = try await service.download(pull); XCTFail("Expected closed") } catch {}
-        do { _ = try await service.quote(for: file); XCTFail("Expected closed") } catch {}
+        do { _ = try await service.quote(for: file, in: project); XCTFail("Expected closed") } catch {}
     }
 
     func testCompletedPreviewReusesPullUntilRemovedAndKeepsProjectIdentity() async throws {
@@ -381,13 +532,16 @@ final class ProjectFilesTests: XCTestCase {
             let path = request.url!.path
             paths.append(path)
             XCTAssertEqual(request.value(forHTTPHeaderField: "X-Session-Id"), "test-account-a")
+            if path == "/api/mobile/backup-consent" {
+                return .json(#"{"enabled":true,"decided":true,"subscriptionActive":true,"consentVersion":"2026-10-11"}"#)
+            }
             if path == "/api/mobile/catalog" {
                 return .json(#"[{"projectUid":"cloud-uid","name":"Cloud","locations":[{"kind":"cloud","deviceId":"cloud","key":"3","online":true}]}]"#)
             }
             if path.hasSuffix("/files") {
                 return .json(#"{"files":[{"id":"23","uid":"file-uid","source":"cloud","name":"a.pdf","path":"a.pdf","size":3},{"id":"24","uid":"desktop-file","source":"desktop","name":"desktop.pdf","path":"desktop.pdf","size":3}],"count":2,"truncated":false}"#)
             }
-            XCTAssertEqual(path, "/api/mobile/catalog/cloud-uid/files/file-uid/content")
+            XCTAssertEqual(path, "/api/mobile/preview/catalog/cloud-uid/files/file-uid/content")
             return .binary(Data([1, 2, 3]))
         }
         let service = client()
@@ -397,7 +551,7 @@ final class ProjectFilesTests: XCTestCase {
         let pull = try await service.preparePull(project: projects[0], file: listing.files[0])
         let url = try await service.download(pull)
         XCTAssertEqual(try Data(contentsOf: url), Data([1, 2, 3]))
-        XCTAssertEqual(paths.count, 3)
+        XCTAssertEqual(paths.count, 4)
         XCTAssertFalse(paths.contains { $0.contains("/transfer/") })
         await service.close()
     }

@@ -13,6 +13,7 @@ actor ProjectFilesService: ProjectFilesServing {
     private let recoveryDirectory: URL
     private let noRedirect = ProjectFilesNoRedirect()
     private var closed = false
+    private var desktopAvailability: [String: Bool] = [:]
     private var downloads: [UUID: Task<URL, Error>] = [:]
     private var previews: [UUID: Preview] = [:]
     private var bytesOnDisk: Int64 = 0
@@ -51,6 +52,18 @@ actor ProjectFilesService: ProjectFilesServing {
 
     deinit { try? FileManager.default.removeItem(at: cacheDirectory) }
 
+    func backupConsent() async throws -> BackupConsent {
+        let data = try await response(request("/api/mobile/backup-consent"))
+        return try decode(BackupConsent.self, data)
+    }
+
+    func setBackupConsent(enabled: Bool) async throws -> BackupConsent {
+        var req = try request("/api/mobile/backup-consent", body: ["enabled": enabled, "consentVersion": ContractCapabilities.backupConsentVersion])
+        req.httpMethod = "PUT"
+        let data = try await response(req)
+        return try decode(BackupConsent.self, data)
+    }
+
     func projects() async throws -> [RelayProject] {
         let data = try await response(request("/api/mobile/catalog"))
         if let envelope = try? JSONDecoder().decode(CodeOnly.self, from: data), envelope.code != 0 {
@@ -60,32 +73,86 @@ actor ProjectFilesService: ProjectFilesServing {
     }
 
     func files(in project: RelayProject) async throws -> ProjectFileListing {
-        if project.isCloud, let uid = project.projectUid {
-            let data = try await response(request("/api/mobile/catalog/\(uid)/files"))
-            if let envelope = try? JSONDecoder().decode(CodeOnly.self, from: data), envelope.code != 0 {
-                throw APIError(message: envelope.message ?? tr("files.error.response"))
+        var desktopOffline = desktopAvailability[project.legacyID].map { !$0 }
+            ?? (project.locations?.first(where: { $0.alias == project.legacyID })?.online == false)
+        if desktopOffline, !project.isCloud {
+            if let refreshed = try? await projects().first(where: { $0.matches(project) }),
+               let online = refreshed.locations?.first(where: { $0.alias == project.legacyID })?.online {
+                desktopOffline = !online
             }
-            let listing = try decode(CatalogFiles.self, data)
-            let files = listing.files.filter { $0.source == nil || $0.source == "cloud" }
-            return ProjectFileListing(files: files, count: files.count,
-                                      totalCount: nil, truncated: listing.truncated)
+            try ensureOpen()
+            desktopAvailability[project.legacyID] = !desktopOffline
         }
-        let created: Created = try await json("/api/mobile/transfer/list", body: [
-            "deviceId": project.deviceId, "projectKey": project.key, "requestId": UUID().uuidString,
-        ])
-        let transfer = try await poll(id: created.id, kind: "LIST", until: "DONE")
-        guard let files = transfer.files else { throw failure("files.error.response") }
-        return ProjectFileListing(files: files, count: transfer.count,
-                                  totalCount: transfer.totalCount, truncated: transfer.truncated)
+        if project.isCloud || desktopOffline { return try await catalogFiles(in: project) }
+        do {
+            let created: Created = try await json("/api/mobile/transfer/list", body: [
+                "deviceId": project.deviceId, "projectKey": project.key, "requestId": UUID().uuidString,
+            ])
+            let transfer = try await poll(id: created.id, kind: "LIST", until: "DONE")
+            guard let files = transfer.files else { throw failure("files.error.response") }
+            desktopAvailability[project.legacyID] = true
+            if project.projectUid != nil, let cloud = try? await catalogFiles(in: project) {
+                try ensureOpen()
+                let additional = cloud.files.filter { candidate in
+                    !files.contains { local in
+                        if let uid = candidate.uid, let localUID = local.uid { return uid == localUID }
+                        return candidate.source == "desktop" && local.id == candidate.id
+                    }
+                }
+                return ProjectFileListing(files: files + additional,
+                                          totalCount: transfer.totalCount.map { $0 + additional.count },
+                                          truncated: (transfer.truncated ?? (files.count >= 2000)) || cloud.truncated)
+            }
+            try ensureOpen()
+            return ProjectFileListing(files: files, count: transfer.count,
+                                      totalCount: transfer.totalCount, truncated: transfer.truncated)
+        } catch is CancellationError { throw CancellationError() }
+        catch {
+            // The online bit is a snapshot. A desktop may disconnect after the
+            // catalog was fetched; only a fresh authorized cloud listing can recover it.
+            desktopAvailability[project.legacyID] = false
+            guard project.projectUid != nil else { throw error }
+            let listing = try await catalogFiles(in: project)
+            guard !listing.files.isEmpty else { throw failure("files.desktopRequired") }
+            return listing
+        }
     }
 
-    func quote(for file: RemoteProjectFile) async throws -> ProjectFileQuote {
-        try validateSize(file.size)
+    private func catalogFiles(in project: RelayProject) async throws -> ProjectFileListing {
+        guard let uid = project.projectUid else { throw failure("files.desktopRequired") }
+        let data = try await response(request("/api/mobile/catalog/\(uid)/files"))
+        if let envelope = try? JSONDecoder().decode(CodeOnly.self, from: data), envelope.code != 0 {
+            throw APIError(message: envelope.message ?? tr("files.error.response"))
+        }
+        let listing = try decode(CatalogFiles.self, data)
+        let files = listing.files.filter {
+            if $0.source == "cloud" || (project.isCloud && $0.source == nil) { return true }
+            return ($0.source == "backup" || $0.source == "desktop") && $0.deviceId == project.deviceId && $0.projectKey == project.key
+        }
+        return ProjectFileListing(files: files, count: files.count,
+                                  totalCount: nil, truncated: listing.truncated)
+    }
+
+    func quote(for file: RemoteProjectFile, in project: RelayProject) async throws -> ProjectFileQuote {
+        try validatePreview(file)
+        try await validateAccess(project: project, file: file)
+        if project.isCloud || file.source == "cloud" || file.source == "backup" {
+            return ProjectFileQuote(credits: 0, balanceCents: nil)
+        }
         return try await json("/api/mobile/transfer/quote?bytes=\(max(1, file.size))")
+    }
+
+    private func validateAccess(project: RelayProject, file: RemoteProjectFile) async throws {
+        if project.isCloud || file.source == "backup" || file.source == "cloud" {
+            guard try await backupConsent().canReadCloud else { throw failure("files.desktopRequired") }
+        } else if (desktopAvailability[project.legacyID] ?? project.locations?.first(where: { $0.alias == project.legacyID })?.online) == false {
+            throw failure("files.desktopRequired")
+        }
     }
 
     func preparePull(project: RelayProject, file: RemoteProjectFile) throws -> ProjectFilePull {
         try ensureOpen()
+        try validatePreview(file)
         if let preview = previews.values.first(where: { $0.pull.matches(project: project, file: file) }) {
             return preview.pull
         }
@@ -101,6 +168,8 @@ actor ProjectFilesService: ProjectFilesServing {
 
     func download(_ pull: ProjectFilePull) async throws -> URL {
         try ensureOpen()
+        try validatePreview(pull.file)
+        try await validateAccess(project: pull.project, file: pull.file)
         if let task = downloads[pull.requestID] { return try await task.value }
         let task = Task {
             do { return try await self.performDownload(pull) }
@@ -166,9 +235,9 @@ actor ProjectFilesService: ProjectFilesServing {
             ledger?[key] = Pending(pull: pull)
             try saveLedger()
         }
-        if pull.project.isCloud {
+        if pull.project.isCloud || pull.file.source == "backup" || pull.file.source == "cloud" {
             guard let projectUID = pull.project.projectUid, let fileUID = pull.file.uid else { throw failure("files.error.response") }
-            let source = try await saveContent(path: "/api/mobile/catalog/\(projectUID)/files/\(fileUID)/content",
+            let source = try await saveContent(path: "/api/mobile/preview/catalog/\(projectUID)/files/\(fileUID)/content",
                                                name: pull.file.name, expectedSize: pull.file.size)
             var saved = false
             defer {
@@ -189,7 +258,7 @@ actor ProjectFilesService: ProjectFilesServing {
         else {
             ledger?[key]?.attempted = true
             try saveLedger()
-            let created: Created = try await json("/api/mobile/transfer/pull", body: [
+            let created: Created = try await json("/api/mobile/preview/pull", body: [
                 "deviceId": pull.project.deviceId, "projectKey": pull.project.key,
                 "remoteFileId": pull.file.id, "fileName": pull.file.name,
                 "fileSize": pull.file.size, "requestId": pull.requestID.uuidString,
@@ -353,6 +422,11 @@ actor ProjectFilesService: ProjectFilesServing {
     private func ensureOpen() throws {
         try Task.checkCancellation()
         if closed { throw failure("files.error.closed") }
+    }
+
+    private func validatePreview(_ file: RemoteProjectFile) throws {
+        guard file.supportsPreview else { throw failure("workspace.unsupportedPreview") }
+        try validateSize(file.size)
     }
 
     private func validateSize(_ size: Int64) throws {

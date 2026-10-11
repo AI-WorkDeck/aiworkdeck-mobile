@@ -25,6 +25,7 @@ Page({
     emptyText: t('empty.projects'),
     navTitle: t('project.title'),
     retryText: t('project.retry'),
+    filesText: t('project.files'),
     metrics: {} as Metrics,
     showBack: false,
     scrollTop: 0,
@@ -76,6 +77,12 @@ Page({
 
   onRefresh() {
     this.loadProjects()
+  },
+
+  onOpenFiles(e: { currentTarget: { dataset: { gi: number; ii: number } } }) {
+    const { gi, ii } = e.currentTarget.dataset
+    setSelectedProject(this.data.groups[gi].items[ii])
+    wx.navigateTo({ url: '/pages/files/files' })
   },
 
   onSelectProject(e: { currentTarget: { dataset: { gi: number; ii: number } } }) {

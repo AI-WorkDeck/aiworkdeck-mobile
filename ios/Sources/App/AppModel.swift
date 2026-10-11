@@ -43,6 +43,42 @@ final class AppModel {
         return f.string(from: Date())
     }
 
+    private(set) var accountGeneration = UUID()
+    var backupConsent: BackupConsent?
+    var backupError: String?
+    var showBackupPrompt = false
+
+    func refreshBackupConsent(promptIfNeeded: Bool = true) async {
+        guard isSignedIn else { return }
+#if DEBUG
+        if Shot.isOn || ProcessInfo.processInfo.arguments.contains("-AWDRecordingUITest") { return }
+#endif
+        let generation = accountGeneration
+        do {
+            let consent = try await workspaceFiles().backupConsent()
+            guard generation == accountGeneration else { return }
+            backupConsent = consent; backupError = nil
+            if promptIfNeeded { showBackupPrompt = !consent.decided }
+        } catch {
+            guard generation == accountGeneration else { return }
+            backupError = tr("backup.error")
+        }
+    }
+
+    func setBackupConsent(enabled: Bool) async -> Bool {
+        let generation = accountGeneration
+        do {
+            let consent = try await workspaceFiles().setBackupConsent(enabled: enabled)
+            guard generation == accountGeneration else { return false }
+            backupConsent = consent; backupError = nil; showBackupPrompt = !consent.decided
+            return consent.decided
+        } catch {
+            guard generation == accountGeneration else { return false }
+            backupError = tr("backup.error")
+            return false
+        }
+    }
+
     private var filesClient: (any ProjectFilesServing)?
 
     func workspaceFiles() -> any ProjectFilesServing {
@@ -55,6 +91,8 @@ final class AppModel {
     }
 
     private func closeWorkspaceFiles() {
+        accountGeneration = UUID()
+        backupConsent = nil; backupError = nil; showBackupPrompt = false
         let client = filesClient
         filesClient = nil
         Task { await client?.close() }

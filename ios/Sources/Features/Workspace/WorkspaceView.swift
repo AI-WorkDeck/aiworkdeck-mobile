@@ -158,9 +158,11 @@ private struct ProjectContentsView: View {
     @State private var scrollID: String?
     @State private var download: DownloadSelection?
     @State private var locationID: String?
+    @State private var directory = ""
 
     private var storageProject: RelayProject {
-        guard let location = project.locations?.first(where: { $0.alias == (locationID ?? project.legacyID) }) else { return project }
+        let preferred = project.locations?.first(where: { $0.kind == "desktop" && $0.online == true })?.alias ?? project.legacyID
+        guard let location = project.locations?.first(where: { $0.alias == (locationID ?? preferred) }) else { return project }
         return RelayProject(deviceId: location.deviceId, deviceName: location.deviceName, key: location.key,
                             name: project.name, projectUid: project.projectUid, locations: project.locations)
     }
@@ -169,15 +171,14 @@ private struct ProjectContentsView: View {
     private struct DownloadSelection: Identifiable {
         let file: RemoteProjectFile
         let project: RelayProject
-        var id: String { project.id + ":" + file.id }
+        var id: String { project.id + ":" + file.rowID }
     }
 
-    private var visibleFiles: [RemoteProjectFile] {
-        guard loadedProjectID == storageKey else { return [] }
-        return (listing?.files ?? []).filter {
-            query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) || $0.path.localizedCaseInsensitiveContains(query)
-        }
+    private var directoryListing: ProjectFileDirectory {
+        ProjectFileDirectory(files: loadedProjectID == storageKey ? (listing?.files ?? []) : [])
     }
+    private var visibleFiles: [RemoteProjectFile] { directoryListing.files(in: directory, matching: query) }
+    private var visibleFolders: [ProjectFileDirectory.Folder] { query.isEmpty ? directoryListing.folders(in: directory) : [] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -197,7 +198,7 @@ private struct ProjectContentsView: View {
         }
         .task(id: storageKey) {
             if loadedProjectID != storageKey {
-                query = ""; scrollID = nil
+                query = ""; scrollID = nil; directory = ""
                 await load()
             }
         }
@@ -223,6 +224,22 @@ private struct ProjectContentsView: View {
             TextField(tr("workspace.searchFiles"), text: $query)
                 .textFieldStyle(.roundedBorder).padding(.horizontal)
                 .accessibilityIdentifier("workspace.fileSearch")
+            if query.isEmpty {
+                HStack {
+                    Button(tr("workspace.folderRoot")) { directory = ""; scrollID = nil }
+                        .accessibilityIdentifier("workspace.folderRoot")
+                    if !directory.isEmpty {
+                        Text("/ " + directory).lineLimit(2).font(.caption)
+                        Spacer()
+                        Button {
+                            directory = directory.split(separator: "/").dropLast().joined(separator: "/")
+                            scrollID = nil
+                        } label: { Image(systemName: "arrow.up") }
+                        .accessibilityLabel(tr("workspace.folderUp"))
+                        .accessibilityIdentifier("workspace.folderUp")
+                    }
+                }.padding()
+            }
             if listing?.truncated == true, loadedProjectID == storageKey {
                 Text(tr("workspace.limit")).font(.caption).foregroundStyle(.secondary).padding()
             }
@@ -233,7 +250,21 @@ private struct ProjectContentsView: View {
             }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(visibleFiles) { file in
+                    ForEach(visibleFolders) { folder in
+                        Button { directory = folder.path; scrollID = nil } label: {
+                            HStack {
+                                Image(systemName: "folder")
+                                Text(folder.name)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                            }.padding().frame(maxWidth: .infinity, minHeight: T.touchMin, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("workspace.folder.\(folder.path)")
+                        Divider()
+                    }
+                    ForEach(visibleFiles, id: \.rowID) { file in
                         Button { download = DownloadSelection(file: file, project: storageProject) } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "doc")
@@ -250,11 +281,11 @@ private struct ProjectContentsView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .id(file.id)
+                        .id(file.rowID)
                         .accessibilityIdentifier("workspace.file.\(file.id)")
                         Divider()
                     }
-                    if !loading, error == nil, visibleFiles.isEmpty {
+                    if !loading, error == nil, visibleFiles.isEmpty, visibleFolders.isEmpty {
                         ContentUnavailableView(tr(query.isEmpty ? "workspace.noFiles" : "workspace.noMatches"), systemImage: "doc", description: Text(tr(storageProject.isCloud ? "workspace.cloudHint" : "workspace.desktopHint")))
                     }
                 }
@@ -308,11 +339,12 @@ private struct FileDownloadView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 16) {
                         Text(file.path).font(.subheadline).foregroundStyle(.secondary)
-                        if busy { ProgressView(tr(project.isCloud ? "workspace.cloudDownload" : "workspace.downloading")) }
+                        if !file.supportsPreview { Text(tr("workspace.unsupportedPreview")).accessibilityIdentifier("workspace.unsupported") }
+                        if busy { ProgressView(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudDownload" : "workspace.downloading")) }
                         if let error { Text(error).foregroundStyle(T.S.failed) }
                         if let quote, !approved {
-                            Text(project.isCloud ? tr("workspace.cloudHint") : tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)]))
-                            Button(tr(project.isCloud ? "workspace.cloudOpen" : "workspace.download")) { approved = true; Task { await download() } }
+                            Text((project.isCloud || file.source == "backup" || file.source == "cloud") ? tr("workspace.cloudHint") : tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)]))
+                            Button(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudOpen" : "workspace.download")) { approved = true; Task { await download() } }
                                 .buttonStyle(.borderedProminent)
                                 .accessibilityIdentifier("workspace.confirmDownload")
                                 .disabled(busy)
@@ -343,13 +375,15 @@ private struct FileDownloadView: View {
     }
 
     private func loadQuote() async {
+        guard file.supportsPreview else { return }
         busy = true; error = nil
-        do { quote = project.isCloud ? ProjectFileQuote(credits: 0, balanceCents: nil) : try await client.quote(for: file) }
+        do { quote = try await client.quote(for: file, in: project) }
         catch { self.error = error.localizedDescription }
         busy = false
     }
 
     private func download() async {
+        guard file.supportsPreview else { return }
         busy = true; error = nil
         do {
             if pull == nil { pull = try await client.preparePull(project: project, file: file) }

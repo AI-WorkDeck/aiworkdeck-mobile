@@ -72,7 +72,7 @@ final class CameraService: NSObject {
 #if DEBUG
         // 截图模式一律不点相机。守在这里而不是调用点：进前台、切模式、浮层收起
         // 都会各自 start() 一次，漏一处就是一张带权限弹窗的截图。
-        if Shot.isOn { return }
+        if Shot.isOn || WorkspaceUITestSeed.isOn || ProcessInfo.processInfo.arguments.contains("-AWDRecordingUITest") { return }
 #endif
         let intent = startIntent.begin()
         recovery.desiredRunning = true
@@ -403,9 +403,11 @@ struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
     var device: AVCaptureDevice? = nil
     var revision = 0
+    var onVisibilityChanged: (UUID, Bool) -> Void = { _, _ in }
 
     func makeUIView(context: Context) -> PreviewView {
         let v = PreviewView()
+        v.onVisibilityChanged = onVisibilityChanged
         v.previewLayer.session = session
         v.previewLayer.videoGravity = .resizeAspect
         v.track(device, revision: revision)
@@ -415,6 +417,12 @@ struct CameraPreview: UIViewRepresentable {
     func updateUIView(_ uiView: PreviewView, context: Context) { uiView.track(device, revision: revision) }
 
     final class PreviewView: UIView {
+        var onVisibilityChanged: (UUID, Bool) -> Void = { _, _ in }
+        private let visibilityID = UUID()
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            onVisibilityChanged(visibilityID, window != nil)
+        }
         private var rotation: AVCaptureDevice.RotationCoordinator?
         private var observation: NSKeyValueObservation?
         private var revision = -1

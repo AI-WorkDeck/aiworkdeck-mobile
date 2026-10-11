@@ -6,6 +6,13 @@ import UIKit
 actor WorkspaceUITestSeed: ProjectFilesServing {
     static let isOn = ProcessInfo.processInfo.arguments.contains("-AWDWorkspaceUITest")
     private var preview: URL?
+    private var consent = BackupConsent(enabled: false, decided: !ProcessInfo.processInfo.arguments.contains("-AWDConsentUITest"), subscriptionActive: true, consentVersion: nil)
+    func backupConsent() async throws -> BackupConsent { consent }
+    func setBackupConsent(enabled: Bool) async throws -> BackupConsent {
+        if ProcessInfo.processInfo.arguments.contains("-AWDConsentFailureUITest") { throw URLError(.notConnectedToInternet) }
+        consent = BackupConsent(enabled: enabled, decided: true, subscriptionActive: true, consentVersion: "2026-10-11")
+        return consent
+    }
     func projects() async throws -> [RelayProject] {
         if ProcessInfo.processInfo.arguments.contains("-AWDCloudCatalogUITest") {
             return [RelayProject(deviceId: "cloud", deviceName: nil, key: "cloud-only", name: "Cloud project", projectUid: "cloud-uid"),
@@ -27,13 +34,17 @@ actor WorkspaceUITestSeed: ProjectFilesServing {
         } else {
             try await Task.sleep(for: .milliseconds(project.key == "alpha" ? 300 : 20))
         }
-        let files = (1...35).map { n in
+        var files = (1...35).map { n in
             RemoteProjectFile(id: "\(n)", name: "\(project.key)-document-\(n).pdf",
                               path: "Documents/\(project.key)-document-\(n).pdf", size: 1024)
         }
+        if ProcessInfo.processInfo.arguments.contains("-AWDFolderUITest") {
+            files.append(RemoteProjectFile(id: "unsupported", name: "notes.txt", path: "Documents/Nested/notes.txt", size: 12))
+            files.append(RemoteProjectFile(id: "empty", name: "Empty", path: "Empty", size: 0, isFolder: true))
+        }
         return ProjectFileListing(files: files)
     }
-    func quote(for file: RemoteProjectFile) async throws -> ProjectFileQuote {
+    func quote(for file: RemoteProjectFile, in project: RelayProject) async throws -> ProjectFileQuote {
         ProjectFileQuote(credits: 1, balanceCents: 1000)
     }
     func preparePull(project: RelayProject, file: RemoteProjectFile) async throws -> ProjectFilePull {
