@@ -33,16 +33,22 @@ final class AudioRecorderService: NSObject {
     private(set) var recordingSeconds = 0
     private(set) var lastError: String?
     private(set) var lastSavedID: UUID?
+    private(set) var notice: String?
+    private(set) var canRetrySave = false
 
     private var recorder: AVAudioRecorder?
     private var draft: RecordingDraft?
     private var clock = RecordingClock()
     private var timer: Timer?
     private let activity = RecordingActivityController()
-    private var recovering = false
+    private var attemptedDrafts = Set<UUID>()
+    private let store: EvidenceStore
+    private let pendingDrafts: () throws -> [RecordingDraft]
     var onStored: (() async -> Void)?
 
-    private override init() {
+    init(store: EvidenceStore = .shared, pendingDrafts: @escaping () throws -> [RecordingDraft] = RecordingDraft.pending) {
+        self.store = store
+        self.pendingDrafts = pendingDrafts
         super.init()
         NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification,
@@ -52,15 +58,14 @@ final class AudioRecorderService: NSObject {
                   let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
             Task { @MainActor in
                 guard let self, self.isRecording else { return }
-                if type == .began { self.synchronize() }
-                else { await self.resumeIfInterrupted() }
+                if type == .began { await self.stop(interrupted: true) }
             }
         }
         NotificationCenter.default.addObserver(
             forName: AVAudioSession.mediaServicesWereResetNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in await self?.stop() }
+            Task { @MainActor in await self?.stop(interrupted: true) }
         }
     }
 
@@ -72,7 +77,7 @@ final class AudioRecorderService: NSObject {
 
     /// stop() closes the file synchronously; saving must not depend on a delegate arriving
     /// after an interruption. Both delegate and intent use this idempotent path.
-    func stop() async {
+    func stop(interrupted: Bool = false) async {
         guard !isBusy, let r = recorder, let draft else { return }
         isBusy = true
         let task = UIApplication.shared.beginBackgroundTask(withName: "Save recording")
@@ -87,39 +92,81 @@ final class AudioRecorderService: NSObject {
         timer?.invalidate()
         timer = nil
         activity.end()
-        _ = await configureAudioSession(active: false)
         isRecording = false
         isInterrupted = false
         recordingSeconds = 0
-        await save(draft)
-    }
-
-    private func save(_ draft: RecordingDraft) async {
-        do {
-            let duration = try await AVURLAsset(url: draft.audioURL).load(.duration)
-            guard duration.seconds.isFinite, duration.seconds > 0 else {
-                throw CocoaError(.fileReadCorruptFile)
-            }
-            let item = try await EvidenceStore.shared.saveRecording(draft)
-            draft.remove() // Only remove the source after the manifest has committed.
-            lastSavedID = item.id
+        lastSavedID = nil
+        _ = await configureAudioSession(active: false)
+        let result = await save(draft)
+        switch result {
+        case .saved:
             lastError = nil
-            await onStored?()
-        } catch {
-            // Metadata and audio survive for the next foreground/launch retry.
-            lastError = tr("rec.saveFailed")
+            if interrupted { notice = tr("rec.interruption.saved") }
+        case .noAudio, .failed:
+            lastError = failureMessage(result, count: 1)
+            notice = lastError
+            canRetrySave = true
         }
     }
 
-    func recoverPending() async {
-        guard !recovering, !isBusy else { return }
-        recovering = true
-        defer { recovering = false }
+    private enum SaveResult { case saved, noAudio, failed }
+
+    private func failureMessage(_ result: SaveResult, count: Int) -> String {
+        tr(result == .noAudio ? "rec.recovery.noAudio" : "rec.recovery.saveFailed", ["count": String(count)])
+    }
+
+    private func save(_ draft: RecordingDraft) async -> SaveResult {
+        attemptedDrafts.insert(draft.id)
         do {
-            for pending in try RecordingDraft.pending() where pending.id != draft?.id {
-                await save(pending)
+            let duration = try await AVURLAsset(url: draft.audioURL).load(.duration)
+            guard duration.seconds.isFinite, duration.seconds > 0 else {
+                return .noAudio
             }
-        } catch { lastError = tr("rec.saveFailed") }
+        } catch { return .noAudio }
+        do {
+            let item = try await store.saveRecording(draft)
+            draft.remove() // Only remove the source after the manifest has committed.
+            lastSavedID = item.id
+            await onStored?()
+            return .saved
+        } catch {
+            // Metadata and audio survive for the next foreground/launch retry.
+            return .failed
+        }
+    }
+
+    func dismissNotice() { notice = nil }
+
+    func recoverPending(retry: Bool = false) async {
+        guard !isBusy, !isRecording else { return }
+        isBusy = true
+        defer { isBusy = false }
+        if retry { attemptedDrafts.removeAll() }
+        do {
+            let pending = try pendingDrafts().filter { !attemptedDrafts.contains($0.id) }
+            guard !pending.isEmpty else { return }
+            lastSavedID = nil
+            var saved = 0, invalid = 0, failed = 0
+            for draft in pending {
+                switch await save(draft) {
+                case .saved: saved += 1
+                case .noAudio: invalid += 1
+                case .failed: failed += 1
+                }
+            }
+            var messages: [String] = []
+            if saved > 0 { messages.append(tr("rec.recovery.saved", ["count": String(saved)])) }
+            var errors: [String] = []
+            if invalid > 0 { errors.append(failureMessage(.noAudio, count: invalid)) }
+            if failed > 0 { errors.append(failureMessage(.failed, count: failed)) }
+            canRetrySave = invalid + failed > 0
+            lastError = errors.isEmpty ? nil : errors.joined(separator: "\n\n")
+            notice = (messages + errors).joined(separator: "\n\n")
+        } catch {
+            lastError = tr("rec.saveFailed")
+            notice = lastError
+            canRetrySave = true
+        }
     }
 
     private func start(project: RelayProject?, location: (lat: Double, lon: Double, accuracy: Double)?) async {
@@ -157,7 +204,7 @@ final class AudioRecorderService: NSObject {
             isInterrupted = false
             recordingSeconds = 0
             let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-                Task { @MainActor in self?.synchronize() }
+                Task { @MainActor in await self?.checkRecordingStatus() }
             }
             self.timer = timer
             RunLoop.main.add(timer, forMode: .common)
@@ -179,19 +226,12 @@ final class AudioRecorderService: NSObject {
         if changed { activity.update(state: activityState) }
     }
 
-    func resumeIfInterrupted() async {
+    /// Foreground/timer verification never reopens the microphone after an interruption.
+    func checkRecordingStatus() async {
         guard !isBusy, let r = recorder else { return }
         synchronize()
-        guard !r.isRecording else {
-            activity.update(state: activityState)
-            return
-        }
-        // Keep stop available while session activation awaits another process.
-        let activated = await configureAudioSession(active: true)
-        guard recorder === r, !isBusy else { return }
-        if activated { _ = r.record() }
-        synchronize()
-        activity.update(state: activityState)
+        if !r.isRecording { await stop(interrupted: true) }
+        else { activity.update(state: activityState) }
     }
 
     private var activityState: RecordingActivityAttributes.ContentState {
@@ -220,7 +260,7 @@ extension AudioRecorderService: AVAudioRecorderDelegate {
         let url = recorder.url
         Task { @MainActor [weak self] in
             guard let self, self.recorder?.url == url else { return }
-            await self.stop()
+            await self.stop(interrupted: true)
         }
     }
 
@@ -228,7 +268,7 @@ extension AudioRecorderService: AVAudioRecorderDelegate {
         let url = recorder.url
         Task { @MainActor [weak self] in
             guard let self, self.recorder?.url == url else { return }
-            await self.stop()
+            await self.stop(interrupted: true)
         }
     }
 }

@@ -18,13 +18,22 @@ final class AudioRecorderIntegrationTests: XCTestCase {
         XCTAssertTrue(service.isRecording, service.lastError ?? "Recording did not start")
         guard service.isRecording else { return }
         try await Task.sleep(for: .seconds(2))
-        await service.resumeIfInterrupted()
+        await service.checkRecordingStatus()
         XCTAssertGreaterThanOrEqual(service.recordingSeconds, 1)
         NotificationCenter.default.post(name: AVAudioSession.interruptionNotification,
             object: AVAudioSession.sharedInstance(),
             userInfo: [AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.began.rawValue])
-        try await Task.sleep(for: .milliseconds(100))
-        XCTAssertTrue(service.isInterrupted, "The recorder must report the injected system interruption")
+        for _ in 0..<50 where service.isRecording || service.isBusy {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertFalse(service.isRecording)
+        XCTAssertEqual(service.notice, tr("rec.interruption.saved"))
+        NotificationCenter.default.post(name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance(),
+            userInfo: [AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.ended.rawValue,
+                       AVAudioSessionInterruptionOptionKey: AVAudioSession.InterruptionOptions.shouldResume.rawValue])
+        await service.checkRecordingStatus()
+        XCTAssertFalse(service.isRecording, "An interruption must never automatically reopen the microphone")
         StopRecordingIntent.handler = { await service.stop() }
         _ = try await StopRecordingIntent().perform()
         await service.stop()
@@ -42,6 +51,7 @@ final class AudioRecorderIntegrationTests: XCTestCase {
         let player = try AVAudioPlayer(contentsOf: item.localURL)
         XCTAssertTrue(player.prepareToPlay())
         XCTAssertGreaterThan(player.duration, 1)
+        service.dismissNotice()
         await EvidenceStore.shared.delete(ids: [id])
         _ = await configureAudioSession(active: false)
     }

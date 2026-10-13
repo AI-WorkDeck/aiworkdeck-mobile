@@ -17,12 +17,13 @@ ENV["FASTLANE_WWDR_USE_HTTP1_AND_RETRIES"] ||= "true"
 
 default_platform(:ios)
 
-# 主 App 与录音 Live Activity 扩展（dev-board#404）各要一份 App Store 描述文件。
-# 两份都是人在 ASC 手建的（私钥不是 fastlane 生成的，走不了 sigh），名字固定。
+# 主 App、录音 Live Activity 扩展与 Watch App 各要一份 App Store 描述文件。
+# 都复用已备案的 Distribution 证书，由 ASC 管理，名字固定。
 def app_store_profiles
   {
     "com.aiworkdeck.mobile.cn" => "AI WorkDeck AppStore",
-    "com.aiworkdeck.mobile.cn.LiveActivity" => "AI WorkDeck LiveActivity AppStore"
+    "com.aiworkdeck.mobile.cn.LiveActivity" => "AI WorkDeck LiveActivity AppStore",
+    "com.aiworkdeck.mobile.cn.watchkitapp" => "AI WorkDeck Watch AppStore"
   }
 end
 
@@ -186,6 +187,7 @@ end
 #                                              （本机 fastlane_build keychain 导出）
 #   APPSTORE_PROFILE_PATH                      AI WorkDeck AppStore 描述文件
 #   LA_PROFILE_PATH                            同上，Live Activity 扩展的（可缺，见下）
+#   WATCH_PROFILE_PATH                         同上，Watch App 的
 platform :ios do
   desc "CI：发行版 macOS 上打正式包并上传"
   lane :ci_appstore do
@@ -218,6 +220,8 @@ platform :ios do
       if la && File.exist?(la)
         FileUtils.cp(la, File.join(dir, "aiworkdeck-liveactivity-appstore.mobileprovision"))
       end
+      FileUtils.cp(ENV.fetch("WATCH_PROFILE_PATH"),
+                   File.join(dir, "aiworkdeck-watch-appstore.mobileprovision"))
     end
 
     sh("cd .. && xcodegen generate --spec ios/project.yml --project ios")

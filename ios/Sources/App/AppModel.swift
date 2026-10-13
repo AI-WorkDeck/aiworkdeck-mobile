@@ -111,11 +111,13 @@ final class AppModel {
             } else {
                 UserDefaults.standard.removeObject(forKey: "selectedRelayProject")
             }
+            WatchPhoneBridge.shared.publishContext()
         }
     }
 
     func didLogin(_ result: LoginResult) async {
         closeWorkspaceFiles()
+        WatchAccountScope.didLogin(userID: result.user.id)
         selectedProject = nil
         account = result.user
         await refresh()
@@ -305,6 +307,9 @@ final class AppModel {
             await self?.refresh()
             self?.kickUpload()
         }
+        WatchPhoneBridge.shared.onImport = { [weak self] in await self?.refresh() }
+        WatchPhoneBridge.shared.publishContext()
+        await WatchPhoneBridge.shared.importPending()
         didRestore = true
         await AudioRecorderService.shared.recoverPending()
         try? await EvidenceStore.shared.sweepOrphans()
@@ -320,6 +325,8 @@ final class AppModel {
         Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
+                await WatchPhoneBridge.shared.importPending()
+                WatchPhoneBridge.shared.publishContext()
                 if self.isSignedIn { await UploadQueue.shared.autoKick() }
             }
         }

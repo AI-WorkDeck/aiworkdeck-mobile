@@ -103,7 +103,7 @@ struct HomeView: View {
             case .active:
                 if recorder.isRecording { mode = .audio }
                 Task {
-                    await recorder.resumeIfInterrupted()
+                    await recorder.checkRecordingStatus()
                     await recorder.recoverPending()
                 }
                 // 回前台立刻续传：后台被杀的上传此刻已是滞留态，kick 入口会回收
@@ -556,13 +556,18 @@ struct HomeView: View {
                     }
                     if let error = recorder.lastError {
                         Text(error).font(T.F.micro()).foregroundStyle(T.S.failed)
-                    } else if recorder.lastSavedID != nil, !recorder.isRecording {
+                    }
+                    if recorder.canRetrySave, !recorder.isRecording {
+                        Button(tr("rec.retrySave")) { Task { await recorder.recoverPending(retry: true) } }
+                            .disabled(recorder.isBusy)
+                    }
+                    if recorder.lastSavedID != nil, !recorder.isRecording {
                         Button(tr("rec.saved.open"), action: onOpenLibrary)
                             .font(T.F.small()).foregroundStyle(.white)
                     }
                     if recorder.isRecording {
-                        // 说清楚退后台也在录；来电中断时换成暂停提示，结束后自动续录
-                        Text(recorder.isInterrupted ? tr("rec.paused.interrupted") : tr("home.audio.backgroundOk"))
+                        // 中断后不会自动开麦；强制退出只能在下次启动检查草稿。
+                        Text(tr("rec.background.limit"))
                             .font(T.F.micro())
                             .foregroundStyle(.white.opacity(0.45))
                             .multilineTextAlignment(.center)
