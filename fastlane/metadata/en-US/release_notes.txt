@@ -1,3 +1,3 @@
-1. Open directly to photo, video and audio capture after signing in, with improved camera startup on first entry.
-2. Browse project folders, including empty folders, and identify unsupported file types before transfer.
-3. Choose whether to enable cloud file backup. Active subscribers who explicitly enable it can preview backed-up files while their computer is offline; otherwise, the app guides you to an online computer.
+1. Record on Apple Watch and automatically transfer recordings to your paired iPhone for the existing project upload workflow. Recordings wait on your watch while disconnected and sync when the connection returns.
+2. Recording requests fewer interruptions from system alerts. If recording is interrupted, usable audio is saved with clearer feedback. After an unexpected app exit, see the recovery result and an explicit notice if audio could not be recovered.
+3. View Watch recordings on iPhone and change their project before the first upload attempt.

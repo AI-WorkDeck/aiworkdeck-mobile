@@ -2,6 +2,10 @@
 
 AI WorkDeck iPhone 应用附带的 watchOS 10+ 单 target 应用。手表只负责录音、计时、保存与同步；项目选择和播放在手机端完成。未在手表存储登录凭据。
 
+## 安装
+
+手表应用随同一个 iPhone App 的 1.6.0 版本提交 App Store，不需要另建商店应用记录。需要 iOS 17+、watchOS 10+，且手表与 iPhone 已配对。更新 iPhone App 后，在系统「Watch」App →「我的手表」→「可用 App」安装 AI WorkDeck；开启自动安装应用时系统也会自动安装。首次使用先在手机登录并选项目，再打开手表 App。
+
 ## 使用路径
 
 1. 在配对 iPhone 登录 AI WorkDeck，在现有项目入口选择归档项目。手表收到项目后显示项目名称。
@@ -13,6 +17,10 @@ AI WorkDeck iPhone 应用附带的 watchOS 10+ 单 target 应用。手表只负�
 系统调度文件交接，不保证停止后立刻到达。手表显示的「已存入手机」只代表手机可靠接收；上传与电脑落盘状态仍在手机队列查看。强制退出手机应用、系统暂停后台工作或离线时，可能需要重新打开手机应用才能继续处理。
 
 ## 中断与可靠性
+
+录音开始前请求 `setPrefersNoInterruptionsFromSystemAlerts(true)`（watchOS 7.3+ / iOS 14.5+）。这是尽量避免来电提示和系统提醒打断的偏好，并非录音最高优先级；配置失败仍允许开始录音。接听电话、Siri或其他不可混音会话仍可能中断。iPhone 需采用横幅来电显示，全屏来电不受该偏好保护；Apple未对Watch承诺相同的来电显示规则。手机播放录音时恢复普通提示行为。
+
+保留 `.record` 以避免意外播放声音混入取证；不为抢占优先级改成 `mixWithOthers`，它不能夺回电话/Siri的麦克风。背景音频模式解决落腕/切应用时持续执行，不提供系统中断豁免。真机来电/提醒/Siri矩阵仍待实测。
 
 - 手表使用音频后台模式，来电/音频会话被系统中断时保存可用部分，明确提示并等待用户重新开始，不自动开麦。
 - 录音开始前落盘 UUID、时间与项目快照。重启检查遗留音频的有效音轨和时长；恢复成功与无法恢复分别提示。进程被强杀可能破坏未封装完成的 AAC 文件，不能保证恢复；原草稿保留，绝不把空文件当成功。
@@ -38,7 +46,9 @@ xcodebuild test -project ios/Workdeck.xcodeproj -scheme Workdeck \
 
 `WatchRecordingTests` 覆盖共享夹具、接收回调返回前复制、进程恢复、重复接收、账号变化、主动改项目后的账号隔离、失败导入与接收墓碑。
 
-正式签名复用现有团队与 Distribution 证书；Watch 有独立 Bundle ID/profile。CI 使用 `WATCH_PROFILE_B64` 原位密钥项。构建上传仍只由既有明确发版触发机制启用；本次开发不发版。
+正式签名复用现有团队与 Distribution 证书；Watch 有独立 Bundle ID/profile。CI 使用 `WATCH_PROFILE_B64` 原位密钥项。构建上传仍只由既有明确发版触发机制启用：提交消息包含 `[appstore]`。用户已于 2026-10-13 授权发布 1.6.0（dev-board#1241）。
+
+商店 Watch 截图独立于 iPhone 截图：提交消息含 `[watch-screenshots]` 时，由无签名密钥的 CI 新建 Watch 模拟器、运行真实 App 并生成中英文截图。检查图片后，通过 `scripts/asc-listing.py watch-screenshots <artifact目录>` 上传到 `APP_WATCH_SERIES_10` 截图组；不能放入现有 iPhone 截图目录。
 
 ## 真机验收（待执行）
 
@@ -52,3 +62,5 @@ Apple 要求在真实配对设备测试 WatchConnectivity 文件传输，模拟�
 - 手表落腕、切到其他应用、真实来电/音频抢占、低空间与强制终止后的恢复提示。
 
 参考：[Apple transferFile 文档](https://developer.apple.com/documentation/watchconnectivity/wcsession/transferfile(_:metadata:))、[Apple 文件接收回调](https://developer.apple.com/documentation/watchconnectivity/wcsessiondelegate/session(_:didreceive:))。
+
+音频优先级参考：[Apple 系统提醒偏好](https://developer.apple.com/documentation/avfaudio/avaudiosession/setprefersnointerruptionsfromsystemalerts(_:))、[record 类别限制](https://developer.apple.com/documentation/avfaudio/avaudiosession/category-swift.struct/record)。

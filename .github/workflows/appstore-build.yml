@@ -13,6 +13,10 @@ permissions:
 jobs:
   build-upload:
     if: contains(github.event.head_commit.message, '[appstore]')
+    # Serialize build-number allocation and upload; never cancel an active release.
+    concurrency:
+      group: appstore-upload
+      cancel-in-progress: false
     runs-on: macos-latest
     timeout-minutes: 90
     steps:

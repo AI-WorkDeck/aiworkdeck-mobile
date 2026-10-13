@@ -229,6 +229,7 @@ platform :ios do
     key = asc_key
     # 不用 latest_testflight_build_number：它只看最新预发布版本下的构建，会漏号
     # （2026-09-02 报 19 而 ASC 已有 20，上传撞 409 buildUpload INVALID_STATE）。
+    sh("cd .. && .venv/bin/python -m unittest discover -s scripts/tests")
     build = sh("cd .. && .venv/bin/python scripts/asc-next-build.py").strip.to_i
     UI.message("CI #{marketing_version} (#{build})")
     build_app(

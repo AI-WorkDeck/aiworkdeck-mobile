@@ -52,6 +52,8 @@ final class WatchRecorder: NSObject, AVAudioRecorderDelegate, WCSessionDelegate 
         guard allowed else { notice = tr("watch.permission"); return }
         do {
             try session.setCategory(.record, mode: .default)
+            // Best effort: alerts may yield, but accepted calls can still interrupt.
+            try? session.setPrefersNoInterruptionsFromSystemAlerts(true)
             try session.setActive(true)
             let value = WatchRecording(id: UUID(), startedAt: Date(), destination: context?.destination,
                 deviceModel: WKInterfaceDevice.current().model,
