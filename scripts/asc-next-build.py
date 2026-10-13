@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""下一个 build 号 = 该 App 在 ASC 上**所有**构建里最大的 +1（不分版本、不分处理状态）。
+"""下一个 build 号 = 该 App 在 ASC 上构建及上传预留编号中的最大值 +1。
 
 用法：python scripts/asc-next-build.py   （env 同 asc-listing.py）
 
@@ -15,14 +15,20 @@ spec = importlib.util.spec_from_file_location(
 asc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(asc)
 
-tok = asc.token_for()
-app_id = asc.APP_ID
-nums = []
-path = f"/apps/{app_id}/builds?limit=200"
-while path:
-    r = asc.call(tok, "GET", path)
-    asc.die_on_error(r, "读取构建列表")
-    nums += [int(b["attributes"]["version"]) for b in r["data"]
-             if str(b["attributes"].get("version", "")).isdigit()]
-    path = (r.get("links") or {}).get("next")
-print(max(nums, default=0) + 1)
+def next_build_number(tok, app_id):
+    nums = []
+    # A received upload can remain absent from builds while Apple processes it.
+    # Include reservations too, so a following release cannot reuse that number.
+    for resource, field in (("builds", "version"), ("buildUploads", "cfBundleVersion")):
+        path = f"/apps/{app_id}/{resource}?limit=200"
+        while path:
+            r = asc.call(tok, "GET", path)
+            asc.die_on_error(r, f"读取 {resource}")
+            nums += [int(b["attributes"][field]) for b in r["data"]
+                     if str(b["attributes"].get(field, "")).isdigit()]
+            path = (r.get("links") or {}).get("next")
+    return max(nums, default=0) + 1
+
+
+if __name__ == "__main__":
+    print(next_build_number(asc.token_for(), asc.APP_ID))
