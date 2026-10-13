@@ -45,6 +45,7 @@ jobs:
           DIST_P12_B64: ${{ secrets.DIST_P12_B64 }}
           APPSTORE_PROFILE_B64: ${{ secrets.APPSTORE_PROFILE_B64 }}
           LA_PROFILE_B64: ${{ secrets.LA_PROFILE_B64 }}
+          WATCH_PROFILE_B64: ${{ secrets.WATCH_PROFILE_B64 }}
         run: |
           mkdir -p "$RUNNER_TEMP/signing"
           echo "$ASC_KEY_P8_B64"       | base64 -d > "$RUNNER_TEMP/signing/asc.p8"
@@ -55,6 +56,11 @@ jobs:
           if [ -n "$LA_PROFILE_B64" ]; then
             echo "$LA_PROFILE_B64" | base64 -d > "$RUNNER_TEMP/signing/la.mobileprovision"
           fi
+          if [ -z "$WATCH_PROFILE_B64" ]; then
+            echo "::error::缺少 WATCH_PROFILE_B64，无法签名随 iOS App 嵌入的 Watch App"
+            exit 1
+          fi
+          echo "$WATCH_PROFILE_B64" | base64 -d > "$RUNNER_TEMP/signing/watch.mobileprovision"
 
       - name: 打包并上传
         env:
@@ -69,6 +75,7 @@ jobs:
           export ASC_KEY_PATH="$RUNNER_TEMP/signing/asc.p8"
           export DIST_P12_PATH="$RUNNER_TEMP/signing/dist.p12"
           export APPSTORE_PROFILE_PATH="$RUNNER_TEMP/signing/appstore.mobileprovision"
+          export WATCH_PROFILE_PATH="$RUNNER_TEMP/signing/watch.mobileprovision"
           if [ -f "$RUNNER_TEMP/signing/la.mobileprovision" ]; then
             export LA_PROFILE_PATH="$RUNNER_TEMP/signing/la.mobileprovision"
           fi
