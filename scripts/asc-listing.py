@@ -9,6 +9,7 @@ fastlane 的 upload_to_app_store 负责二进制、文案、截图；剩下这�
   category      主/次类目（读 metadata/*_category.txt）
   review        审核联系信息与演示账号（读 metadata/review_information/）
   screenshots   上传截图（读 fastlane/screenshots/<locale>/，6.9 吋 1320x2868）
+  watch-screenshots <目录> 上传独立 Watch 截图（416x496，按 locale 分目录）
   attach <build> 把已上传的构建挂到版本上（构建号，如 13）
   submit        提交审核。对外动作，要再打一次 --yes 才真发
   rating        年龄分级问卷（全部答「无」）
@@ -448,7 +449,7 @@ def cmd_review(tok, app_id):
 SCREENSHOT_DISPLAY_TYPE = "APP_IPHONE_67"
 
 
-def cmd_screenshots(tok, app_id):
+def cmd_screenshots(tok, app_id, root=None, display_type=SCREENSHOT_DISPLAY_TYPE):
     """把 fastlane/screenshots/<locale>/ 下的图传到对应语言的截图组。
 
     ASC 传文件是三段式：先 POST 预留一条记录拿 uploadOperations，再按它给的
@@ -456,7 +457,7 @@ def cmd_screenshots(tok, app_id):
     记录会一直挂在「上传中」，网页上看得见但提审用不了。
     """
     import hashlib
-    root = os.path.join("fastlane", "screenshots")
+    root = root or os.path.join("fastlane", "screenshots")
     if not os.path.isdir(root):
         sys.exit(f"找不到 {root}")
     v = version(tok, app_id)
@@ -477,7 +478,7 @@ def cmd_screenshots(tok, app_id):
         sets = call(tok, "GET", f"/appStoreVersionLocalizations/{loc['id']}/appScreenshotSets?limit=20")
         die_on_error(sets, "读取截图组")
         node = next((x for x in sets["data"]
-                     if x["attributes"]["screenshotDisplayType"] == SCREENSHOT_DISPLAY_TYPE), None)
+                     if x["attributes"]["screenshotDisplayType"] == display_type), None)
         if node:
             set_id = node["id"]
             # 重传前清空，否则会在已有图后面追加，顺序和数量都不受控
@@ -487,7 +488,7 @@ def cmd_screenshots(tok, app_id):
         else:
             r = call(tok, "POST", "/appScreenshotSets",
                      {"data": {"type": "appScreenshotSets",
-                               "attributes": {"screenshotDisplayType": SCREENSHOT_DISPLAY_TYPE},
+                               "attributes": {"screenshotDisplayType": display_type},
                                "relationships": {"appStoreVersionLocalization": {"data": {
                                    "type": "appStoreVersionLocalizations", "id": loc["id"]}}}}})
             die_on_error(r, "创建截图组")
@@ -650,6 +651,10 @@ def main():
         cmd_submit(tok, app_id, "--yes" in sys.argv)
     elif cmd == "screenshots":
         cmd_screenshots(tok, app_id)
+    elif cmd == "watch-screenshots":
+        if len(sys.argv) != 3:
+            sys.exit("用法：asc-listing.py watch-screenshots <包含 zh-Hans/en-US 的截图目录>")
+        cmd_screenshots(tok, app_id, root=sys.argv[2], display_type="APP_WATCH_SERIES_10")
     elif cmd == "review":
         cmd_review(tok, app_id)
     elif cmd == "category":
