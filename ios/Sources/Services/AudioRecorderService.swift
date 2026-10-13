@@ -12,6 +12,8 @@ func configureAudioSession(active: Bool, playback: Bool = false) async -> Bool {
                 let session = AVAudioSession.sharedInstance()
                 if active {
                     try session.setCategory(playback ? .playback : .record, mode: .default)
+                    // A rejected preference must not prevent recording. Playback keeps normal alerts.
+                    try? session.setPrefersNoInterruptionsFromSystemAlerts(!playback)
                 }
                 try session.setActive(active)
                 cont.resume(returning: true)
