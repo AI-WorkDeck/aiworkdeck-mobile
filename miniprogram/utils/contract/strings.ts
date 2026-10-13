@@ -1219,5 +1219,77 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
   "backup.error": {
     "zh-Hans": "云备份设置暂不可用，请重试。",
     "en": "Cloud backup settings are unavailable. Please try again."
+  },
+  "watch.title": {
+    "zh-Hans": "手表录音",
+    "en": "Watch recording"
+  },
+  "watch.start": {
+    "zh-Hans": "开始录音",
+    "en": "Record"
+  },
+  "watch.stop": {
+    "zh-Hans": "停止并同步",
+    "en": "Stop & sync"
+  },
+  "watch.recording": {
+    "zh-Hans": "正在录音",
+    "en": "Recording"
+  },
+  "watch.ready": {
+    "zh-Hans": "随时记录",
+    "en": "Ready to record"
+  },
+  "watch.pending": {
+    "zh-Hans": "{n} 段保留在手表，等待手机确认",
+    "en": "{n} on watch, awaiting iPhone confirmation"
+  },
+  "watch.received": {
+    "zh-Hans": "已存入手机，上传进度请在手机查看",
+    "en": "Saved on iPhone. Check upload status there."
+  },
+  "watch.setup": {
+    "zh-Hans": "先在 iPhone 登录并选择项目，可自动上传。未选项目的录音存入手机「未归类」。",
+    "en": "Sign in and select a project on iPhone for automatic upload. Otherwise recordings stay Unassigned on iPhone."
+  },
+  "watch.target": {
+    "zh-Hans": "同步项目：{name}",
+    "en": "Sync to: {name}"
+  },
+  "watch.retry": {
+    "zh-Hans": "重试同步",
+    "en": "Retry sync"
+  },
+  "watch.permission": {
+    "zh-Hans": "麦克风未获授权，请在系统设置中允许录音。",
+    "en": "Allow microphone access in system settings to record."
+  },
+  "watch.failed": {
+    "zh-Hans": "录音未能开始：{reason}",
+    "en": "Recording could not start: {reason}"
+  },
+  "watch.interrupted": {
+    "zh-Hans": "录音被系统中断。已录部分将保存并同步，请确认后重新开始。",
+    "en": "Recording was interrupted. The recorded portion will be saved and synced. Start again when ready."
+  },
+  "watch.recovered": {
+    "zh-Hans": "上次录音未正常结束，已恢复可用部分并等待同步。",
+    "en": "The last recording ended unexpectedly. Its usable audio was recovered for sync."
+  },
+  "watch.recoveryFailed": {
+    "zh-Hans": "有录音未能完成保存，原文件仍保留在手表。请重试；未显示已同步前不要卸载应用。",
+    "en": "A recording could not be saved. Its original remains on this watch. Retry; do not uninstall before sync is confirmed."
+  },
+  "watch.syncFailed": {
+    "zh-Hans": "同步尚未完成，录音仍保留在手表，将自动重试。",
+    "en": "Sync is incomplete. Audio remains on your watch and will retry automatically."
+  },
+  "watch.phoneHint": {
+    "zh-Hans": "手表停止录音后会自动同步；选定项目的录音接入上传队列，未选项目的可在未归类资料中查看。电脑收到后可使用现有转写功能。",
+    "en": "Watch recordings sync automatically. Assigned recordings enter the upload queue; others appear in Unassigned. Use transcription on desktop after receipt."
+  },
+  "watch.phoneError": {
+    "zh-Hans": "手表录音暂未导入，原件仍保留，将自动重试。",
+    "en": "Watch recording import is pending. The original is retained and will retry."
   }
 }

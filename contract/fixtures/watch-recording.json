@@ -1,0 +1,16 @@
+{
+  "id": "A9375378-A1C8-4CE4-A535-BF1139900311",
+  "startedAt": 1000000,
+  "destination": {
+    "binding": "test-account-scope",
+    "deviceId": "desktop-a",
+    "deviceName": "Test Mac",
+    "key": "project-a",
+    "name": "Project A",
+    "projectUid": null
+  },
+  "deviceModel": "Apple Watch",
+  "osVersion": "watchOS test",
+  "appVersion": "1",
+  "complete": true
+}
