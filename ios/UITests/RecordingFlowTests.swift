@@ -12,6 +12,11 @@ final class RecordingFlowTests: XCTestCase {
         }
     }
 
+    private func dismissEarlierRecordingNotice(in app: XCUIApplication) {
+        let notice = app.alerts["Recording status"]
+        if notice.waitForExistence(timeout: 2) { notice.buttons["Close"].tap() }
+    }
+
     @MainActor
     func testUnassignedRecordingSettingsBackAndMove() {
         continueAfterFailure = false
@@ -19,9 +24,10 @@ final class RecordingFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest", "-libraryViewMode", "grid"]
         app.launch()
-        let capture = app.buttons["workspace.quickCapture"]
-        XCTAssertTrue(capture.waitForExistence(timeout: 10)); capture.tap()
-        app.buttons["capture.mode.audio"].tap()
+        dismissEarlierRecordingNotice(in: app)
+        // The current app opens capture first; projects are reached via Back.
+        let mode = app.buttons["capture.mode.audio"]
+        XCTAssertTrue(mode.waitForExistence(timeout: 10)); mode.tap()
         let shutter = app.buttons["capture.shutter"]
         shutter.tap()
         allowMicrophoneIfNeeded()
@@ -105,6 +111,7 @@ final class RecordingFlowTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         app.launchArguments = ["-AWDRecordingUITest"]
         app.launch()
+        dismissEarlierRecordingNotice(in: app)
         let mode = app.buttons["capture.mode.audio"]
         XCTAssertTrue(mode.waitForExistence(timeout: 10))
         mode.tap()

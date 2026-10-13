@@ -37,6 +37,7 @@ final class WatchPhoneBridge: NSObject, WCSessionDelegate {
     var lastError: String?
     var onImport: (@MainActor () async -> Void)?
     private var importing = false
+    private var needsImportPass = false
 
     func activate() {
         guard WCSession.isSupported() else { return }
@@ -61,31 +62,37 @@ final class WatchPhoneBridge: NSObject, WCSessionDelegate {
     }
 
     func importPending() async {
-        guard !importing else { return }
+        guard !importing else { needsImportPass = true; return }
         importing = true
         let task = UIApplication.shared.beginBackgroundTask(withName: "Watch recording import")
         defer {
-            importing = false
             if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
         }
         do {
-            for recording in try inbox.pending() {
-                if !inbox.hasReceipt(recording.id) {
-                    _ = try await EvidenceStore.shared.saveWatchRecording(recording,
-                        audioURL: inbox.audioURL(recording.id), currentBinding: WatchAccountScope.current)
-                    try inbox.markReceived(recording.id)
+            var failed = false
+            repeat {
+                needsImportPass = false
+                for recording in try inbox.pending() {
+                    do {
+                        if !inbox.hasReceipt(recording.id) {
+                            _ = try await EvidenceStore.shared.saveWatchRecording(recording,
+                                audioURL: inbox.audioURL(recording.id), currentBinding: WatchAccountScope.current)
+                            try inbox.markReceived(recording.id)
+                        }
+                        // A lost receipt causes re-delivery of the same UUID.
+                        if WCSession.default.activationState == .activated {
+                            WCSession.default.transferUserInfo(["watchRecordingAck": recording.id.uuidString])
+                            try inbox.acknowledge(recording.id)
+                        }
+                        await onImport?()
+                    } catch { failed = true }
                 }
-                // The OS queues this receipt durably. A lost receipt causes a
-                // harmless re-delivery with the same UUID, never a second upload.
-                if WCSession.default.activationState == .activated {
-                    WCSession.default.transferUserInfo(["watchRecordingAck": recording.id.uuidString])
-                    try inbox.acknowledge(recording.id)
-                }
-                await onImport?()
-            }
-            lastError = nil
-            if SessionStore.current != nil { await UploadQueue.shared.autoKick() }
+            } while needsImportPass
+            lastError = failed ? tr("watch.phoneError") : nil
         } catch { lastError = tr("watch.phoneError") }
+        // A slow cloud upload must not hold the inbox lock or swallow new files.
+        importing = false
+        if SessionStore.current != nil { await UploadQueue.shared.autoKick() }
     }
 
     nonisolated func session(_ session: WCSession, didReceive file: WCSessionFile) {

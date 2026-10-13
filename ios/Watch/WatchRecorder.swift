@@ -77,18 +77,21 @@ final class WatchRecorder: NSObject, AVAudioRecorderDelegate, WCSessionDelegate 
         }
     }
 
-    func stop() {
-        guard recording, !busy else { return }
+    func stop(interrupted: Bool = false) {
+        guard recording, !busy, let audio = recorder else { return }
         busy = true
         recording = false
-        recorder?.stop()
-        // The delegate validates and commits the file before queueing it.
+        audio.delegate = nil
+        audio.stop()
+        // Interruptions do not deliver didFinishRecording. Close synchronously
+        // and invoke the same idempotent finalizer ourselves.
+        audioRecorderDidFinishRecording(audio, successfully: !interrupted)
     }
 
     private func interrupt() {
         guard recording else { return }
         notice = tr("watch.interrupted")
-        stop()
+        stop(interrupted: true)
     }
 
     func resume() async {
