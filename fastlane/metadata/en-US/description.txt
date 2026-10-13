@@ -15,12 +15,15 @@ The cloud is only a relay
 The relayed copy is deleted as soon as the desktop app confirms the file has landed on disk; the 7-day expiry is a backstop, not the main mechanism.
 
 Photo, video and audio in one viewfinder
-All three capture modes share one screen and file into the same project folder. Audio recording keeps going in the background and resumes automatically after a call interrupts it.
+All three capture modes share one screen and file into the same project folder. Audio recording continues in the background. When a call or system event interrupts it, usable audio is saved with a clear notice. Reopen the app after an unexpected exit to see the recovery result.
 
 One phone, every matter you're on
 Switch projects and each capture files itself into the right folder.
 
+Apple Watch recording
+Start and stop recording on your watch. Recordings automatically transfer to your paired iPhone and follow the existing project upload workflow. Pending recordings stay on the watch while disconnected. Change the project on iPhone before the first upload attempt. Requires watchOS 10 or later.
+
 Who it's for
 Due diligence and site visits for law firms, audit stocktakes for accounting firms, supply-chain factory inspections, site acceptance for engineering, insurance surveys, and anyone whose work is document-driven and needs what happens on site brought back into the project.
 
-Note: the app interface is currently in Simplified Chinese only. An AI WorkDeck account and the AI WorkDeck desktop app are required.
+An AI WorkDeck account and the AI WorkDeck desktop app are required.
