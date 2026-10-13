@@ -1295,5 +1295,33 @@ export const ContractStrings: Record<string, Record<string, string>> = {
   "watch.accountChanged": {
     "zh-Hans": "录音属于上次登录，请重新归类后再上传。",
     "en": "This recording belongs to a previous sign-in. Assign it again before uploading."
+  },
+  "rec.notice.title": {
+    "zh-Hans": "录音状态",
+    "en": "Recording status"
+  },
+  "rec.interruption.saved": {
+    "zh-Hans": "录音因来电、其他音频占用或系统中断而停止。已录部分已保存，请到资料库试听核对；之后的声音没有录入。如需继续，请重新开始录音。",
+    "en": "Recording stopped because of a call, another audio session, or a system interruption. The recorded portion was saved; play it in the library to check. Audio after the interruption was not recorded. Start a new recording to continue."
+  },
+  "rec.recovery.saved": {
+    "zh-Hans": "检测到上次录音未正常结束，已恢复 {count} 段可播放音频。请到资料库试听核对；应用退出后的声音没有录入。",
+    "en": "The previous recording did not end normally. Recovered {count} playable recording(s). Play them in the library to check; audio after the app exited was not recorded."
+  },
+  "rec.recovery.noAudio": {
+    "zh-Hans": "有 {count} 段录音未能读取到有效音频，不能视为录音成功。原始草稿已保留，可重试保存；请重新录音补充缺失内容。",
+    "en": "No valid audio could be read from {count} recording(s). These recordings were not saved successfully. Original drafts are retained for retry; record again to replace the missing content."
+  },
+  "rec.recovery.saveFailed": {
+    "zh-Hans": "有 {count} 段录音尚未保存到资料库，不能视为保存成功。原始草稿已保留，请重试保存。",
+    "en": "Failed to save {count} recording(s) to the library. Original drafts are retained. Retry saving."
+  },
+  "rec.retrySave": {
+    "zh-Hans": "重试保存",
+    "en": "Retry saving"
+  },
+  "rec.background.limit": {
+    "zh-Hans": "锁屏或退到后台仍可录音；来电、系统中断或强制退出会停止录音，请留意提示并核对已录内容。",
+    "en": "Recording continues while locked or in the background. Calls, system interruptions, or force quitting can stop it. Check any notice and review the recorded audio."
   }
 }

@@ -65,6 +65,38 @@ final class RecordingFlowTests: XCTestCase {
         shot.lifetime = .keepAlways; add(shot)
     }
 
+    func testTerminatedRecordingReportsRecoveryWithoutRestarting() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-AWDRecordingUITest"]
+        app.launch()
+        // Earlier crash-path runs deliberately retain failed drafts.
+        let earlierNotice = app.alerts["Recording status"]
+        if earlierNotice.waitForExistence(timeout: 2) { earlierNotice.buttons["Close"].tap() }
+        let mode = app.buttons["capture.mode.audio"]
+        XCTAssertTrue(mode.waitForExistence(timeout: 10))
+        mode.tap()
+        let shutter = app.buttons["capture.shutter"]
+        shutter.tap()
+        allowMicrophoneIfNeeded()
+        expectation(for: NSPredicate(format: "label == %@", "Stop recording"), evaluatedWith: shutter)
+        waitForExpectations(timeout: 30)
+        Thread.sleep(forTimeInterval: 3)
+        app.terminate()
+        app.launch()
+        let notice = app.alerts["Recording status"]
+        XCTAssertTrue(notice.waitForExistence(timeout: 15))
+        let recovered = notice.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "previous recording did not end normally")).firstMatch
+        let invalid = notice.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "No valid audio could be read")).firstMatch
+        XCTAssertTrue(recovered.exists || invalid.exists, "Relaunch must explicitly report recovered audio or an unsuccessful recording")
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        notice.buttons["Close"].tap()
+        XCTAssertFalse(app.buttons["capture.shutter"].label == "Stop recording")
+    }
+
     func testBackgroundReturnStopAndPlayFromAudioLibrary() {
         defer { XCUIDevice.shared.orientation = .portrait }
         continueAfterFailure = false

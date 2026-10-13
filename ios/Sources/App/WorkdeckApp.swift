@@ -33,6 +33,8 @@ struct WorkdeckApp: App {
 }
 
 private struct RootView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    private let recorder = AudioRecorderService.shared
     @State private var showingProjects = false
     @Environment(AppModel.self) private var model
 
@@ -65,6 +67,26 @@ private struct RootView: View {
         }
         .onChange(of: model.isSignedIn) { _, signedIn in
             showingProjects = false
+        }
+        .alert(tr("rec.notice.title"), isPresented: Binding(
+            get: { recorder.notice != nil },
+            set: { if !$0 { recorder.dismissNotice() } }
+        )) {
+            if recorder.canRetrySave {
+                Button(tr("rec.retrySave")) { Task { await recorder.recoverPending(retry: true) } }
+            }
+            Button(tr("common.close"), role: .cancel) { recorder.dismissNotice() }
+        } message: { Text(recorder.notice ?? "") }
+        .task(id: model.didRestore) {
+            if model.didRestore { await recorder.recoverPending() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task {
+                    await recorder.checkRecordingStatus()
+                    await recorder.recoverPending()
+                }
+            }
         }
         .animation(T.A.base, value: model.isSignedIn)
         .animation(T.A.base, value: model.selectedProject)
