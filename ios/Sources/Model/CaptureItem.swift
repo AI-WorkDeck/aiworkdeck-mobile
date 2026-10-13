@@ -109,6 +109,8 @@ struct CaptureItem: Identifiable, Sendable {
     /// Even a failed request may have reached the server. Never silently reroute
     /// its idempotency key after the first upload attempt.
     var uploadAttempted = false
+    /// Watch-origin recordings must never follow a different login into its cloud.
+    var watchAccountBinding: String? = nil
     var canMoveToProject: Bool { !uploadAttempted && (state == .waiting || state == .failed) }
 
     var capturedAt: Date { manifest.capturedAt }

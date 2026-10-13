@@ -308,7 +308,14 @@ actor API {
     /// 所以这里不需要「先建记录再传字节」的两段式。
     func upload(item: CaptureItem, project: RelayProject, fileName: String,
                 progress: @Sendable @escaping (Double) -> Void) async throws {
-        var req = Self.request(Backend.baseURL.appendingPathComponent("/api/mobile/media"))
+        let baseURL = Backend.baseURL
+        let sessionID = SessionStore.current
+        if let binding = item.watchAccountBinding,
+           binding != WatchAccountScope.binding(session: sessionID, baseURL: baseURL) {
+            throw APIError(message: tr("watch.accountChanged"))
+        }
+        var req = Self.request(baseURL.appendingPathComponent("/api/mobile/media"))
+        req.setValue(sessionID, forHTTPHeaderField: "X-Session-Id")
         req.httpMethod = "POST"
         let boundary = "awd-\(UUID().uuidString)"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")

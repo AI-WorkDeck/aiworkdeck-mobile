@@ -52,7 +52,8 @@ actor EvidenceStore {
         location: (lat: Double, lon: Double, accuracy: Double)?,
         device: DeviceFacts,
         project: RelayProject?,
-        id: UUID = UUID()
+        id: UUID = UUID(),
+        watchAccountBinding: String? = nil
     ) throws -> CaptureItem {
         try ensureDirs()
 
@@ -85,7 +86,8 @@ actor EvidenceStore {
         let item = CaptureItem(
             id: id, kind: kind, state: .waiting,
             manifest: manifest, localURL: url, progress: 0,
-            lastError: nil, savedToAlbum: false, project: project
+            lastError: nil, savedToAlbum: false, project: project,
+            watchAccountBinding: watchAccountBinding
         )
         try writeManifest(item)
         return item
@@ -101,10 +103,36 @@ actor EvidenceStore {
                         project: draft.project, id: draft.id)
     }
 
+    /// A duplicate delivery must preserve upload state and the original destination.
+    func saveWatchRecording(_ recording: WatchRecording, audioURL: URL,
+                            currentBinding: String?) throws -> CaptureItem {
+        if let existing = try loadOne(recording.id) { return existing }
+        guard recording.complete else { throw CocoaError(.fileReadCorruptFile) }
+        let data = try Data(contentsOf: audioURL, options: .mappedIfSafe)
+        guard !data.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+        let target = recording.destination.flatMap { destination -> RelayProject? in
+            guard destination.binding == currentBinding else { return nil }
+            return RelayProject(deviceId: destination.deviceId, deviceName: destination.deviceName,
+                key: destination.key, name: destination.name, projectUid: destination.projectUid)
+        }
+        return try save(data: data, kind: .audio, capturedAt: recording.startedAt, location: nil,
+            device: DeviceFacts(model: recording.deviceModel, osVersion: recording.osVersion,
+                                appVersion: recording.appVersion),
+            project: target, id: recording.id,
+            watchAccountBinding: recording.destination?.binding ?? "")
+    }
+
     /// Claim and project edits run in one actor without suspension, so an upload
     /// cannot send a stale destination while the user moves the item.
-    func claimNextUpload() throws -> CaptureItem? {
-        guard var item = try loadAll().last(where: { $0.state == .waiting && $0.project != nil }) else { return nil }
+    func claimNextUpload(currentWatchBinding: String? = WatchAccountScope.current) throws -> CaptureItem? {
+        for var item in try loadAll() where item.state == .waiting && item.project != nil &&
+            item.watchAccountBinding != nil && item.watchAccountBinding != currentWatchBinding {
+            item.state = .failed
+            item.lastError = tr("watch.accountChanged")
+            try writeManifest(item)
+        }
+        guard var item = try loadAll().last(where: { $0.state == .waiting && $0.project != nil &&
+            ($0.watchAccountBinding == nil || $0.watchAccountBinding == currentWatchBinding) }) else { return nil }
         item.state = .uploading
         item.uploadAttempted = true
         item.progress = 0
@@ -113,7 +141,7 @@ actor EvidenceStore {
         return item
     }
 
-    func moveToProject(_ id: UUID, _ project: RelayProject) throws {
+    func moveToProject(_ id: UUID, _ project: RelayProject, currentWatchBinding: String? = WatchAccountScope.current) throws {
         guard let item = try loadOne(id) else { throw APIError(message: tr("library.moveMissing")) }
         guard item.canMoveToProject else {
             throw APIError(message: tr("library.moveSynced"))
@@ -121,7 +149,8 @@ actor EvidenceStore {
         let updated = CaptureItem(
             id: item.id, kind: item.kind, state: .waiting, manifest: item.manifest,
             localURL: item.localURL, progress: 0, lastError: nil,
-            savedToAlbum: item.savedToAlbum, project: project)
+            savedToAlbum: item.savedToAlbum, project: project,
+            watchAccountBinding: item.watchAccountBinding == nil ? nil : (currentWatchBinding ?? ""))
         try writeManifest(updated)
     }
 
@@ -199,7 +228,8 @@ actor EvidenceStore {
             lastError: row.lastError,
             savedToAlbum: row.savedToAlbum ?? false,
             project: row.project,
-            uploadAttempted: row.uploadAttempted ?? (row.project != nil)
+            uploadAttempted: row.uploadAttempted ?? (row.project != nil),
+            watchAccountBinding: row.watchAccountBinding
         )
     }
 
@@ -207,7 +237,7 @@ actor EvidenceStore {
         let row = StoredRow(kind: item.kind, state: item.state, progress: item.progress,
                             manifest: item.manifest, lastError: item.lastError,
                             savedToAlbum: item.savedToAlbum, project: item.project,
-                            uploadAttempted: item.uploadAttempted)
+                            uploadAttempted: item.uploadAttempted, watchAccountBinding: item.watchAccountBinding)
         let u = manifestDir.appendingPathComponent("\(item.id.uuidString).json")
         try JSONEncoder.iso.encode(row).write(to: u, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
@@ -244,6 +274,7 @@ private struct StoredRow: Codable {
     /// 归档去向。未归类记录等待用户手动指定。
     var project: RelayProject?
     var uploadAttempted: Bool?
+    var watchAccountBinding: String?
 }
 
 struct DeviceFacts: Sendable, Codable {

@@ -61,3 +61,5 @@ __pycache__/
 scripts/store-shots/out-preview/
 scripts/store-shots/raw/
 ios/DerivedData-release/
+
+ios/Info-Watch.plist

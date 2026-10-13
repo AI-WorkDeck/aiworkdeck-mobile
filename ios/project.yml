@@ -29,6 +29,7 @@ targetTemplates:
     platform: iOS
     sources:
       - path: Sources
+      - path: WatchShared
       - path: Resources
       # Live Activity 的属性与停止意图，与扩展共用同一份源码（见 LiveActivityExt）
       - path: Shared
@@ -164,6 +165,7 @@ targets:
       storeKitConfiguration: Workdeck.storekit
     dependencies:
       - target: WorkdeckLiveActivity
+      - target: WorkdeckWatch
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.aiworkdeck.mobile.cn
@@ -210,3 +212,46 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGNING_ALLOWED: NO
         TEST_TARGET_NAME: Workdeck
+
+  WorkdeckWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: Watch
+      - path: WatchShared
+      - path: WatchResources
+      - path: Sources/Contract/Strings.swift
+      - path: Sources/Contract/Tokens.swift
+      - path: Sources/Design/L10n.swift
+      - path: Sources/Design/Typography.swift
+    scheme:
+      configVariants: []
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.aiworkdeck.mobile.cn.watchkitapp
+        TARGETED_DEVICE_FAMILY: "4"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SKIP_INSTALL: YES
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: Automatic
+          CODE_SIGNING_ALLOWED: NO
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          "CODE_SIGN_IDENTITY[sdk=watchos*]": "Apple Distribution"
+          PROVISIONING_PROFILE_SPECIFIER: "AI WorkDeck Watch AppStore"
+    info:
+      path: Info-Watch.plist
+      properties:
+        CFBundleDisplayName: AI WorkDeck
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.aiworkdeck.mobile.cn
+        WKRunsIndependentlyOfCompanionApp: false
+        ITSAppUsesNonExemptEncryption: false
+        NSMicrophoneUsageDescription: 录制音频并自动同步到配对 iPhone 中的 AI WorkDeck。
+        UIBackgroundModes:
+          - audio

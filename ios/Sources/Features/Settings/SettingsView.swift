@@ -104,6 +104,19 @@ struct SettingsView: View {
                             .frame(minHeight: T.touchMin)
                     }
 
+                    group(tr("watch.title")) {
+                        Text(tr("watch.phoneHint"))
+                            .font(T.F.small()).foregroundStyle(T.L.fgMuted)
+                        if let error = WatchPhoneBridge.shared.lastError {
+                            Text(error).font(T.F.small()).foregroundStyle(T.S.failed)
+                        }
+                        Button(tr("watch.retry")) {
+                            WatchPhoneBridge.shared.publishContext()
+                            Task { await WatchPhoneBridge.shared.importPending() }
+                        }
+                        .frame(minHeight: T.touchMin)
+                    }
+
                     group(tr("settings.account")) {
                         infoRow(tr("settings.signedIn"), model.account?.displayName ?? "—")
                         // 还没读完时整行不渲染，见 BalanceState 上的注释。

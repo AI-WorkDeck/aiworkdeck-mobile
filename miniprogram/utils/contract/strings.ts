@@ -1291,5 +1291,9 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
   "watch.phoneError": {
     "zh-Hans": "手表录音暂未导入，原件仍保留，将自动重试。",
     "en": "Watch recording import is pending. The original is retained and will retry."
+  },
+  "watch.accountChanged": {
+    "zh-Hans": "录音属于上次登录，请重新归类后再上传。",
+    "en": "This recording belongs to a previous sign-in. Assign it again before uploading."
   }
 }

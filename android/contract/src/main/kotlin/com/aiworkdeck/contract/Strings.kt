@@ -326,5 +326,6 @@ object ContractStrings {
         "watch.syncFailed" to mapOf("zh-Hans" to "同步尚未完成，录音仍保留在手表，将自动重试。", "en" to "Sync is incomplete. Audio remains on your watch and will retry automatically."),
         "watch.phoneHint" to mapOf("zh-Hans" to "手表停止录音后会自动同步；选定项目的录音接入上传队列，未选项目的可在未归类资料中查看。电脑收到后可使用现有转写功能。", "en" to "Watch recordings sync automatically. Assigned recordings enter the upload queue; others appear in Unassigned. Use transcription on desktop after receipt."),
         "watch.phoneError" to mapOf("zh-Hans" to "手表录音暂未导入，原件仍保留，将自动重试。", "en" to "Watch recording import is pending. The original is retained and will retry."),
+        "watch.accountChanged" to mapOf("zh-Hans" to "录音属于上次登录，请重新归类后再上传。", "en" to "This recording belongs to a previous sign-in. Assign it again before uploading."),
     )
 }

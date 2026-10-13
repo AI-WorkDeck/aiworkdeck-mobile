@@ -12,6 +12,7 @@ struct WorkdeckApp: App {
         // 界面语言跟账号区域走（dev-board#837）：大陆版中文、海外版英文，不跟设备语言。
         // 存量用户没有区域键 → 缺省大陆版 → 中文，与升级前一致。
         L10n.apply(region: .current)
+        WatchPhoneBridge.shared.activate()
     }
 
     var body: some Scene {
