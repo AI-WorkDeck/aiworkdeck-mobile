@@ -250,6 +250,13 @@ actor API {
 
     // MARK: 登录
 
+    func accountLogin(account: String, password: String) async throws -> LoginResult {
+        let r = try await post("/api/auth/account-login", body: ["account": account, "password": password], as: LoginResult.self)
+        guard let r, !r.sessionId.isEmpty, r.user.id > 0 else { throw APIError(message: tr("error.loginNoData")) }
+        SessionStore.current = r.sessionId
+        return r
+    }
+
     func sendLoginCode(phone: String) async throws {
         _ = try await post("/api/auth/sms-login/send-code",
                            body: ["phone": phone], as: Empty.self)

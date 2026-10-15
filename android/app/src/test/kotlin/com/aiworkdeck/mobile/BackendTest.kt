@@ -28,6 +28,29 @@ class BackendTest {
 
     @After fun tearDown() { server.shutdown() }
 
+    @Test fun passwordLoginPreservesIdentityAndExactPassword() = runTest {
+        server.enqueue(MockResponse().setBody(
+            """{"code":0,"data":{"sessionId":"device-token","user":{"id":71,"username":"existing-user","displayName":"Test"}}}"""
+        ))
+        val result = backend.accountLogin("synthetic@example.invalid", "  synthetic password  ")
+        assertEquals(71L, result.user.id)
+        assertEquals("device-token", session.current())
+        val request = server.takeRequest()
+        assertEquals("/api/auth/account-login", request.path)
+        assertTrue(request.body.readUtf8().contains("\"password\":\"  synthetic password  \""))
+    }
+
+    @Test fun setupChallengeNeverBecomesAMobileSession() = runTest {
+        server.enqueue(MockResponse().setBody(
+            """{"code":0,"data":{"passwordSetupRequired":true,"setupToken":"synthetic-setup"}}"""
+        ))
+        var rejected = false
+        try { backend.accountLogin("synthetic@example.invalid", "synthetic") }
+        catch (_: Exception) { rejected = true }
+        assertTrue(rejected)
+        assertNull(session.current())
+    }
+
     @Test fun verifyLoginCodeDecodesEnvelopeAndSavesSession() = runTest {
         server.enqueue(MockResponse().setBody(
             """{"code":0,"data":{"sessionId":"sess-1","isNewUser":true,"user":{"id":1,"username":"u","displayName":"U"}}}"""

@@ -112,23 +112,62 @@ final class WorkspaceFlowTests: XCTestCase {
         app.launchArguments = ["-AWDLoginUITest", "-accountRegion", "cn"]
         XCUIDevice.shared.orientation = .landscapeLeft
         app.launch()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 10))
+        let identity = app.textFields["login.identity"]
+        XCTAssertTrue(identity.waitForExistence(timeout: 10))
         XCTAssertGreaterThan(app.frame.width, app.frame.height)
-        app.swipeDown()
-        let region = app.buttons["切换大陆版或海外版账号"]
-        XCTAssertTrue(region.waitForExistence(timeout: 5))
-        XCTAssertTrue(region.isHittable)
-        XCTAssertGreaterThanOrEqual(region.frame.minY, app.frame.minY)
-        app.buttons["邮箱"].tap()
-        XCTAssertTrue(app.textFields.firstMatch.waitForExistence(timeout: 5))
-        app.textFields.firstMatch.tap()
-        app.textFields.firstMatch.typeText("layout-test@example.invalid")
-        XCTAssertEqual(app.textFields.firstMatch.value as? String, "layout-test@example.invalid")
-        app.swipeUp()
-        let send = app.buttons["获取验证码"]
-        XCTAssertTrue(send.waitForExistence(timeout: 5))
-        XCTAssertTrue(send.isHittable)
-        // No code request is sent; this only exercises form layout.
+        identity.tap()
+        identity.typeText("13800007301")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        let scroll = app.scrollViews["login.scroll"]
+        XCTAssertTrue(scroll.exists)
+        // A full-screen flick skips the password between the short landscape viewport and keyboard.
+        // The ScrollView frame includes the landscape safe area; derive the content gutter from the field.
+        // This stays inside the safe area and outside segmented controls that consume vertical gestures.
+        // Reverse if the target passed above the visible scroll area.
+        func reveal(_ element: XCUIElement) {
+            for _ in 0..<12 where !element.isHittable {
+                let frame = scroll.frame
+                let keyboard = app.keyboards.firstMatch
+                let bottom = keyboard.exists ? min(frame.maxY, keyboard.frame.minY) : frame.maxY
+                let top = max(frame.minY, app.frame.minY) + 8
+                let height = max(24, bottom - top - 8)
+                let centerY = top + height / 2
+                let direction: CGFloat = element.frame.maxY < top ? 1 : -1
+                let gutterX = max(frame.minX + 8, identity.frame.minX - 8)
+                let origin = app.coordinate(withNormalizedOffset: .zero)
+                let start = origin.withOffset(CGVector(dx: gutterX, dy: centerY - direction * height * 0.15))
+                let end = origin.withOffset(CGVector(dx: gutterX, dy: centerY + direction * height * 0.15))
+                // The default 500 px/s release flings past the entire short form. Stop before lifting.
+                start.press(forDuration: 0.15, thenDragTo: end,
+                            withVelocity: XCUIGestureVelocity(rawValue: 80), thenHoldForDuration: 0.5)
+            }
+            if !element.isHittable {
+                let geometry = XCTAttachment(string: "App: \(app.frame); scroll: \(scroll.frame); identity: \(identity.frame); keyboard: \(app.keyboards.firstMatch.frame); target: \(element.frame)")
+                geometry.lifetime = .keepAlways
+                add(geometry)
+                let failure = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+                failure.name = "Unreachable landscape login control"
+                failure.lifetime = .keepAlways
+                add(failure)
+            }
+            XCTAssertTrue(element.isHittable)
+        }
+        let password = app.secureTextFields["login.password"]
+        reveal(password)
+        let visiblePassword = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        visiblePassword.name = "Landscape password reachable above keyboard"
+        visiblePassword.lifetime = .keepAlways; add(visiblePassword)
+        password.tap()
+        password.typeText("synthetic-layout-password")
+        let enteredPassword = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        enteredPassword.name = "Landscape password entered"
+        enteredPassword.lifetime = .keepAlways; add(enteredPassword)
+        for id in ["login.register", "login.reset"] {
+            let entry = app.buttons[id]
+            XCTAssertTrue(entry.exists)
+            reveal(entry)
+        }
+        // No sign-in, code request, external navigation or real data is created.
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         shot.lifetime = .keepAlways; add(shot)
     }

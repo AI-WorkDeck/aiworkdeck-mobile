@@ -1,0 +1,2 @@
+.fallback { padding: var(--gutter); color: var(--fg); background: var(--bg); }
+.fallback view, .fallback text { display: block; margin-bottom: var(--s4); overflow-wrap: anywhere; }

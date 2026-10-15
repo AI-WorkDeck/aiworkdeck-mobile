@@ -1,15 +1,6 @@
 import SwiftUI
 
-/// 首屏登录：手机号或邮箱 + 验证码。
-///
-/// 两条路径**语义不同**，界面上必须说清，别做成同一句话换个输入框：
-/// - 手机号：注册与登录合一，号码没见过后端就建号。只走中国大陆短信通道。
-/// - 邮箱：同样是注册登录合一（后端 findOrCreateByEmail），未注册的地址也会收到码，
-///   验过就建号。两条路在「填标识 → 收码 → 进去」这件事上没有差别，界面上也就
-///   不该再区别对待。
-///
-/// 邮箱这条是国际版能用的前提：境外收不到中国短信，只有手机号那条等于门是锁死的。
-/// 登录方式。放在文件级而不是 LoginView 里私有，是为了让「按区域可用的方式」能直接单测。
+/// Regional account methods remain shared with the login-method tests.
 enum LoginMethod: Equatable, Sendable {
     case phone, email
 
@@ -29,351 +20,97 @@ enum LoginMethod: Equatable, Sendable {
     }
 }
 
+/// Only a flow marker crosses to the browser; never put the entered identity or password in a URL.
+func accountFlowURL(region: AccountRegion, method: LoginMethod, flow: String) -> URL {
+    let host = region == .intl ? "https://workdeck.ai/en/account" : "https://aiworkdeck.com/zh/account"
+    let selectedFlow = flow == "reset" ? "reset" : "register"
+    let migration = region == .cn && method == .email ? "&legacyEmail=1" : ""
+    return URL(string: host + "?flow=" + selectedFlow + migration)!
+}
+
+/// Password sign-in uses the same account authority as desktop and website.
 struct LoginView: View {
     @Environment(AppModel.self) private var model
-
-    private typealias Method = LoginMethod
-    private enum Step { case identity, code }
-
-    /// 区域在登录页现选现存：API 每次请求现读 `AccountRegion.current`，
-    /// 所以这里一改，下一次发码就打到新主机上。
+    @Environment(\.openURL) private var openURL
     @State private var region: AccountRegion = .current
-    @Namespace private var regionNS
-    @State private var method: Method = LoginMethod.defaultMethod(in: .current,
-                                                                  bundleID: Bundle.main.bundleIdentifier)
-    @State private var step: Step = .identity
-    @State private var phone = ""
-    @State private var email = ""
-    @State private var code = ""
+    @State private var method = LoginMethod.defaultMethod(in: .current, bundleID: Bundle.main.bundleIdentifier)
+    @State private var identity = ""
+    @State private var password = ""
     @State private var busy = false
+    @State private var reviewMode = false
     @State private var error: String?
-    @State private var cooldown = 0
-    @FocusState private var focused: Bool
 
     var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                form.frame(minHeight: geometry.size.height)
-            }
-            .scrollDismissesKeyboard(.interactively)
-        }
-        .background(T.L.bg)
-        .onAppear { focused = true }
-    }
-
-    private var form: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if ContractCapabilities.intlAccount {
-                HStack { Spacer(); regionToggle }.padding(.top, T.Sp.s2)
-            }
-
-            Spacer(minLength: 0)
-
-            Eyebrow(text: tr(step == .identity ? "login.title" : "login.codeTitle"))
-            Text(title)
-                .font(T.F.display())
-                .foregroundStyle(T.L.fg)
-                .padding(.top, T.Sp.s2)
-
-            if step == .identity, region == .intl {
-                Text(tr("login.region.intlHint"))
-                    .font(T.F.micro())
-                    .foregroundStyle(T.L.fgFaint)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, T.Sp.s1)
-                    .transition(.opacity)
-            }
-
-            if step == .code {
-                Text(tr("login.sentTo", ["to": masked]))
-                    .font(T.F.micro())
-                    .foregroundStyle(T.L.fgFaint)
-                    .padding(.top, T.Sp.s1)
-            }
-
-            if step == .identity, LoginMethod.available(in: region).count > 1 {
-                methodPicker.padding(.top, T.Sp.s4)
-            }
-
-            field.padding(.top, step == .identity ? T.Sp.s5 : T.Sp.s8)
-            Hairline().padding(.top, T.Sp.s3)
-
-            if let error {
-                Text(error)
-                    .font(T.F.micro())
-                    .foregroundStyle(T.S.failed)
-                    .padding(.top, T.Sp.s3)
-                    .transition(.opacity)
-            }
-
-            primaryAction.padding(.top, T.Sp.s6)
-
-            if step == .code { secondaryActions.padding(.top, T.Sp.s4) }
-
-            Spacer(minLength: 0)
-            footer
-        }
-        .padding(.horizontal, T.Sp.gutter)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var title: String {
-        if step == .code { return tr("login.codePrompt") }
-        return tr(method == .phone ? "login.phone" : "login.email")
-    }
-
-    private var masked: String {
-        switch method {
-        case .phone:
-            guard phone.count >= 7 else { return phone }
-            return phone.prefix(3) + "****" + phone.suffix(4)
-        case .email:
-            guard let at = email.firstIndex(of: "@") else { return email }
-            let name = email[email.startIndex..<at]
-            let head = name.count <= 1 ? "***" : name.prefix(1) + "***"
-            return head + email[at...]
-        }
-    }
-
-    // MARK: - 输入
-
-    /// 大陆版 / 海外版：右上角一个胶囊开关，点哪儿都翻到另一边（参照云厂商 App 的「中国站 / 国际站」）。
-    /// 两边是两套账号体系，选错了发码必然失败。切换当场生效：主机、登录方式、界面语言
-    /// （海外版英文）一起换；回到填标识那一步、清掉输入与报错——上一区域填到一半的东西
-    /// 在新区域没有意义；冷却也归零，那是上一台主机的冷却。
-    private var regionToggle: some View {
-        Button {
-            let r: AccountRegion = region == .cn ? .intl : .cn
-            model.switchRegion(to: r)
-            withAnimation(T.A.base) {
-                region = r
-                method = LoginMethod.defaultMethod(in: r, bundleID: Bundle.main.bundleIdentifier)
-                step = .identity
-                phone = ""
-                email = ""
-                code = ""
-                error = nil
-                cooldown = 0
-            }
-            focused = true
-        } label: {
-            HStack(spacing: 0) {
-                ForEach(AccountRegion.allCases, id: \.self) { r in
-                    Text(tr(r.labelKey))
-                        .font(T.F.micro())
-                        .foregroundStyle(region == r ? T.L.bg : T.L.fgMuted)
-                        .padding(.horizontal, T.Sp.s3)
-                        .padding(.vertical, T.Sp.s1)
-                        .background {
-                            if region == r {
-                                Capsule().fill(T.L.accent)
-                                    .matchedGeometryEffect(id: "regionThumb", in: regionNS)
-                            }
-                        }
+        ScrollView {
+            VStack(alignment: .leading, spacing: T.Sp.s4) {
+                if ContractCapabilities.intlAccount {
+                    Picker(tr("login.region.a11y"), selection: $region) {
+                        ForEach(AccountRegion.allCases, id: \.self) { r in Text(tr(r.labelKey)).tag(r) }
+                    }.pickerStyle(.segmented).disabled(busy)
                 }
-            }
-            .padding(2)
-            .background(Capsule().fill(T.L.sunken))
-            .overlay(Capsule().stroke(T.L.ruleStrong, lineWidth: 1))
-            .frame(minHeight: T.touchMin)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(tr("login.region.a11y"))
-        .accessibilityValue(tr(region.labelKey))
-        .accessibilityAddTraits(.isButton)
-    }
-
-    /// 两个方式之间切换。切换要清掉另一路的输入与报错，否则会出现
-    /// 「填了邮箱、报的是手机号那条的错」这种对不上号的状态。
-    private var methodPicker: some View {
-        HStack(spacing: T.Sp.s5) {
-            ForEach(LoginMethod.available(in: region), id: \.self) { m in
-                Button {
-                    guard method != m else { return }
-                    withAnimation(T.A.base) {
-                        method = m
-                        code = ""
-                        error = nil
-                    }
-                    focused = true
-                } label: {
-                    Text(tr(m == .phone ? "login.phone" : "login.email"))
-                        .font(T.F.small())
-                        .foregroundStyle(method == m ? T.L.accent : T.L.fgMuted)
+                Text(tr("login.title")).font(T.F.display()).foregroundStyle(T.L.fg)
+                Text(tr("login.passwordHint")).font(T.F.micro()).foregroundStyle(T.L.fgMuted)
+                if LoginMethod.available(in: region).count > 1 {
+                    Picker(tr("login.title"), selection: $method) {
+                        Text(tr("login.phone")).tag(LoginMethod.phone)
+                        Text(tr("login.email")).tag(LoginMethod.email)
+                    }.pickerStyle(.segmented).disabled(busy)
                 }
-                .buttonStyle(.plain)
-            }
-            Spacer()
+                TextField(tr(method == .phone ? "login.phonePlaceholder" : "login.emailPlaceholder"), text: $identity)
+                    .keyboardType(method == .phone ? .phonePad : .emailAddress)
+                    .textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .disabled(busy).accessibilityIdentifier("login.identity")
+                Hairline()
+                SecureField(tr(reviewMode ? "login.reviewCredential" : "login.passwordPlaceholder"), text: $password)
+                    .textContentType(.password).disabled(busy).accessibilityIdentifier("login.password")
+                Hairline()
+                if let error { Text(error).font(T.F.micro()).foregroundStyle(T.S.failed) }
+                Button { Task { await signIn() } } label: {
+                    HStack { Text(tr(busy ? "login.working" : "login.title")); Spacer(); if busy { ProgressView() } }
+                        .frame(minHeight: T.touchMin)
+                }.disabled(busy || identity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
+                    .accessibilityIdentifier("login.submit")
+                Button(tr(reviewMode ? "login.passwordMode" : "login.review")) { reviewMode.toggle(); password = ""; error = nil }.frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.review")
+                Button(tr("login.register")) { openAccountFlow("register") }.frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.register")
+                Button(tr("login.forgotPassword")) { openAccountFlow("reset") }.frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.reset")
+                Text(tr(region == .cn && method == .email ? "login.legacyEmailHint" : "login.webHint"))
+                    .font(T.F.micro()).foregroundStyle(T.L.fgMuted)
+            }.padding(T.Sp.gutter)
+        }.background(T.L.bg)
+        .accessibilityIdentifier("login.scroll")
+        .scrollDismissesKeyboard(.interactively)
+        .onChange(of: region) { _, value in
+            model.switchRegion(to: value)
+            method = LoginMethod.defaultMethod(in: value, bundleID: Bundle.main.bundleIdentifier)
+            clearInputs()
         }
-        .frame(minHeight: T.touchMin)
+        .onChange(of: method) { _, _ in clearInputs() }
     }
 
-    @ViewBuilder
-    private var field: some View {
-        switch step {
-        case .identity:
-            if method == .phone {
-                TextField("", text: $phone, prompt: Text(tr("login.phonePlaceholder")).foregroundStyle(T.L.fgFaint))
-                    .keyboardType(.numberPad)
-                    .textContentType(.telephoneNumber)
-                    .font(T.F.mono(28, .light))
-                    .foregroundStyle(T.L.fg)
-                    .focused($focused)
-                    .onChange(of: phone) { _, v in
-                        phone = String(v.filter(\.isNumber).prefix(11))
-                        error = nil
-                    }
-            } else {
-                // 占位符**不能写成一个真邮箱样子的串**：SwiftUI 的 Text 会把它识别成
-                // 邮件链接、按 accent 色渲染，看上去像是已经填好了值（页脚那条
-                // hi@aiworkdeck.com 的蓝色就是同一个机制，那处是有意的）。
-                TextField("", text: $email, prompt: Text(tr("login.emailPlaceholder")).foregroundStyle(T.L.fgFaint))
-                    .keyboardType(.emailAddress)
-                    .textContentType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .font(T.F.mono(20, .light))
-                    .foregroundStyle(T.L.fg)
-                    .focused($focused)
-                    .onChange(of: email) { _, v in
-                        email = v.trimmingCharacters(in: .whitespaces)
-                        error = nil
-                    }
-            }
-        case .code:
-            TextField("", text: $code, prompt: Text("······").foregroundStyle(T.L.fgFaint))
-                .keyboardType(.numberPad)
-                .textContentType(.oneTimeCode)   // 让系统从短信里自动填
-                .font(T.F.mono(28, .light))
-                .tracking(8)
-                .foregroundStyle(T.L.fg)
-                .focused($focused)
-                .onChange(of: code) { _, v in
-                    code = String(v.filter(\.isNumber).prefix(6))
-                    error = nil
-                    if code.count == 6 { Task { await verify() } }   // 满 6 位自动提交
-                }
-        }
+    private func clearInputs() { identity = ""; password = ""; error = nil; reviewMode = false }
+
+    private func openAccountFlow(_ flow: String) {
+        password = ""; error = nil; reviewMode = false
+        let url = accountFlowURL(region: region, method: method, flow: flow)
+        openURL(url) { accepted in if !accepted { error = tr("login.webError") } }
     }
 
-    // MARK: - 动作
-
-    private var primaryAction: some View {
-        Button {
-            Task { step == .identity ? await send() : await verify() }
-        } label: {
-            HStack {
-                Text(tr(step == .identity ? "login.sendCode" : "login.title"))
-                    .font(T.F.heading())
-                    .foregroundStyle(canSubmit ? T.L.accent : T.L.fgFaint)
-                Spacer()
-                if busy {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(canSubmit ? T.L.accent : T.L.fgFaint)
-                }
-            }
-            .frame(minHeight: T.touchMin)
-        }
-        .buttonStyle(.plain)
-        .disabled(!canSubmit || busy)
-    }
-
-    private var canSubmit: Bool {
-        switch step {
-        case .identity: return method == .phone ? phone.count == 11 : looksLikeEmail
-        case .code:     return code.count == 6
-        }
-    }
-
-    /// 只做「明显不是邮箱」的拦截，不做 RFC 校验——真正的判定在后端，
-    /// 客户端把合法地址挡下来比放个错地址过去更糟。
-    private var looksLikeEmail: Bool {
-        guard let at = email.firstIndex(of: "@"), at != email.startIndex else { return false }
-        let domain = email[email.index(after: at)...]
-        return domain.contains(".") && !domain.hasPrefix(".") && !domain.hasSuffix(".")
-    }
-
-    private var secondaryActions: some View {
-        HStack(spacing: T.Sp.s5) {
-            Button(cooldown > 0 ? tr("login.resendIn", ["s": String(cooldown)]) : tr("login.resend")) {
-                Task { await send() }
-            }
-            .disabled(cooldown > 0 || busy)
-            .font(T.F.small())
-            .foregroundStyle(cooldown > 0 ? T.L.fgFaint : T.L.accent)
-
-            Button(tr(method == .phone ? "login.changePhone" : "login.changeEmail")) {
-                withAnimation(T.A.base) { step = .identity; code = ""; error = nil }
-                focused = true
-            }
-            .font(T.F.small())
-            .foregroundStyle(T.L.fgMuted)
-
-            Spacer()
-        }
-        .frame(minHeight: T.touchMin)
-    }
-
-    private var footer: some View {
-        VStack(alignment: .leading, spacing: T.Sp.s1) {
-            Hairline()
-            // 走 LocalizedStringKey 而不是 String：那条 hi@aiworkdeck.com 的蓝色来自
-            // SwiftUI 对 LocalizedStringKey 的 Markdown/链接识别（见上面 field 里的注释），
-            // 直接传 String 会走 StringProtocol 那个 init，链接色就没了。
-            Text(LocalizedStringKey(tr("login.help")))
-                .font(T.F.nano())
-                .foregroundStyle(T.L.fgFaint)
-                .padding(.top, T.Sp.s3)
-        }
-        .padding(.bottom, T.Sp.s6)
-    }
-
-    private func send() async {
-        busy = true; error = nil
-        do {
-            switch method {
-            case .phone: try await API.shared.sendLoginCode(phone: phone)
-            case .email: try await API.shared.sendMailLoginCode(email: email)
-            }
-            withAnimation(T.A.base) { step = .code }
-            code = ""
-            focused = true
-            startCooldown()
-        } catch {
-            self.error = error.localizedDescription
-        }
-        busy = false
-    }
-
-    private func verify() async {
+    private func signIn() async {
         guard !busy else { return }
         busy = true; error = nil
+        defer { busy = false }
         do {
-            let r = switch method {
-            case .phone: try await API.shared.verifyLoginCode(phone: phone, code: code)
-            case .email: try await API.shared.verifyMailLoginCode(email: email, code: code)
+            let account = identity.trimmingCharacters(in: .whitespacesAndNewlines)
+            let result: LoginResult
+            if reviewMode {
+                result = method == .phone
+                    ? try await API.shared.verifyLoginCode(phone: account, code: password)
+                    : try await API.shared.verifyMailLoginCode(email: account, code: password)
+            } else {
+                result = try await API.shared.accountLogin(account: account, password: password)
             }
-            await model.didLogin(r)
-        } catch {
-            self.error = error.localizedDescription
-            code = ""
-        }
-        busy = false
-    }
-
-    /// 60 秒重发冷却。后端也有冷却，这里只是别让人白点。
-    private func startCooldown() {
-        cooldown = 60
-        Task {
-            while cooldown > 0 {
-                try? await Task.sleep(for: .seconds(1))
-                cooldown -= 1
-            }
-        }
+            password = ""
+            await model.didLogin(result)
+        } catch { self.error = error.localizedDescription }
     }
 }

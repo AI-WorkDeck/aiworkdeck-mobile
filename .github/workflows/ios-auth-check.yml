@@ -1,0 +1,38 @@
+name: ios-auth-check
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['ios/**', 'contract/**', '.github/workflows/ios-auth-check.yml']
+permissions:
+  contents: read
+jobs:
+  simulator:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Test on an available iPhone simulator
+        working-directory: ios
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for devices in d["devices"].values() for x in devices if "iPhone" in x["name"]))')
+          xcodebuild test -scheme Workdeck -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:WorkdeckTests -only-testing:WorkdeckUITests/LoginFlowTests -only-testing:WorkdeckUITests/WorkspaceFlowTests/testLandscapeLoginControlsRemainReachableAfterShowingKeyboard CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"
+      - name: Export simulator screenshots and recordings
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/auth-tests.xcresult" ]; then
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/auth-tests.xcresult" --output-path "$RUNNER_TEMP/auth-attachments"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-auth-attachments
+          path: ${{ runner.temp }}/auth-attachments
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-auth-tests
+          path: ${{ runner.temp }}/auth-tests.xcresult

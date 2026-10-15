@@ -238,6 +238,20 @@ function request<T>(
 
 // ---------- 登录 ----------
 
+/** Website account authority; only a complete mobile identity may be persisted. */
+export async function accountLogin(account: string, password: string): Promise<LoginResult> {
+  const result = await request<LoginResult>('/api/auth/account-login', 'POST', { account, password })
+  if (!result || typeof result.sessionId !== 'string' || !result.sessionId ||
+      !result.user || !Number.isSafeInteger(result.user.id) || result.user.id <= 0 ||
+      typeof result.user.username !== 'string' || typeof result.user.displayName !== 'string') {
+    throw new ApiError(1, t('error.loginNoData'))
+  }
+  setSession(result.sessionId)
+  setUser(result.user)
+  rememberPhone(account)
+  return result
+}
+
 export function sendLoginCode(phone: string): Promise<void> {
   return request<void>('/api/auth/sms-login/send-code', 'POST', { phone })
 }
