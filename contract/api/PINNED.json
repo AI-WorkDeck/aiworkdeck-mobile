@@ -1,6 +1,6 @@
 {
-  "serverCommit": "4b5e5d53de54ee6177aae2c499c7594b32395cec",
-  "sha256": "d2356d64fc03467d98cb0de391d7d3db92dda81030aed163692da846205ff351",
-  "pulledAt": "2026-10-11T08:49:58.973Z",
-  "note": "钉自 /tmp/awd-backend-1208 的干净工作区，照 serverCommit 可复现。"
+  "serverCommit": "02f3da98df22ab5855471df0400ae4da537b9ec7",
+  "sha256": "8e3067f3bdbba13783533f676b63407323ef588806d254902d7c44a26d034dd8",
+  "pulledAt": "2026-10-15T12:45:18.231Z",
+  "note": "钉自 /Users/hans_claw_root/awd-auth-20261015/core 的干净工作区，照 serverCommit 可复现。"
 }

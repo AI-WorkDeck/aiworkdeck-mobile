@@ -37,6 +37,11 @@ export class Backend {
     this.session = session
   }
 
+  async accountLogin(account: string, password: string): Promise<LoginResult> {
+    const body: Record<string, string> = { 'account': account, 'password': password }
+    return await this.login('/api/auth/account-login', body)
+  }
+
   async sendLoginCode(phone: string): Promise<void> {
     const body: Record<string, string> = { 'phone': phone }
     await this.envelope('/api/auth/sms-login/send-code', body)
@@ -113,6 +118,7 @@ export class Backend {
     const data: Record<string, Object> | null = asRecord(env['data'])
     if (data === null) throw new ApiError(1, 'empty data')
     const result: LoginResult = decodeLoginResult(data)
+    if (result.sessionId.length === 0 || result.user.id <= 0) throw new ApiError(1, 'invalid login identity')
     await this.session.save(result.sessionId)
     return result
   }

@@ -132,14 +132,16 @@ export function decodeAccountUser(o: Record<string, Object>): AccountUser {
 
 export function decodeLoginResult(data: Record<string, Object>): LoginResult {
   const sessionId: string | undefined = getString(data, 'sessionId')
-  if (sessionId === undefined) throw new ApiError(1, 'login response without sessionId')
+  if (sessionId === undefined || sessionId.length === 0) throw new ApiError(1, 'login response without sessionId')
   const userObj: Record<string, Object> | null = asRecord(data['user'])
-  const fallback: AccountUser = { id: 0, username: '', displayName: '' }
+  if (userObj === null || (getNumber(userObj, 'id') ?? 0) <= 0 || getString(userObj, 'username') === undefined || getString(userObj, 'displayName') === undefined) {
+    throw new ApiError(1, 'login response without user identity')
+  }
   const r: LoginResult = {
     sessionId: sessionId,
     isNewUser: getBoolean(data, 'isNewUser'),
     mustBindPhone: getBoolean(data, 'mustBindPhone'),
-    user: userObj === null ? fallback : decodeAccountUser(userObj),
+    user: decodeAccountUser(userObj),
   }
   return r
 }

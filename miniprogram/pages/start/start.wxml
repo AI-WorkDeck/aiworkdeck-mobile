@@ -1,63 +1,6 @@
-<nav-bar title="AI WorkDeck" />
-
 <view class="page" style="padding-bottom: {{metrics.bottomInset}}px;">
-
-  <block wx:if="{{!done}}">
-    <view class="hero">
-      <view class="hero__title">一键创建账户</view>
-      <view class="hero__sub">用微信绑定的手机号直接创建 AI WorkDeck 账户，免验证码。已用同一手机号注册过的，会自动认出原账户，不会重复。</view>
-    </view>
-
-    <button
-      class="submit tappable {{working ? 'submit--disabled' : ''}}"
-      open-type="getPhoneNumber"
-      bindgetphonenumber="onGetPhone"
-      disabled="{{working}}"
-    >
-      <text class="submit__text">{{working ? '正在创建账户…' : '用手机号一键开始'}}</text>
-    </button>
-
-    <view wx:if="{{error}}" class="error">{{error}}</view>
-
-    <view class="alt">不用微信手机号也可以：在电脑浏览器打开 {{desktopUrl}}，用验证码完成注册。</view>
-  </block>
-
-  <block wx:else>
-    <view class="hero">
-      <view class="hero__title">账户已就绪</view>
-      <view class="hero__sub">{{isNewUser ? '账户已创建：' : '认出了你的账户：'}}{{displayName}}。AI WorkDeck 桌面版需要在电脑上安装。</view>
-    </view>
-
-    <view class="next">
-      <view class="next__label">下一步，回到电脑</view>
-      <view class="next__url mono">{{desktopUrl}}</view>
-      <view class="next__hint">在电脑浏览器打开上面的地址，用同一手机号验证码进入即可下载桌面版。</view>
-      <view class="copy-btn tappable" bindtap="onCopyUrl">
-        <text class="copy-btn__text">复制地址</text>
-      </view>
-    </view>
-
-    <view class="next__hint">下面的「进去看看」也要用这个手机号验证码登录一次小程序，不是出错。</view>
-  </block>
-
-  <view class="rule sect-rule"></view>
-
-  <view class="features">
-    <view class="features__title">这个小程序还是你的现场伴侣</view>
-    <view class="feature">
-      <view class="feature__name">现场拍摄</view>
-      <view class="feature__desc">取景器直拍，带时间水印，弱网自动重传</view>
-    </view>
-    <view class="feature">
-      <view class="feature__name">{{featureAudioName}}</view>
-      <view class="feature__desc">录下沟通与口述，回到电脑接着整理</view>
-    </view>
-    <view class="feature">
-      <view class="feature__name">直达项目</view>
-      <view class="feature__desc">与桌面端同一账号，拍摄件自动落进对应项目</view>
-    </view>
-    <view class="enter-btn tappable" bindtap="onEnterApp">
-      <text class="enter-btn__text">进去看看</text>
-    </view>
-  </view>
+  <view class="hero"><view class="hero__title">{{title}}</view><view class="hero__sub">{{hint}}</view></view>
+  <button class="submit tappable" bindtap="onRegister">{{title}}</button>
+  <view class="next__hint">{{webHint}}</view>
+  <button class="submit tappable" bindtap="onEnterApp">{{loginText}}</button>
 </view>

@@ -1,5 +1,7 @@
 package com.aiworkdeck.mobile.features.auth
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -77,195 +79,70 @@ internal fun loginMethods(region: AccountRegion): List<Method> =
 /** 进登录页（或切了区域）时默认选中的方式：大陆站照旧先手机号，国际站只有邮箱。 */
 internal fun defaultMethod(region: AccountRegion): Method = loginMethods(region).first()
 
-/**
- * 首屏登录：手机号或邮箱 + 验证码。镜像 iOS `LoginView`。
- *
- * 两条路径**语义不同**，界面上必须说清：
- * - 手机号：注册与登录合一，号码没见过后端就建号。只走中国大陆短信通道。
- * - 邮箱：同样是注册登录合一，未注册的地址也会收到码，验过就建号。
- *
- * 右上角一个胶囊开关选账号区域（大陆版 / 海外版，两套账号不通，dev-board#837）。区域决定主机、
- * 可用方式与界面语言：短信只有阿里云的大陆签名，海外站没有短信通道，海外版只给邮箱，
- * 标题下说明一句，整屏换英文。区域缺省按 flavor（[com.aiworkdeck.mobile.BuildConfig.DEFAULT_REGION]），
- * 选过就记在本机。
- */
+/** Password login; verification and password creation use the regional website. */
 @Composable
 fun LoginScreen(model: AppModel) {
     val backend = ServiceLocator.backend
-    val prefs = ServiceLocator.prefs
     val scope = rememberCoroutineScope()
-    var region by remember { mutableStateOf(prefs.accountRegion) }
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+    var region by remember { mutableStateOf(ServiceLocator.prefs.accountRegion) }
     var method by remember { mutableStateOf(defaultMethod(region)) }
-    var step by remember { mutableStateOf(Step.Identity) }
-    var phone by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var code by remember { mutableStateOf("") }
+    var identity by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var reviewMode by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var cooldown by remember { mutableIntStateOf(0) }
     val focus = remember { FocusRequester() }
-
-    val identity = if (method == Method.Phone) phone else email
-    val canSubmit = when (step) {
-        Step.Identity -> if (method == Method.Phone) phone.length == 11 else looksLikeEmail(email)
-        Step.Code -> code.length == 6
+    fun openFlow(flow: String) {
+        password = ""; error = null; reviewMode = false
+        val host = if (region == AccountRegion.intl) "https://workdeck.ai/en/account" else "https://aiworkdeck.com/zh/account"
+        runCatching { uriHandler.openUri("$host?flow=$flow") }.onFailure { error = tr("login.webError") }
     }
-
-    suspend fun send() {
-        busy = true; error = null
-        try {
-            if (method == Method.Phone) backend.sendLoginCode(phone) else backend.sendMailLoginCode(email)
-            step = Step.Code
-            code = ""
-            cooldown = 60
-        } catch (e: Exception) {
-            error = errorText(e)
-        }
-        busy = false
-    }
-
-    suspend fun verify() {
-        if (busy) return
-        busy = true; error = null
-        try {
-            val result = if (method == Method.Phone) backend.verifyLoginCode(phone, code)
-            else backend.verifyMailLoginCode(email, code)
-            model.didLogin(result)
-        } catch (e: Exception) {
-            error = errorText(e)
-            code = ""
-        }
-        busy = false
-    }
-
-    // 60 秒重发冷却。后端也有冷却，这里只是别让人白点。
-    LaunchedEffect(cooldown) {
-        if (cooldown > 0) { delay(1000); cooldown -= 1 }
-    }
-    // 首帧节点还没落位时 requestFocus 会抛，接住即可——键盘晚一帧弹出好过启动就崩。
-    LaunchedEffect(step, method) { runCatching { focus.requestFocus() } }
-
-    Column(
-        Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()
-            .padding(horizontal = Tk.Sp.gutter),
-    ) {
+    Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()
+        .verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter),
+        verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
         if (ContractCapabilities.intlAccount) {
-            Row(Modifier.fillMaxWidth().padding(top = Tk.Sp.s2), horizontalArrangement = Arrangement.End) {
-                // 切区域 = 换一套账号体系：回到填标识那一步，输入、报错、冷却全清，免得带着上一站的状态；
-                // 界面语言当场跟着换
-                RegionToggle(region, enabled = !busy) {
-                    // 记新区、清掉上一区的项目、界面语言当场换（AppModel.switchAccountRegion）
-                    val next = model.switchAccountRegion()
-                    region = next
-                    method = defaultMethod(next)
-                    step = Step.Identity
-                    phone = ""; email = ""; code = ""
-                    error = null
-                    cooldown = 0
-                }
+            RegionToggle(region, !busy) {
+                val next = model.switchAccountRegion()
+                region = next; method = defaultMethod(next); identity = ""; password = ""; error = null; reviewMode = false
             }
         }
-
-        Spacer(Modifier.weight(1f))
-
-        Eyebrow(tr(if (step == Step.Identity) "login.title" else "login.codeTitle"))
-        Text(
-            text = when {
-                step == Step.Code -> tr("login.codePrompt")
-                method == Method.Phone -> tr("login.phone")
-                else -> tr("login.email")
-            },
-            style = Fonts.display(), color = Tk.L.fg, modifier = Modifier.padding(top = Tk.Sp.s2),
-        )
-        if (step == Step.Identity && region == AccountRegion.intl) {
-            Text(
-                tr("login.region.intlHint"), style = Fonts.micro(), color = Tk.L.fgFaint,
-                modifier = Modifier.padding(top = Tk.Sp.s1),
-            )
+        Text(tr("login.title"), style = Fonts.display(), color = Tk.L.fg)
+        Text(tr("login.passwordHint"), style = Fonts.micro(), color = Tk.L.fgMuted)
+        if (loginMethods(region).size > 1) {
+            MethodPicker(method) { if (!busy) { method = it; identity = ""; password = ""; error = null; reviewMode = false } }
         }
-        if (step == Step.Code) {
-            Text(
-                text = tr("login.sentTo", mapOf("to" to mask(method, identity))),
-                style = Fonts.micro(), color = Tk.L.fgFaint, modifier = Modifier.padding(top = Tk.Sp.s1),
-            )
+        Field(identity, tr(if (method == Method.Phone) "login.phonePlaceholder" else "login.emailPlaceholder"), 20.sp,
+            focus, if (method == Method.Phone) KeyboardType.Phone else KeyboardType.Email) {
+            if (!busy) identity = it.trim()
         }
-
-        if (step == Step.Identity && loginMethods(region).size > 1) {
-            MethodPicker(method, Modifier.padding(top = Tk.Sp.s4)) {
-                if (method != it) { method = it; code = ""; error = null }
-            }
-        }
-
-        // 输入框：一格大号等宽，看得清、核得准。手机号只收数字，验证码只收 6 位。
-        val fieldTop = if (step == Step.Identity) Tk.Sp.s5 else Tk.Sp.s8
-        Box(Modifier.padding(top = fieldTop)) {
-            when {
-                step == Step.Code -> Field(
-                    value = code, placeholder = "······", mono = 28.sp, letterSpacing = true, focus = focus,
-                    keyboard = KeyboardType.NumberPassword,
-                ) { v ->
-                    code = v.filter { it.isDigit() }.take(6)
-                    error = null
-                    if (code.length == 6) scope.launch { verify() }   // 满 6 位自动提交
-                }
-                method == Method.Phone -> Field(
-                    value = phone, placeholder = tr("login.phonePlaceholder"), mono = 28.sp, focus = focus,
-                    keyboard = KeyboardType.Phone,
-                ) { v -> phone = v.filter { it.isDigit() }.take(11); error = null }
-                else -> Field(
-                    value = email, placeholder = tr("login.emailPlaceholder"), mono = 20.sp, focus = focus,
-                    keyboard = KeyboardType.Email,
-                ) { v -> email = v.trim(); error = null }
-            }
-        }
-        Hairline(Modifier.padding(top = Tk.Sp.s3), color = Tk.L.rule)
-
-        error?.let {
-            Text(it, style = Fonts.micro(), color = Tk.S.failed, modifier = Modifier.padding(top = Tk.Sp.s3))
-        }
-
-        // 主动作。禁用时只是变灰不藏起来——用户要看得见「差什么才能往下走」。
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).padding(top = Tk.Sp.s6)
-                .clickable(enabled = canSubmit && !busy) {
-                    scope.launch { if (step == Step.Identity) send() else verify() }
-                },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = tr(if (step == Step.Identity) "login.sendCode" else "login.title"),
-                style = Fonts.heading(), color = if (canSubmit) Tk.L.accent else Tk.L.fgFaint,
-            )
-            Spacer(Modifier.weight(1f))
-            Text("→", style = Fonts.heading(), color = if (canSubmit) Tk.L.accent else Tk.L.fgFaint)
-        }
-
-        if (step == Step.Code) {
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).padding(top = Tk.Sp.s4),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s5),
-            ) {
-                val resendable = cooldown == 0 && !busy
-                Text(
-                    text = if (cooldown > 0) tr("login.resendIn", mapOf("s" to cooldown)) else tr("login.resend"),
-                    style = Fonts.small(), color = if (resendable) Tk.L.accent else Tk.L.fgFaint,
-                    modifier = Modifier.clickable(enabled = resendable) { scope.launch { send() } },
-                )
-                Text(
-                    text = tr(if (method == Method.Phone) "login.changePhone" else "login.changeEmail"),
-                    style = Fonts.small(), color = Tk.L.fgMuted,
-                    modifier = Modifier.clickable { step = Step.Identity; code = ""; error = null },
-                )
-            }
-        }
-
-        Spacer(Modifier.weight(1f))
         Hairline(color = Tk.L.rule)
-        Text(
-            text = tr("login.help"), style = Fonts.nano(), color = Tk.L.fgFaint,
-            modifier = Modifier.padding(top = Tk.Sp.s3, bottom = Tk.Sp.s6),
-        )
+        Field(password, tr(if (reviewMode) "login.reviewCredential" else "login.passwordPlaceholder"), 20.sp, remember { FocusRequester() }, KeyboardType.Password,
+            secret = true) { if (!busy) password = it }
+        Hairline(color = Tk.L.rule)
+        error?.let { Text(it, style = Fonts.micro(), color = Tk.L.fgMuted) }
+        Text(tr(if (busy) "login.working" else "login.title"), style = Fonts.heading(), color = Tk.L.accent,
+            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy && identity.isNotBlank() && password.isNotEmpty()) {
+                if (busy) return@clickable
+                busy = true; error = null
+                scope.launch {
+                    try {
+                        val result = if (!reviewMode) backend.accountLogin(identity.trim(), password)
+                            else if (method == Method.Phone) backend.verifyLoginCode(identity.trim(), password)
+                            else backend.verifyMailLoginCode(identity.trim(), password)
+                        password = ""; model.didLogin(result)
+                    }
+                    catch (e: Exception) { error = errorText(e) }
+                    finally { busy = false }
+                }
+            })
+        Text(tr(if (reviewMode) "login.passwordMode" else "login.review"), style = Fonts.small(), color = Tk.L.fgMuted,
+            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { reviewMode = !reviewMode; password = ""; error = null })
+        Text(tr("login.register"), style = Fonts.small(), color = Tk.L.accent,
+            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("register") })
+        Text(tr("login.forgotPassword"), style = Fonts.small(), color = Tk.L.accent,
+            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("reset") })
+        Text(tr("login.webHint"), style = Fonts.micro(), color = Tk.L.fgMuted)
     }
 }
 
@@ -353,6 +230,7 @@ private fun Field(
     focus: FocusRequester,
     keyboard: KeyboardType,
     letterSpacing: Boolean = false,
+    secret: Boolean = false,
     onChange: (String) -> Unit,
 ) {
     val style = Fonts.mono(mono, FontWeight.Light).copy(
@@ -362,6 +240,7 @@ private fun Field(
         value = value,
         onValueChange = onChange,
         singleLine = true,
+        visualTransformation = if (secret) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
         textStyle = style,
         cursorBrush = SolidColor(Tk.L.accent),
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),

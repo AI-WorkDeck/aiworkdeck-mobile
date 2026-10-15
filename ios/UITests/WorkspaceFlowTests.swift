@@ -112,23 +112,24 @@ final class WorkspaceFlowTests: XCTestCase {
         app.launchArguments = ["-AWDLoginUITest", "-accountRegion", "cn"]
         XCUIDevice.shared.orientation = .landscapeLeft
         app.launch()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 10))
+        let identity = app.textFields["login.identity"]
+        XCTAssertTrue(identity.waitForExistence(timeout: 10))
         XCTAssertGreaterThan(app.frame.width, app.frame.height)
-        app.swipeDown()
-        let region = app.buttons["切换大陆版或海外版账号"]
-        XCTAssertTrue(region.waitForExistence(timeout: 5))
-        XCTAssertTrue(region.isHittable)
-        XCTAssertGreaterThanOrEqual(region.frame.minY, app.frame.minY)
-        app.buttons["邮箱"].tap()
-        XCTAssertTrue(app.textFields.firstMatch.waitForExistence(timeout: 5))
-        app.textFields.firstMatch.tap()
-        app.textFields.firstMatch.typeText("layout-test@example.invalid")
-        XCTAssertEqual(app.textFields.firstMatch.value as? String, "layout-test@example.invalid")
-        app.swipeUp()
-        let send = app.buttons["获取验证码"]
-        XCTAssertTrue(send.waitForExistence(timeout: 5))
-        XCTAssertTrue(send.isHittable)
-        // No code request is sent; this only exercises form layout.
+        identity.tap()
+        identity.typeText("13800007301")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        let password = app.secureTextFields["login.password"]
+        for _ in 0..<3 where !password.isHittable { app.swipeUp() }
+        XCTAssertTrue(password.isHittable)
+        password.tap()
+        password.typeText("synthetic-layout-password")
+        for id in ["login.register", "login.reset"] {
+            let entry = app.buttons[id]
+            XCTAssertTrue(entry.exists)
+            for _ in 0..<3 where !entry.isHittable { app.swipeUp() }
+            XCTAssertTrue(entry.isHittable)
+        }
+        // No sign-in, code request, external navigation or real data is created.
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         shot.lifetime = .keepAlways; add(shot)
     }
