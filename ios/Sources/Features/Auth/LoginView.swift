@@ -68,6 +68,7 @@ struct LoginView: View {
                 Text(tr("login.webHint")).font(T.F.micro()).foregroundStyle(T.L.fgMuted)
             }.padding(T.Sp.gutter)
         }.background(T.L.bg)
+        .accessibilityIdentifier("login.scroll")
         .scrollDismissesKeyboard(.interactively)
         .onChange(of: region) { _, value in
             model.switchRegion(to: value)

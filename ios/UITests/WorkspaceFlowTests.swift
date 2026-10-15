@@ -118,16 +118,40 @@ final class WorkspaceFlowTests: XCTestCase {
         identity.tap()
         identity.typeText("13800007301")
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        let scroll = app.scrollViews["login.scroll"]
+        XCTAssertTrue(scroll.exists)
+        // A full-screen flick skips the password between the short landscape viewport and keyboard.
+        // Drag inside the visible scroll area in small steps, reversing if the target passed above us.
+        func reveal(_ element: XCUIElement) {
+            for _ in 0..<12 where !element.isHittable {
+                let frame = scroll.frame
+                let keyboard = app.keyboards.firstMatch
+                let bottom = keyboard.exists ? min(frame.maxY, keyboard.frame.minY) : frame.maxY
+                let top = max(frame.minY, app.frame.minY) + 8
+                let height = max(24, bottom - top - 8)
+                let centerY = top + height / 2
+                let direction: CGFloat = element.frame.maxY < top ? 1 : -1
+                let origin = app.coordinate(withNormalizedOffset: .zero)
+                let start = origin.withOffset(CGVector(dx: frame.midX, dy: centerY - direction * height * 0.15))
+                let end = origin.withOffset(CGVector(dx: frame.midX, dy: centerY + direction * height * 0.15))
+                start.press(forDuration: 0.15, thenDragTo: end)
+            }
+            if !element.isHittable {
+                let failure = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+                failure.name = "Unreachable landscape login control"
+                failure.lifetime = .keepAlways
+                add(failure)
+            }
+            XCTAssertTrue(element.isHittable)
+        }
         let password = app.secureTextFields["login.password"]
-        for _ in 0..<3 where !password.isHittable { app.swipeUp() }
-        XCTAssertTrue(password.isHittable)
+        reveal(password)
         password.tap()
         password.typeText("synthetic-layout-password")
         for id in ["login.register", "login.reset"] {
             let entry = app.buttons[id]
             XCTAssertTrue(entry.exists)
-            for _ in 0..<3 where !entry.isHittable { app.swipeUp() }
-            XCTAssertTrue(entry.isHittable)
+            reveal(entry)
         }
         // No sign-in, code request, external navigation or real data is created.
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
