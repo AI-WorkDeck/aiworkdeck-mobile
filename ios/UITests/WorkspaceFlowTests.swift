@@ -121,7 +121,8 @@ final class WorkspaceFlowTests: XCTestCase {
         let scroll = app.scrollViews["login.scroll"]
         XCTAssertTrue(scroll.exists)
         // A full-screen flick skips the password between the short landscape viewport and keyboard.
-        // Drag in the empty leading gutter, outside segmented controls that consume vertical gestures.
+        // The ScrollView frame includes the landscape safe area; derive the content gutter from the field.
+        // This stays inside the safe area and outside segmented controls that consume vertical gestures.
         // Reverse if the target passed above the visible scroll area.
         func reveal(_ element: XCUIElement) {
             for _ in 0..<12 where !element.isHittable {
@@ -132,12 +133,16 @@ final class WorkspaceFlowTests: XCTestCase {
                 let height = max(24, bottom - top - 8)
                 let centerY = top + height / 2
                 let direction: CGFloat = element.frame.maxY < top ? 1 : -1
+                let gutterX = max(frame.minX + 8, identity.frame.minX - 8)
                 let origin = app.coordinate(withNormalizedOffset: .zero)
-                let start = origin.withOffset(CGVector(dx: frame.minX + 4, dy: centerY - direction * height * 0.15))
-                let end = origin.withOffset(CGVector(dx: frame.minX + 4, dy: centerY + direction * height * 0.15))
+                let start = origin.withOffset(CGVector(dx: gutterX, dy: centerY - direction * height * 0.15))
+                let end = origin.withOffset(CGVector(dx: gutterX, dy: centerY + direction * height * 0.15))
                 start.press(forDuration: 0.15, thenDragTo: end)
             }
             if !element.isHittable {
+                let geometry = XCTAttachment(string: "App: \(app.frame); scroll: \(scroll.frame); identity: \(identity.frame); keyboard: \(app.keyboards.firstMatch.frame); target: \(element.frame)")
+                geometry.lifetime = .keepAlways
+                add(geometry)
                 let failure = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
                 failure.name = "Unreachable landscape login control"
                 failure.lifetime = .keepAlways
