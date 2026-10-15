@@ -121,7 +121,8 @@ final class WorkspaceFlowTests: XCTestCase {
         let scroll = app.scrollViews["login.scroll"]
         XCTAssertTrue(scroll.exists)
         // A full-screen flick skips the password between the short landscape viewport and keyboard.
-        // Drag inside the visible scroll area in small steps, reversing if the target passed above us.
+        // Drag in the empty leading gutter, outside segmented controls that consume vertical gestures.
+        // Reverse if the target passed above the visible scroll area.
         func reveal(_ element: XCUIElement) {
             for _ in 0..<12 where !element.isHittable {
                 let frame = scroll.frame
@@ -132,8 +133,8 @@ final class WorkspaceFlowTests: XCTestCase {
                 let centerY = top + height / 2
                 let direction: CGFloat = element.frame.maxY < top ? 1 : -1
                 let origin = app.coordinate(withNormalizedOffset: .zero)
-                let start = origin.withOffset(CGVector(dx: frame.midX, dy: centerY - direction * height * 0.15))
-                let end = origin.withOffset(CGVector(dx: frame.midX, dy: centerY + direction * height * 0.15))
+                let start = origin.withOffset(CGVector(dx: frame.minX + 4, dy: centerY - direction * height * 0.15))
+                let end = origin.withOffset(CGVector(dx: frame.minX + 4, dy: centerY + direction * height * 0.15))
                 start.press(forDuration: 0.15, thenDragTo: end)
             }
             if !element.isHittable {

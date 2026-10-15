@@ -79,6 +79,14 @@ internal fun loginMethods(region: AccountRegion): List<Method> =
 /** 进登录页（或切了区域）时默认选中的方式：大陆站照旧先手机号，国际站只有邮箱。 */
 internal fun defaultMethod(region: AccountRegion): Method = loginMethods(region).first()
 
+/** Fixed origins and a non-identifying marker; no entered credentials leave in browser URLs. */
+internal fun accountFlowUrl(region: AccountRegion, method: Method, flow: String): String {
+    val host = if (region == AccountRegion.intl) "https://workdeck.ai/en/account" else "https://aiworkdeck.com/zh/account"
+    val selectedFlow = if (flow == "reset") "reset" else "register"
+    val migration = if (region == AccountRegion.cn && method == Method.Email) "&legacyEmail=1" else ""
+    return "$host?flow=$selectedFlow$migration"
+}
+
 /** Password login; verification and password creation use the regional website. */
 @Composable
 fun LoginScreen(model: AppModel) {
@@ -95,8 +103,7 @@ fun LoginScreen(model: AppModel) {
     val focus = remember { FocusRequester() }
     fun openFlow(flow: String) {
         password = ""; error = null; reviewMode = false
-        val host = if (region == AccountRegion.intl) "https://workdeck.ai/en/account" else "https://aiworkdeck.com/zh/account"
-        runCatching { uriHandler.openUri("$host?flow=$flow") }.onFailure { error = tr("login.webError") }
+        runCatching { uriHandler.openUri(accountFlowUrl(region, method, flow)) }.onFailure { error = tr("login.webError") }
     }
     Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()
         .verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter),
@@ -142,7 +149,8 @@ fun LoginScreen(model: AppModel) {
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("register") })
         Text(tr("login.forgotPassword"), style = Fonts.small(), color = Tk.L.accent,
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("reset") })
-        Text(tr("login.webHint"), style = Fonts.micro(), color = Tk.L.fgMuted)
+        Text(tr(if (region == AccountRegion.cn && method == Method.Email) "login.legacyEmailHint" else "login.webHint"),
+            style = Fonts.micro(), color = Tk.L.fgMuted)
     }
 }
 

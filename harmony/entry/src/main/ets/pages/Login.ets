@@ -4,7 +4,7 @@ import { AppModel } from '../AppModel'
 import { Pill, PrimaryButton, SegmentToggle } from '../design/Components'
 import { LOCALE_ZH, trIn } from '../design/L10n'
 import { Tk } from '../design/Tokens'
-import { AccountRegion, LoginMethod, defaultLoginMethodOf, loginMethodsOf } from '../model/AccountRegion'
+import { AccountRegion, LoginMethod, accountFlowUrl, defaultLoginMethodOf, loginMethodsOf } from '../model/AccountRegion'
 import { LoginResult } from '../services/ApiTypes'
 import { ServiceLocator } from '../services/ServiceLocator'
 import { errorText, toast } from './Feedback'
@@ -63,7 +63,7 @@ export struct Login {
             .onClick((): void => this.openFlow('register'))
           Text(this.t('login.forgotPassword')).fontColor(Tk.L.accent).height(Tk.touchMin)
             .onClick((): void => this.openFlow('reset'))
-          Text(this.t('login.webHint')).fontSize(Tk.Ty.micro).fontColor(Tk.L.fgMuted)
+          Text(this.t(this.region === AccountRegion.cn && this.method === LoginMethod.email ? 'login.legacyEmailHint' : 'login.webHint')).fontSize(Tk.Ty.micro).fontColor(Tk.L.fgMuted)
         }.width('100%').alignItems(HorizontalAlign.Start).padding(Tk.Sp.gutter)
       }.width('100%').height('100%')
     }.hideTitleBar(true).backgroundColor(Tk.L.bg)
@@ -83,8 +83,7 @@ export struct Login {
   private openFlow(flow: string): void {
     if (this.busy) return
     this.password = ''; this.reviewMode = false
-    const host: string = this.region === AccountRegion.intl ? 'https://workdeck.ai/en/account' : 'https://aiworkdeck.com/zh/account'
-    const want: Want = { action: 'ohos.want.action.viewData', entities: ['entity.system.browsable'], uri: host + '?flow=' + flow }
+    const want: Want = { action: 'ohos.want.action.viewData', entities: ['entity.system.browsable'], uri: accountFlowUrl(this.region, this.method, flow) }
     const ctx: common.UIAbilityContext = ServiceLocator.ctx as common.UIAbilityContext
     ctx.startAbility(want).catch((): void => { toast(this.getUIContext(), this.t('login.webError')) })
   }

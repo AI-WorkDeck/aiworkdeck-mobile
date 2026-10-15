@@ -1344,6 +1344,10 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "zh-Hans": "首次验证后请设置密码；完成后返回 App，用密码登录。",
     "en": "Verify and set a password on the website, then return to the app to sign in."
   },
+  "login.legacyEmailHint": {
+    "zh-Hans": "大陆站旧邮箱账户请先验证手机号并设置密码，再验证原邮箱，以保留原手机端数据。完成后返回 App，用原邮箱和密码登录。",
+    "en": "For an existing mainland email account, first verify a phone number and set a password, then verify your original email to keep your mobile data. Return to the app and sign in with that email and password."
+  },
   "login.passwordHint": {
     "zh-Hans": "日常登录使用密码，仅首次设置或重置密码需要验证码。",
     "en": "Use your password to sign in. Verification codes are only needed to set or reset your password."

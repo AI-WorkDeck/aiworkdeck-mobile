@@ -77,3 +77,11 @@ export async function switchRegion(current: AccountRegion, next: AccountRegion,
   await sink.persistRegion(next)
   return true
 }
+
+/** Fixed website flow; the legacy flag carries no email address or credential. */
+export function accountFlowUrl(region: AccountRegion, method: LoginMethod, flow: string): string {
+  const host: string = region === AccountRegion.intl ? 'https://workdeck.ai/en/account' : 'https://aiworkdeck.com/zh/account'
+  const selectedFlow: string = flow === 'reset' ? 'reset' : 'register'
+  const migration: string = region === AccountRegion.cn && method === LoginMethod.email ? '&legacyEmail=1' : ''
+  return host + '?flow=' + selectedFlow + migration
+}

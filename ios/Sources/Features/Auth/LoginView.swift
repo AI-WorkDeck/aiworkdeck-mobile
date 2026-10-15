@@ -20,6 +20,14 @@ enum LoginMethod: Equatable, Sendable {
     }
 }
 
+/// Only a flow marker crosses to the browser; never put the entered identity or password in a URL.
+func accountFlowURL(region: AccountRegion, method: LoginMethod, flow: String) -> URL {
+    let host = region == .intl ? "https://workdeck.ai/en/account" : "https://aiworkdeck.com/zh/account"
+    let selectedFlow = flow == "reset" ? "reset" : "register"
+    let migration = region == .cn && method == .email ? "&legacyEmail=1" : ""
+    return URL(string: host + "?flow=" + selectedFlow + migration)!
+}
+
 /// Password sign-in uses the same account authority as desktop and website.
 struct LoginView: View {
     @Environment(AppModel.self) private var model
@@ -65,7 +73,8 @@ struct LoginView: View {
                 Button(tr(reviewMode ? "login.passwordMode" : "login.review")) { reviewMode.toggle(); password = ""; error = nil }.frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.review")
                 Button(tr("login.register")) { openAccountFlow("register") }.frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.register")
                 Button(tr("login.forgotPassword")) { openAccountFlow("reset") }.frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.reset")
-                Text(tr("login.webHint")).font(T.F.micro()).foregroundStyle(T.L.fgMuted)
+                Text(tr(region == .cn && method == .email ? "login.legacyEmailHint" : "login.webHint"))
+                    .font(T.F.micro()).foregroundStyle(T.L.fgMuted)
             }.padding(T.Sp.gutter)
         }.background(T.L.bg)
         .accessibilityIdentifier("login.scroll")
@@ -82,8 +91,7 @@ struct LoginView: View {
 
     private func openAccountFlow(_ flow: String) {
         password = ""; error = nil; reviewMode = false
-        let host = region == .intl ? "https://workdeck.ai/en/account" : "https://aiworkdeck.com/zh/account"
-        guard let url = URL(string: host + "?flow=" + flow) else { return }
+        let url = accountFlowURL(region: region, method: method, flow: flow)
         openURL(url) { accepted in if !accepted { error = tr("login.webError") } }
     }
 
