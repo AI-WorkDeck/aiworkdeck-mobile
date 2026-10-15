@@ -137,7 +137,9 @@ final class WorkspaceFlowTests: XCTestCase {
                 let origin = app.coordinate(withNormalizedOffset: .zero)
                 let start = origin.withOffset(CGVector(dx: gutterX, dy: centerY - direction * height * 0.15))
                 let end = origin.withOffset(CGVector(dx: gutterX, dy: centerY + direction * height * 0.15))
-                start.press(forDuration: 0.15, thenDragTo: end)
+                // The default 500 px/s release flings past the entire short form. Stop before lifting.
+                start.press(forDuration: 0.15, thenDragTo: end,
+                            withVelocity: XCUIGestureVelocity(rawValue: 80), thenHoldForDuration: 0.5)
             }
             if !element.isHittable {
                 let geometry = XCTAttachment(string: "App: \(app.frame); scroll: \(scroll.frame); identity: \(identity.frame); keyboard: \(app.keyboards.firstMatch.frame); target: \(element.frame)")
@@ -152,8 +154,14 @@ final class WorkspaceFlowTests: XCTestCase {
         }
         let password = app.secureTextFields["login.password"]
         reveal(password)
+        let visiblePassword = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        visiblePassword.name = "Landscape password reachable above keyboard"
+        visiblePassword.lifetime = .keepAlways; add(visiblePassword)
         password.tap()
         password.typeText("synthetic-layout-password")
+        let enteredPassword = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        enteredPassword.name = "Landscape password entered"
+        enteredPassword.lifetime = .keepAlways; add(enteredPassword)
         for id in ["login.register", "login.reset"] {
             let entry = app.buttons[id]
             XCTAssertTrue(entry.exists)
