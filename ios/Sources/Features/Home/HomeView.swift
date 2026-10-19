@@ -27,29 +27,34 @@ struct HomeView: View {
     /// CLLocationManager 再丢掉（dev-board#418）。
     private let camera = CameraService.shared
     /// 锁屏卡片 / 灵动岛的停止意图要找到正在录的这一个
-    private let recorder = AudioRecorderService.shared
+    var recorder = AudioRecorderService.shared
+#if DEBUG
+    /// Runs the real view lifecycle in host tests without requesting camera hardware.
+    var cameraStartForTesting: (() async -> Void)?
+#endif
     private let stamper = LocationStamper.shared
     @State private var mode: CapMode = .photo
     @State private var showFlash = false
     @State private var visiblePreviews: Set<UUID> = []
 
+    // CameraService defers startup while audio is busy. Observe completion so
+    // the camera starts automatically without a mode switch.
     private var shouldRunCamera: Bool {
-        !visiblePreviews.isEmpty && !paused && scenePhase == .active && mode != .audio && !recorder.isRecording
+        !visiblePreviews.isEmpty && !paused && scenePhase == .active && mode != .audio && !recorder.isRecording && !recorder.isBusy
     }
 
     var body: some View {
         GeometryReader { geometry in
-            if geometry.size.width > geometry.size.height {
-                HStack(spacing: 0) {
+            // Keep one view hierarchy: replacing HStack/VStack also replaces the
+            // attached AVCaptureVideoPreviewLayer during each rotation.
+            ScrollView {
+                CaptureLayout(viewport: geometry.size) {
+                    header
                     stage
-                    ScrollView {
-                        VStack(spacing: 0) { header; controls }
-                    }
-                    .frame(width: min(360, geometry.size.width * 0.45))
+                    controls
                 }
-            } else {
-                VStack(spacing: 0) { header; stage; controls }
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
         .background(T.D.bg.ignoresSafeArea())
         .task {
@@ -58,7 +63,7 @@ struct HomeView: View {
 #if DEBUG
             // Recording/navigation fixtures do not need real location services.
             // Keep the host simulator's location daemon out of these isolated tests.
-            if !WorkspaceUITestSeed.isOn && !ProcessInfo.processInfo.arguments.contains("-AWDRecordingUITest") {
+            if cameraStartForTesting == nil && !WorkspaceUITestSeed.isOn && !ProcessInfo.processInfo.arguments.contains("-AWDRecordingUITest") {
                 stamper.begin()
             }
 #else
@@ -95,7 +100,12 @@ struct HomeView: View {
         // Drive startup from actual visibility and foreground state, including
         // the return from the first permission prompt and full-screen covers.
         .task(id: shouldRunCamera) {
-            if shouldRunCamera { await camera.start() }
+            if shouldRunCamera {
+#if DEBUG
+                if let cameraStartForTesting { await cameraStartForTesting(); return }
+#endif
+                await camera.start()
+            }
             else if !camera.isRecording { camera.stop() }
         }
         .onChange(of: scenePhase) { _, phase in

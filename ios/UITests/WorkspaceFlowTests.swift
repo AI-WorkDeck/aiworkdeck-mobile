@@ -2,6 +2,62 @@ import XCTest
 
 final class WorkspaceFlowTests: XCTestCase {
     @MainActor
+    func testCaptureLayoutSurvivesRepeatedRotationAndProjectEntry() {
+        continueAfterFailure = false
+        defer { XCUIDevice.shared.orientation = .portrait }
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-AWDWorkspaceUITest"]
+        app.launch()
+        XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 10))
+        let original = app.buttons["capture.shutter"].frame
+        for orientation in [UIDeviceOrientation.landscapeLeft, .portrait, .landscapeRight, .portrait] {
+            XCUIDevice.shared.orientation = orientation
+            let portrait = orientation == .portrait
+            let settled = NSPredicate { _, _ in
+                (app.frame.height > app.frame.width) == portrait
+            }
+            expectation(for: settled, evaluatedWith: app)
+            waitForExpectations(timeout: 5)
+            for id in ["capture.close", "capture.settings", "capture.mode.photo", "capture.mode.video", "capture.mode.audio", "capture.shutter", "capture.library"] {
+                let button = app.buttons[id]
+                XCTAssertTrue(button.isHittable, "\(id) at \(orientation)")
+                XCTAssertTrue(app.frame.contains(button.frame), "\(id) \(button.frame) outside \(app.frame)")
+            }
+            if portrait {
+                XCTAssertEqual(app.buttons["capture.shutter"].frame.midX, original.midX, accuracy: 2)
+                XCTAssertEqual(app.buttons["capture.shutter"].frame.midY, original.midY, accuracy: 2)
+            }
+            let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            shot.name = "Capture rotation \(orientation.rawValue)"; shot.lifetime = .keepAlways; add(shot)
+        }
+        openProjects(app)
+        app.buttons["workspace.project.alpha"].tap()
+        XCTAssertTrue(app.buttons["workspace.capture"].waitForExistence(timeout: 5))
+        app.buttons["workspace.capture"].tap()
+        XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 5))
+        continueAfterFailure = true
+        for orientation in [UIDeviceOrientation.landscapeLeft, .portrait, .landscapeRight, .portrait] {
+            XCUIDevice.shared.orientation = orientation
+            let portrait = orientation == .portrait
+            expectation(for: NSPredicate { _, _ in (app.frame.height > app.frame.width) == portrait }, evaluatedWith: app)
+            waitForExpectations(timeout: 5)
+            let shutter = app.buttons["capture.shutter"]
+            expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: shutter)
+            waitForExpectations(timeout: 5)
+            let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            shot.name = "Project capture rotation \(orientation.rawValue)"; shot.lifetime = .keepAlways; add(shot)
+            let geometry = XCTAttachment(string: "App: \(app.frame); shutter: \(shutter.frame)")
+            geometry.lifetime = .keepAlways; add(geometry)
+            XCTAssertTrue(app.frame.contains(shutter.frame))
+            if portrait {
+                XCTAssertEqual(shutter.frame.midX, original.midX, accuracy: 2)
+                XCTAssertEqual(shutter.frame.midY, original.midY, accuracy: 2)
+            }
+        }
+    }
+
+    @MainActor
     private func openProjects(_ app: XCUIApplication) {
         let close = app.buttons["capture.close"]
         XCTAssertTrue(close.waitForExistence(timeout: 10))

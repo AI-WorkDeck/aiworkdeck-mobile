@@ -1,3 +1,3 @@
-1. Record on Apple Watch and automatically transfer recordings to your paired iPhone for the existing project upload workflow. Recordings wait on your watch while disconnected and sync when the connection returns.
-2. Recording requests fewer interruptions from system alerts. If recording is interrupted, usable audio is saved with clearer feedback. After an unexpected app exit, see the recovery result and an explicit notice if audio could not be recovered.
-3. View Watch recordings on iPhone and change their project before the first upload attempt.
+1. Improved capture layout when switching between portrait and landscape, keeping the camera preview attached throughout rotation.
+2. Fixed camera startup after audio saving or recovery finishes, without having to switch between Audio and Photo modes.
+3. Updated sign-in with passwords and entry points for account registration and password recovery.
