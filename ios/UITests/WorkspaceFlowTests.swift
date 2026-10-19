@@ -1,6 +1,12 @@
 import XCTest
 
 final class WorkspaceFlowTests: XCTestCase {
+    override func tearDown() async throws {
+        // XCTest can abort a failing method before its Swift defer runs.
+        await MainActor.run { XCUIDevice.shared.orientation = .portrait }
+        try await super.tearDown()
+    }
+
     @MainActor
     func testCaptureLayoutSurvivesRepeatedRotationAndProjectEntry() {
         continueAfterFailure = false
@@ -19,8 +25,14 @@ final class WorkspaceFlowTests: XCTestCase {
             }
             expectation(for: settled, evaluatedWith: app)
             waitForExpectations(timeout: 5)
+            let state = XCTAttachment(string: app.debugDescription)
+            state.name = "Rotated hierarchy"; state.lifetime = .keepAlways; add(state)
+            let rotatedShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            rotatedShot.name = "Before hit testing"; rotatedShot.lifetime = .keepAlways; add(rotatedShot)
             for id in ["capture.close", "capture.settings", "capture.mode.photo", "capture.mode.video", "capture.mode.audio", "capture.shutter", "capture.library"] {
                 let button = app.buttons[id]
+                expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: button)
+                waitForExpectations(timeout: 5)
                 XCTAssertTrue(button.isHittable, "\(id) at \(orientation)")
                 XCTAssertTrue(app.frame.contains(button.frame), "\(id) \(button.frame) outside \(app.frame)")
             }

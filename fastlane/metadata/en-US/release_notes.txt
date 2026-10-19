@@ -1,3 +1,3 @@
-1. Improved capture layout when switching between portrait and landscape, keeping the camera preview attached throughout rotation.
+1. Improved capture and project-list layouts during rotation, preserving the camera preview and restoring the title and list position in portrait.
 2. Fixed camera startup after audio saving or recovery finishes, without having to switch between Audio and Photo modes.
 3. Updated sign-in with passwords and entry points for account registration and password recovery.
