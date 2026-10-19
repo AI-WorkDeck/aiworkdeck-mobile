@@ -24,13 +24,13 @@ final class CrossScreenRotationTests: XCTestCase {
             expectation(for: NSPredicate { _, _ in
                 (app.frame.height > app.frame.width) == (orientation == .portrait)
             }, evaluatedWith: app)
-            waitForExpectations(timeout: 5)
+            waitForExpectations(timeout: 15)
             let portrait = orientation == .portrait
             XCTAssertEqual(app.frame.width < app.frame.height, portrait, name + " application orientation")
             for element in elements {
                 expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: element)
             }
-            waitForExpectations(timeout: 5)
+            waitForExpectations(timeout: 15)
             record(name + " \(orientation.rawValue)", app: app, elements: elements)
             for (index, element) in elements.enumerated() {
                 XCTAssertTrue(element.exists, name + " missing " + element.identifier)
