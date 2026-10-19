@@ -43,8 +43,11 @@ struct WorkspaceView: View {
                     Text(tr("project.emptyHint")).foregroundStyle(.secondary)
                 }
             }
-            .searchable(text: $search, prompt: tr("workspace.searchProjects"))
+            .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: tr("workspace.searchProjects"))
             .navigationTitle(tr("workspace.title"))
+            // The large title disappears when iPhone split navigation collapses
+            // back to portrait, shifting the list. Keep one title style.
+            .navigationBarTitleDisplayMode(.inline)
             .refreshable { await load() }
             .toolbar {
                 ToolbarItemGroup(placement: .bottomBar) {

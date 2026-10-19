@@ -18,8 +18,20 @@ jobs:
       - name: Test on an available iPhone simulator
         working-directory: ios
         run: |
-          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for devices in d["devices"].values() for x in devices if "iPhone" in x["name"]))')
-          xcodebuild test -scheme Workdeck -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:WorkdeckTests -only-testing:WorkdeckUITests/LoginFlowTests -only-testing:WorkdeckUITests/WorkspaceFlowTests/testLandscapeLoginControlsRemainReachableAfterShowingKeyboard CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"
+          xcodebuild -version
+          xcrun simctl list devices available -j > "$RUNNER_TEMP/simulators.json"
+          DEVICE_ID=$(python3 - "$RUNNER_TEMP/simulators.json" <<'PYTHON'
+          import json, re, sys
+          devices = json.load(open(sys.argv[1]))["devices"]
+          candidates = [(runtime, device) for runtime, group in devices.items() for device in group if "iPhone" in device["name"]]
+          runtime, device = max(candidates, key=lambda item: ("Pro Max" in item[1]["name"], tuple(map(int, re.findall(r"\d+", item[0])))))
+          print(f"Testing {device['name']} on {runtime}", file=sys.stderr)
+          print(device["udid"])
+          PYTHON
+          )
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -collect-test-diagnostics never -test-timeouts-enabled YES -default-test-execution-time-allowance 900 -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:WorkdeckTests -only-testing:WorkdeckUITests/LoginFlowTests -only-testing:WorkdeckUITests/CrossScreenRotationTests -only-testing:WorkdeckUITests/WorkspaceFlowTests/testCaptureLayoutSurvivesRepeatedRotationAndProjectEntry -only-testing:WorkdeckUITests/WorkspaceFlowTests/testLandscapeLoginControlsRemainReachableAfterShowingKeyboard CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"
       - name: Export simulator screenshots and recordings
         if: always()
         run: |
