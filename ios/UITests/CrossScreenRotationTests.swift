@@ -2,7 +2,10 @@ import XCTest
 
 final class CrossScreenRotationTests: XCTestCase {
     override func tearDown() async throws {
-        await MainActor.run { XCUIDevice.shared.orientation = .portrait }
+        await MainActor.run {
+            XCUIApplication().terminate()
+            XCUIDevice.shared.orientation = .portrait
+        }
         try await super.tearDown()
     }
 
@@ -48,28 +51,60 @@ final class CrossScreenRotationTests: XCTestCase {
     }
 
     @MainActor
-    func testProjectSettingsAndLibrarySurviveRepeatedRotation() {
-        continueAfterFailure = true
+    private func launchWorkspace() -> XCUIApplication {
+        continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
-        defer { XCUIDevice.shared.orientation = .portrait }
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest", "-libraryViewMode", "grid"]
         app.launch()
         let closeCapture = app.buttons["capture.close"]
         XCTAssertTrue(closeCapture.waitForExistence(timeout: 15)); closeCapture.tap()
-        let alpha = app.buttons["workspace.project.alpha"]
-        XCTAssertTrue(alpha.waitForExistence(timeout: 10))
-        let quickCapture = app.buttons["workspace.quickCapture"]
-        let quickCaptureBefore = quickCapture.frame
-        cycle("Project list", app: app, elements: [alpha])
-        XCTAssertTrue(quickCapture.isHittable)
-        XCTAssertEqual(quickCapture.frame, quickCaptureBefore)
-        alpha.tap()
+        XCTAssertTrue(app.buttons["workspace.project.alpha"].waitForExistence(timeout: 10))
+        return app
+    }
+
+    @MainActor
+    private func openFiles(_ app: XCUIApplication) {
+        app.buttons["workspace.project.alpha"].tap()
         let documents = app.buttons["workspace.folder.Documents"]
         XCTAssertTrue(documents.waitForExistence(timeout: 10)); documents.tap()
+        XCTAssertTrue(app.buttons["workspace.file.1"].waitForExistence(timeout: 10))
+    }
+
+    @MainActor
+    private func returnToFiles(_ app: XCUIApplication) {
+        let closeCapture = app.buttons["capture.close"]
+        XCTAssertTrue(closeCapture.waitForExistence(timeout: 10)); closeCapture.tap()
         let firstFile = app.buttons["workspace.file.1"]
         XCTAssertTrue(firstFile.waitForExistence(timeout: 10))
-        cycle("Project files", app: app, elements: [firstFile, app.buttons["workspace.capture"], app.textFields["workspace.fileSearch"]])
+        record("Files after nested modals", app: app, elements: [firstFile, app.buttons["workspace.capture"]])
+        XCTAssertTrue(firstFile.isHittable)
+    }
+
+    @MainActor
+    func testProjectListSurvivesRepeatedRotation() {
+        let app = launchWorkspace()
+        let quickCapture = app.buttons["workspace.quickCapture"]
+        let quickCaptureBefore = quickCapture.frame
+        cycle("Project list", app: app, elements: [app.buttons["workspace.project.alpha"]])
+        XCTAssertTrue(quickCapture.isHittable)
+        XCTAssertEqual(quickCapture.frame, quickCaptureBefore)
+        openFiles(app)
+    }
+
+    @MainActor
+    func testProjectFilesSurviveRepeatedRotation() {
+        let app = launchWorkspace()
+        openFiles(app)
+        cycle("Project files", app: app, elements: [app.buttons["workspace.file.1"], app.buttons["workspace.capture"], app.textFields["workspace.fileSearch"]])
+        app.buttons["workspace.capture"].tap()
+        returnToFiles(app)
+    }
+
+    @MainActor
+    func testSettingsSurviveRepeatedRotation() {
+        let app = launchWorkspace()
+        openFiles(app)
         app.buttons["workspace.capture"].tap()
         let settings = app.buttons["capture.settings"]
         XCTAssertTrue(settings.waitForExistence(timeout: 10)); settings.tap()
@@ -77,15 +112,20 @@ final class CrossScreenRotationTests: XCTestCase {
         XCTAssertTrue(closeSettings.waitForExistence(timeout: 10))
         cycle("Settings", app: app, elements: [closeSettings, app.buttons["settings.switchProject"]])
         closeSettings.tap()
+        returnToFiles(app)
+    }
+
+    @MainActor
+    func testLibrarySurvivesRepeatedRotation() {
+        let app = launchWorkspace()
+        openFiles(app)
+        app.buttons["workspace.capture"].tap()
         let library = app.buttons["capture.library"]
         XCTAssertTrue(library.waitForExistence(timeout: 10)); library.tap()
         let back = app.buttons["Back"].firstMatch
         XCTAssertTrue(back.waitForExistence(timeout: 10))
         cycle("Library", app: app, elements: [back, app.segmentedControls.buttons["All"], app.segmentedControls.buttons["Audio"]])
         back.tap()
-        XCTAssertTrue(closeCapture.waitForExistence(timeout: 10)); closeCapture.tap()
-        XCTAssertTrue(firstFile.waitForExistence(timeout: 10))
-        record("Files after nested modals", app: app, elements: [firstFile, app.buttons["workspace.capture"]])
-        XCTAssertTrue(firstFile.isHittable)
+        returnToFiles(app)
     }
 }
