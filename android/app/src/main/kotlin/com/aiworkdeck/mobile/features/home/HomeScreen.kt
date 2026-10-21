@@ -87,6 +87,8 @@ private enum class CapMode { photo, video, audio }
 @Composable
 fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
     val context = LocalContext.current
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val landscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
 
@@ -103,6 +105,8 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
     var loc by remember { mutableStateOf(if (ScreenshotMode.enabled) ScreenshotMode.loc else null) }
     var now by remember { mutableStateOf(Instant.now()) }
     var flash by remember { mutableStateOf(false) }
+    var cameraError by remember { mutableStateOf(false) }
+    var cameraRetry by remember { mutableStateOf(0) }
 
     var hasCamera by remember { mutableStateOf(granted(context, Manifest.permission.CAMERA)) }
     var hasMic by remember { mutableStateOf(granted(context, Manifest.permission.RECORD_AUDIO)) }
@@ -148,12 +152,34 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
         if (RecordingState.isRecording) mode = CapMode.audio
     }
 
-    LaunchedEffect(mode, hasCamera) {
+    LaunchedEffect(configuration.orientation) {
+        androidx.compose.runtime.withFrameNanos { }
+        previewView.display?.let { camera.updateRotation(it.rotation) }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasCamera = granted(context, Manifest.permission.CAMERA)
+                hasMic = granted(context, Manifest.permission.RECORD_AUDIO)
+                hasLocation = granted(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                cameraRetry++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(mode, hasCamera, cameraRetry) {
         // 截图模式下取景区贴的是静态照，PreviewView 根本没挂进树，绑相机只会白烧一次会话
         if (ScreenshotMode.stage != null) return@LaunchedEffect
         if (!hasCamera) return@LaunchedEffect
         if (mode == CapMode.audio) camera.unbind()
-        else runCatching { camera.bind(previewView, if (mode == CapMode.photo) CameraService.Mode.photo else CameraService.Mode.video) }
+        else {
+            cameraError = false
+            try { camera.bind(previewView, if (mode == CapMode.photo) CameraService.Mode.photo else CameraService.Mode.video) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { cameraError = true }
+        }
     }
 
     // 落库一律走 ViewModel 的作用域而不是 rememberCoroutineScope：退出登录、切项目会把这一屏
@@ -164,9 +190,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
     // 项目也在这里就定死：落库是异步的，中途用户去设置页切了项目，这一件该记的仍是
     // 按下快门时屏幕上显示的那个项目。
     fun stopVideoAndStore() {
-        val at = Instant.ofEpochMilli(camera.recordingStartedAt ?: System.currentTimeMillis())
-        val target = project
-        storeScope.launch { runCatching { model.store(MediaKind.video, camera.stopVideo(), at, loc, target) } }
+        storeScope.launch { runCatching { camera.stopVideo() } }
     }
 
     /**
@@ -208,7 +232,12 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
                 storeScope.launch { runCatching { model.store(MediaKind.photo, camera.takePhoto(), at, loc, target) } }
                 scope.launch { delay(120); flash = false }
             }
-            CapMode.video -> if (camera.isRecording) stopVideoAndStore() else camera.startVideo()
+            CapMode.video -> if (camera.isRecording) stopVideoAndStore() else {
+                val at = Instant.now(); val target = project; val location = loc
+                camera.startVideo { file ->
+                    storeScope.launch { runCatching { model.store(MediaKind.video, file, at, location, target) } }
+                }
+            }
             CapMode.audio -> when {
                 RecordingState.isRecording -> RecordingService.stop(context)
                 !granted(context, Manifest.permission.RECORD_AUDIO) -> hasMic = false
@@ -217,12 +246,19 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
         }
     }
 
+    androidx.compose.runtime.LaunchedEffect(RecordingState.message) { if (RecordingState.message != null) mode = CapMode.audio }
+
     val recording = camera.isRecording || RecordingState.isRecording
     val startedAt = camera.recordingStartedAt ?: RecordingState.startedAt
     val elapsed = startedAt?.let { (now.toEpochMilli() - it) / 1000 } ?: 0L
 
     Column(Modifier.fillMaxSize().background(Tk.D.bg).safeDrawingPadding()) {
-        Header(
+        Row {
+            androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Projects) }, enabled = !camera.isRecording) { Text(project?.name ?: tr("library.unknownProject"), color = Tk.D.fg) }
+            if (project != null) androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Files) }, enabled = !camera.isRecording) { Text(tr("workspace.files"), color = Tk.D.fg) }
+            if (landscape) androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("home.settings"), color = Tk.D.fg) }
+        }
+        if (!landscape) Header(
             projectName = project?.name.orEmpty(),
             loc = loc,
             tally = tally,
@@ -241,9 +277,16 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
                     RecordingState.message?.let { message ->
                         Text(message, color = Color.White, modifier = Modifier.padding(Tk.Sp.s3)
                             .clickable { onOpen(Overlay.Library) })
+                        if (!RecordingState.isRecording) androidx.compose.material3.TextButton(onClick = { model.retryRecordingDrafts() }, enabled = !RecordingState.isSaving) {
+                            Text(tr("rec.retrySave"), color = Tk.D.fg)
+                        }
                     }
                 }
                 !hasCamera -> PermissionStage(tr("home.permission.camera"), context)
+                cameraError -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(tr("camera.error.start"), color = Tk.D.fg)
+                    androidx.compose.material3.TextButton(onClick = { cameraRetry++ }) { Text(tr("project.retry"), color = Tk.D.fg) }
+                }
                 // 截图模式：模拟器没有相机，取景区贴一张静态现场照，水印照常叠上去
                 ScreenshotMode.stage != null -> {
                     AsyncImage(
@@ -278,6 +321,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
             recent = items.firstOrNull(),
             total = tally.total,
             desktopOnline = desktopOnline,
+            assigned = project != null,
             onShoot = ::shoot,
             onOpenLibrary = { onOpen(Overlay.Library) },
             onOpenQueue = { onOpen(Overlay.Queue) },
@@ -319,9 +363,9 @@ private fun Header(
             )
         }
 
-        Text(projectName, style = Fonts.title(), color = Tk.D.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(projectName.ifEmpty { tr("library.unknownProject") }, style = Fonts.title(), color = Tk.D.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
-            tr(
+            if (projectName.isEmpty()) tr("workspace.unassignedHint") else tr(
                 "home.archiveTo",
                 mapOf("path" to tr("archive.path", mapOf("date" to ScreenshotMode.archiveDate()))),
             ),
@@ -384,6 +428,7 @@ private fun Controls(
     recent: CaptureItem?,
     total: Int,
     desktopOnline: Boolean,
+    assigned: Boolean,
     onShoot: () -> Unit,
     onOpenLibrary: () -> Unit,
     onOpenQueue: () -> Unit,
@@ -440,7 +485,7 @@ private fun Controls(
                     .background(if (desktopOnline) Tk.S.arrivedOnDark else Color.White.copy(alpha = 0.3f)),
             )
             Text(
-                (if (desktopOnline) tr("home.desktop.online") else tr("home.desktop.offline")).uppercase(),
+                (if (!assigned) tr("workspace.unassignedHint") else if (desktopOnline) tr("home.desktop.online") else tr("home.desktop.offline")).uppercase(),
                 style = Fonts.nano(), color = Color.White.copy(alpha = 0.5f),
             )
         }

@@ -21,6 +21,8 @@ import com.aiworkdeck.mobile.design.WorkdeckTheme
 import com.aiworkdeck.mobile.features.auth.LoginScreen
 import com.aiworkdeck.mobile.features.auth.ProjectPickerScreen
 import com.aiworkdeck.mobile.features.home.HomeScreen
+import com.aiworkdeck.mobile.features.workspace.ProjectFilesScreen
+import com.aiworkdeck.mobile.features.settings.BackupConsentScreen
 import com.aiworkdeck.mobile.features.library.LibraryScreen
 import com.aiworkdeck.mobile.features.library.ViewerScreen
 import com.aiworkdeck.mobile.features.queue.QueueScreen
@@ -78,7 +80,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * 根路由。四态互斥、按顺序判定：还没恢复完 → 没登录 → 没选项目 → 主界面。
+ * 根路由：恢复会话 → 登录 → 直接采集；项目选择作为可关闭的浮层。
  *
  * 深色不是主题跟随而是功能性的：取景器与影像浏览要深色（现场看屏、不干扰夜视），
  * 登录与选项目是普通表单屏，走浅色。
@@ -108,13 +110,22 @@ fun Root(model: AppModel) {
         }
     }
 
-    val dark = didRestore && isSignedIn && project != null
+    LaunchedEffect(isSignedIn) {
+        if (!isSignedIn) { overlay = Overlay.None; viewer = null }
+        else if (!ScreenshotMode.enabled) {
+            val consent = try { ServiceLocator.backend.backupConsent() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+            consent?.let {
+                if (!it.decided) overlay = Overlay.Backup
+            }
+        }
+    }
+
+    val dark = didRestore && isSignedIn
     WorkdeckTheme(dark = dark) {
         when {
             // 恢复会话前先给一张与主界面同色的空屏，避免登录页闪一下再跳走
             !didRestore -> Column(Modifier.fillMaxSize().background(Tk.L.bg)) {}
             !isSignedIn -> LoginScreen(model)
-            project == null -> ProjectPickerScreen(model)
             else -> {
                 // 取景器一直在下面：图集是盖上去的一层，退回来时镜头还在原处，不用重新绑定
                 HomeScreen(model, onOpen = { overlay = it })
@@ -122,8 +133,15 @@ fun Root(model: AppModel) {
                     QueueScreen(model, onClose = { overlay = Overlay.None })
                 }
                 if (overlay == Overlay.Settings) {
-                    SettingsScreen(model, onClose = { overlay = Overlay.None })
+                    SettingsScreen(model, onClose = { overlay = Overlay.None }, onOpen = { overlay = it })
                 }
+                if (overlay == Overlay.Projects) {
+                    ProjectPickerScreen(model, onClose = { overlay = Overlay.None }, onSelect = { model.selectProject(it); overlay = Overlay.None })
+                }
+                if (overlay == Overlay.Files) {
+                    project?.let { ProjectFilesScreen(it, onClose = { overlay = Overlay.None }) }
+                }
+                if (overlay == Overlay.Backup) BackupConsentScreen(onClose = { overlay = Overlay.None })
                 if (overlay == Overlay.Library) {
                     LibraryScreen(
                         model = model,

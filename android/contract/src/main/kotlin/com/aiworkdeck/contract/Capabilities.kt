@@ -3,6 +3,8 @@ package com.aiworkdeck.contract
 
 object ContractCapabilities {
     const val client: String = "android"
+    const val backupConsentVersion: String = "2026-10-11"
+    val previewExtensions: List<String> = listOf("jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tif", "tiff", "docx", "pptx", "xlsx", "pdf", "m4a", "mp3", "wav", "aac", "caf", "aif", "aiff", "mp4", "mov", "m4v")
     const val backgroundUpload: Boolean = true
     val maxVideoSeconds: Int? = null
     const val continuousSegments: Boolean = false

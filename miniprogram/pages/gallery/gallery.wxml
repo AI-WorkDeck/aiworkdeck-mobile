@@ -37,7 +37,8 @@
     <view class="tools__btn tappable" data-audio="true" bindtap="onFilterAudio"><text>{{audioOnly ? '✓ ' + audioLabel : audioLabel}}</text></view>
   </view>
   <!-- 三段计数，只数正在看的项目 -->
-  <view class="tally">
+  <view wx:if="{{viewingUnassigned}}" class="tally"><text class="tally__label">{{unassignedHint}}</text></view>
+  <view wx:else class="tally">
     <text class="tally__num mono tally__num--waiting">{{tally.uploading}}</text>
     <text class="tally__label">{{phaseLabel.uploading}}</text>
     <text wx:if="{{tally.failed > 0}}" class="tally__failed">{{failedSuffix}}</text>
@@ -63,6 +64,7 @@
         wx:key="clientMediaId"
         data-id="{{item.clientMediaId}}"
         bindtap="onTapCell"
+        bindlongpress="onAssign"
       >
         <image
           wx:if="{{item.thumb}}"
@@ -87,6 +89,7 @@
         wx:key="clientMediaId"
         data-id="{{item.clientMediaId}}"
         bindtap="onTapCell"
+        bindlongpress="onAssign"
       >
         <view wx:if="{{selecting}}" class="row__check {{item.checked ? 'row__check--on' : ''}}"></view>
         <view class="row__thumb">

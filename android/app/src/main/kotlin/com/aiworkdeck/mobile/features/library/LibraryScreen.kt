@@ -4,6 +4,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import com.aiworkdeck.mobile.features.auth.ProjectPickerScreen
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -94,6 +98,9 @@ fun LibraryScreen(
     var selecting by rememberSaveable { mutableStateOf(false) }
     var selected by remember { mutableStateOf(emptySet<String>()) }
     var confirming by remember { mutableStateOf(false) }
+    var assigning by remember { mutableStateOf<Set<String>?>(null) }
+    var assignError by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     var barHeight by remember { mutableStateOf(0.dp) }
 
     val projects = LibraryGrouping.projectsIn(all, current)
@@ -135,6 +142,7 @@ fun LibraryScreen(
                                 item = item,
                                 selecting = selecting,
                                 checked = selected.contains(item.id),
+                                onAssign = { if (item.project == null && item.state == TransferState.waiting) assigning = setOf(item.id) },
                                 onTap = {
                                     if (selecting) {
                                         selected = if (selected.contains(item.id)) selected - item.id else selected + item.id
@@ -168,6 +176,7 @@ fun LibraryScreen(
                                 item = item,
                                 selecting = selecting,
                                 checked = selected.contains(item.id),
+                                onAssign = { if (item.project == null && item.state == TransferState.waiting) assigning = setOf(item.id) },
                                 onTap = {
                                     if (selecting) {
                                         selected = if (selected.contains(item.id)) selected - item.id else selected + item.id
@@ -233,6 +242,17 @@ fun LibraryScreen(
             }
         }
 
+        assigning?.let { ids ->
+            ProjectPickerScreen(model, onClose = { assigning = null }, onSelect = { target ->
+                scope.launch {
+                    try { model.assignCaptures(ids, target); assigning = null }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (_: Exception) { assignError = true }
+                }
+            })
+        }
+        if (assignError) AlertDialog(onDismissRequest = { assignError = false },
+            text = { Text(tr("library.assignFailed")) }, confirmButton = { TextButton(onClick = { assignError = false }) { Text(tr("common.close")) } })
         if (confirming) {
             AlertDialog(
                 onDismissRequest = { confirming = false },
@@ -362,9 +382,10 @@ private fun DayHeader(day: DaySection) {
  * 从影像上拉走。录音没有画面，用音符占位。
  */
 @Composable
-private fun Cell(item: CaptureItem, selecting: Boolean, checked: Boolean, onTap: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun Cell(item: CaptureItem, selecting: Boolean, checked: Boolean, onAssign: () -> Unit, onTap: () -> Unit) {
     Box(
-        Modifier.aspectRatio(1f).background(Tk.D.surface).clickable(onClick = onTap)
+        Modifier.aspectRatio(1f).background(Tk.D.surface).combinedClickable(onClick = onTap, onLongClick = onAssign)
             .semantics { contentDescription = "${item.state.caption} ${LibraryTime.clock(item.capturedAt)}" },
     ) {
         Thumb(item, Modifier.fillMaxSize())
@@ -418,7 +439,7 @@ private fun SelectionTick(checked: Boolean, modifier: Modifier = Modifier) {
  * 列表一行。格子上时刻只到分，这里到秒：切到列表就是为了核对，取证核对的是那一下。
  */
 @Composable
-private fun ListRow(item: CaptureItem, selecting: Boolean, checked: Boolean, onTap: () -> Unit) {
+private fun ListRow(item: CaptureItem, selecting: Boolean, checked: Boolean, onAssign: () -> Unit, onTap: () -> Unit) {
     RowItem(
         onClick = onTap,
         leading = {
@@ -444,6 +465,7 @@ private fun ListRow(item: CaptureItem, selecting: Boolean, checked: Boolean, onT
                 )
             }
             Text(kindLabel(item.kind), style = Fonts.nano(), color = Tk.D.fgMuted)
+            if (item.project == null && item.state == TransferState.waiting) TextButton(onClick = onAssign) { Text(tr("library.assign")) }
         }
     }
 }

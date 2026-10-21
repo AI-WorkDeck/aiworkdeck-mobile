@@ -51,6 +51,7 @@ export interface QueueItem {
 // ---------- 持久化 + 订阅通知 ----------
 
 const listeners: Array<() => void> = []
+const savingIds = new Set<string>()
 
 export function subscribe(cb: () => void): () => void {
   listeners.push(cb)
@@ -74,12 +75,13 @@ function writeItems(items: QueueItem[]): void {
   notify()
 }
 
-function updateItem(clientMediaId: string, mutate: (item: QueueItem) => void): void {
+function updateItem(clientMediaId: string, mutate: (item: QueueItem) => void): boolean {
   const items = readItems()
   const item = items.find((it) => it.clientMediaId === clientMediaId)
-  if (!item) return
+  if (!item) return false
   mutate(item)
   writeItems(items)
+  return true
 }
 
 // ---------- 查询 ----------
@@ -93,12 +95,12 @@ export function listItems(projectIdFilter?: string): QueueItem[] {
 
 /** 三段计数，只数一个项目——进度跟着项目走。 */
 export function tallyFor(projectIdFilter: string): Tally {
-  return tallyOf(listItems(projectIdFilter))
+  return tallyOf(listItems(projectIdFilter).filter(isAssigned))
 }
 
 /** 别的项目里还没落盘的件数。队列页末尾提一句，免得它们被完全藏起来。 */
 export function otherPendingCount(projectIdFilter: string): number {
-  return readItems().filter((it) => projectId(it) !== projectIdFilter && it.state !== 'arrived').length
+  return readItems().filter((it) => isAssigned(it) && projectId(it) !== projectIdFilter && it.state !== 'arrived').length
 }
 
 /** 用户主动删除：原图（留底文件）与记录一起删。记录留着而图没了，图集里会出现永远打不开的空格。 */
@@ -109,6 +111,24 @@ export function removeItems(ids: string[]): void {
     if (set.has(it.clientMediaId) && it.saved) removeSavedFile(it.filePath)
   }
   writeItems(items.filter((it) => !set.has(it.clientMediaId)))
+}
+
+/** Missing transport identity means local Unassigned media, never a server project. */
+export function isAssigned(item: Pick<QueueItem, 'deviceId' | 'projectKey'>): boolean {
+  return !!item.deviceId && !!item.projectKey
+}
+
+/** Assignment is one-way: an existing destination, even before upload, is immutable here. */
+export function assignCapture(id: string, project: RelayProject): boolean {
+  if (!project.deviceId || !project.key) return false
+  const items = readItems()
+  const item = items.find(it => it.clientMediaId === id)
+  if (!item || item.deviceId || item.projectKey || item.projectUid || item.state !== 'waiting' || (item.attempts ?? 0) > 0) return false
+  Object.assign(item, { deviceId: project.deviceId, projectKey: project.key,
+    projectUid: project.projectUid, projectName: project.name })
+  writeItems(items)
+  processQueue()
+  return true
 }
 
 // ---------- 文件名 ----------
@@ -140,8 +160,9 @@ function fileNameFor(mediaType: 'image' | 'video' | 'audio', at: Date, segmentIn
 export function enqueueCapture(
   tempFilePath: string,
   mediaType: 'image' | 'video' | 'audio',
-  project: RelayProject,
+  project: RelayProject | null,
   segmentIndex?: number,
+  onSaved?: (saved: boolean) => void,
 ): QueueItem {
   const now = new Date()
   const item: QueueItem = {
@@ -150,36 +171,59 @@ export function enqueueCapture(
     mediaType,
     filePath: tempFilePath,
     saved: false,
-    deviceId: project.deviceId,
-    projectKey: project.key,
-    projectUid: project.projectUid,
-    projectName: project.name,
+    deviceId: project?.deviceId ?? '',
+    projectKey: project?.key ?? '',
+    projectUid: project?.projectUid,
+    projectName: project?.name ?? t('library.unknownProject'),
     capturedAt: now.toISOString(),
     state: 'waiting',
     segmentIndex,
     createdAt: now.getTime(),
   }
 
+  savingIds.add(item.clientMediaId)
   const items = readItems()
   items.push(item)
   writeItems(items)
 
+  let reported = false
+  const report = (saved: boolean) => {
+    if (reported) return
+    reported = true
+    savingIds.delete(item.clientMediaId)
+    if (!saved && !project && mediaType !== 'audio' && readItems().some(it => it.clientMediaId === item.clientMediaId)) {
+      const message = t('capture.saveFailed')
+      try { updateItem(item.clientMediaId, it => { it.errorMessage = message }) } catch { /* Still show the failure if metadata cannot be written. */ }
+      wx.showModal({ title: t('library.unknownProject'), content: message, showCancel: false })
+    }
+    onSaved?.(saved)
+  }
   try {
     wx.getFileSystemManager().saveFile({
       tempFilePath,
       success: (res) => {
-        updateItem(item.clientMediaId, (it) => {
-          it.filePath = res.savedFilePath
-          it.saved = true
-        })
+        try {
+          const retained = updateItem(item.clientMediaId, (it) => {
+            it.filePath = res.savedFilePath
+            it.saved = true
+          })
+          if (!retained) {
+            removeSavedFile(res.savedFilePath)
+            report(false)
+            return
+          }
+        } catch { report(false); return }
+        report(true)
         processQueue()
       },
       fail: () => {
         // 留底失败：保持临时路径继续（saved 已是 false），不影响上传。
+        report(false)
         processQueue()
       },
     })
   } catch {
+    report(false)
     processQueue()
   }
 
@@ -220,7 +264,7 @@ export function recoverOnLaunch(): void {
 /** 逐个（单飞）把 waiting → uploading → uploaded；失败 → failed，继续下一个。 */
 export function processQueue(): void {
   if (uploading) return
-  const next = readItems().find((it) => it.state === 'waiting')
+  const next = readItems().find((it) => it.state === 'waiting' && isAssigned(it) && !savingIds.has(it.clientMediaId))
   if (!next) return
 
   uploading = true

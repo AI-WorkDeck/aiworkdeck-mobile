@@ -41,6 +41,8 @@ class RecordingService : Service() {
     private var request: RecordingState.StartRequest? = null
     private var startedAt: Long = 0L
     private var destroyed = false
+    private val drafts by lazy { RecordingDrafts(java.io.File(filesDir, "recording-drafts")) }
+    private var draft: RecordingDrafts.Draft? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -66,14 +68,17 @@ class RecordingService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val eng = AudioRecorderService(this)
-        if (!eng.start()) {
+        val eng = AudioRecorderService(this) { stopAndStore(interrupted = true) }
+        val current = runCatching { drafts.create(now, req) }.getOrNull()
+        if (current == null || !eng.start(drafts.file(current))) {
+            if (current != null) drafts.complete(current)
             RecordingState.finish()
             RecordingState.message = tr("rec.startFailed")
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
         }
+        draft = current
         engine = eng
         request = req
         startedAt = eng.recordingStartedAt ?: now
@@ -85,25 +90,29 @@ class RecordingService : Service() {
      * 停录并落库。停表的那一刻就把界面状态翻回去；写盘在进程级作用域里做，服务被销毁也不中断。
      * 顺序与 `AppModel.store` 一致：先进库、再排上传、最后踢一脚队列；录音不存相册，服务里不用管。
      */
-    private fun stopAndStore() {
+    private fun stopAndStore(interrupted: Boolean = false) {
         if (RecordingState.isSaving) return
         val eng = engine
         engine = null
         val req = request
+        val currentDraft = draft
+        draft = null
         val at = startedAt
         RecordingState.finish()
         val file = eng?.stop()
         if (file == null) {
-            if (eng != null) RecordingState.message = tr("rec.failed")
+            if (eng != null) RecordingState.message = tr("rec.recovery.noAudio", mapOf("count" to 1))
             finishService()
             return
         }
         RecordingState.isSaving = true
+        if (interrupted) RecordingState.message = tr("rec.interruption.saving")
         val app = applicationContext
         storeScope.launch {
             try {
                 val item = ServiceLocator.store.save(MediaKind.audio, file, Instant.ofEpochMilli(at), req?.loc, req?.project)
-                withContext(Dispatchers.Main) { RecordingState.message = tr("rec.saved.open") }
+                if (currentDraft != null) drafts.complete(currentDraft)
+                withContext(Dispatchers.Main) { RecordingState.message = tr(if (interrupted) "rec.interruption.saved" else "rec.saved.open") }
                 UploadWorker.enqueue(app)
                 RecordingState.stored.emit(item)
             } catch (e: Exception) {
@@ -125,7 +134,7 @@ class RecordingService : Service() {
 
     /** 系统杀服务的兜底：还在录就停下来落库，已录的内容不能丢。 */
     override fun onDestroy() {
-        if (engine != null) stopAndStore()
+        if (engine != null) stopAndStore(interrupted = true)
         destroyed = true
         super.onDestroy()
     }

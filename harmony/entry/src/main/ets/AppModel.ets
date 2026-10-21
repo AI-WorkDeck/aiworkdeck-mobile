@@ -119,6 +119,7 @@ export class AppModel {
       this.signedIn = false
     }
     this.selectedProject = await this.readSelectedProject()
+    await RecorderService.shared.recoverDrafts()
     this.route = this.routeForState()
     this.emit()
     await this.refresh()
@@ -165,7 +166,7 @@ export class AppModel {
     if (current === null) return
     try {
       const projects: RelayProject[] = await ServiceLocator.backend.myProjects()
-      const seen: boolean = projects.some((p: RelayProject): boolean => (p.locations ?? []).some(
+      const seen: boolean = projects.some((p: RelayProject): boolean => (p?.locations ?? []).some(
         (l: ProjectLocation): boolean => l.kind === 'desktop' && l.deviceId === current.deviceId && l.online === true))
       this.desktopLastSeenMs = seen ? Date.now() : null
       this.emit()
@@ -192,11 +193,11 @@ export class AppModel {
     await this.refresh()
   }
 
-  async selectProject(p: RelayProject): Promise<void> {
+  async selectProject(p: RelayProject | null): Promise<void> {
     await ServiceLocator.prefs.setSelectedProject(p)
     this.selectedProject = p
-    const online: boolean = (p.locations ?? []).some((l: ProjectLocation): boolean =>
-      l.kind === 'desktop' && l.deviceId === p.deviceId && l.online === true)
+    const online: boolean = (p?.locations ?? []).some((l: ProjectLocation): boolean =>
+      l.kind === 'desktop' && l.deviceId === p?.deviceId && l.online === true)
     this.desktopLastSeenMs = online ? Date.now() : null
     this.route = Route.home
     this.emit()
@@ -321,7 +322,7 @@ export class AppModel {
 
   private routeForState(): Route {
     if (!this.signedIn) return Route.login
-    return this.selectedProject === null ? Route.projects : Route.home
+    return Route.home
   }
 
   private async readSelectedProject(): Promise<RelayProject | null> {

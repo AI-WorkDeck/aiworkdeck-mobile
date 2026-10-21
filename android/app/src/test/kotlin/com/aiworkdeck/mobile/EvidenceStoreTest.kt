@@ -165,4 +165,18 @@ class EvidenceStoreTest {
         }
     }
 
+    @Test fun assigningUnclassifiedCaptureNeverChangesPreviouslyTransferredIdentity() = runTest {
+        val store = EvidenceStore(tmp.newFolder(), facts())
+        val first = RelayProject("one", key = "p", name = "One")
+        val second = RelayProject("two", key = "q", name = "Two")
+        val waiting = store.save(MediaKind.photo, newTemp("waiting.jpg", "bytes"), Instant.now(), null, null)
+        store.setProject(waiting.id, first)
+        store.setProject(waiting.id, second)
+        assertEquals(first, store.loadAll().single().project)
+        val transferred = store.save(MediaKind.photo, newTemp("transferred.jpg", "bytes"), Instant.now(), null, null)
+        store.updateState(transferred.id, TransferState.uploaded)
+        store.setProject(transferred.id, second)
+        assertNull(store.loadAll().first { it.id == transferred.id }.project)
+    }
+
 }
