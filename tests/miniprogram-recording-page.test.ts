@@ -1,5 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { gunzipSync } from 'node:zlib'
+import { recordingSnapshot } from '../miniprogram/utils/recorder.ts'
 import { t } from '../miniprogram/utils/i18n.ts'
 
 let definition: any
@@ -22,7 +25,10 @@ const redirects: string[] = []
   uploadFile: (o: any) => { o.success({ statusCode: 200, data: JSON.stringify({ code: 0 }) }); return {} },
   request: (o: any) => o.success({ statusCode: 200, data: { enabled: false, decided: true, subscriptionActive: false } }),
   authorize: (o: any) => o.success(),
-  showModal: (o: any) => { modals.push(o) },
+  showModal: (o: any) => {
+    if ((o.confirmText?.length ?? 0) > 4 || (o.cancelText?.length ?? 0) > 4) { o.fail?.({ errMsg: 'showModal:fail invalid text length' }); o.complete?.(); return }
+    modals.push(o)
+  },
   reLaunch: (o: any) => redirects.push(o.url),
   showToast() {}, vibrateShort() {}, nextTick: (cb: () => void) => cb(),
 }
@@ -134,4 +140,36 @@ test('late video start callbacks cannot mutate a later audio capture UI', () => 
   startOptions.fail()
   assert.equal(instance.data.recording, true)
   assert.equal(stops, 0)
+})
+
+
+test('classified silence opens a valid native modal and keeps recording until the explicit stop action', async () => {
+  const compiled = await WebAssembly.instantiate(readFileSync(new URL('../miniprogram/vendor/speech/speech.wasm', import.meta.url)))
+  ;(globalThis as any).WXWebAssembly = { instantiate: () => Promise.resolve(compiled) }
+  storage = {}; modals.length = 0
+  const instance = page()
+  instance.visible = true
+  instance.data.mode = 'audio'
+  try {
+    await instance.onStartAudio(null)
+    await new Promise(resolve => setImmediate(resolve))
+    const bytes = gunzipSync(readFileSync(new URL('fixtures/speech/silence-long.mp3.gz', import.meta.url)))
+    for (let i = 0; i < bytes.length; i += 6144) {
+      const chunk = bytes.subarray(i, i + 6144)
+      handlers.frame({ frameBuffer: chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.length) })
+    }
+    assert.equal(modals.length, 1)
+    assert.equal(instance.data.recording, true)
+    assert.ok(modals[0].confirmText.length <= 4, 'WeChat rejects confirmText longer than 4 characters')
+    assert.ok(modals[0].cancelText.length <= 4)
+    modals[0].success({ confirm: false })
+    modals[0].complete()
+    assert.equal(instance.data.recording, true)
+    assert.equal(recordingSnapshot()?.silencePending, false)
+  } finally {
+    instance.onStopAudio()
+    handlers.stop({ tempFilePath: '/synthetic/modal.mp3', duration: 310000, fileSize: 1860884 })
+    save.success({ savedFilePath: '/synthetic/modal-saved.mp3' })
+    delete (globalThis as any).WXWebAssembly
+  }
 })

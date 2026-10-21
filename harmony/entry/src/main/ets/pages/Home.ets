@@ -81,6 +81,7 @@ export struct Home {
   @State voiceUnavailable: boolean = false
   @State backgroundReminderAvailable: boolean = true
   @State pauseBusy: boolean = false
+  @State landscape: boolean = false
   @State elapsedText: string = '00:00'
   @State flash: boolean = false
 
@@ -196,6 +197,9 @@ export struct Home {
       }
       .width('100%')
       .height('100%')
+      .onAreaChange((_previous: Area, current: Area): void => {
+        this.landscape = Number(current.width) > Number(current.height)
+      })
     }
     .hideTitleBar(true)
     .backgroundColor(Tk.D.bg)
@@ -401,10 +405,7 @@ export struct Home {
         if (this.recordingPaused) {
           Text(tr('rec.pause.remember')).fontSize(Tk.Ty.small).fontColor(Tk.D.fg).textAlign(TextAlign.Center)
         }
-        Button(tr(this.recordingPaused ? (this.recordingVideo ? 'rec.resume.video' : 'rec.resume.audio') :
-          (this.recordingVideo ? 'rec.pause.video' : 'rec.pause.audio')))
-          .fontColor(Tk.D.bg).backgroundColor(Tk.D.fg).height(Tk.touchMin)
-          .enabled(!this.pauseBusy).onClick((): void => { this.togglePause() })
+        if (!this.landscape) { this.pauseControl() }
       } else {
         // 三档并排、点选切换。取证的档位必须显式可预期，不做横滑档位条，也不做快门手势
         // 切换——手滑录错档位是取证事故。
@@ -419,7 +420,8 @@ export struct Home {
 
       Row() {
         Column() {
-          this.recentThumb()
+          if (this.landscape && this.recording()) { this.pauseControl() }
+          else { this.recentThumb() }
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
@@ -472,6 +474,14 @@ export struct Home {
     .height(Tk.touchMin)
     .justifyContent(FlexAlign.Center)
     .onClick((): void => this.switchMode(m))
+  }
+
+  @Builder
+  pauseControl() {
+    Button(tr(this.recordingPaused ? (this.recordingVideo ? 'rec.resume.video' : 'rec.resume.audio') :
+      (this.recordingVideo ? 'rec.pause.video' : 'rec.pause.audio')))
+      .fontColor(Tk.D.bg).backgroundColor(Tk.D.fg).height(Tk.touchMin)
+      .enabled(!this.pauseBusy).onClick((): void => { this.togglePause() })
   }
 
   /** 快门。照片单击即拍；录像 / 录音单击切换开始与停止，录制中变红方块。 */

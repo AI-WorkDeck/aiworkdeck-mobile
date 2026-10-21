@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { t, setLocale } from '../miniprogram/utils/i18n.ts'
 import { Mp3VoiceDetector, SilenceWindow } from '../miniprogram/utils/silence-monitor.ts'
 
 async function detector() {
@@ -62,4 +63,13 @@ test('a pending reminder is revoked by speech or a frame gap before returning to
     gate.accept(speech, 10, speech ? 300000 : 310000)
     assert.equal(gate.awaitingConfirmation, false)
   }
+})
+
+test('native modal button labels fit the four-character platform limit in both languages', () => {
+  try {
+    for (const locale of ['zh-Hans', 'en'] as const) {
+      setLocale(locale)
+      for (const key of ['rec.silence.stop.short', 'rec.silence.continue.short']) assert.ok(t(key).length <= 4)
+    }
+  } finally { setLocale('zh-Hans') }
 })

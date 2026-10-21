@@ -632,7 +632,7 @@ Page({
     this.silencePromptVisible = true
     wx.showModal({
       title: t('rec.silence.title'), content: t('rec.silence.message'),
-      confirmText: t('rec.silence.stop'), cancelText: t('rec.silence.continue'),
+      confirmText: t('rec.silence.stop.short'), cancelText: t('rec.silence.continue.short'),
       success: res => answerSilenceReminder(sessionId, !!res.confirm),
       fail: () => answerSilenceReminder(sessionId, false),
       complete: () => { this.silencePromptVisible = false },

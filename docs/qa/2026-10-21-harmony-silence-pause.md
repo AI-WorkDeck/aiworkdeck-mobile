@@ -8,7 +8,7 @@
 - libfvad 固定来源和版权由仓根 `third_party/libfvad` 管理；HAP rawfile 附带 LICENSE、PATENTS、AUTHORS 和 UPSTREAM。没有语音上传，没有用音量阈值冒充人声。
 - 提醒阈值读取 `ContractCapabilities.voiceReminderSeconds`。只累计实际完成分类的 10 ms 无语音 PCM；人声、超过 250 ms 的回调间隙、暂停、恢复、用户选择继续都会清零。无帧超过一秒显示检测暂不可用，不把无帧算作静音。分类失败只影响提醒，编码继续；编码/存储失败保留草稿和可播放前缀。
 - 达到阈值只弹出“继续录音／停止并保存”，不会自动停录。发布系统通知，点击回应用；通知拒绝/失败不阻止录音，并在界面解释后台提醒不可用。迟到通知不会在已经暂停、停止或清除提醒后重新留下。
-- 录音暂停真正停止 AudioCapturer，恢复只由用户触发；同一编码器与输出文件保持，PTS 由收到的 PCM 样本数连续生成。录像暂停/恢复调用同一 AVRecorder 的原生 pause/resume。两种时钟都排除暂停时间，持续显示“已暂停·当前未录制”和继续提示，暂停时状态点改为灰色，停止保存仍可操作。
+- 录音暂停真正停止 AudioCapturer，恢复只由用户触发；同一编码器与输出文件保持，PTS 由收到的 PCM 样本数连续生成。录像暂停/恢复调用同一 AVRecorder 的原生 pause/resume。两种时钟都排除暂停时间，持续显示“已暂停·当前未录制”和继续提示，暂停时状态点改为灰色，停止保存仍可操作。横屏时暂停/继续进入快门左侧，避免新增竖排按钮挤出停止键。
 - 暂停/恢复正在等待硬件时点停止，服务会排队保存，不丢弃停止请求。系统音频焦点中断仍保存已有内容，不自动继续。NAPI 输出按“有效音频 payload → EOS 确认”处理，含 payload 的 EOS buffer 不丢尾帧。
 
 ## 验证
@@ -23,7 +23,7 @@ NODE_HOME=/Applications/DevEco-Studio.app/Contents/tools/node \
   assembleHap --mode module -p product=default -p buildMode=debug --no-daemon
 ```
 
-最后输出原文：`BUILD SUCCESSFUL in 3 s 687 ms`，`41 tasks in total: 23 executed, 18 up-to-date`。包括 arm64-v8a 与 x86_64 NAPI/libfvad 编译；未签名 debug HAP，未发布。
+最后输出原文：`BUILD SUCCESSFUL in 4 s 419 ms`，`41 tasks in total: 20 executed, 21 up-to-date`。包括 arm64-v8a 与 x86_64 NAPI/libfvad 编译；未签名 debug HAP，未发布。
 
 针对性测试命令：
 
@@ -46,18 +46,21 @@ Pura 90 Pro、HarmonyOS 7.0/API 26 模拟器。使用本机既有 debug 截图�
 
 1. 首页选择录音 → 开始 → 00:16 暂停 → 约 22 秒后仍为 00:16 → 继续 → 停止。导出的 `recording.m4a` 完整解码成功：AAC、48000 Hz、单声道、22.932979 秒，未计入暂停墙钟。
 2. 18:55:27 开始完整正式长测，五分钟后出现提醒。05:34 截图时弹框仍在，计时继续，证明没有自动停止。点击“继续录音”，06:01 和 07:04 两次 UI 记录均继续录制且未立即重弹；19:02:33 手动停止并保存。该长测文件曾落盘为 166551 字节；随后重新启动演示种子会清除新增演示数据，因此未保留该长文件，不将它列作独立解码证据。
-3. 最后包含 48 kHz AAC-LC 显式配置、回调代际隔离与灰色暂停标志的版本再次实录、暂停、恢复、保存。`recording-final.m4a` 为 AAC、48000 Hz、单声道、49.471229 秒，`ffmpeg -v error -i ... -f null -` 返回 0，错误日志为空。
+3. 包含 48 kHz AAC-LC 显式配置、回调代际隔离与灰色暂停标志的版本再次实录、暂停、恢复、保存。`recording-final.m4a` 为 AAC、48000 Hz、单声道、49.471229 秒，`ffmpeg -v error -i ... -f null -` 返回 0，错误日志为空。
+4. 最终 EOS 尾帧修复构建再次短录并在暂停状态停止保存，`recording-eos.m4a` 为 AAC48k单声道、8.469208 秒；完整解码返回 0，错误日志为空。
 
 归档目录（主任务可直接检查）：
 
 `/Users/zewei/.codex/qa-artifacts/mobile-silence-pause-20261021/harmony/`
 
-- `paused-final.jpeg`：最终灰色暂停标志，继续与停止均在屏内。
+- `paused-final.jpeg`、`paused-landscape-fixed.jpeg`：最终竖/横屏灰色暂停标志，继续与停止均在屏内。
 - `five-minute.jpeg`：真实正式五分钟触发弹框，背景计时 05:34。
 - `continued.jpeg`、`ui-observations.json`：点击继续后至 07:04 不重弹且录音继续。
-- `recording.m4a`、`recording-final.m4a`、`harmony-silence-final-media.json`、`harmony-silence-decode.log`：两份实际录音和最终解码证据。
+- `recording.m4a`、`recording-final.m4a`、`recording-eos.m4a`、`harmony-silence-final-media.json`、`harmony-silence-decode.log`：两份实际录音和最终解码证据。
 - `harmony-silence-tests-final.log`、`harmony-silence-build-final.log`、`harmony-silence-contract.log`：测试、构建、契约输出。
 - `harmony-silence-runtime.log`：录音开始/保存时间及下面的视频编码限制。
+
+补充横屏实测：暂停17秒处旋转至横屏，暂停状态、继续、停止和底栏全部可见；点击左侧“继续录音”成功恢复，再点击停止成功保存。`paused-landscape-fixed.jpeg` 与 `harmony-landscape-resumed.json` 保存最终结果。
 
 ## 未验证项与真机复测
 
