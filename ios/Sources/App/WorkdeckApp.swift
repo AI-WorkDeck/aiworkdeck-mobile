@@ -77,10 +77,25 @@ private struct RootView: View {
             }
             Button(tr("common.close"), role: .cancel) { recorder.dismissNotice() }
         } message: { Text(recorder.notice ?? "") }
+        .alert(tr("rec.silence.title"), isPresented: Binding(
+            get: { recorder.silence.needsConfirmation && recorder.isRecording && scenePhase == .active },
+            set: { if !$0 && scenePhase == .active { recorder.continueAfterSilence() } }
+        )) {
+            Button(tr("rec.silence.stop")) { Task { await recorder.stop() } }
+            Button(tr("rec.silence.continue"), role: .cancel) { recorder.continueAfterSilence() }
+        } message: { Text(tr("rec.silence.message")) }
         .task(id: model.didRestore) {
-            if model.didRestore { await recorder.recoverPending() }
+            if model.didRestore {
+                await recorder.recoverPending()
+#if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("-AWDSilenceReminderUITest") {
+                    recorder.beginFakeRecording(seconds: 300)
+                }
+#endif
+            }
         }
         .onChange(of: scenePhase) { _, phase in
+            recorder.recordingSceneChanged(active: phase == .active)
             if phase == .active {
                 Task {
                     await recorder.checkRecordingStatus()

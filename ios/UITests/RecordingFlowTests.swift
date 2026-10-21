@@ -18,6 +18,24 @@ final class RecordingFlowTests: XCTestCase {
     }
 
     @MainActor
+    func testSilenceReminderOffersSaveAndContinuesWithoutStopping() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-AWDRecordingUITest", "-AWDSilenceReminderUITest"]
+        app.launch()
+        let alert = app.alerts["Stop recording?"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 15))
+        XCTAssertTrue(alert.buttons["Stop and save"].isHittable)
+        XCTAssertTrue(alert.buttons["Keep recording"].isHittable)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        alert.buttons["Keep recording"].tap()
+        XCTAssertFalse(alert.exists)
+        XCTAssertEqual(app.buttons["capture.shutter"].label, "Stop recording")
+    }
+
+    @MainActor
     func testUnassignedRecordingSettingsBackAndMove() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait

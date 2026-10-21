@@ -38,6 +38,12 @@ final class AudioRecorderService: NSObject {
     private(set) var notice: String?
     private(set) var canRetrySave = false
 
+    private(set) var silence = RecordingSilence()
+    private var voiceMonitor: VoiceActivityMonitor?
+    private var voiceGeneration = UUID()
+    private var lastVoiceResultAt: TimeInterval?
+    private let reminderNotification = RecordingReminderNotification()
+
     private var recorder: AVAudioRecorder?
     private var draft: RecordingDraft?
     private var clock = RecordingClock()
@@ -52,6 +58,7 @@ final class AudioRecorderService: NSObject {
         self.store = store
         self.pendingDrafts = pendingDrafts
         super.init()
+        reminderNotification.clear()
         NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: AVAudioSession.sharedInstance(), queue: .main
@@ -87,6 +94,7 @@ final class AudioRecorderService: NSObject {
             isBusy = false
             if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
         }
+        stopVoiceMonitoring()
         r.delegate = nil
         r.stop()
         recorder = nil
@@ -179,6 +187,7 @@ final class AudioRecorderService: NSObject {
         permissionDenied = false
         lastError = nil
         lastSavedID = nil
+        await reminderNotification.requestPermission()
         await CameraService.shared.prepareForAudioRecording()
         guard await configureAudioSession(active: true) else {
             lastError = tr("rec.startFailed")
@@ -203,6 +212,7 @@ final class AudioRecorderService: NSObject {
             self.draft = draft
             clock.start(at: Date())
             isRecording = true
+            startVoiceMonitoring()
             isInterrupted = false
             recordingSeconds = 0
             let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
@@ -232,8 +242,71 @@ final class AudioRecorderService: NSObject {
     func checkRecordingStatus() async {
         guard !isBusy, let r = recorder else { return }
         synchronize()
+        if let lastVoiceResultAt, ProcessInfo.processInfo.systemUptime - lastVoiceResultAt > 5 {
+            // A stalled classifier cannot justify a reminder, including after suspension.
+            clearSilenceReminder()
+            self.lastVoiceResultAt = nil
+        }
         if !r.isRecording { await stop(interrupted: true) }
         else { activity.update(state: activityState) }
+    }
+
+    func recordingSceneChanged(active: Bool) {
+        if active { reminderNotification.clear() }
+        else if silence.needsConfirmation { reminderNotification.show() }
+    }
+
+    func continueAfterSilence() {
+        silence.keepRecording()
+        reminderNotification.clear()
+    }
+
+    private func clearSilenceReminder() {
+        silence = RecordingSilence()
+        reminderNotification.clear()
+    }
+
+    private func startVoiceMonitoring() {
+        clearSilenceReminder()
+        let generation = UUID()
+        voiceGeneration = generation
+        lastVoiceResultAt = nil
+        let monitor = VoiceActivityMonitor(onResult: { [weak self] start, end, voice in
+            Task { @MainActor in
+                guard let self, self.isRecording, self.voiceGeneration == generation else { return }
+                self.lastVoiceResultAt = ProcessInfo.processInfo.systemUptime
+                let wasPending = self.silence.needsConfirmation
+                self.silence.observe(start: start, end: end, voice: voice)
+                if self.silence.needsConfirmation && !wasPending {
+                    if UIApplication.shared.applicationState != .active { self.reminderNotification.show() }
+                } else if !self.silence.needsConfirmation && wasPending {
+                    self.reminderNotification.clear()
+                }
+            }
+        }, onFailure: { [weak self] in
+            Task { @MainActor in
+                guard let self, self.voiceGeneration == generation else { return }
+                self.stopVoiceMonitoring()
+                self.notice = tr("rec.silence.unavailable")
+            }
+        })
+        do {
+            try monitor.start()
+            voiceMonitor = monitor
+        } catch {
+            monitor.stop()
+            // Failure of optional analysis must never stop the primary recording.
+            stopVoiceMonitoring()
+            notice = tr("rec.silence.unavailable")
+        }
+    }
+
+    private func stopVoiceMonitoring() {
+        voiceGeneration = UUID()
+        voiceMonitor?.stop()
+        voiceMonitor = nil
+        lastVoiceResultAt = nil
+        clearSilenceReminder()
     }
 
     private var activityState: RecordingActivityAttributes.ContentState {
@@ -250,9 +323,12 @@ final class AudioRecorderService: NSObject {
 
 #if DEBUG
     func beginFakeRecording(seconds: Int) {
-        guard Shot.isOn else { return }
+        guard Shot.isOn || ProcessInfo.processInfo.arguments.contains("-AWDSilenceReminderUITest") else { return }
         isRecording = true
         recordingSeconds = seconds
+        if ProcessInfo.processInfo.arguments.contains("-AWDSilenceReminderUITest") {
+            silence.observe(start: 0, end: 300, voice: false)
+        }
     }
 #endif
 }

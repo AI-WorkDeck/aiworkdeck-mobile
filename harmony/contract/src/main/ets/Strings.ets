@@ -1296,6 +1296,26 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "zh-Hans": "录音属于上次登录，请重新归类后再上传。",
     "en": "This recording belongs to a previous sign-in. Assign it again before uploading."
   },
+  "rec.silence.unavailable": {
+    "zh-Hans": "人声提醒暂不可用，录音仍在继续，请记得手动停止。",
+    "en": "Voice reminders are unavailable. Recording is still running; please remember to stop it manually."
+  },
+  "rec.silence.title": {
+    "zh-Hans": "是否停止录音？",
+    "en": "Stop recording?"
+  },
+  "rec.silence.message": {
+    "zh-Hans": "已连续 5 分钟未检测到人声。录音仍在继续，是否停止并保存？",
+    "en": "No voice has been detected for 5 minutes. Recording is still running. Stop and save?"
+  },
+  "rec.silence.stop": {
+    "zh-Hans": "停止并保存",
+    "en": "Stop and save"
+  },
+  "rec.silence.continue": {
+    "zh-Hans": "继续录音",
+    "en": "Keep recording"
+  },
   "rec.notice.title": {
     "zh-Hans": "录音状态",
     "en": "Recording status"
