@@ -80,7 +80,7 @@ class EvidenceStore(private val root: File, private val facts: DeviceFacts) {
     suspend fun setProject(id: String, project: RelayProject) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val row = readRowLocked(id) ?: return@withLock
-            if (row.project != null) return@withLock
+            if (row.project != null || row.state != TransferState.waiting.raw) return@withLock
             writeRowLocked(id, row.copy(project = project))
         }
     }

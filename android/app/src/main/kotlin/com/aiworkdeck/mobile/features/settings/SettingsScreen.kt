@@ -67,7 +67,7 @@ private val RECHARGE_CHANNEL: String = ContractCapabilities.recharge
  * 镜像 iOS `SettingsView`。
  */
 @Composable
-fun SettingsScreen(model: AppModel, onClose: () -> Unit) {
+fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck.mobile.Overlay) -> Unit = {}) {
     val prefs = ServiceLocator.prefs
     // 区域登录后固定（只在未登录的登录页能换），进页面读一次即可
     val region = remember { prefs.accountRegion }
@@ -140,6 +140,9 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit) {
                     }
                 }
 
+                Group(tr("backup.title")) {
+                    TextAction(tr("backup.title"), color = Tk.L.accent) { onOpen(com.aiworkdeck.mobile.Overlay.Backup) }
+                }
                 Group(tr("settings.archiveTarget")) {
                     InfoRow(tr("home.eyebrow"), project?.name ?: DASH)
                     InfoRow(tr("settings.relay"), usageCaption(usage))
@@ -152,9 +155,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit) {
                         InfoRow(tr("settings.persistent"), caption)
                     }
                     TextAction(tr("settings.switchProject"), color = Tk.L.accent) {
-                        // 清掉选择即回选择页：Root 看到 selectedProject 变 null 自己路由
-                        model.clearProjectSelection()
-                        onClose()
+                        onOpen(com.aiworkdeck.mobile.Overlay.Projects)
                     }
                 }
 

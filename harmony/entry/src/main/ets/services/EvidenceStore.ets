@@ -167,7 +167,7 @@ export class EvidenceStore {
   async setProject(id: string, p: RelayProject): Promise<void> {
     await this.run<void>(async (): Promise<void> => {
       const row: StoredRow | null = this.readRow(id)
-      if (row === null || row.project !== undefined) return
+      if (row === null || row.project !== undefined || row.state !== TransferState.waiting) return
       const updated: StoredRow = {
         kind: row.kind, state: row.state, progress: row.progress, manifest: row.manifest,
         lastError: row.lastError, savedToAlbum: row.savedToAlbum, project: p,

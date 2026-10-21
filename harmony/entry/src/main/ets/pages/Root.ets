@@ -11,6 +11,7 @@ import { Login } from './Login'
 import { ProjectPicker } from './ProjectPicker'
 import { Queue } from './Queue'
 import { Settings } from './Settings'
+import { ProjectFiles } from './ProjectFiles'
 import { Viewer } from './Viewer'
 
 const DOMAIN: number = 0x0000
@@ -27,11 +28,11 @@ const PAGE_VIEWER: string = 'Viewer'
 const PAGE_QUEUE: string = 'Queue'
 
 /**
- * 根路由。四态互斥、按顺序判定：还没恢复完（boot）→ 没登录 → 没选项目 → 主界面，
+ * 根路由。登录状态路由：还没恢复完（boot）→ 没登录 → 采集首页，
  * 与安卓 `MainActivity.Root` 一致，只是换成 Navigation 栈来承载。
  *
  * 路由由 AppModel 的 `route` 说了算，这里只负责把它翻译成栈操作：
- * 每次换态先 `clear()` 再 `pushPath()`——这四态之间没有「返回上一态」的语义
+ * 每次换态先 `clear()` 再 `pushPath()`——这些根状态之间没有「返回上一态」的语义
  * （登出之后能按返回键回到取景器是安全事故），所以不留历史。
  */
 @Entry
@@ -71,7 +72,8 @@ struct Root {
   private applyScreenshotScreen(): void {
     if (!ScreenshotMode.enabled || this.route !== Route.home) return
     const s: string = ScreenshotMode.screen
-    if (s === 'queue') this.stack.pushPath(new NavPathInfo(PAGE_QUEUE, ''), false)
+    if (s === 'projects') this.stack.pushPath(new NavPathInfo(PAGE_PROJECTS_SWITCH, ''), false)
+    else if (s === 'queue') this.stack.pushPath(new NavPathInfo(PAGE_QUEUE, ''), false)
     else if (s === 'library') this.stack.pushPath(new NavPathInfo(PAGE_LIBRARY, ''), false)
     else if (s === 'settings') this.stack.pushPath(new NavPathInfo(PAGE_SETTINGS, ''), false)
     else if (s === 'viewer') {
@@ -93,6 +95,10 @@ struct Root {
       ProjectPicker({ stack: this.stack, switching: false })
     } else if (name === PAGE_PROJECTS_SWITCH) {
       ProjectPicker({ stack: this.stack, switching: true })
+    } else if (name === 'ProjectAssign') {
+      ProjectPicker({ stack: this.stack, assigning: true })
+    } else if (name === 'ProjectFiles') {
+      ProjectFiles({ stack: this.stack })
     } else if (name === PAGE_SETTINGS) {
       Settings({ stack: this.stack })
     } else if (name === PAGE_LIBRARY) {
@@ -114,6 +120,7 @@ struct Root {
         .backgroundColor(Tk.L.bg)
     }
     .hideTitleBar(true)
+    .mode(NavigationMode.Stack)
     .navDestination(this.pageMap)
     .width('100%')
     .height('100%')

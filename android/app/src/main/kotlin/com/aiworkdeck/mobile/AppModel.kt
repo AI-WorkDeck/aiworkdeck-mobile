@@ -32,7 +32,7 @@ import java.time.Instant
 import java.util.logging.Logger
 
 /** 主界面之上盖着的整屏。None = 只有取景器。 */
-enum class Overlay { None, Library, Queue, Settings }
+enum class Overlay { None, Library, Queue, Settings, Projects, Files, Backup }
 
 /**
  * 全局状态。界面只读它，写入一律经过这里，保证磁盘上的库与屏幕上的画面不会各说各话。
@@ -118,6 +118,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             // 请求的 401——启动多打一次网络请求会让离线开 App 卡住，而离线拍照正是主场景。
             _isSignedIn.value = backend.hasSession()
             _selectedProject.value = prefs.selectedProject
+            if (!RecordingState.isRecording && !RecordingState.isSaving) {
+                com.aiworkdeck.mobile.services.RecordingDrafts(File(getApplication<Application>().filesDir, "recording-drafts"))
+                    .recover(evidence)?.let { RecordingState.message = it }
+            }
             evidence.sweepOrphans()
             refresh()
             _didRestore.value = true
@@ -173,6 +177,25 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         _isSignedIn.value = true
         startHeartbeat()
         viewModelScope.launch { refresh() }
+    }
+
+    fun retryRecordingDrafts() {
+        if (RecordingState.isRecording || RecordingState.isSaving) return
+        RecordingState.isSaving = true
+        viewModelScope.launch {
+            try {
+                RecordingState.message = com.aiworkdeck.mobile.services.RecordingDrafts(File(getApplication<Application>().filesDir, "recording-drafts")).recover(evidence)
+                refresh()
+                if (!ScreenshotMode.enabled) UploadWorker.enqueue(getApplication<Application>())
+            } finally { RecordingState.isSaving = false }
+        }
+    }
+
+    suspend fun assignCaptures(ids: Set<String>, project: RelayProject) {
+        for (id in ids) evidence.setProject(id, project)
+        refresh()
+        UploadWorker.enqueue(getApplication<Application>())
+        queue.kick()
     }
 
     fun selectProject(project: RelayProject) {

@@ -3,13 +3,14 @@ import { backgroundTaskManager } from '@kit.BackgroundTasksKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo as fs } from '@kit.CoreFileKit'
 import { media } from '@kit.MediaKit'
-import { util } from '@kit.ArkTS'
+import { JSON as ArkJson, util } from '@kit.ArkTS'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { CaptureItem, MediaKind, RelayProject } from '../model/Capture'
 import { tr } from '../design/L10n'
 import { Loc } from '../model/Loc'
 import { RecordingState } from './RecordingState'
 import { ScreenshotMode } from '../ScreenshotMode'
+import { asRecord, getNumber } from './ApiTypes'
 import { ServiceLocator } from './ServiceLocator'
 
 const DOMAIN: number = 0x0000
@@ -26,16 +27,14 @@ const PROFILE: media.AVRecorderProfile = {
 }
 
 /**
- * 录音（纯音频）。AVRecorder + AUDIO_RECORDING 长时任务 + 中断后自动续录，对位
+ * 录音（纯音频）。AVRecorder + AUDIO_RECORDING 长时任务 + 中断后保存，对位
  * 安卓 `RecordingService.kt` 的前台服务，见 `docs/specs/2026-09-03-background-recording-design.md`。
  *
  * 进程级单例：录音要跨过取景页的生死（切后台、锁屏都继续录，页面可能已经销毁重建），
  * 界面只读 `state`、只调 `start/stop`。
  *
- * 中断的信号来自 `on('stateChange')` 而不是 `on('audioInterrupt')`——API 26 的
- * `media.AVRecorder` 没有 audioInterrupt 事件（那是 AVPlayer 的），系统抢走麦克风时
- * 录音机被置为 `paused`，焦点还回来时自己回到 `started`。焦点没自动还回来的情形
- * （通话结束用户直接切回应用）由 `resumeIfInterrupted()` 补一刀。
+ * 真正的 paused/stopped/error 事件停止并保存已录部分；普通系统提示未中断录音时保持继续。
+ * 回前台不自动续录，避免把中断后的声音误报为已录入。
  */
 export class RecorderService {
   static readonly shared: RecorderService = new RecorderService()
@@ -52,6 +51,7 @@ export class RecorderService {
   private loc: Loc | null = null
   private bgRunning: boolean = false
   private busy: boolean = false
+  private interruptedDuringStart: boolean = false
 
   // MARK: - 开录
 
@@ -62,12 +62,14 @@ export class RecorderService {
   async start(project: RelayProject | null, loc: Loc | null): Promise<boolean> {
     if (this.busy || this.state.isRecording) return false
     this.busy = true
+    this.interruptedDuringStart = false
     try {
       const started: boolean = await this.startInner(project, loc)
       if (!started) this.state.setMessage(tr('rec.startFailed'))
       return started
     } finally {
       this.busy = false
+      if (this.interruptedDuringStart && this.state.isRecording) this.finishInterrupted()
     }
   }
 
@@ -79,7 +81,8 @@ export class RecorderService {
     // 长时任务先申请再开录音机：系统在长时任务批下来之前就把应用挂起的话，录音机会被一起冻住
     if (!await this.startBackground()) return false
 
-    const dir: string = ServiceLocator.ctx.cacheDir
+    const dir: string = `${ServiceLocator.ctx.filesDir}/RecordingDrafts`
+    if (!fs.accessSync(dir)) fs.mkdirSync(dir, true)
     const path: string = `${dir}/rec-${util.generateRandomUUID(false).toLowerCase()}.m4a`
     let file: fs.File
     try {
@@ -112,6 +115,9 @@ export class RecorderService {
       url: `fd://${file.fd}`,
     }
     try {
+      const draft: Record<string, Object> = { 'capturedAt': Date.now() }
+      const draftFd: fs.File = fs.openSync(path + '.json', fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC)
+      try { fs.writeSync(draftFd.fd, ArkJson.stringify(draft)) } finally { fs.closeSync(draftFd) }
       // 先挂事件再 prepare：prepare/start 自己就会推状态，晚挂就会漏掉第一条
       this.listen(recorder)
       await recorder.prepare(config)
@@ -146,7 +152,7 @@ export class RecorderService {
    * 落库失败只记日志，**不删文件**——录到的东西是不可复现的，宁可留一个孤儿在 cacheDir
    * 里等人工捞，也不能因为写 manifest 出错就把它抹掉。
    */
-  async stop(): Promise<CaptureItem | null> {
+  async stop(interrupted: boolean = false): Promise<CaptureItem | null> {
     if (this.busy) return null
     if (!this.state.isRecording && this.recorder === null) return null
     this.busy = true
@@ -163,6 +169,10 @@ export class RecorderService {
 
     let item: CaptureItem
     try {
+      if (!await this.playable(path)) {
+        this.state.setMessage(tr('rec.recovery.noAudio', { 'count': 1 }))
+        return null
+      }
       item = await ServiceLocator.store.save(MediaKind.audio, path, startedAt, loc, project)
     } catch (e) {
       hilog.error(DOMAIN, TAG, 'save failed, source file retained: %{public}s', messageOf(e))
@@ -171,7 +181,8 @@ export class RecorderService {
     } finally {
       this.busy = false
     }
-    this.state.setMessage(tr('rec.saved.open'))
+    this.removeDraftMetadata(path)
+    this.state.setMessage(tr(interrupted ? 'rec.interruption.saved' : 'rec.saved.open'))
     hilog.info(DOMAIN, TAG, '%{public}s', 'recording stored')
     // 上传不挡着返回：界面等的是「这一件已经进库」，传没传出去是队列自己的事
     // 截图模式下队列里摆的是灌进去的假件，一上传就会被打成 failed
@@ -185,32 +196,29 @@ export class RecorderService {
     return item
   }
 
-  /**
-   * 中断结束后补一次续录。系统还回音频焦点时录音机通常自己回到 `started`（走 stateChange），
-   * 但通话结束后用户直接切回应用的那条路上不一定有事件，所以回前台时再问一次。
-   */
+  /** Returning to the foreground must not silently restart after missing audio. */
   async resumeIfInterrupted(): Promise<void> {
-    const recorder: media.AVRecorder | null = this.recorder
-    if (recorder === null || !this.state.isRecording || !this.state.interrupted) return
-    try {
-      await recorder.resume()
-    } catch (e) {
-      // 焦点还没还回来就是失败，等下一次机会，不算错误
-      hilog.info(DOMAIN, TAG, 'resume not accepted yet: %{public}s', messageOf(e))
-      return
-    }
-    this.state.markResumed(Date.now())
-    hilog.info(DOMAIN, TAG, '%{public}s', 'recording resumed')
+    if (this.state.interrupted) this.finishInterrupted()
+  }
+
+  private finishInterrupted(): void {
+    if (this.busy) { this.interruptedDuringStart = true; return }
+    if (!this.state.isRecording) return
+    this.state.markInterrupted(Date.now())
+    this.stop(true).catch((e: Object): void => {
+      hilog.error(DOMAIN, TAG, 'interrupted save failed: %{public}s', messageOf(e))
+      this.state.setMessage(tr('rec.saveFailed'))
+    })
   }
 
   // MARK: - 事件
 
   private listen(recorder: media.AVRecorder): void {
     recorder.on('stateChange', (s: media.AVRecorderState, reason: media.StateChangeReason): void => {
-      this.onStateChange(s, reason)
+      if (this.recorder === recorder) this.onStateChange(s, reason)
     })
     recorder.on('error', (err: BusinessError): void => {
-      this.onError(err)
+      if (this.recorder === recorder) this.onError(err)
     })
   }
 
@@ -219,24 +227,64 @@ export class RecorderService {
    * 我们自己发起的，再走一遍中断逻辑会把秒表算乱。
    */
   private onStateChange(s: media.AVRecorderState, reason: media.StateChangeReason): void {
-    if (this.busy || !this.state.isRecording) return
-    hilog.info(DOMAIN, TAG, 'state %{public}s reason %{public}d', s, reason)
-    if (s === 'paused') {
-      this.state.markInterrupted(Date.now())
-    } else if (s === 'started') {
-      this.state.markResumed(Date.now())
-    } else if (s === 'stopped' || s === 'error') {
-      // 系统把录音停了（焦点长期不还、达到时长上限）：按停止处理，已经录到的照样落库
-      this.stop().catch((e: Object): void => {
-        hilog.error(DOMAIN, TAG, 'stop after system stop failed: %{public}s', messageOf(e))
-      })
-    }
+    if (s === 'paused' || s === 'stopped' || s === 'error') this.finishInterrupted()
   }
 
   private onError(err: BusinessError): void {
     hilog.error(DOMAIN, TAG, 'recorder error %{public}d: %{public}s', err.code, err.message)
-    // AVRecorder 把音频焦点被抢报成一条错误，不是单独的事件
-    if (err.code === media.AVErrorCode.AVERR_AUDIO_INTERRUPTED) this.state.markInterrupted(Date.now())
+    this.finishInterrupted()
+  }
+
+  private async playable(path: string): Promise<boolean> {
+    let file: fs.File | null = null
+    let extractor: media.AVMetadataExtractor | null = null
+    try {
+      if (!fs.accessSync(path) || fs.statSync(path).size === 0) return false
+      file = fs.openSync(path, fs.OpenMode.READ_ONLY)
+      extractor = await media.createAVMetadataExtractor()
+      extractor.fdSrc = { fd: file.fd, offset: 0, length: fs.statSync(path).size }
+      const metadata: media.AVMetadata = await extractor.fetchMetadata()
+      const duration: number = Number(metadata.duration ?? '0')
+      return Number.isFinite(duration) && duration > 0 &&
+        (metadata.hasAudio === 'yes' || metadata.hasAudio === 'true' || metadata.hasAudio === '1')
+    } catch (_) { return false } finally {
+      if (extractor !== null) { try { await extractor.release() } catch (_) {} }
+      if (file !== null) closeQuietly(file)
+    }
+  }
+
+  /** Interrupted process drafts recover locally as unassigned; never inherit a different sign-in's upload target. */
+  async recoverDrafts(): Promise<void> {
+    if (this.busy || this.state.isRecording) return
+    const directory: string = `${ServiceLocator.ctx.filesDir}/RecordingDrafts`
+    if (!fs.accessSync(directory)) return
+    this.busy = true
+    let recovered: number = 0
+    let invalid: number = 0
+    let failed: number = 0
+    try {
+      for (const name of fs.listFileSync(directory)) {
+        if (!name.endsWith('.m4a.json')) continue
+        const path: string = `${directory}/${name.substring(0, name.length - 5)}`
+        try {
+          if (!fs.accessSync(path)) { this.removeDraftMetadata(path); continue }
+          if (!await this.playable(path)) { invalid++; continue }
+          const data: Record<string, Object> | null = asRecord(ArkJson.parse(fs.readTextSync(path + '.json')))
+          const capturedAt: number | undefined = data === null ? undefined : getNumber(data, 'capturedAt')
+          if (capturedAt === undefined || !Number.isFinite(capturedAt) || capturedAt <= 0) { failed++; continue }
+          await ServiceLocator.store.save(MediaKind.audio, path, capturedAt, null, null)
+          this.removeDraftMetadata(path)
+          recovered++
+        } catch (_) { failed++ }
+      }
+      if (invalid > 0) this.state.setMessage(tr('rec.recovery.noAudio', { 'count': invalid }))
+      else if (failed > 0) this.state.setMessage(tr('rec.recovery.saveFailed', { 'count': failed }))
+      else if (recovered > 0) this.state.setMessage(tr('rec.recovery.saved', { 'count': recovered }))
+    } finally { this.busy = false }
+  }
+
+  private removeDraftMetadata(path: string): void {
+    try { if (fs.accessSync(path + '.json')) fs.unlinkSync(path + '.json') } catch (_) {}
   }
 
   // MARK: - 内部
@@ -312,6 +360,7 @@ export class RecorderService {
   /** 开录半途失败时的收尾：文件里还什么都没有，留着只会当孤儿。 */
   private closeAndRemove(file: fs.File, path: string): void {
     closeQuietly(file)
+    this.removeDraftMetadata(path)
     try {
       fs.unlinkSync(path)
     } catch (e) {

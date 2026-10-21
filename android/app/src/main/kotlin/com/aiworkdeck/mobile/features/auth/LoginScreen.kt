@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -105,7 +106,7 @@ fun LoginScreen(model: AppModel) {
         password = ""; error = null; reviewMode = false
         runCatching { uriHandler.openUri(accountFlowUrl(region, method, flow)) }.onFailure { error = tr("login.webError") }
     }
-    Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()
+    Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().imePadding()
         .verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter),
         verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
         if (ContractCapabilities.intlAccount) {

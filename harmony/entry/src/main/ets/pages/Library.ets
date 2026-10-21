@@ -12,6 +12,7 @@ import {
 import { TransferState, TransferStateOps } from '../model/TransferState'
 import { LIBRARY_VIEW_GRID, LIBRARY_VIEW_LIST } from '../services/Prefs'
 import { ServiceLocator } from '../services/ServiceLocator'
+import { AssignmentRequest } from './AssignmentRequest'
 import { ViewerRequest } from './ViewerRequest'
 
 const DOMAIN: number = 0x0000
@@ -235,6 +236,10 @@ export struct Library {
             this.cell(it)
           }
           .onClick((): void => this.tap(s, it))
+          .gesture(LongPressGesture().onAction((): void => {
+            this.selecting = true
+            this.selected = [it.id]
+          }))
         }, (it: CaptureItem): string => it.id)
       }, (s: DaySection): string => s.key)
 
@@ -267,6 +272,10 @@ export struct Library {
             this.listRow(it)
           }
           .onClick((): void => this.tap(s, it))
+          .gesture(LongPressGesture().onAction((): void => {
+            this.selecting = true
+            this.selected = [it.id]
+          }))
         }, (it: CaptureItem): string => it.id)
       }, (s: DaySection): string => s.key)
 
@@ -414,6 +423,13 @@ export struct Library {
           .fontColor(Tk.D.fgMuted)
           .layoutWeight(1)
 
+        if (this.assignable()) {
+          Text(tr('library.assign')).fontColor(Tk.D.fg).height(Tk.touchMin)
+            .onClick((): void => {
+              AssignmentRequest.ids = this.selected.slice()
+              this.stack.pushPath(new NavPathInfo('ProjectAssign', ''))
+            })
+        }
         Text(tr('library.delete'))
           .fontSize(Tk.Ty.small)
           .fontColor(WHITE)
@@ -434,6 +450,11 @@ export struct Library {
   }
 
   // MARK: - 行为
+
+  private assignable(): boolean {
+    const items: CaptureItem[] = AppModel.shared.items.filter((it: CaptureItem): boolean => this.selected.includes(it.id))
+    return items.length > 0 && items.every((it: CaptureItem): boolean => it.project === null && it.state === TransferState.waiting)
+  }
 
   private checked(item: CaptureItem): boolean {
     return this.selected.includes(item.id)

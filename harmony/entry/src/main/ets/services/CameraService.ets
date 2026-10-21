@@ -1,3 +1,4 @@
+import { display } from '@kit.ArkUI'
 import { camera } from '@kit.CameraKit'
 import { image } from '@kit.ImageKit'
 import { media } from '@kit.MediaKit'
@@ -17,7 +18,9 @@ const RATIO_16_9: number = 16 / 9
 const RATIO_TOLERANCE: number = 0.02
 
 /** 竖屏应用：设备自然方向就是 0 度，旋转角由相机自己按传感器安装角算。 */
-const DEVICE_DEGREE: number = 0
+function deviceDegrees(): number {
+  return display.getDefaultDisplaySync().rotation * 90
+}
 
 /**
  * 在途拍照被相机拆掉时的失败信息。调用方（取景页）据此把这一次静默处理——
@@ -82,7 +85,11 @@ export class CameraService {
       if (this.session !== null && this.surfaceId === surfaceId) return
       if (this.session !== null) await this.teardown()
       this.surfaceId = surfaceId
-      await this.openPhotoSession()
+      try { await this.openPhotoSession() } catch (e) {
+        await this.teardown()
+        throw e as Error
+      }
+      this.updatePreviewRotation()
     })
   }
 
@@ -98,6 +105,14 @@ export class CameraService {
     await this.run<void>(async (): Promise<void> => {
       await this.teardown()
     })
+  }
+
+  updatePreviewRotation(): void {
+    const preview: camera.PreviewOutput | null = this.preview
+    if (preview === null) return
+    try { preview.setPreviewRotation(preview.getPreviewRotation(deviceDegrees()), true) } catch (e) {
+      hilog.warn(DOMAIN, TAG, 'preview rotation failed: %{public}s', messageOf(e))
+    }
   }
 
   // MARK: - 拍照
@@ -120,7 +135,7 @@ export class CameraService {
       this.pendingPhotoFail = reject
     })
     // 竖屏应用固定按设备 0 度算旋转；传感器装配角由系统补（d.ts:6197）
-    const setting: camera.PhotoCaptureSetting = { rotation: out.getPhotoRotation(DEVICE_DEGREE) }
+    const setting: camera.PhotoCaptureSetting = { rotation: out.getPhotoRotation(deviceDegrees()) }
     try {
       await out.capture(setting)
     } catch (e) {
@@ -246,30 +261,24 @@ export class CameraService {
     this.input = input
     this.preview = preview
 
-    // 方向写死 90 度：`AVMetadata.videoOrientation`（media.d.ts:1068）在 prepare 时就定死，
-    // 而能问出真实旋转角的 `VideoOutput.getVideoRotation`（camera.d.ts:6457）要等 VideoOutput
-    // 建出来——它又要等 prepare 给的 surface。这个循环解不开，只能取竖屏手机后置传感器的
-    // 常规装配角（顺时针 90 度）。真机走查时要核对录像的正反（列在未验证项里）。
     const withAudio: boolean = this.hasMic()
     const profile: media.AVRecorderProfile = videoRecorderProfile(videoProfile, withAudio)
-    const metadata: media.AVMetadata = { videoOrientation: '90' }
     const config: media.AVRecorderConfig = withAudio ? {
       audioSourceType: media.AudioSourceType.AUDIO_SOURCE_TYPE_MIC,
       videoSourceType: media.VideoSourceType.VIDEO_SOURCE_TYPE_SURFACE_YUV,   // d.ts:7224
       profile: profile,
       url: `fd://${file.fd}`,
-      metadata: metadata,
     } : {
       // 没有麦克风权限也照录（只是没声）：现场画面本身就是证据，不因为少一项权限把画面也拒了
       videoSourceType: media.VideoSourceType.VIDEO_SOURCE_TYPE_SURFACE_YUV,
       profile: profile,
       url: `fd://${file.fd}`,
-      metadata: metadata,
     }
     await recorder.prepare(config)
     const videoSurfaceId: string = await recorder.getInputSurface()            // d.ts:5315
     const videoOut: camera.VideoOutput = mgr.createVideoOutput(videoProfile, videoSurfaceId)  // d.ts:610
     this.videoOut = videoOut
+    await recorder.updateRotation(videoOut.getVideoRotation(deviceDegrees()))
 
     const session: camera.VideoSession = mgr.createSession<camera.VideoSession>(camera.SceneMode.NORMAL_VIDEO)
     this.session = session

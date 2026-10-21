@@ -43,11 +43,13 @@ test('logged-in capture remains the landing page with no selected project', () =
   instance.visible = false
 })
 
-test('shutter with no project offers selection rather than silently ignoring the tap', () => {
+test('shutter with no project captures locally without requiring project selection', () => {
   ;(globalThis as any).wx = { getStorageSync: () => undefined }
   const instance = page()
-  let selects = 0
-  instance.onSwitchProject = () => { selects++ }
+  let captured: unknown = 'not called'
+  instance.data.cameraState = 'ready'
+  ;(globalThis as any).wx.vibrateShort = () => {}
+  instance.takePhoto = (project: unknown) => { captured = project }
   instance.onShutter()
-  assert.equal(selects, 1)
+  assert.equal(captured, null)
 })

@@ -98,6 +98,11 @@ class CameraService(private val context: Context, private val lifecycleOwner: Li
         boundMode = mode
     }
 
+    fun updateRotation(rotation: Int) {
+        imageCapture.targetRotation = rotation
+        videoCapture.targetRotation = rotation
+    }
+
     /** 放开相机。幂等：没占着就直接返回，重复调用不会多解绑一次。 */
     fun unbind() {
         if (!bound) return
@@ -128,7 +133,7 @@ class CameraService(private val context: Context, private val lifecycleOwner: Li
      * 开始录像。没有录音权限也照录（只是没声），不因为少一项权限就把画面也拒了——
      * 现场画面本身就是证据。
      */
-    fun startVideo() {
+    fun startVideo(onFinalized: (File) -> Unit) {
         if (recording != null) return
         val file = File(context.cacheDir, "cap-${UUID.randomUUID()}.mp4")
         val done = CompletableDeferred<File>()
@@ -151,6 +156,7 @@ class CameraService(private val context: Context, private val lifecycleOwner: Li
                     // 现场不可复现，能留多少留多少。
                     if (file.exists() && file.length() > 0) {
                         done.complete(file)
+                        onFinalized(file)
                     } else {
                         file.delete()
                         done.completeExceptionally(IllegalStateException("video finalize error ${event.error}"))

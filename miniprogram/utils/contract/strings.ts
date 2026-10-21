@@ -972,6 +972,10 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
     "zh-Hans": "文件服务返回了无效响应",
     "en": "The file service returned an invalid response"
   },
+  "files.error.cacheFull": {
+    "zh-Hans": "预览缓存空间不足。请先重试未完成的传输，或关闭文件页释放已完成的预览。",
+    "en": "Preview cache is full. Retry unfinished transfers, or close the files page to clear completed previews."
+  },
   "files.error.tooLarge": {
     "zh-Hans": "文件超过 200 MB 预览上限",
     "en": "This file exceeds the 200 MB preview limit"
@@ -1179,6 +1183,14 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
   "files.previewFailed": {
     "zh-Hans": "预览失败，请重试",
     "en": "Preview failed. Try again."
+  },
+  "capture.saveFailed": {
+    "zh-Hans": "影像未能保存到本机，退出后可能丢失。请尽快归类到项目完成上传，或重新拍摄。",
+    "en": "Could not save this capture locally. Its temporary file may be lost after you exit. Assign it to a project and finish uploading soon, or capture it again."
+  },
+  "camera.error.start": {
+    "zh-Hans": "相机暂不可用，请重试",
+    "en": "Camera is unavailable. Try again."
   },
   "files.noPreviewApp": {
     "zh-Hans": "未安装可预览此格式的应用，未发起传输",

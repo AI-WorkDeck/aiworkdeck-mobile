@@ -1,5 +1,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { ContractCapabilities } from 'contract'
+import { BackupConsentService } from '../services/BackupConsentService'
+import { BackupConsent } from '../model/ProjectFiles'
 import { AppModel } from '../AppModel'
 import { tr } from '../design/L10n'
 import { Tk } from '../design/Tokens'
@@ -43,6 +45,7 @@ export struct Settings {
   @State projectName: string = DASH
   @State usage: MediaUsage | null = null
   @State subscription: SubscriptionBalance | null = null
+  @State backup: BackupConsent | null = null
   private token: number = -1
   /** 这一屏还在不在。异步回调回来时组件可能已经销毁，往里写 @State 是错误日志甚至崩溃。 */
   private alive: boolean = false
@@ -51,6 +54,7 @@ export struct Settings {
     this.alive = true
     this.token = AppModel.shared.subscribe((): void => this.syncProject())
     this.syncProject()
+    ServiceLocator.backend.backupConsent().then((v: BackupConsent): void => { if (this.alive) this.backup = v }).catch((): void => {})
     ServiceLocator.prefs.saveToAlbum().then((v: boolean): void => {
       if (!this.alive) return
       this.saveToAlbum = v
@@ -169,6 +173,9 @@ export struct Settings {
   archiveGroup() {
     this.eyebrow(tr('settings.archiveTarget'))
     this.infoRow(tr('home.eyebrow'), this.projectName)
+    Text(tr('backup.title') + ' · ' + (this.backup === null ? DASH : tr(this.backup.enabled ? 'backup.enabled' : 'backup.disabled')))
+      .height(Tk.touchMin).fontColor(Tk.L.accent)
+      .onClick((): void => { this.changeBackup().catch((): void => toast(this.getUIContext(), tr('backup.error'))) })
     this.infoRow(tr('settings.relay'), this.usageCaption())
     Progress({ value: this.usageFraction(), total: 100, type: ProgressType.Linear })
       .color(Tk.L.accent)
@@ -276,6 +283,14 @@ export struct Settings {
   }
 
   /** 「已用 / 配额」。满了之后上传会被拒并提示去桌面端收件，这行让用户提前有数。 */
+  private async changeBackup(): Promise<void> {
+    const session: string | null = await ServiceLocator.session.current()
+    if (session === null) return
+    const current: BackupConsent = await ServiceLocator.backend.backupConsent()
+    if (!this.alive || session !== await ServiceLocator.session.current()) return
+    this.backup = await BackupConsentService.choose(this.getUIContext(), current, session, (): boolean => this.alive)
+  }
+
   private credits(cents: number): string {
     return tr('subscription.credits', { 'amount': (cents / 100).toFixed(2) })
   }

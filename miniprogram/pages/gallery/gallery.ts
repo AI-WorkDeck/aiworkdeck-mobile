@@ -8,7 +8,7 @@ import { isRecording } from '../../utils/recorder'
 import { Icon } from '../../utils/icons'
 import type { Metrics } from '../../utils/layout'
 import { getSelectedProject } from '../../utils/api'
-import { listItems, removeItems, subscribe, pollStatus, type QueueItem } from '../../utils/queue'
+import { listItems, removeItems, subscribe, pollStatus, isAssigned, type QueueItem } from '../../utils/queue'
 import {
   deleteWarning, dotClass, groupByDay, projectsIn, stateText, tallyOf, PHASE_LABEL, type Tally,
 } from '../../utils/phase'
@@ -84,6 +84,8 @@ Page({
     scrollTop: 0,
     viewingId: '',
     viewingName: '',
+    viewingUnassigned: false,
+    unassignedHint: t('workspace.unassignedHint'),
     projects: [] as Array<{ id: string; name: string }>,
     tally: { uploading: 0, failed: 0, staged: 0, landed: 0 } as Tally,
     failedSuffix: '',
@@ -154,8 +156,7 @@ Page({
 
   refresh() {
     const current = getSelectedProject()
-    if (!current) return
-    const projects = projectsIn(listItems(), current)
+    const projects = projectsIn(listItems(), current ?? { deviceId: '', key: '', name: t('library.unknownProject') })
     const viewingId = projects.some((p) => p.id === this.data.viewingId)
       ? this.data.viewingId
       : projects[0].id
@@ -168,18 +169,19 @@ Page({
       thumb: thumbFor(it),
       kindIcon: kindIcon(it.mediaType),
       time: formatTime(it.createdAt),
-      statusText: stateText(it.state),
-      errorText: it.state === 'failed' ? it.errorMessage || '' : '',
+      statusText: isAssigned(it) ? stateText(it.state) : t('library.unknownProject'),
+      errorText: it.errorMessage || '',
       dotClass: dotClass(it.state),
       fileName: it.fileName,
       createdAt: it.createdAt,
       checked: this.selected.has(it.clientMediaId),
     }))
-    const tally = tallyOf(items)
+    const tally = tallyOf(items.filter(isAssigned))
     this.setData({
       projects,
       viewingId,
       viewingName,
+      viewingUnassigned: viewingId === ':',
       tally,
       failedSuffix: tally.failed > 0 ? t('tally.failedSuffix', { m: tally.failed }) : '',
       days: groupByDay(cells),
@@ -239,6 +241,12 @@ Page({
     if (this.selected.has(id)) this.selected.delete(id)
     else this.selected.add(id)
     this.refresh()
+  },
+
+  onAssign(e: WechatMiniprogram.BaseEvent<WechatMiniprogram.IAnyObject, { id: string }>) {
+    const item = listItems().find(it => it.clientMediaId === e.currentTarget.dataset.id)
+    if (!item || isAssigned(item)) return
+    wx.navigateTo({ url: `/pages/project/project?assign=${encodeURIComponent(item.clientMediaId)}` })
   },
 
   // ---------- 全屏看大图：走系统接口（dev-board#387） ----------

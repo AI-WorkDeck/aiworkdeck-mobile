@@ -1,3 +1,5 @@
+import { ContractCapabilities } from 'contract'
+import { BackupConsent, decodeBackupConsent } from '../model/ProjectFiles'
 import { http } from '@kit.NetworkKit'
 import { JSON as ArkJson } from '@kit.ArkTS'
 import { ApiError, Unauthorized, checkEnvelope } from '../model/Envelope'
@@ -94,6 +96,30 @@ export class Backend {
     return decodeMediaStatuses(await this.bare('/api/mobile/media/status?clientMediaIds=' + ids.join(',')))
   }
 
+  async backupConsent(): Promise<BackupConsent> {
+    return decodeBackupConsent(await this.bare('/api/mobile/backup-consent'))
+  }
+
+  async setBackupConsent(enabled: boolean, expectedSession: string): Promise<BackupConsent> {
+    if (await this.session.current() !== expectedSession) throw new Unauthorized()
+    const body: Record<string, Object> = { 'enabled': enabled, 'consentVersion': ContractCapabilities.backupConsentVersion }
+    const text: string = await this.execute('/api/mobile/backup-consent', http.RequestMethod.PUT, ArkJson.stringify(body), expectedSession)
+    const o: Record<string, Object> | null = asRecord(ArkJson.parse(text))
+    if (o === null) throw new ApiError(1, 'Invalid backup response')
+    await this.check(o)
+    if (await this.session.current() !== expectedSession) throw new Unauthorized()
+    return decodeBackupConsent(o)
+  }
+
+  async fileRequest(path: string, body: Record<string, Object> | null = null, expectedSession: string): Promise<Record<string, Object>> {
+    const text: string = await this.execute(path, body === null ? http.RequestMethod.GET : http.RequestMethod.POST,
+      body === null ? null : ArkJson.stringify(body), expectedSession)
+    const o: Record<string, Object> | null = asRecord(ArkJson.parse(text))
+    if (o === null) throw new ApiError(1, 'Invalid file response')
+    await this.check(o)
+    return o
+  }
+
   // ---- 内部 ----
 
   /** 裸响应（数组 / 对象）。是对象才查信封——未登录时这些接口同样回 4010 信封。 */
@@ -133,8 +159,9 @@ export class Backend {
     }
   }
 
-  private async execute(path: string, method: http.RequestMethod, body: string | null): Promise<string> {
+  private async execute(path: string, method: http.RequestMethod, body: string | null, expectedSession: string | null = null): Promise<string> {
     const sid: string | null = await this.session.current()
+    if (expectedSession !== null && sid !== expectedSession) throw new Unauthorized()
     const region: AccountRegion = this.region()
     const header: Record<string, string> = { 'X-App-Language': appLanguageOf(region) }
     if (sid !== null) header['X-Session-Id'] = sid
@@ -144,13 +171,13 @@ export class Backend {
       if (body === null) {
         options = {
           method: method, header: header, expectDataType: http.HttpDataType.STRING,
-          connectTimeout: CONNECT_TIMEOUT_MS, readTimeout: READ_TIMEOUT_MS,
+          connectTimeout: CONNECT_TIMEOUT_MS, readTimeout: READ_TIMEOUT_MS, maxRedirects: 0,
         }
       } else {
         header['Content-Type'] = 'application/json; charset=utf-8'
         options = {
           method: method, header: header, extraData: body, expectDataType: http.HttpDataType.STRING,
-          connectTimeout: CONNECT_TIMEOUT_MS, readTimeout: READ_TIMEOUT_MS,
+          connectTimeout: CONNECT_TIMEOUT_MS, readTimeout: READ_TIMEOUT_MS, maxRedirects: 0,
         }
       }
       const url: string = baseUrlOf(region) + path

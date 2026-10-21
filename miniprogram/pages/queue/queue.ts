@@ -1,7 +1,7 @@
 import { Icon } from '../../utils/icons'
 import type { Metrics } from '../../utils/layout'
 import { getSelectedProject } from '../../utils/api'
-import { listItems, otherPendingCount, subscribe, pollStatus, retry, type QueueItem } from '../../utils/queue'
+import { listItems, otherPendingCount, subscribe, pollStatus, retry, isAssigned, type QueueItem } from '../../utils/queue'
 import { dotClass, phaseOf, projectId, stateText } from '../../utils/phase'
 import { thumbFor, markThumbBroken } from '../../utils/thumbs'
 import { t } from '../../utils/i18n'
@@ -157,9 +157,8 @@ Page({
   /** 只列当前项目，分四区；别的项目的未落盘件在末尾提一句，不完全藏起来 */
   refresh() {
     const project = getSelectedProject()
-    if (!project) return
-    const pid = projectId({ deviceId: project.deviceId, projectKey: project.key, projectUid: project.projectUid })
-    const all = listItems(pid)
+    const pid = projectId({ deviceId: project?.deviceId ?? '', projectKey: project?.key ?? '', projectUid: project?.projectUid })
+    const all = listItems(pid).filter(isAssigned)
     const pick = (f: (it: QueueItem) => boolean) => all.filter(f).map(toDisplayItem)
     const sections: Section[] = [
       { title: t('queue.section.failed'), items: pick((it) => it.state === 'failed') },
@@ -170,7 +169,7 @@ Page({
     const otherPending = otherPendingCount(pid)
     this.setData({
       sections,
-      projectName: project.name,
+      projectName: project?.name ?? t('library.unknownProject'),
       otherPending,
       otherPendingText: t('library.otherPending', { n: otherPending }),
     })
