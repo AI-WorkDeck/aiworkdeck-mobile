@@ -43,7 +43,7 @@ OK (3 tests)
 首页未经登录时仍展示正常登录页；测试采集使用现有 debug 截图登录跳过，仅提供合成账号和未归类状态，录音/相机均为真实原生路径，没有模拟暂停或缩短正式提醒阈值。
 
 - 录音到 00:14 暂停，等待数十秒后界面仍为 00:14，草稿大小保持 117409 字节；继续显示 00:15，再停止保存。产物 21.144 秒、178144 字节、AAC 48000 Hz/mono，ffmpeg 完整解码成功。
-- 录像到 00:16 暂停，等待约一分钟仍 00:16；继续、再次暂停、旋转至横屏、停止保存。产物 33.657289 秒，H.264 视频及音轨。实际解码已验证；原容器 957 个视频 packet 的 DTS 严格递增。ffmpeg 默认 CFR 空输出曾报告两处重采样重复 DTS，使用 `-fps_mode passthrough` 完整解码无错误，未据此冒充真实设备质量验证。
+- 录像到 00:16 暂停，等待约一分钟仍 00:16；继续、再次暂停、旋转至横屏、停止保存。产物 33.657289 秒，H.264 视频及音轨。实际解码已验证；原容器 957 个视频 packet 的 DTS 严格递增。ffmpeg 默认 CFR 空输出曾报告两处重采样重复 DTS，主会话复核时仅 `-fps_mode passthrough` 仍有输出时间基舍入警告；保留原视频时间基 `-fps_mode passthrough -enc_time_base:v 1:90000` 完整解码返回0且日志为空，未据此冒充真实设备质量验证。
 - 竖/横屏可见暂停、继续与停止保存入口。最终界面把继续与停止并排，进一步保留横屏取景空间。
 
 证据目录：`/Users/zewei/.codex/qa-artifacts/mobile-silence-pause-20261021/android/`，含 `login.png`、`audio-recording.png`、`audio-paused.png`、`audio-resumed.png`、`audio-saved.png`、`video-recording.png`、`video-paused.png`、`video-resumed.png`、`video-paused-landscape.png`，并保存对应 UI XML 和两段实录媒体。

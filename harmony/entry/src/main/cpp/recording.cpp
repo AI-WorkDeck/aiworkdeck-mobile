@@ -96,6 +96,7 @@ private:
     OH_AVCodec *codec = nullptr;
     OH_AVMuxer *muxer = nullptr;
     VoiceFrames voice;
+    EncodedPackets packets;
     int32_t track = -1;
     bool muxerStarted = false;
     std::mutex mutex;
@@ -118,10 +119,17 @@ private:
         auto *r = static_cast<Recording *>(user);
         OH_AVCodecBufferAttr attr{};
         if (OH_AVBuffer_GetBufferAttr(buffer, &attr) != AV_ERR_OK) r->failed = true;
-        else if (!consumeEncodedPacket(attr.size, attr.flags & AVCODEC_BUFFER_FLAGS_CODEC_DATA,
-                attr.flags & AVCODEC_BUFFER_FLAGS_EOS,
+        else {
+            const bool codecData = attr.flags & AVCODEC_BUFFER_FLAGS_CODEC_DATA;
+            const bool end = attr.flags & AVCODEC_BUFFER_FLAGS_EOS;
+            const auto *data = OH_AVBuffer_GetAddr(buffer);
+            const int capacity = OH_AVBuffer_GetCapacity(buffer);
+            if (attr.size < 0 || attr.offset < 0 || attr.offset > capacity || attr.size > capacity - attr.offset ||
+                (attr.size > 0 && !data)) r->failed = true;
+            else if (!r->packets.consume(data ? data + attr.offset : nullptr, attr.size, attr.pts, codecData, end,
                 [r, buffer] { return OH_AVMuxer_WriteSampleBuffer(r->muxer, r->track, buffer) == AV_ERR_OK; },
                 [r] { std::lock_guard<std::mutex> lock(r->mutex); r->eos = true; })) r->failed = true;
+        }
         OH_AudioCodec_FreeOutputBuffer(codec, index);
         r->ready.notify_all();
     }

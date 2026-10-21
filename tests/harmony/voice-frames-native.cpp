@@ -20,6 +20,31 @@ int main(int argc, char **argv) {
     events.clear();
     assert(consumeEncodedPacket(0, false, true, write, end));
     assert((events == std::vector<int>{2}));
+    EncodedPackets packets;
+    const uint8_t payload[] = {0x01, 0x18, 0x20, 0x07};
+    const uint8_t distinct[] = {0x01, 0x18, 0x20, 0x08};
+    events.clear();
+    assert(packets.consume(payload, 4, 1000, false, false, write, end));
+    assert(packets.consume(payload, 4, 1000, false, true, write, end));
+    assert((events == std::vector<int>{1, 2})); // platform EOS repeats preceding PTS AND full payload
+    events.clear();
+    assert(packets.consume(payload, 4, 22333, false, true, write, end));
+    assert((events == std::vector<int>{1, 2})); // repeated silence bytes at a new PTS are valid audio
+    events.clear();
+    assert(!packets.consume(distinct, 4, 22333, false, true, write, end));
+    assert((events == std::vector<int>{2})); // same PTS but different audio cannot be silently dropped
+    events.clear();
+    assert(!packets.consume(payload, 4, 20000, false, false, write, end));
+    assert(events.empty()); // unexplained timestamp regression is visible failure
+    EncodedPackets single;
+    assert(single.consume(payload, 4, 0, false, true, write, end)); // first/final payload retained
+    EncodedPackets mutatingWriter;
+    uint8_t mutablePayload[] = {1, 2, 3};
+    const uint8_t original[] = {1, 2, 3};
+    assert(mutatingWriter.consume(mutablePayload, 3, 0, false, false, [&] { mutablePayload[0] = 9; return true; }, end));
+    events.clear();
+    assert(mutatingWriter.consume(original, 3, 0, false, true, write, end));
+    assert((events == std::vector<int>{2})); // compare bytes captured before a muxer modifies the buffer
     assert(argc == 2);
     VoiceFrames voice;
     std::vector<int16_t> zero(480, 0);
@@ -44,5 +69,5 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i + 480 <= bytes.size() / 2; i += 480, t += 10)
         if (voice.push(pcm + i, 480, t) == 0) heardVoice = true;
     assert(heardVoice);
-    std::puts("PASS: real WebRTC 300 s threshold; AAC final payload before EOS; missing frames; pause/reset; partial frames; voice PCM resets silence");
+    std::puts("PASS: real WebRTC 300 s threshold; AAC final payload and duplicate EOS; missing frames; pause/reset; partial frames; voice PCM resets silence");
 }
