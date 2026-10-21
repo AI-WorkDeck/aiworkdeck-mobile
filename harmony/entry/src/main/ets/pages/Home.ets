@@ -77,6 +77,11 @@ export struct Home {
   @State recordingMessage: string = ''
   @State recordingAudio: boolean = false
   @State interrupted: boolean = false
+  @State recordingPaused: boolean = false
+  @State voiceUnavailable: boolean = false
+  @State backgroundReminderAvailable: boolean = true
+  @State pauseBusy: boolean = false
+  @State landscape: boolean = false
   @State elapsedText: string = '00:00'
   @State flash: boolean = false
 
@@ -98,6 +103,7 @@ export struct Home {
   private locateId: number = -1
   private token: number = -1
   private recToken: number = -1
+  private silenceDialog: boolean = false
   private lifeToken: number = -1
 
   // MARK: - 生命周期
@@ -147,6 +153,7 @@ export struct Home {
     if (foreground) {
       this.readPermissions()
       this.openCamera()
+      this.showSilenceReminder()
       return
     }
     this.stopVideoAndStore()
@@ -190,6 +197,9 @@ export struct Home {
       }
       .width('100%')
       .height('100%')
+      .onAreaChange((_previous: Area, current: Area): void => {
+        this.landscape = Number(current.width) > Number(current.height)
+      })
     }
     .hideTitleBar(true)
     .backgroundColor(Tk.D.bg)
@@ -205,6 +215,7 @@ export struct Home {
     })
     .onShown((): void => {
       this.visible = true
+      this.showSilenceReminder()
       this.readPermissions()
       this.openCamera()
     })
@@ -272,9 +283,15 @@ export struct Home {
         Text(this.elapsedText)
           .fontSize(Tk.Ty.hero)
           .fontColor(Tk.D.fg)
-        Text(this.recordingAudio ? tr('home.recording.audio') : tr('home.audio.hint'))
+        Text(this.recordingAudio ? tr(this.recordingPaused ? 'rec.pause.status' : 'home.recording.audio') : tr('home.audio.hint'))
           .fontSize(Tk.Ty.nano)
           .fontColor(Tk.D.fgMuted)
+        if (this.recordingAudio && !this.backgroundReminderAvailable) {
+          Text(tr('rec.silence.backgroundUnavailable')).fontSize(Tk.Ty.nano).fontColor(Tk.D.fgMuted).textAlign(TextAlign.Center)
+        }
+        if (this.recordingAudio && this.voiceUnavailable && !this.recordingPaused) {
+          Text(tr('rec.silence.unavailable')).fontSize(Tk.Ty.small).fontColor(Tk.D.fg).textAlign(TextAlign.Center)
+        }
         if (this.recordingMessage.length > 0) {
           Text(this.recordingMessage)
             .fontSize(Tk.Ty.small)
@@ -289,7 +306,7 @@ export struct Home {
         }
         // 录音中说一句「退后台也在录」：用户开会时最怕的就是切出去一下就断了
         if (this.recordingAudio) {
-          Text(this.interrupted ? tr('rec.paused.interrupted') : tr('home.audio.backgroundOk'))
+          Text(tr(this.recordingPaused ? 'rec.pause.remember' : this.interrupted ? 'rec.paused.interrupted' : 'home.audio.backgroundOk'))
             .fontSize(Tk.Ty.nano)
             .fontColor(this.interrupted ? Tk.S.failed : Tk.D.fgMuted)
             .textAlign(TextAlign.Center)
@@ -374,17 +391,21 @@ export struct Home {
     Column({ space: Tk.Sp.s3 }) {
       if (this.recording()) {
         Row({ space: Tk.Sp.s1 }) {
-          StatusDot({ color: Tk.S.failed, dotSize: 7 })
+          StatusDot({ color: this.recordingPaused ? Tk.D.fgMuted : Tk.S.failed, dotSize: 7 })
           Text(this.elapsedText)
             .fontSize(Tk.Ty.small)
             .fontColor(Tk.D.fg)
-          Text(this.recordingVideo ? tr('home.recording.video') : tr('home.recording.audio'))
+          Text(tr(this.recordingPaused ? 'rec.pause.status' : this.recordingVideo ? 'home.recording.video' : 'home.recording.audio'))
             .fontSize(Tk.Ty.nano)
             .fontColor(Tk.D.fgMuted)
         }
         .width('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
+        if (this.recordingPaused) {
+          Text(tr('rec.pause.remember')).fontSize(Tk.Ty.small).fontColor(Tk.D.fg).textAlign(TextAlign.Center)
+        }
+        if (!this.landscape) { this.pauseControl() }
       } else {
         // 三档并排、点选切换。取证的档位必须显式可预期，不做横滑档位条，也不做快门手势
         // 切换——手滑录错档位是取证事故。
@@ -399,7 +420,8 @@ export struct Home {
 
       Row() {
         Column() {
-          this.recentThumb()
+          if (this.landscape && this.recording()) { this.pauseControl() }
+          else { this.recentThumb() }
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
@@ -452,6 +474,14 @@ export struct Home {
     .height(Tk.touchMin)
     .justifyContent(FlexAlign.Center)
     .onClick((): void => this.switchMode(m))
+  }
+
+  @Builder
+  pauseControl() {
+    Button(tr(this.recordingPaused ? (this.recordingVideo ? 'rec.resume.video' : 'rec.resume.audio') :
+      (this.recordingVideo ? 'rec.pause.video' : 'rec.pause.audio')))
+      .fontColor(Tk.D.bg).backgroundColor(Tk.D.fg).height(Tk.touchMin)
+      .enabled(!this.pauseBusy).onClick((): void => { this.togglePause() })
   }
 
   /** 快门。照片单击即拍；录像 / 录音单击切换开始与停止，录制中变红方块。 */
@@ -572,6 +602,43 @@ export struct Home {
     }
   }
 
+  private async togglePause(): Promise<void> {
+    if (this.pauseBusy) return
+    this.pauseBusy = true
+    try {
+      if (this.recordingVideo) {
+        if (this.camera.isVideoPaused) await this.camera.resumeVideo()
+        else await this.camera.pauseVideo()
+        if (this.alive) this.recordingPaused = this.camera.isVideoPaused
+        this.tick()
+      } else if (this.recordingAudio) {
+        if (RecorderService.shared.state.userPaused) await RecorderService.shared.resume()
+        else await RecorderService.shared.pause()
+      }
+    } catch (_) {
+      if (this.recordingVideo && !this.camera.isVideoPaused) this.stopVideoAndStore()
+      if (this.alive) toast(this.getUIContext(), tr(this.camera.isVideoPaused ? 'rec.resume.videoFailed' : 'rec.interruption.saving'))
+    } finally { if (this.alive) this.pauseBusy = false }
+  }
+
+  private showSilenceReminder(): void {
+    const svc: RecorderService = RecorderService.shared
+    if (!this.alive || !this.visible || !this.foreground || this.silenceDialog || !svc.state.silencePending) return
+    const startedAt: number = svc.state.startedAt
+    this.silenceDialog = true
+    this.getUIContext().showAlertDialog({ title: tr('rec.silence.title'), message: tr('rec.silence.message'),
+      autoCancel: false,
+      primaryButton: { value: tr('rec.silence.continue'), action: (): void => {
+        this.silenceDialog = false
+        if (svc.state.startedAt === startedAt) svc.continueAfterSilence()
+      } },
+      secondaryButton: { value: tr('rec.silence.stop'), action: (): void => {
+        this.silenceDialog = false
+        if (svc.state.startedAt === startedAt) svc.stop()
+      } },
+    })
+  }
+
   private takePhoto(): void {
     if (!this.hasCamera) return
     // 采集时刻、项目、位置都在按下的这一瞬定死：落库是异步的，中途切了项目，
@@ -610,6 +677,7 @@ export struct Home {
       this.videoLoc = loc
       if (!this.alive) return
       this.recordingVideo = true
+      this.recordingPaused = false
       this.tick()
     }).catch((e: Object): void => {
       hilog.error(DOMAIN, TAG, 'startVideo failed: %{public}s', `${e}`)
@@ -626,7 +694,7 @@ export struct Home {
     const target: RelayProject | null = this.videoProject
     this.videoLoc = null
     this.videoProject = null
-    if (this.alive) this.recordingVideo = false
+    if (this.alive) { this.recordingVideo = false; this.recordingPaused = false }
     this.camera.stopVideo().then((path: string): Promise<CaptureItem> =>
       AppModel.shared.store(MediaKind.video, path, at, loc, target)
     ).catch((e: Object): void => {
@@ -732,8 +800,7 @@ export struct Home {
   private tick(): void {
     this.refreshStamp()
     if (this.recordingVideo) {
-      const started: number = this.camera.videoStartedAt
-      this.elapsedText = formatClock(started === 0 ? 0 : (Date.now() - started) / 1000)
+      this.elapsedText = formatClock(this.camera.videoClock.elapsed(Date.now()))
     }
   }
 
@@ -767,9 +834,13 @@ export struct Home {
     const st: RecordingState = RecorderService.shared.state
     this.recordingMessage = st.message
     this.recordingAudio = st.isRecording
+    this.voiceUnavailable = st.voiceUnavailable
+    this.backgroundReminderAvailable = st.backgroundReminderAvailable
+    if (!this.recordingVideo) this.recordingPaused = st.userPaused
     if (st.isRecording) this.mode = CapMode.audio
     this.interrupted = st.interrupted
     if (st.isRecording || !this.recordingVideo) this.elapsedText = formatClock(st.elapsedSec)
+    this.showSilenceReminder()
   }
 }
 

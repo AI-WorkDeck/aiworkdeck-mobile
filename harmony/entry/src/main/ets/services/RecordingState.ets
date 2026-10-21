@@ -1,3 +1,4 @@
+import { ContractCapabilities } from 'contract'
 import { RecordingClock } from '../model/RecordingClock'
 
 /**
@@ -18,6 +19,10 @@ export class RecordingState {
   startedAt: number = 0
   /** 被系统中断（来电等）暂停中。界面据此显示 `rec.paused.interrupted`。 */
   interrupted: boolean = false
+  userPaused: boolean = false
+  silencePending: boolean = false
+  voiceUnavailable: boolean = false
+  backgroundReminderAvailable: boolean = true
   readonly clock: RecordingClock = new RecordingClock()
   elapsedSec: number = 0
 
@@ -45,6 +50,9 @@ export class RecordingState {
     this.startedAt = at
     this.isRecording = true
     this.interrupted = false
+    this.userPaused = false
+    this.silencePending = false
+    this.voiceUnavailable = false
     this.elapsedSec = 0
     this.startTicking()
     this.emit()
@@ -67,12 +75,56 @@ export class RecordingState {
     this.emit()
   }
 
+  markUserPaused(at: number): void {
+    if (!this.isRecording || this.userPaused) return
+    this.clock.interrupt(at)
+    this.userPaused = true
+    this.silencePending = false
+    this.voiceUnavailable = false
+    this.recompute()
+    this.emit()
+  }
+
+  markUserResumed(at: number): void {
+    if (!this.isRecording || !this.userPaused) return
+    this.clock.resume(at)
+    this.userPaused = false
+    this.silencePending = false
+    this.voiceUnavailable = false
+    this.message = ''
+    this.recompute()
+    this.emit()
+  }
+
+  updateVoice(silenceMs: number): void {
+    if (!this.isRecording || this.userPaused || this.interrupted) return
+    const unavailable: boolean = silenceMs < 0
+    const pending: boolean = silenceMs >= ContractCapabilities.voiceReminderSeconds * 1000
+    if (this.voiceUnavailable === unavailable && this.silencePending === pending) return
+    this.voiceUnavailable = unavailable
+    this.silencePending = pending
+    this.emit()
+  }
+
+  clearSilenceReminder(): void {
+    this.silencePending = false
+    this.emit()
+  }
+
   finish(): void {
     this.stopTicking()
     this.isRecording = false
     this.interrupted = false
+    this.userPaused = false
+    this.silencePending = false
+    this.voiceUnavailable = false
     this.startedAt = 0
     this.elapsedSec = 0
+    this.emit()
+  }
+
+  setBackgroundReminderAvailable(available: boolean): void {
+    this.backgroundReminderAvailable = available
     this.emit()
   }
 

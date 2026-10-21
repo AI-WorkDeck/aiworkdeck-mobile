@@ -1,6 +1,5 @@
 import { abilityAccessCtrl, bundleManager, PermissionRequestResult, Permissions, Want, wantAgent, WantAgent } from '@kit.AbilityKit'
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit'
-import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo as fs } from '@kit.CoreFileKit'
 import { media } from '@kit.MediaKit'
 import { JSON as ArkJson, util } from '@kit.ArkTS'
@@ -9,6 +8,8 @@ import { CaptureItem, MediaKind, RelayProject } from '../model/Capture'
 import { tr } from '../design/L10n'
 import { Loc } from '../model/Loc'
 import { RecordingState } from './RecordingState'
+import { PcmRecorder } from './PcmRecorder'
+import { RecordingReminder } from './RecordingReminder'
 import { ScreenshotMode } from '../ScreenshotMode'
 import { asRecord, getNumber } from './ApiTypes'
 import { ServiceLocator } from './ServiceLocator'
@@ -18,16 +19,8 @@ const TAG: string = 'RecorderService'
 
 const MIC: Permissions = 'ohos.permission.MICROPHONE'
 
-const PROFILE: media.AVRecorderProfile = {
-  audioBitrate: 64000,
-  audioChannels: 1,
-  audioCodec: media.CodecMimeType.AUDIO_AAC,
-  audioSampleRate: 44100,
-  fileFormat: media.ContainerFormatType.CFT_MPEG_4A,
-}
-
 /**
- * 录音（纯音频）。AVRecorder + AUDIO_RECORDING 长时任务 + 中断后保存，对位
+ * 录音（纯音频）。AudioCapturer + AAC/M4A + AUDIO_RECORDING 长时任务 + 中断后保存，对位
  * 安卓 `RecordingService.kt` 的前台服务，见 `docs/specs/2026-09-03-background-recording-design.md`。
  *
  * 进程级单例：录音要跨过取景页的生死（切后台、锁屏都继续录，页面可能已经销毁重建），
@@ -43,7 +36,7 @@ export class RecorderService {
   /** 落库完成后回调一件。`AppModel` 收到后重读库。 */
   onStored: ((item: CaptureItem) => void) | null = null
 
-  private recorder: media.AVRecorder | null = null
+  private recorder: PcmRecorder | null = null
   private file: fs.File | null = null
   private path: string = ''
   /** 开录**时**的项目与位置快照：录到一半换项目不该改写这一件的归属。 */
@@ -51,7 +44,9 @@ export class RecorderService {
   private loc: Loc | null = null
   private bgRunning: boolean = false
   private busy: boolean = false
+  private stopRequested: boolean = false
   private interruptedDuringStart: boolean = false
+  private encodingInterrupted: boolean = false
 
   // MARK: - 开录
 
@@ -63,13 +58,14 @@ export class RecorderService {
     if (this.busy || this.state.isRecording) return false
     this.busy = true
     this.interruptedDuringStart = false
+    this.encodingInterrupted = false
+    this.stopRequested = false
     try {
       const started: boolean = await this.startInner(project, loc)
       if (!started) this.state.setMessage(tr('rec.startFailed'))
       return started
     } finally {
-      this.busy = false
-      if (this.interruptedDuringStart && this.state.isRecording) this.finishInterrupted()
+      await this.finishOperation()
     }
   }
 
@@ -78,6 +74,7 @@ export class RecorderService {
       hilog.warn(DOMAIN, TAG, '%{public}s', 'start aborted: microphone permission denied')
       return false
     }
+    const reminderAvailable: boolean = await RecordingReminder.prepare()
     // 长时任务先申请再开录音机：系统在长时任务批下来之前就把应用挂起的话，录音机会被一起冻住
     if (!await this.startBackground()) return false
 
@@ -93,11 +90,11 @@ export class RecorderService {
       return false
     }
 
-    let recorder: media.AVRecorder
+    let recorder: PcmRecorder
     try {
-      recorder = await media.createAVRecorder()
+      recorder = await PcmRecorder.create(file.fd)
     } catch (e) {
-      hilog.error(DOMAIN, TAG, 'createAVRecorder failed: %{public}s', messageOf(e))
+      hilog.error(DOMAIN, TAG, 'create PCM/AAC recorder failed: %{public}s', messageOf(e))
       this.closeAndRemove(file, path)
       await this.stopBackground()
       return false
@@ -109,18 +106,12 @@ export class RecorderService {
     this.project = project
     this.loc = loc
 
-    const config: media.AVRecorderConfig = {
-      audioSourceType: media.AudioSourceType.AUDIO_SOURCE_TYPE_MIC,
-      profile: PROFILE,
-      url: `fd://${file.fd}`,
-    }
     try {
       const draft: Record<string, Object> = { 'capturedAt': Date.now() }
       const draftFd: fs.File = fs.openSync(path + '.json', fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC)
       try { fs.writeSync(draftFd.fd, ArkJson.stringify(draft)) } finally { fs.closeSync(draftFd) }
-      // 先挂事件再 prepare：prepare/start 自己就会推状态，晚挂就会漏掉第一条
+      // Bind callbacks before starting the microphone so interruptions cannot go unnoticed.
       this.listen(recorder)
-      await recorder.prepare(config)
       await recorder.start()
     } catch (e) {
       hilog.error(DOMAIN, TAG, 'prepare/start failed: %{public}s', messageOf(e))
@@ -140,6 +131,7 @@ export class RecorderService {
     }
 
     this.state.begin(Date.now())
+    this.state.setBackgroundReminderAvailable(reminderAvailable)
     hilog.info(DOMAIN, TAG, '%{public}s', 'recording started')
     return true
   }
@@ -153,7 +145,8 @@ export class RecorderService {
    * 里等人工捞，也不能因为写 manifest 出错就把它抹掉。
    */
   async stop(interrupted: boolean = false): Promise<CaptureItem | null> {
-    if (this.busy) return null
+    if (this.busy) { this.stopRequested = true; return null }
+    this.stopRequested = false
     if (!this.state.isRecording && this.recorder === null) return null
     this.busy = true
     const startedAt: number = this.state.startedAt
@@ -164,6 +157,7 @@ export class RecorderService {
       await this.teardown()
     } finally {
       this.state.finish()
+      RecordingReminder.cancel()
     }
     if (path.length === 0) { this.busy = false; return null }
 
@@ -182,7 +176,7 @@ export class RecorderService {
       this.busy = false
     }
     this.removeDraftMetadata(path)
-    this.state.setMessage(tr(interrupted ? 'rec.interruption.saved' : 'rec.saved.open'))
+    this.state.setMessage(tr(interrupted || this.encodingInterrupted ? 'rec.interruption.saved' : 'rec.saved.open'))
     hilog.info(DOMAIN, TAG, '%{public}s', 'recording stored')
     // 上传不挡着返回：界面等的是「这一件已经进库」，传没传出去是队列自己的事
     // 截图模式下队列里摆的是灌进去的假件，一上传就会被打成 failed
@@ -213,26 +207,68 @@ export class RecorderService {
 
   // MARK: - 事件
 
-  private listen(recorder: media.AVRecorder): void {
-    recorder.on('stateChange', (s: media.AVRecorderState, reason: media.StateChangeReason): void => {
-      if (this.recorder === recorder) this.onStateChange(s, reason)
-    })
-    recorder.on('error', (err: BusinessError): void => {
-      if (this.recorder === recorder) this.onError(err)
-    })
+  private listen(recorder: PcmRecorder): void {
+    recorder.onInterrupted = (): void => {
+      if (this.recorder === recorder) this.finishInterrupted()
+    }
+    recorder.onVoice = (silenceMs: number): void => {
+      if (this.recorder !== recorder || !this.state.isRecording || this.state.userPaused) return
+      const wasPending: boolean = this.state.silencePending
+      this.state.updateVoice(silenceMs)
+      if (!wasPending && this.state.silencePending) {
+        RecordingReminder.show().then((available: boolean): void => {
+          if (this.recorder === recorder && this.state.isRecording && this.state.silencePending) {
+            this.state.setBackgroundReminderAvailable(available)
+          } else if (!this.state.silencePending) RecordingReminder.cancel()
+        })
+      } else if (wasPending && !this.state.silencePending) RecordingReminder.cancel()
+    }
   }
 
-  /**
-   * 录音机状态变了。只有我们自己不在 start/stop 中途时才作数——那两段里的状态跳变是
-   * 我们自己发起的，再走一遍中断逻辑会把秒表算乱。
-   */
-  private onStateChange(s: media.AVRecorderState, reason: media.StateChangeReason): void {
-    if (s === 'paused' || s === 'stopped' || s === 'error') this.finishInterrupted()
+  async pause(): Promise<void> {
+    const recorder: PcmRecorder | null = this.recorder
+    if (this.busy || recorder === null || !this.state.isRecording || this.state.userPaused) return
+    this.busy = true
+    try {
+      await recorder.pause()
+      this.state.markUserPaused(Date.now())
+      RecordingReminder.cancel()
+    } catch (_) {
+      this.interruptedDuringStart = true
+    } finally {
+      await this.finishOperation()
+    }
   }
 
-  private onError(err: BusinessError): void {
-    hilog.error(DOMAIN, TAG, 'recorder error %{public}d: %{public}s', err.code, err.message)
-    this.finishInterrupted()
+  async resume(): Promise<void> {
+    const recorder: PcmRecorder | null = this.recorder
+    if (this.busy || recorder === null || !this.state.userPaused) return
+    this.busy = true
+    try {
+      await recorder.resume()
+      this.state.markUserResumed(Date.now())
+    } catch (_) { this.state.setMessage(tr('rec.resume.failed')) } finally {
+      await this.finishOperation()
+    }
+  }
+
+  private async finishOperation(): Promise<void> {
+    this.busy = false
+    const interrupted: boolean = this.interruptedDuringStart
+    this.interruptedDuringStart = false
+    if (interrupted && this.state.isRecording) {
+      this.state.markInterrupted(Date.now())
+      await this.stop(true)
+    } else if (this.stopRequested) {
+      this.stopRequested = false
+      await this.stop()
+    }
+  }
+
+  continueAfterSilence(): void {
+    if (this.recorder !== null) this.recorder.resetVoice()
+    this.state.clearSilenceReminder()
+    RecordingReminder.cancel()
   }
 
   private async playable(path: string): Promise<boolean> {
@@ -333,7 +369,7 @@ export class RecorderService {
   }
 
   private async teardown(): Promise<void> {
-    const recorder: media.AVRecorder | null = this.recorder
+    const recorder: PcmRecorder | null = this.recorder
     const file: fs.File | null = this.file
     this.recorder = null
     this.file = null
@@ -344,7 +380,8 @@ export class RecorderService {
       try {
         await recorder.stop()
       } catch (e) {
-        // 系统已经把它停了的情形会报 5400102，不是问题
+        this.encodingInterrupted = true
+        // Keep any playable encoded prefix, but report the incomplete tail.
         hilog.info(DOMAIN, TAG, 'stop skipped: %{public}s', messageOf(e))
       }
       try {

@@ -21,6 +21,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 object RecordingState {
     data class StartRequest(val project: RelayProject?, val loc: Loc?)
 
+    var isPaused by mutableStateOf(false)
+        private set
+    var elapsedMs by mutableStateOf(0L)
+    var silenceConfirmation by mutableStateOf(false)
+    var analysisUnavailable by mutableStateOf(false)
+    var backgroundAlertsUnavailable by mutableStateOf(false)
+
     var isSaving by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
 
@@ -39,12 +46,28 @@ object RecordingState {
 
     fun begin(startedAt: Long) {
         message = null
+        isPaused = false
+        elapsedMs = 0
+        silenceConfirmation = false
+        analysisUnavailable = false
+        backgroundAlertsUnavailable = false
         this.startedAt = startedAt
         isRecording = true
     }
 
+    fun applyPaused(value: Boolean) {
+        if (!isRecording) return
+        isPaused = value
+        silenceConfirmation = false
+    }
+
     fun finish() {
         isRecording = false
+        isPaused = false
+        elapsedMs = 0
+        silenceConfirmation = false
+        analysisUnavailable = false
+        backgroundAlertsUnavailable = false
         startedAt = null
     }
 

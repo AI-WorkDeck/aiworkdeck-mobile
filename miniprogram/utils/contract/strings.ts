@@ -1463,5 +1463,33 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
   "login.webFallback": {
     "zh-Hans": "请复制地址，在浏览器中打开并完成设置，然后返回密码登录。",
     "en": "Copy this address and open it in your browser. Finish setup, then return to sign in with your password."
+  },
+  "rec.pause.video.segmentNote": {
+    "zh-Hans": "暂停会保存当前片段，继续后开始新片段。",
+    "en": "Pausing saves this clip. Resuming starts a new clip."
+  },
+  "rec.pause.failed": {
+    "zh-Hans": "暂时无法暂停，仍在录制，请重试或停止并保存。",
+    "en": "Unable to pause. Recording is still running. Retry, or stop and save."
+  },
+  "rec.resume.videoFailed": {
+    "zh-Hans": "暂时无法继续录像，仍处于暂停状态，可重试或停止并保存。",
+    "en": "Unable to resume video. Recording is still paused. Retry, or stop and save."
+  },
+  "rec.silence.backgroundUnavailable": {
+    "zh-Hans": "后台提醒暂不可用，返回应用可查看提醒；录音仍在继续。",
+    "en": "Background alerts are unavailable. Return to the app to view reminders. Recording continues."
+  },
+  "notify.channel.recordingReminders": {
+    "zh-Hans": "录音提醒",
+    "en": "Recording reminders"
+  },
+  "rec.silence.stop.short": {
+    "zh-Hans": "停录保存",
+    "en": "Stop"
+  },
+  "rec.silence.continue.short": {
+    "zh-Hans": "继续录音",
+    "en": "Keep"
   }
 }

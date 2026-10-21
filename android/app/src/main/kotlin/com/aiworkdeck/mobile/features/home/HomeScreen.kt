@@ -105,6 +105,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
     var loc by remember { mutableStateOf(if (ScreenshotMode.enabled) ScreenshotMode.loc else null) }
     var now by remember { mutableStateOf(Instant.now()) }
     var flash by remember { mutableStateOf(false) }
+    var pauseError by remember { mutableStateOf<String?>(null) }
     var cameraError by remember { mutableStateOf(false) }
     var cameraRetry by remember { mutableStateOf(0) }
 
@@ -160,6 +161,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                if (RecordingState.isRecording) RecordingState.backgroundAlertsUnavailable = !RecordingService.canSendReminder(context)
                 hasCamera = granted(context, Manifest.permission.CAMERA)
                 hasMic = granted(context, Manifest.permission.RECORD_AUDIO)
                 hasLocation = granted(context, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -249,8 +251,17 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
     androidx.compose.runtime.LaunchedEffect(RecordingState.message) { if (RecordingState.message != null) mode = CapMode.audio }
 
     val recording = camera.isRecording || RecordingState.isRecording
-    val startedAt = camera.recordingStartedAt ?: RecordingState.startedAt
-    val elapsed = startedAt?.let { (now.toEpochMilli() - it) / 1000 } ?: 0L
+    val paused = if (camera.isRecording) camera.isPaused else RecordingState.isPaused
+    val elapsed = (if (camera.isRecording) camera.elapsedMs else RecordingState.elapsedMs) / 1000
+    if (RecordingState.silenceConfirmation && RecordingState.isRecording && !RecordingState.isPaused) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {},
+            title = { Text(tr("rec.silence.title")) },
+            text = { Text(tr("rec.silence.message")) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { RecordingService.stop(context) }) { Text(tr("rec.silence.stop")) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { RecordingService.keepRecording(context) }) { Text(tr("rec.silence.continue")) } },
+        )
+    }
 
     Column(Modifier.fillMaxSize().background(Tk.D.bg).safeDrawingPadding()) {
         Row {
@@ -273,7 +284,9 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
         ) {
             when {
                 mode == CapMode.audio -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    AudioStage(hasMic, RecordingState.isRecording, elapsed, context)
+                    AudioStage(hasMic, RecordingState.isRecording, RecordingState.isPaused, elapsed, context)
+                    if (RecordingState.isRecording && RecordingState.backgroundAlertsUnavailable) Text(tr("rec.silence.backgroundUnavailable"), color = Color.White, modifier = Modifier.padding(Tk.Sp.s3))
+                    if (RecordingState.analysisUnavailable) Text(tr("rec.silence.unavailable"), color = Color.White, modifier = Modifier.padding(Tk.Sp.s3))
                     RecordingState.message?.let { message ->
                         Text(message, color = Color.White, modifier = Modifier.padding(Tk.Sp.s3)
                             .clickable { onOpen(Overlay.Library) })
@@ -312,10 +325,31 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
             if (flash) Box(Modifier.fillMaxSize().background(Color.White))
         }
 
+        if (recording) {
+            if (paused) Text(tr("rec.pause.remember"), color = Color.White, modifier = Modifier.fillMaxWidth().background(Tk.S.failed).padding(Tk.Sp.s2), textAlign = TextAlign.Center)
+            pauseError?.let { Text(it, color = Color.White, modifier = Modifier.padding(Tk.Sp.s2)) }
+            Row(Modifier.fillMaxWidth()) {
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    pauseError = null
+                    if (camera.isRecording) {
+                        val success = if (paused) camera.resumeVideo() else camera.pauseVideo()
+                        if (!success) pauseError = tr(if (paused) "rec.resume.videoFailed" else "rec.pause.failed")
+                    } else if (paused) RecordingService.resume(context) else RecordingService.pause(context)
+                },
+                enabled = !camera.transitionPending,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(tr(if (paused) { if (camera.isRecording) "rec.resume.video" else "rec.resume.audio" } else { if (camera.isRecording) "rec.pause.video" else "rec.pause.audio" }), color = Color.White)
+            }
+            androidx.compose.material3.TextButton(onClick = ::shoot, modifier = Modifier.weight(1f)) { Text(tr("rec.silence.stop"), color = Color.White) }
+            }
+        }
         Controls(
             mode = mode,
             onMode = { mode = it },
             recording = recording,
+            paused = paused,
             recordingVideo = camera.isRecording,
             elapsed = elapsed,
             recent = items.firstOrNull(),
@@ -381,7 +415,7 @@ private fun Header(
 
 /** 录音模式没有取景画面：深色底，等宽计时器就是全部的界面。 */
 @Composable
-private fun AudioStage(hasMic: Boolean, recording: Boolean, elapsed: Long, context: Context) {
+private fun AudioStage(hasMic: Boolean, recording: Boolean, paused: Boolean, elapsed: Long, context: Context) {
     if (!hasMic) {
         PermissionStage(tr("home.permission.mic"), context)
         return
@@ -391,12 +425,12 @@ private fun AudioStage(hasMic: Boolean, recording: Boolean, elapsed: Long, conte
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
             if (recording) Box(Modifier.size(7.dp).clip(CircleShape).background(Tk.S.failed))
             Text(
-                (if (recording) tr("home.recording.audio") else tr("home.audio.hint")).uppercase(),
+                (if (paused) tr("rec.pause.status") else if (recording) tr("home.recording.audio") else tr("home.audio.hint")).uppercase(),
                 style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f),
             )
         }
         // 录音中说一句「退后台也在录」：用户开会时最怕的就是切出去一下就断了
-        if (recording) Text(tr("home.audio.backgroundOk"), style = Fonts.nano(), color = Color.White.copy(alpha = 0.35f))
+        if (recording && !paused) Text(tr("home.audio.backgroundOk"), style = Fonts.nano(), color = Color.White.copy(alpha = 0.35f))
     }
 }
 
@@ -423,6 +457,7 @@ private fun Controls(
     mode: CapMode,
     onMode: (CapMode) -> Unit,
     recording: Boolean,
+    paused: Boolean,
     recordingVideo: Boolean,
     elapsed: Long,
     recent: CaptureItem?,
@@ -446,7 +481,7 @@ private fun Controls(
                 Box(Modifier.size(7.dp).clip(CircleShape).background(Tk.S.failed))
                 Text(WatermarkFormat.duration(elapsed), style = Fonts.mono(Tk.Ty.small), color = Color.White)
                 Text(
-                    (if (recordingVideo) tr("home.recording.video") else tr("home.recording.audio")).uppercase(),
+                    (if (paused) tr("rec.pause.status") else if (recordingVideo) tr("home.recording.video") else tr("home.recording.audio")).uppercase(),
                     style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f),
                 )
             }

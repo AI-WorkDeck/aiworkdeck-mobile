@@ -65,9 +65,11 @@
 
     <!-- 录音档：无取景画面，深色面板 + 麦克风 -->
     <view wx:if="{{mode === 'audio'}}" class="finder__audio">
-      <image class="finder__audio-icon {{recording ? 'finder__audio-icon--live' : ''}}" src="{{Icon.micWhite}}" mode="aspectFit" />
-      <text wx:if="{{recording && recordInterrupted}}" class="finder__audio-hint">{{recordInterruptedText}}</text>
+      <image class="finder__audio-icon {{recording && !recordPaused ? 'finder__audio-icon--live' : ''}}" src="{{Icon.micWhite}}" mode="aspectFit" />
+      <text wx:if="{{recording && recordPaused}}" class="finder__audio-hint">{{labels.paused}} · {{labels.remember}}</text>
+      <text wx:elif="{{recording && recordInterrupted}}" class="finder__audio-hint">{{recordInterruptedText}}</text>
       <text wx:else class="finder__audio-hint">{{recording ? '录音中，每段录满 10 分钟自动续录下一段' : '按下方按钮开始录音'}}</text>
+      <text wx:if="{{recording && !recordPaused && silenceUnavailable}}" class="finder__audio-note">{{labels.silenceUnavailable}}</text>
       <text wx:if="{{audioNote}}" class="finder__audio-note">{{audioNote}}</text>
     </view>
 
@@ -78,8 +80,9 @@
     </view>
 
     <!-- 录制中状态条（录像/录音共用） -->
-    <view wx:if="{{recording}}" class="rec">
-      <view class="rec__pulse"></view>
+    <view wx:if="{{recording}}" class="rec {{recordPaused ? 'rec--paused' : ''}}">
+      <view wx:if="{{!recordPaused}}" class="rec__pulse"></view>
+      <text wx:else class="rec__paused">{{labels.paused}} · {{labels.remember}}</text>
       <text class="rec__timer mono">{{recordElapsed}}</text>
       <text class="rec__segment">第 {{recordSegment}} 段</text>
     </view>
@@ -110,6 +113,10 @@
       ><text>{{labels.audio}}</text></view>
     </view>
 
+    <view wx:if="{{recording}}" class="pause-row">
+      <button class="pause-control" bindtap="onPauseResume" disabled="{{pausePending || recordInterrupted}}">{{recordPaused ? (mode === 'audio' ? labels.resumeAudio : labels.resumeVideo) : (mode === 'audio' ? labels.pauseAudio : labels.pauseVideo)}}</button>
+      <text wx:if="{{mode === 'video'}}" class="pause-note">{{labels.videoPauseNote}}</text>
+    </view>
     <view class="ctrl__row">
       <!-- 最近一件缩略图入口：真图（照片原图 / 录像帧图），audio 用色块底 + 麦克风 -->
       <view class="ctrl__recent tappable" bindtap="onOpenGallery" aria-label="查看图集">

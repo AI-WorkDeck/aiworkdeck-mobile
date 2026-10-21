@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.5.0)
+project(workdeck_recording)
+set(CMAKE_CXX_STANDARD 17)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../../../third_party/libfvad ${CMAKE_CURRENT_BINARY_DIR}/fvad)
+add_library(recording SHARED recording.cpp)
+target_link_libraries(recording PUBLIC fvad libace_napi.z.so libnative_media_core.so libnative_media_codecbase.so libnative_media_acodec.so libnative_media_avmuxer.so)

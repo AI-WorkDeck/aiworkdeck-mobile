@@ -52,6 +52,13 @@ class CameraService(private val context: Context, private val lifecycleOwner: Li
     var recordingStartedAt by mutableStateOf<Long?>(null)
         private set
 
+    var isPaused by mutableStateOf(false)
+        private set
+    var transitionPending by mutableStateOf(false)
+        private set
+    var elapsedMs by mutableStateOf(0L)
+        private set
+
     private val executor: Executor = ContextCompat.getMainExecutor(context)
     private val preview = Preview.Builder().build()
     private val imageCapture = ImageCapture.Builder()
@@ -141,15 +148,23 @@ class CameraService(private val context: Context, private val lifecycleOwner: Li
         var pending = videoCapture.output.prepareRecording(context, FileOutputOptions.Builder(file).build())
         if (granted(Manifest.permission.RECORD_AUDIO)) pending = pending.withAudioEnabled()
         isRecording = true
+        isPaused = false
+        elapsedMs = 0
+        transitionPending = false
         recordingStartedAt = System.currentTimeMillis()
         recording = pending.start(executor) { event ->
+            elapsedMs = event.recordingStats.recordedDurationNanos / 1_000_000
             when (event) {
+                is VideoRecordEvent.Pause -> { isPaused = true; transitionPending = false }
+                is VideoRecordEvent.Resume -> { isPaused = false; transitionPending = false }
                 is VideoRecordEvent.Start -> {
                     isRecording = true
                     recordingStartedAt = System.currentTimeMillis()
                 }
                 is VideoRecordEvent.Finalize -> {
                     isRecording = false
+                    isPaused = false
+                    transitionPending = false
                     recordingStartedAt = null
                     recording = null
                     // 出错也先看文件：退后台会以 ERROR_SOURCE_INACTIVE 收尾，但已录的部分是完好的，
@@ -165,6 +180,18 @@ class CameraService(private val context: Context, private val lifecycleOwner: Li
                 else -> Unit
             }
         }
+    }
+
+    fun pauseVideo(): Boolean {
+        val active = recording ?: return false
+        if (transitionPending || isPaused) return false
+        return try { active.pause(); transitionPending = true; true } catch (_: Exception) { false }
+    }
+
+    fun resumeVideo(): Boolean {
+        val active = recording ?: return false
+        if (transitionPending || !isPaused) return false
+        return try { active.resume(); transitionPending = true; true } catch (_: Exception) { false }
     }
 
     /** 停止录像并等落盘完成。收尾在 Finalize 事件里，stop() 返回时文件还没写完。 */

@@ -17,7 +17,7 @@ import { listItems, tallyFor, subscribe, pollStatus, processQueue, enqueueCaptur
 import { dotClass, projectId, tallyTotal, PHASE_LABEL, type Tally } from '../../utils/phase'
 import { t } from '../../utils/i18n'
 import { reportDiag } from '../../utils/diag'
-import { startRecording, stopRecording, isRecording, takeRecordingNotice, recordingSnapshot, bindRecordingCallbacks } from '../../utils/recorder'
+import { startRecording, stopRecording, isRecording, takeRecordingNotice, recordingSnapshot, bindRecordingCallbacks, pauseRecording, resumeRecording, answerSilenceReminder } from '../../utils/recorder'
 import { CAPS, DEGRADED_NOTICE } from '../../utils/contract/capabilities'
 import { thumbFor, setVideoThumb, markThumbBroken } from '../../utils/thumbs'
 
@@ -76,6 +76,10 @@ function watermarkTime(): string {
   )
 }
 
+function recordTimeText(seconds: number): string {
+  return `${Math.floor(seconds / 60)}`.padStart(2, '0') + ':' + `${seconds % 60}`.padStart(2, '0')
+}
+
 Page({
   data: {
     Icon,
@@ -91,6 +95,11 @@ Page({
       shoot: t('home.shutter.photo'),
       on: t('common.on'),
       off: t('common.off'),
+      pauseAudio: t('rec.pause.audio'), pauseVideo: t('rec.pause.video'),
+      resumeAudio: t('rec.resume.audio'), resumeVideo: t('rec.resume.video'),
+      paused: t('rec.pause.status'), remember: t('rec.pause.remember'),
+      videoPauseNote: t('rec.pause.video.segmentNote'),
+      silenceUnavailable: t('rec.silence.unavailable'),
     },
     settingsLabel: t('settings.title'),
     tally: { uploading: 0, failed: 0, staged: 0, landed: 0 } as Tally,
@@ -104,6 +113,9 @@ Page({
     /** <camera> 原生组件挂不挂。只在本页可见时为 true，见 mountCamera/unmountCamera（dev-board#536） */
     cameraMounted: false,
     recording: false,
+    recordPaused: false,
+    pausePending: false,
+    silenceUnavailable: false,
     recordElapsed: '00:00',
     recordSegment: 1,
     /** 录音被系统中断（通话等），中断结束自动续录 */
@@ -122,13 +134,17 @@ Page({
   pollTimer: null as number | null,
   recordTimer: null as number | null,
   wmTimer: null as number | null,
-  recordStartedAt: 0,
   cameraCtx: null as WechatMiniprogram.CameraContext | null,
   /** 当前录像段是否已被收走（timeoutCallback 与 stopRecord 只允许一方入队） */
   segmentHandled: true,
   /** 手动停止意图：timeoutCallback 恰好赶上时不再续下一段 */
   manualStopping: false,
   videoProject: null as RelayProject | null,
+  videoPauseRequested: false,
+  videoElapsedMs: 0,
+  videoResumedAt: 0,
+  videoGeneration: 0,
+  silencePromptVisible: false,
 
   onLoad() {
     const app = getApp<AppGlobal>()
@@ -159,13 +175,15 @@ Page({
     if (recording) {
       bindRecordingCallbacks(this.audioCallbacks())
       this.setData({ mode: 'audio', recording: true, recordSegment: recording.segmentIndex,
-        recordInterrupted: recording.interrupted })
+        recordInterrupted: recording.interrupted, recordPaused: recording.paused, pausePending: recording.pausePending,
+        silenceUnavailable: recording.monitorUnavailable })
       this.startRecordTimer()
     } else if (this.data.mode === 'audio' && this.data.recording && !isRecording()) {
       this.stopRecordUi()
     }
     this.visible = true
     this.showRecordingNotice()
+    this.showSilenceReminder()
     // 安卓从别的页面返回时，上一块原生相机可能还没释放；晚一拍再挂，避免新实例初始化失败
     // 变成一块盖住整页的白画布（dev-board#536）。首次进入也走这条，300ms 肉眼无感。
     setTimeout(() => { if (this.visible) this.mountCamera() }, 300)
@@ -194,6 +212,8 @@ Page({
     // 录音交给 RecorderManager；后台能力仍以契约提示为准，系统中断会结束并保存。
     if (this.data.mode === 'video' && this.data.recording) {
       this.manualStopping = true
+      this.videoPauseRequested = false
+      if (this.data.recordPaused) { this.stopRecordUi(); this.unmountCamera(); return }
       // 卸载放在 stopRecord 的回调里：先卸原生组件，这一段就收不回来了
       this.camera().stopRecord({
         success: (res) => {
@@ -211,7 +231,7 @@ Page({
   },
 
   onUnload() {
-    bindRecordingCallbacks({ onSegment: () => {}, onFinish: () => {}, onError: () => {}, onInterrupted: () => {} })
+    bindRecordingCallbacks({ onSegment: () => {}, onFinish: () => {}, onError: () => {}, onInterrupted: () => {}, onPaused: () => {}, onSilence: () => {}, onMonitorUnavailable: () => {} })
     this.visible = false
     // 页面正在销毁，只丢引用不 setData
     this.cameraCtx = null
@@ -468,8 +488,11 @@ Page({
 
   startVideo() {
     this.videoProject = getSelectedProject()
-    this.recordStartedAt = Date.now()
-    this.setData({ recording: true, recordSegment: 1, recordElapsed: '00:00' })
+    this.videoElapsedMs = 0
+    this.videoResumedAt = Date.now()
+    this.videoPauseRequested = false
+    this.videoGeneration += 1
+    this.setData({ recording: true, recordPaused: false, pausePending: false, recordSegment: 1, recordElapsed: '00:00' })
     this.startRecordTimer()
     this.manualStopping = false
     this.startVideoSegment()
@@ -477,18 +500,35 @@ Page({
 
   startVideoSegment() {
     this.segmentHandled = false
+    const generation = this.videoGeneration
+    const resuming = this.data.recordPaused
     this.camera().startRecord({
-      timeoutCallback: (res) => this.onVideoSegmentEnd(res, true),
+      success: () => {
+        if (generation !== this.videoGeneration || !this.data.recording) return
+        this.videoResumedAt = Date.now()
+        this.setData({ recordPaused: false, pausePending: false })
+        if (this.manualStopping || this.videoPauseRequested) this.stopVideoSegmentForPause()
+      },
+      timeoutCallback: (res) => { if (generation === this.videoGeneration) this.onVideoSegmentEnd(res, true) },
       fail: () => {
-        // 首段常见于录音权限（录像要带声音）被拒
-        this.stopRecordUi()
-        wx.showToast({ title: '录像启动失败，请检查麦克风权限', icon: 'none' })
+        if (generation !== this.videoGeneration) return
+        this.segmentHandled = true
+        if (resuming && !this.manualStopping) {
+          this.videoPauseRequested = true
+          this.setData({ recordPaused: true, pausePending: false, recordSegment: Math.max(1, this.data.recordSegment - 1) })
+          wx.showToast({ title: t('rec.resume.videoFailed'), icon: 'none' })
+        } else {
+          this.stopRecordUi()
+          wx.showToast({ title: t('camera.error.start'), icon: 'none' })
+        }
       },
     })
   },
 
   stopVideo() {
     this.manualStopping = true
+    this.videoPauseRequested = false
+    if (this.data.recordPaused) { this.stopRecordUi(); return }
     this.camera().stopRecord({
       success: (res) => this.onVideoSegmentEnd(res, false),
       fail: () => {
@@ -506,24 +546,67 @@ Page({
     if (this.segmentHandled) return
     this.segmentHandled = true
 
+    this.freezeVideoClock()
     const project = this.videoProject
-    if (res.tempVideoPath) {
-      // 段号先抓下来：续录分支马上就会把 recordSegment 加一
-      const videoPath = res.tempVideoPath
-      const thumbPath = res.tempThumbPath
-      const segment = this.data.recordSegment
-      this.saveToAlbumIfEnabled(videoPath, 'video').then(() => {
-        const item = enqueueCapture(videoPath, 'video', project, segment)
-        if (thumbPath) setVideoThumb(item.clientMediaId, thumbPath)
-      })
+    const segment = this.data.recordSegment
+    const generation = this.videoGeneration
+    const finish = (saved: boolean) => {
+      if (generation !== this.videoGeneration) return
+      if (!saved) {
+        this.stopRecordUi()
+        wx.showModal({ title: t('rec.notice.title'), content: t('capture.saveFailed'), showCancel: false })
+      } else if (this.videoPauseRequested && !this.manualStopping) {
+        this.setData({ recordPaused: true, pausePending: false })
+      } else if (timedOut && !this.manualStopping) {
+        this.setData({ recordSegment: segment + 1 })
+        this.startVideoSegment()
+      } else this.stopRecordUi()
     }
+    if (!res.tempVideoPath) { finish(false); return }
+    const videoPath = res.tempVideoPath
+    const thumbPath = res.tempThumbPath
+    this.saveToAlbumIfEnabled(videoPath, 'video').then(() => {
+      const item = enqueueCapture(videoPath, 'video', project, segment, finish)
+      if (thumbPath) setVideoThumb(item.clientMediaId, thumbPath)
+    })
+  },
 
-    if (timedOut && !this.manualStopping) {
-      // 静默续录下一段，不弹窗打断现场
+  freezeVideoClock() {
+    if (this.videoResumedAt) this.videoElapsedMs += Math.max(0, Date.now() - this.videoResumedAt)
+    this.videoResumedAt = 0
+    this.setData({ recordElapsed: recordTimeText(Math.floor(this.videoElapsedMs / 1000)) })
+  },
+
+  stopVideoSegmentForPause() {
+    this.camera().stopRecord({
+      success: res => this.onVideoSegmentEnd(res, false),
+      fail: () => {
+        if (this.segmentHandled) return
+        this.videoPauseRequested = false
+        this.setData({ pausePending: false })
+        wx.showToast({ title: t('rec.pause.failed'), icon: 'none' })
+      },
+    })
+  },
+
+  onPauseResume() {
+    if (!this.data.recording || this.data.recordInterrupted || this.data.pausePending) return
+    if (this.data.mode === 'audio') {
+      this.setData({ pausePending: true })
+      if (this.data.recordPaused) resumeRecording()
+      else pauseRecording()
+      return
+    }
+    if (this.data.mode !== 'video') return
+    this.setData({ pausePending: true })
+    if (this.data.recordPaused) {
+      this.videoPauseRequested = false
       this.setData({ recordSegment: this.data.recordSegment + 1 })
       this.startVideoSegment()
     } else {
-      this.stopRecordUi()
+      this.videoPauseRequested = true
+      if (this.segmentHandled) return // current segment is already being saved
+      this.stopVideoSegmentForPause()
     }
   },
 
@@ -534,8 +617,26 @@ Page({
       onSegment: (segmentIndex: number) => this.setData({ recordSegment: segmentIndex }),
       onFinish: () => { this.stopRecordUi(); this.showRecordingNotice() },
       onError: () => { this.stopRecordUi(); this.showRecordingNotice() },
-      onInterrupted: (recordInterrupted: boolean) => this.setData({ recordInterrupted }),
+      onInterrupted: (recordInterrupted: boolean) => this.setData({ recordInterrupted, pausePending: false }),
+      onPaused: (recordPaused: boolean) => this.setData({ recordPaused, pausePending: false,
+        recordElapsed: recordTimeText(recordingSnapshot()?.elapsedSeconds ?? 0) }),
+      onMonitorUnavailable: () => this.setData({ silenceUnavailable: true }),
+      onSilence: () => this.showSilenceReminder(),
     }
+  },
+
+  showSilenceReminder() {
+    const snapshot = recordingSnapshot()
+    if (!this.visible || !snapshot?.silencePending || this.silencePromptVisible) return
+    const sessionId = snapshot.sessionId
+    this.silencePromptVisible = true
+    wx.showModal({
+      title: t('rec.silence.title'), content: t('rec.silence.message'),
+      confirmText: t('rec.silence.stop.short'), cancelText: t('rec.silence.continue.short'),
+      success: res => answerSilenceReminder(sessionId, !!res.confirm),
+      fail: () => answerSilenceReminder(sessionId, false),
+      complete: () => { this.silencePromptVisible = false },
+    })
   },
 
   showRecordingNotice() {
@@ -548,8 +649,7 @@ Page({
     const started = await startRecording(project, this.audioCallbacks())
     if (!started) return
 
-    this.recordStartedAt = Date.now()
-    this.setData({ recording: true, recordSegment: 1, recordElapsed: '00:00' })
+    this.setData({ recording: true, recordPaused: false, pausePending: false, silenceUnavailable: recordingSnapshot()?.monitorUnavailable ?? false, recordSegment: 1, recordElapsed: '00:00' })
     this.startRecordTimer()
   },
 
@@ -561,8 +661,9 @@ Page({
   // ---------- 录制计时（录像/录音共用） ----------
 
   stopRecordUi() {
+    this.videoGeneration += 1
     this.stopRecordTimer()
-    this.setData({ recording: false, recordElapsed: '00:00', recordSegment: 1, recordInterrupted: false })
+    this.setData({ recordPaused: false, pausePending: false, silenceUnavailable: false, recording: false, recordElapsed: '00:00', recordSegment: 1, recordInterrupted: false })
   },
 
   startRecordTimer() {
@@ -570,10 +671,8 @@ Page({
     this.recordTimer = setInterval(() => {
       const total = this.data.mode === 'audio'
         ? (recordingSnapshot()?.elapsedSeconds ?? 0)
-        : Math.floor((Date.now() - this.recordStartedAt) / 1000)
-      const mm = `${Math.floor(total / 60)}`.padStart(2, '0')
-      const ss = `${total % 60}`.padStart(2, '0')
-      this.setData({ recordElapsed: `${mm}:${ss}` })
+        : Math.floor((this.videoElapsedMs + (this.videoResumedAt ? Date.now() - this.videoResumedAt : 0)) / 1000)
+      this.setData({ recordElapsed: recordTimeText(total) })
     }, 1000)
   },
 

@@ -16,6 +16,7 @@
 import type { RelayProject } from './api'
 import { enqueueCapture } from './queue'
 import { t } from './i18n'
+import { Mp3VoiceDetector, SilenceWindow } from './silence-monitor'
 
 /** 单段最长 10 分钟——RecorderManager 的上限 */
 export const SEGMENT_DURATION_MS = 600000
@@ -29,9 +30,13 @@ export interface RecorderCallbacks {
   onError: (message: string) => void
   /** 系统中断开始，正在停止并保存 */
   onInterrupted?: (interrupted: boolean) => void
+  onPaused?: (paused: boolean) => void
+  onSilence?: () => void
+  onMonitorUnavailable?: () => void
 }
 
 interface Session extends RecorderCallbacks {
+  id: number
   project: RelayProject | null
   segmentIndex: number
   manualStop: boolean
@@ -42,8 +47,16 @@ interface Session extends RecorderCallbacks {
   errorTimer: ReturnType<typeof setTimeout> | null
   elapsedMs: number
   resumedAt: number | null
+  paused: boolean
+  pauseIntent: 'pause' | 'resume' | null
+  detector: Mp3VoiceDetector | null
+  silence: SilenceWindow
+  monitorUnavailable: boolean
+  lastFrameAt: number
+  monitorTimer: ReturnType<typeof setInterval> | null
 }
 
+let nextSessionId = 0
 let starting = false
 let manager: WechatMiniprogram.RecorderManager | null = null
 let session: Session | null = null
@@ -58,6 +71,7 @@ function getManager(): WechatMiniprogram.RecorderManager {
     if (!s || s.finalizing || (!s.segmentStarted && !s.manualStop)) return
     clearErrorTimer(s)
     pauseClock(s)
+    stopMonitor(s)
     s.segmentStarted = false
     s.finalizing = true
     if (!res.tempFilePath || !(res.duration > 0) || !(res.fileSize > 0)) {
@@ -116,8 +130,53 @@ function getManager(): WechatMiniprogram.RecorderManager {
     if (s.manualStop) { manager?.stop(); return }
     clearErrorTimer(s)
     s.resumedAt = Date.now()
+    s.lastFrameAt = Date.now()
+    s.silence.reset()
+    s.detector?.reset()
+    s.monitorTimer = setInterval(() => {
+      if (!s.paused && !s.manualStop && Date.now() - s.lastFrameAt > 5000) unavailable(s)
+    }, 1000)
   })
 
+  manager.onPause(() => {
+    const s = session
+    if (!s || s.manualStop || s.finalizing) return
+    pauseClock(s)
+    s.silence.reset()
+    if (s.pauseIntent !== 'pause') {
+      s.interrupted = true
+      s.onInterrupted?.(true)
+      stopRecording()
+      return
+    }
+    s.pauseIntent = null
+    s.paused = true
+    s.onPaused?.(true)
+  })
+  manager.onResume(() => {
+    const s = session
+    if (!s || s.manualStop || s.finalizing) { manager?.stop(); return }
+    if (s.pauseIntent !== 'resume' || !s.paused) { stopRecording(); return }
+    s.pauseIntent = null
+    s.paused = false
+    s.resumedAt = Date.now()
+    s.lastFrameAt = Date.now()
+    s.silence.reset()
+    s.detector?.reset()
+    s.onPaused?.(false)
+  })
+  manager.onFrameRecorded(({ frameBuffer }) => {
+    const s = session
+    if (!s || !s.segmentStarted || s.paused || s.pauseIntent || s.manualStop || s.finalizing || !s.detector) return
+    const now = Date.now()
+    if (now - s.lastFrameAt > 2500) { s.silence.reset(); s.detector.reset() }
+    s.lastFrameAt = now
+    try {
+      for (const voice of s.detector.push(frameBuffer)) {
+        if (s.silence.accept(voice, 10, now)) s.onSilence?.()
+      }
+    } catch { unavailable(s) }
+  })
   return manager
 }
 
@@ -130,6 +189,7 @@ function startSegment(): void {
     numberOfChannels: 1,
     encodeBitRate: 48000,
     duration: SEGMENT_DURATION_MS,
+    frameSize: 6,
   })
 }
 
@@ -175,8 +235,14 @@ export async function startRecording(project: RelayProject | null, callbacks: Re
   try {
     const ok = await ensureRecordAuth()
     if (!ok) return false
-    session = { project, segmentIndex: 1, manualStop: false, interrupted: false, finalizing: false, segmentStarted: false, errorTimer: null,
-      elapsedMs: 0, resumedAt: null, ...callbacks }
+    session = { id: ++nextSessionId, project, segmentIndex: 1, manualStop: false, interrupted: false, finalizing: false, segmentStarted: false, errorTimer: null,
+      elapsedMs: 0, resumedAt: null, paused: false, pauseIntent: null, detector: null,
+      silence: new SilenceWindow(), monitorUnavailable: false, lastFrameAt: Date.now(), monitorTimer: null, ...callbacks }
+    const current = session
+    // Capability initialization cannot hold up capture or disable its existing save path.
+    void Mp3VoiceDetector.create().then(detector => {
+      if (session === current && !current.manualStop && !current.monitorUnavailable) current.detector = detector
+    }).catch(() => unavailable(current))
     startSegment()
     return session !== null
   } finally { starting = false }
@@ -198,6 +264,7 @@ function clearErrorTimer(s: Session): void {
 function finishError(s: Session): void {
   if (session !== s) return
   clearErrorTimer(s)
+  stopMonitor(s)
   session = null
   notice = t('rec.failed')
   s.onError(notice)
@@ -219,10 +286,43 @@ function pauseClock(s: Session): void {
 export function recordingSnapshot() {
   const s = session
   if (!s) return null
-  return { segmentIndex: s.segmentIndex, interrupted: s.interrupted,
+  return { sessionId: s.id, silencePending: s.silence.awaitingConfirmation, segmentIndex: s.segmentIndex, interrupted: s.interrupted, paused: s.paused, pausePending: s.pauseIntent !== null,
+    monitorUnavailable: s.monitorUnavailable,
     elapsedSeconds: Math.floor((s.elapsedMs + (s.resumedAt === null ? 0 : Math.max(0, Date.now() - s.resumedAt))) / 1000) }
 }
 
 export function bindRecordingCallbacks(callbacks: RecorderCallbacks): void {
   if (session) Object.assign(session, callbacks)
+}
+
+function stopMonitor(s: Session): void {
+  if (s.monitorTimer !== null) clearInterval(s.monitorTimer)
+  s.monitorTimer = null
+  s.silence.reset()
+}
+function unavailable(s: Session): void {
+  if (session !== s || s.monitorUnavailable) return
+  s.monitorUnavailable = true
+  s.detector = null
+  s.silence.reset()
+  s.onMonitorUnavailable?.()
+}
+export function pauseRecording(): void {
+  const s = session
+  if (!s || !s.segmentStarted || s.paused || s.pauseIntent || s.manualStop || s.finalizing) return
+  s.pauseIntent = 'pause'
+  s.silence.reset()
+  getManager().pause()
+}
+export function resumeRecording(): void {
+  const s = session
+  if (!s || !s.paused || s.pauseIntent || s.manualStop || s.finalizing) return
+  s.pauseIntent = 'resume'
+  s.silence.reset()
+  getManager().resume()
+}
+export function answerSilenceReminder(sessionId: number, stop: boolean): void {
+  if (!session || session.id !== sessionId) return
+  session.silence.reset()
+  if (stop) stopRecording()
 }

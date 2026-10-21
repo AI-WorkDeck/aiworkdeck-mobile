@@ -369,5 +369,12 @@ object ContractStrings {
         "login.passwordMode" to mapOf("zh-Hans" to "返回密码登录", "en" to "Back to password sign-in"),
         "login.copyWebAddress" to mapOf("zh-Hans" to "复制官网地址", "en" to "Copy website address"),
         "login.webFallback" to mapOf("zh-Hans" to "请复制地址，在浏览器中打开并完成设置，然后返回密码登录。", "en" to "Copy this address and open it in your browser. Finish setup, then return to sign in with your password."),
+        "rec.pause.video.segmentNote" to mapOf("zh-Hans" to "暂停会保存当前片段，继续后开始新片段。", "en" to "Pausing saves this clip. Resuming starts a new clip."),
+        "rec.pause.failed" to mapOf("zh-Hans" to "暂时无法暂停，仍在录制，请重试或停止并保存。", "en" to "Unable to pause. Recording is still running. Retry, or stop and save."),
+        "rec.resume.videoFailed" to mapOf("zh-Hans" to "暂时无法继续录像，仍处于暂停状态，可重试或停止并保存。", "en" to "Unable to resume video. Recording is still paused. Retry, or stop and save."),
+        "rec.silence.backgroundUnavailable" to mapOf("zh-Hans" to "后台提醒暂不可用，返回应用可查看提醒；录音仍在继续。", "en" to "Background alerts are unavailable. Return to the app to view reminders. Recording continues."),
+        "notify.channel.recordingReminders" to mapOf("zh-Hans" to "录音提醒", "en" to "Recording reminders"),
+        "rec.silence.stop.short" to mapOf("zh-Hans" to "停录保存", "en" to "Stop"),
+        "rec.silence.continue.short" to mapOf("zh-Hans" to "继续录音", "en" to "Keep"),
     )
 }

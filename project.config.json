@@ -47,5 +47,30 @@
         }
       ]
     }
+  },
+  "packOptions": {
+    "ignore": [],
+    "include": [
+      {
+        "type": "file",
+        "value": "miniprogram/vendor/speech/speech.wasm"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/vendor/speech/MINIMP3-LICENSE"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/vendor/speech/LIBFVAD-LICENSE"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/vendor/speech/LIBFVAD-PATENTS"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/vendor/speech/LIBFVAD-AUTHORS"
+      }
+    ]
   }
 }

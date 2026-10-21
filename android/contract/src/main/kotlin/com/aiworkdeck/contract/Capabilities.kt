@@ -3,6 +3,10 @@ package com.aiworkdeck.contract
 
 object ContractCapabilities {
     const val client: String = "android"
+    const val voiceReminderSeconds: Int = 300
+    const val voiceActivityReminder: Boolean = true
+    const val audioPause: Boolean = true
+    const val videoPause: String = "native"
     const val backupConsentVersion: String = "2026-10-11"
     val previewExtensions: List<String> = listOf("jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tif", "tiff", "docx", "pptx", "xlsx", "pdf", "m4a", "mp3", "wav", "aac", "caf", "aif", "aiff", "mp4", "mov", "m4v")
     const val backgroundUpload: Boolean = true
@@ -15,5 +19,5 @@ object ContractCapabilities {
     const val recharge: String = "external"
     /** 能否登录国际站（workdeck.ai）账号 */
     const val intlAccount: Boolean = true
-    val degradedNotice: Map<String, String> = mapOf("backgroundUpload" to "cap.noBackgroundUpload", "continuousSegments" to "cap.segmentedRecording", "backgroundRecording" to "cap.noBackgroundRecording", "intlAccount" to "cap.noIntlAccount")
+    val degradedNotice: Map<String, String> = mapOf("voiceActivityReminder" to "rec.silence.unavailable", "videoPause" to "rec.pause.video.segmentNote", "backgroundUpload" to "cap.noBackgroundUpload", "continuousSegments" to "cap.segmentedRecording", "backgroundRecording" to "cap.noBackgroundRecording", "intlAccount" to "cap.noIntlAccount")
 }

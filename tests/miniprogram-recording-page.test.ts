@@ -1,5 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { gunzipSync } from 'node:zlib'
+import { recordingSnapshot } from '../miniprogram/utils/recorder.ts'
 import { t } from '../miniprogram/utils/i18n.ts'
 
 let definition: any
@@ -8,6 +11,7 @@ let save: any
 const handlers: Record<string, (result?: any) => void> = {}
 const on = (name: string) => (cb: any) => { handlers[name] = cb }
 const manager = { start: () => handlers.start(), stop() {},
+  onPause: on('pause'), onResume: on('resume'), onFrameRecorded: on('frame'),
   onStart: on('start'), onStop: on('stop'), onError: on('error'), onInterruptionBegin: on('interruption') }
 const modals: any[] = []
 const redirects: string[] = []
@@ -21,9 +25,12 @@ const redirects: string[] = []
   uploadFile: (o: any) => { o.success({ statusCode: 200, data: JSON.stringify({ code: 0 }) }); return {} },
   request: (o: any) => o.success({ statusCode: 200, data: { enabled: false, decided: true, subscriptionActive: false } }),
   authorize: (o: any) => o.success(),
-  showModal: (o: any) => { modals.push(o) },
+  showModal: (o: any) => {
+    if ((o.confirmText?.length ?? 0) > 4 || (o.cancelText?.length ?? 0) > 4) { o.fail?.({ errMsg: 'showModal:fail invalid text length' }); o.complete?.(); return }
+    modals.push(o)
+  },
   reLaunch: (o: any) => redirects.push(o.url),
-  vibrateShort() {}, nextTick: (cb: () => void) => cb(),
+  showToast() {}, vibrateShort() {}, nextTick: (cb: () => void) => cb(),
 }
 await import('../miniprogram/pages/index/index.ts')
 function page() {
@@ -84,4 +91,85 @@ test('camera interruption remounts while visible but never reattaches a hidden p
   instance.onHide()
   instance.onCameraStop()
   assert.equal(instance.data.cameraMounted, false)
+})
+
+test('video pause saves the current segment before exposing resume and resume failure stays paused for retry', async () => {
+  storage = {}; modals.length = 0
+  const instance = page()
+  instance.data.mode = 'video'
+  let startOptions: any, stopOptions: any
+  instance.camera = () => ({ startRecord(o: any) { startOptions = o }, stopRecord(o: any) { stopOptions = o } })
+  instance.startVideo()
+  startOptions.success()
+  instance.onPauseResume()
+  assert.equal(instance.data.pausePending, true)
+  assert.equal(instance.data.recordPaused, false)
+  stopOptions.success({ tempVideoPath: '/synthetic/segment.mp4' })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(instance.data.recordPaused, false)
+  save.success({ savedFilePath: '/synthetic/saved-segment.mp4' })
+  assert.equal(instance.data.recordPaused, true)
+  instance.onPauseResume()
+  startOptions.fail()
+  assert.equal(instance.data.recording, true)
+  assert.equal(instance.data.recordPaused, true)
+  assert.equal(instance.data.pausePending, false)
+  assert.equal(instance.data.recordSegment, 1)
+  instance.onPauseResume()
+  startOptions.success()
+  assert.equal(instance.data.recordPaused, false)
+  assert.equal(instance.data.recordSegment, 2)
+  instance.stopVideo()
+  stopOptions.success({ tempVideoPath: '/synthetic/segment2.mp4' })
+  await new Promise(resolve => setImmediate(resolve))
+  save.success({ savedFilePath: '/synthetic/saved-segment2.mp4' })
+  assert.equal(instance.data.recording, false)
+})
+test('late video start callbacks cannot mutate a later audio capture UI', () => {
+  const instance = page()
+  instance.data.mode = 'video'
+  let startOptions: any
+  let stops = 0
+  instance.camera = () => ({ startRecord(o: any) { startOptions = o }, stopRecord() { stops++ } })
+  instance.startVideo()
+  instance.stopRecordUi()
+  instance.data.mode = 'audio'
+  instance.data.recording = true
+  instance.manualStopping = true
+  startOptions.success()
+  startOptions.fail()
+  assert.equal(instance.data.recording, true)
+  assert.equal(stops, 0)
+})
+
+
+test('classified silence opens a valid native modal and keeps recording until the explicit stop action', async () => {
+  const compiled = await WebAssembly.instantiate(readFileSync(new URL('../miniprogram/vendor/speech/speech.wasm', import.meta.url)))
+  ;(globalThis as any).WXWebAssembly = { instantiate: () => Promise.resolve(compiled) }
+  storage = {}; modals.length = 0
+  const instance = page()
+  instance.visible = true
+  instance.data.mode = 'audio'
+  try {
+    await instance.onStartAudio(null)
+    await new Promise(resolve => setImmediate(resolve))
+    const bytes = gunzipSync(readFileSync(new URL('fixtures/speech/silence-long.mp3.gz', import.meta.url)))
+    for (let i = 0; i < bytes.length; i += 6144) {
+      const chunk = bytes.subarray(i, i + 6144)
+      handlers.frame({ frameBuffer: chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.length) })
+    }
+    assert.equal(modals.length, 1)
+    assert.equal(instance.data.recording, true)
+    assert.ok(modals[0].confirmText.length <= 4, 'WeChat rejects confirmText longer than 4 characters')
+    assert.ok(modals[0].cancelText.length <= 4)
+    modals[0].success({ confirm: false })
+    modals[0].complete()
+    assert.equal(instance.data.recording, true)
+    assert.equal(recordingSnapshot()?.silencePending, false)
+  } finally {
+    instance.onStopAudio()
+    handlers.stop({ tempFilePath: '/synthetic/modal.mp3', duration: 310000, fileSize: 1860884 })
+    save.success({ savedFilePath: '/synthetic/modal-saved.mp3' })
+    delete (globalThis as any).WXWebAssembly
+  }
 })

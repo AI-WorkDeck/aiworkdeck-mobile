@@ -1,17 +1,19 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { gunzipSync } from 'node:zlib'
 import { startRecording, stopRecording, recordingSnapshot, bindRecordingCallbacks, takeRecordingNotice,
-  SEGMENT_DURATION_MS } from '../miniprogram/utils/recorder.ts'
+  SEGMENT_DURATION_MS, pauseRecording, resumeRecording, answerSilenceReminder } from '../miniprogram/utils/recorder.ts'
 import { t } from '../miniprogram/utils/i18n.ts'
 
 const handlers: Record<string, (result?: any) => void> = {}
 const calls = { start: 0, stop: 0, resume: 0 }
 const on = (name: string) => (cb: (result?: any) => void) => { handlers[name] = cb }
 const manager = {
-  start() { calls.start++ }, stop() { calls.stop++ }, resume() { calls.resume++ },
+  pause() {}, start() { calls.start++ }, stop() { calls.stop++ }, resume() { calls.resume++ },
+  onPause: on('pause'), onResume: on('resume'), onFrameRecorded: on('frame'),
   onStart: on('start'), onStop: on('stop'), onError: on('error'),
   onInterruptionBegin: on('interruptionBegin'), onInterruptionEnd: on('interruptionEnd'),
-  onResume: on('resume'),
 }
 let storage: Record<string, any> = {}
 let saves: any[] = []
@@ -296,4 +298,97 @@ test('a delayed native start after a failed session timed out is stopped instead
   const stops = calls.stop
   handlers.start()
   assert.equal(calls.stop, stops + 1)
+})
+
+
+test('explicit pause waits for native acknowledgement, freezes elapsed time, and resumes the same segment', async () => {
+  const originalNow = Date.now
+  let now = 1000
+  Date.now = () => now
+  try {
+    const seen = await start()
+    now = 4000
+    pauseRecording()
+    assert.equal(recordingSnapshot()?.paused, false)
+    assert.equal(recordingSnapshot()?.pausePending, true)
+    handlers.pause()
+    now = 64000
+    assert.equal(recordingSnapshot()?.paused, true)
+    assert.equal(recordingSnapshot()?.elapsedSeconds, 3)
+    const starts = calls.start
+    resumeRecording()
+    handlers.resume()
+    now = 66000
+    assert.equal(recordingSnapshot()?.elapsedSeconds, 5)
+    assert.equal(recordingSnapshot()?.segmentIndex, 1)
+    assert.equal(calls.start, starts)
+    stopRecording(); handlers.stop(audio()); saved()
+    assert.equal(seen.finished, 1)
+  } finally { Date.now = originalNow }
+})
+
+test('native pause without a user pause intent is an interruption and saves rather than showing user-paused', async () => {
+  const seen = await start()
+  const stops = calls.stop
+  handlers.pause()
+  assert.equal(recordingSnapshot()?.paused, false)
+  assert.equal(calls.stop, stops + 1)
+  assert.deepEqual(seen.interrupted, [true])
+  handlers.stop(audio()); saved()
+  assert.equal(takeRecordingNotice(), t('rec.interruption.saved'))
+})
+
+test('stop while user-paused saves once and a late resume cannot restart recording', async () => {
+  const seen = await start()
+  pauseRecording(); handlers.pause()
+  stopRecording()
+  handlers.resume()
+  handlers.stop(audio()); saved()
+  assert.equal(seen.finished, 1)
+  assert.equal(recordingSnapshot(), null)
+})
+
+
+test('a stale silence confirmation cannot stop a later recording session', async () => {
+  await start()
+  const oldId = recordingSnapshot()!.sessionId
+  stopRecording(); handlers.stop(audio()); saved()
+  const seen = await start()
+  const stops = calls.stop
+  answerSilenceReminder(oldId, true)
+  assert.equal(calls.stop, stops)
+  assert.ok(recordingSnapshot())
+  stopRecording(); handlers.stop(audio()); saved()
+  assert.equal(seen.finished, 1)
+})
+
+
+test('real packaged VAD retains an undisplayed reminder across callback unbinding and clears it on pause', async () => {
+  const wasm = readFileSync(new URL('../miniprogram/vendor/speech/speech.wasm', import.meta.url))
+  const compiled = await WebAssembly.instantiate(wasm)
+  ;(globalThis as any).WXWebAssembly = { instantiate: () => Promise.resolve(compiled) }
+  const originalNow = Date.now
+  let now = 1000
+  Date.now = () => now
+  try {
+    await start()
+    await new Promise(resolve => setImmediate(resolve))
+    bindRecordingCallbacks({ onSegment() {}, onFinish() {}, onError() {}, onSilence() {} })
+    const bytes = gunzipSync(readFileSync(new URL('fixtures/speech/silence-long.mp3.gz', import.meta.url)))
+    for (let i = 0; i < bytes.length; i += 6144) {
+      const chunk = bytes.subarray(i, i + 6144)
+      now += 1024
+      handlers.frame({ frameBuffer: chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.length) })
+    }
+    assert.equal(recordingSnapshot()?.silencePending, true)
+    const replacement = callbacks()
+    bindRecordingCallbacks(replacement)
+    assert.equal(recordingSnapshot()?.silencePending, true)
+    pauseRecording(); handlers.pause()
+    assert.equal(recordingSnapshot()?.silencePending, false)
+    stopRecording(); handlers.stop(audio()); saved()
+  } finally {
+    if (recordingSnapshot()) { stopRecording(); handlers.stop(audio()); if (saves.length) saved(saves.length - 1) }
+    Date.now = originalNow; delete (globalThis as any).WXWebAssembly
+  }
 })

@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(workdeck_vad C)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+add_subdirectory(../../../../../third_party/libfvad ${CMAKE_CURRENT_BINARY_DIR}/fvad)
+add_library(workdeck_vad SHARED voice_activity_detector.c)
+target_link_libraries(workdeck_vad PRIVATE fvad)
+target_link_options(workdeck_vad PRIVATE "-Wl,-z,max-page-size=16384")
