@@ -101,7 +101,8 @@ function renderTsStrings(c) {
 function renderTsCaps(c, client) {
   const caps = Object.fromEntries(Object.entries(c.caps.capabilities).map(([k, v]) => [k, v[client]]))
   const notice = Object.fromEntries(Object.entries(c.caps.capabilities).filter(([, v]) => v.degradedNotice).map(([k, v]) => [k, v.degradedNotice]))
-  return H('//') + `export const BACKUP_CONSENT_VERSION = ${q(c.caps.backupConsentVersion)}
+  return H('//') + `export const VOICE_REMINDER_SECONDS = ${c.caps.voiceReminderSeconds}
+export const BACKUP_CONSENT_VERSION = ${q(c.caps.backupConsentVersion)}
 export const PREVIEW_EXTENSIONS: readonly string[] = ${q(c.caps.previewExtensions.ios)}
 export const MINIPROGRAM_PREVIEW_EXTENSIONS: readonly string[] = ${q(c.caps.previewExtensions.miniprogram)}
 export const CLIENT = ${q(client)}
@@ -215,6 +216,10 @@ function renderSwiftCaps(c) {
   const v = (x) => x === null ? 'nil' : typeof x === 'string' ? q(x) : String(x)
   const caps = c.caps.capabilities
   return H('//') + `enum ContractCapabilities {
+    static let voiceReminderSeconds: Int = ${c.caps.voiceReminderSeconds}
+    static let voiceActivityReminder: Bool = ${caps.voiceActivityReminder?.ios}
+    static let audioPause: Bool = ${caps.audioPause?.ios}
+    static let videoPause: String = ${q(caps.videoPause?.ios)}
     static let backupConsentVersion = ${q(c.caps.backupConsentVersion)}
     static let previewExtensions: [String] = ${q(c.caps.previewExtensions.ios)}
     static let client = "ios"
@@ -297,6 +302,10 @@ function renderKtCaps(c) {
 
 object ContractCapabilities {
     const val client: String = "android"
+    const val voiceReminderSeconds: Int = ${c.caps.voiceReminderSeconds}
+    const val voiceActivityReminder: Boolean = ${caps.voiceActivityReminder?.android}
+    const val audioPause: Boolean = ${caps.audioPause?.android}
+    const val videoPause: String = ${kq(caps.videoPause?.android)}
     const val backupConsentVersion: String = ${kq(c.caps.backupConsentVersion)}
     val previewExtensions: List<String> = listOf(${(c.caps.previewExtensions.android ?? []).map(kq).join(', ')})
     const val backgroundUpload: Boolean = ${caps.backgroundUpload.android}
@@ -432,7 +441,7 @@ ${etsTypedConst('ContractStates', 'ContractStatesShape', value, { transitions: '
 function renderEtsCaps(c) {
   const caps = c.caps.capabilities
   const value = Object.assign(
-    { client: 'harmony', backupConsentVersion: c.caps.backupConsentVersion, previewExtensions: c.caps.previewExtensions.harmony ?? [] },
+    { client: 'harmony', voiceReminderSeconds: c.caps.voiceReminderSeconds, backupConsentVersion: c.caps.backupConsentVersion, previewExtensions: c.caps.previewExtensions.harmony ?? [] },
     Object.fromEntries(Object.entries(caps).map(([k, v]) => [k, v.harmony])),
     { degradedNotice: Object.fromEntries(Object.entries(caps).filter(([, x]) => x.degradedNotice).map(([k, x]) => [k, x.degradedNotice])) },
   )

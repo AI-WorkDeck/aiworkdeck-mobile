@@ -286,3 +286,18 @@ test('native preview contracts require platform allowlists and preserve consent 
     assert.ok(r.problems.some((m) => m.includes('capabilities.json') && m.includes(platform)), r.problems.join('\n'))
   }
 })
+
+test('recording contracts reject reminder drift and unknown video pause behavior', () => {
+  for (const [key, change] of [
+    ['voiceReminderSeconds', (caps: any) => { caps.voiceReminderSeconds = 299 }],
+    ['videoPause', (caps: any) => { caps.capabilities.videoPause.miniprogram = 'pretend-native' }],
+  ] as const) {
+    const dir = tempCopy()
+    const p = join(dir, 'contract/capabilities.json')
+    const caps = JSON.parse(readFileSync(p, 'utf8'))
+    change(caps)
+    writeFileSync(p, JSON.stringify(caps))
+    const r = runChecks(dir, { quick: true })
+    assert.ok(r.problems.some((m) => m.includes('capabilities.json') && m.includes(key)), r.problems.join('\n'))
+  }
+})
