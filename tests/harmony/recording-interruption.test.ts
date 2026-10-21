@@ -28,7 +28,8 @@ function recorderFixture(metadata: Record<string, string> = { duration: '1000', 
     '@kit.MediaKit': { media: { CodecMimeType: { AUDIO_AAC: 'aac' }, ContainerFormatType: { CFT_MPEG_4A: 'm4a' },
       createAVMetadataExtractor: async () => ({ fetchMetadata: async () => metadata, release: async () => {} }) } },
     '../model/Capture': capture, '../model/Loc': {}, '../design/L10n': { tr: (key: string) => key },
-    './RecordingState': { RecordingState }, '../ScreenshotMode': { ScreenshotMode: { enabled: false } },
+    './RecordingState': { RecordingState }, './PcmRecorder': {},
+    './RecordingReminder': { RecordingReminder: { cancel() {}, show: async () => true, prepare: async () => true } }, '../ScreenshotMode': { ScreenshotMode: { enabled: false } },
     './ServiceLocator': { ServiceLocator: locator }, './ApiTypes': api,
   }
   const source = readFileSync(new URL('../../harmony/entry/src/main/ets/services/RecorderService.ets', import.meta.url), 'utf8')
@@ -41,10 +42,10 @@ function recorderFixture(metadata: Record<string, string> = { duration: '1000', 
 }
 const drain = () => new Promise(resolve => setTimeout(resolve, 5))
 
-test('real recorder pause finalizes existing audio, stops recording, reports the missing tail', async () => {
+test('real microphone interruption finalizes existing audio, stops recording, reports the missing tail', async () => {
   const f = recorderFixture()
   f.service.state.begin(1234)
-  f.service.onStateChange('paused', 0)
+  f.service.finishInterrupted()
   await drain()
   assert.equal(f.service.state.isRecording, false)
   assert.equal(f.service.state.message, 'rec.interruption.saved')
@@ -82,15 +83,79 @@ test('failed save keeps the playable draft; retry recovers locally unassigned', 
 
 test('late callbacks from a released recorder cannot stop the next recording', async () => {
   const f = recorderFixture()
-  const callbacks: Record<string, Function> = {}
-  const old = { on: (event: string, cb: Function) => { callbacks[event] = cb } }
+  const old: any = {}
   f.service.listen(old)
   f.service.recorder = { stop: async () => {}, release: async () => {} }
   f.service.state.begin(1234)
-  callbacks.stateChange('paused', 0)
-  callbacks.error({ code: 1, message: 'late' })
+  old.onInterrupted()
+  old.onVoice(300000)
   await drain()
   assert.equal(f.service.state.isRecording, true)
   assert.equal(f.stored.length, 0)
   await f.service.stop()
+})
+
+
+test('manual audio pause freezes time and retains the same file until explicit resume or stop', async () => {
+  const f = recorderFixture()
+  const calls: string[] = []
+  f.service.recorder = { pause: async () => { calls.push('pause') }, resume: async () => { calls.push('resume') },
+    stop: async () => { calls.push('stop') }, release: async () => {} }
+  f.service.state.begin(Date.now() - 1000)
+  await f.service.pause()
+  assert.equal(f.service.state.userPaused, true)
+  assert.equal(f.service.state.isRecording, true)
+  const frozen = f.service.state.clock.elapsed(Date.now())
+  assert.equal(f.service.state.clock.elapsed(Date.now() + 600000), frozen)
+  assert.equal(f.stored.length, 0)
+  await f.service.resume()
+  assert.equal(f.service.state.userPaused, false)
+  assert.deepEqual(calls, ['pause', 'resume'])
+  await f.service.stop()
+  assert.equal(f.stored.length, 1)
+})
+
+test('failed resume remains visibly paused and can still save', async () => {
+  const f = recorderFixture()
+  f.service.recorder = { resume: async () => { throw new Error('mic unavailable') }, stop: async () => {}, release: async () => {} }
+  f.service.state.begin(Date.now())
+  f.service.state.markUserPaused(Date.now())
+  await f.service.resume()
+  assert.equal(f.service.state.userPaused, true)
+  assert.equal(f.service.state.message, 'rec.resume.failed')
+  await f.service.stop()
+  assert.equal(f.stored.length, 1)
+})
+
+test('voice threshold is advisory; speech, missing analysis and pause clear pending reminders', () => {
+  const state = new RecordingState()
+  state.begin(Date.now())
+  state.updateVoice(299990)
+  assert.equal(state.silencePending, false)
+  state.updateVoice(300000)
+  assert.equal(state.silencePending, true)
+  assert.equal(state.isRecording, true)
+  state.updateVoice(0)
+  assert.equal(state.silencePending, false)
+  state.updateVoice(300000)
+  state.updateVoice(-1)
+  assert.equal(state.voiceUnavailable, true)
+  assert.equal(state.silencePending, false)
+  state.markUserPaused(Date.now())
+  state.updateVoice(300000)
+  assert.equal(state.silencePending, false)
+  state.markUserResumed(Date.now())
+  state.updateVoice(10)
+  assert.equal(state.voiceUnavailable, false)
+  state.finish()
+})
+
+
+test('AAC finalization failure preserves playable prefix and reports the interrupted tail', async () => {
+  const f = recorderFixture()
+  f.service.recorder = { stop: async () => { throw new Error('EOS timeout') }, release: async () => {} }
+  f.service.state.begin(Date.now())
+  await f.service.stop()
+  assert.equal(f.stored.length, 1)
+  assert.equal(f.service.state.message, 'rec.interruption.saved')
 })

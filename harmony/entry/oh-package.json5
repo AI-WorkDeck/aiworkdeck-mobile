@@ -6,6 +6,7 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "contract": "file:../contract"
+    "contract": "file:../contract",
+    "librecording.so": "file:./src/main/cpp/types/librecording"
   }
 }

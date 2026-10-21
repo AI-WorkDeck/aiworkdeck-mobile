@@ -26,13 +26,17 @@ val appVersionName = project.findProperty("versionName") as String?
 android {
     namespace = "com.aiworkdeck.mobile"
     compileSdk = 37
+    ndkVersion = "28.2.13676358"
+    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
     defaultConfig {
         minSdk = 29
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         targetSdk = 37
         versionCode = appVersionCode
         versionName = appVersionName
         vectorDrawables.useSupportLibrary = true
     }
+    sourceSets.getByName("androidTest").assets.srcDir("../../third_party/libfvad/tests/data")
     flavorDimensions += "market"
     productFlavors {
         create("intl") {
@@ -94,5 +98,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil.compose); implementation(libs.coil.video)
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation(libs.junit)
     testImplementation(libs.junit); testImplementation(libs.okhttp.mockwebserver); testImplementation(libs.kotlinx.coroutines.test)
 }

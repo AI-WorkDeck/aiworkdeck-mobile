@@ -8,6 +8,7 @@ import { util } from '@kit.ArkTS'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { hasPermission, PERM_MICROPHONE } from './Permissions'
 import { ServiceLocator } from './ServiceLocator'
+import { RecordingClock } from '../model/RecordingClock'
 
 const DOMAIN: number = 0x0000
 const TAG: string = 'CameraService'
@@ -54,6 +55,8 @@ export class CameraService {
   isRecordingVideo: boolean = false
   /** 开录的墙钟时刻。落库的采集时刻取它——「什么时候开始录」比「什么时候按停」重要。 */
   videoStartedAt: number = 0
+  readonly videoClock: RecordingClock = new RecordingClock()
+  isVideoPaused: boolean = false
 
   private manager: camera.CameraManager | null = null
   private device: camera.CameraDevice | null = null
@@ -172,6 +175,8 @@ export class CameraService {
       }
       this.isRecordingVideo = true
       this.videoStartedAt = Date.now()
+      this.videoClock.start(this.videoStartedAt)
+      this.isVideoPaused = false
       hilog.info(DOMAIN, TAG, '%{public}s', 'video recording started')
     })
   }
@@ -181,11 +186,32 @@ export class CameraService {
    *
    * 出错也先看文件：退后台收尾会报错，但已录的部分是完好的，现场不可复现，能留多少留多少。
    */
+  async pauseVideo(): Promise<void> {
+    await this.run<void>(async (): Promise<void> => {
+      const recorder: media.AVRecorder | null = this.recorder
+      if (!this.isRecordingVideo || this.isVideoPaused || recorder === null) return
+      await recorder.pause()
+      this.videoClock.interrupt(Date.now())
+      this.isVideoPaused = true
+    })
+  }
+
+  async resumeVideo(): Promise<void> {
+    await this.run<void>(async (): Promise<void> => {
+      const recorder: media.AVRecorder | null = this.recorder
+      if (!this.isRecordingVideo || !this.isVideoPaused || recorder === null) return
+      await recorder.resume()
+      this.videoClock.resume(Date.now())
+      this.isVideoPaused = false
+    })
+  }
+
   async stopVideo(): Promise<string> {
     // 标志同步落下再排队：退后台与页面销毁会前后脚各喊一次停，让第二次当场返回，
     // 而不是排到队里去撞一条「已经没有录像了」的错
     if (!this.isRecordingVideo) throw new Error('no recording in progress')
     this.isRecordingVideo = false
+    this.isVideoPaused = false
     this.videoStartedAt = 0
     return await this.run<string>(async (): Promise<string> => {
       const path: string = this.videoPath
@@ -366,6 +392,7 @@ export class CameraService {
 
   private async teardown(): Promise<void> {
     this.isRecordingVideo = false
+    this.isVideoPaused = false
     this.videoStartedAt = 0
     await this.teardownSession()
     this.videoPath = ''

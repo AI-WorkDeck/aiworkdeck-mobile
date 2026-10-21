@@ -8,6 +8,7 @@ let save: any
 const handlers: Record<string, (result?: any) => void> = {}
 const on = (name: string) => (cb: any) => { handlers[name] = cb }
 const manager = { start: () => handlers.start(), stop() {},
+  onPause: on('pause'), onResume: on('resume'), onFrameRecorded: on('frame'),
   onStart: on('start'), onStop: on('stop'), onError: on('error'), onInterruptionBegin: on('interruption') }
 const modals: any[] = []
 const redirects: string[] = []
@@ -23,7 +24,7 @@ const redirects: string[] = []
   authorize: (o: any) => o.success(),
   showModal: (o: any) => { modals.push(o) },
   reLaunch: (o: any) => redirects.push(o.url),
-  vibrateShort() {}, nextTick: (cb: () => void) => cb(),
+  showToast() {}, vibrateShort() {}, nextTick: (cb: () => void) => cb(),
 }
 await import('../miniprogram/pages/index/index.ts')
 function page() {
@@ -84,4 +85,37 @@ test('camera interruption remounts while visible but never reattaches a hidden p
   instance.onHide()
   instance.onCameraStop()
   assert.equal(instance.data.cameraMounted, false)
+})
+
+test('video pause saves the current segment before exposing resume and resume failure stays paused for retry', async () => {
+  storage = {}; modals.length = 0
+  const instance = page()
+  instance.data.mode = 'video'
+  let startOptions: any, stopOptions: any
+  instance.camera = () => ({ startRecord(o: any) { startOptions = o }, stopRecord(o: any) { stopOptions = o } })
+  instance.startVideo()
+  startOptions.success()
+  instance.onPauseResume()
+  assert.equal(instance.data.pausePending, true)
+  assert.equal(instance.data.recordPaused, false)
+  stopOptions.success({ tempVideoPath: '/synthetic/segment.mp4' })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(instance.data.recordPaused, false)
+  save.success({ savedFilePath: '/synthetic/saved-segment.mp4' })
+  assert.equal(instance.data.recordPaused, true)
+  instance.onPauseResume()
+  startOptions.fail()
+  assert.equal(instance.data.recording, true)
+  assert.equal(instance.data.recordPaused, true)
+  assert.equal(instance.data.pausePending, false)
+  assert.equal(instance.data.recordSegment, 1)
+  instance.onPauseResume()
+  startOptions.success()
+  assert.equal(instance.data.recordPaused, false)
+  assert.equal(instance.data.recordSegment, 2)
+  instance.stopVideo()
+  stopOptions.success({ tempVideoPath: '/synthetic/segment2.mp4' })
+  await new Promise(resolve => setImmediate(resolve))
+  save.success({ savedFilePath: '/synthetic/saved-segment2.mp4' })
+  assert.equal(instance.data.recording, false)
 })

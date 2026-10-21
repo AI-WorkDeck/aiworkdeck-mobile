@@ -38,6 +38,7 @@ import java.util.logging.Logger
 class RecordingService : Service() {
     private val logger = Logger.getLogger("RecordingService")
     private var engine: AudioRecorderService? = null
+    private var recordingToken: Any? = null
     private var request: RecordingState.StartRequest? = null
     private var startedAt: Long = 0L
     private var destroyed = false
@@ -49,6 +50,23 @@ class RecordingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             stopAndStore()
+            return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_PAUSE) {
+            if (engine?.pause() == true) RecordingState.applyPaused(true)
+            else if (engine != null) RecordingState.message = tr("rec.pause.failed")
+            updateNotification()
+            return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_RESUME) {
+            if (engine?.resume() == true) { RecordingState.applyPaused(false); RecordingState.message = null }
+            else if (engine != null) RecordingState.message = tr("rec.resume.failed")
+            updateNotification()
+            return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_CONTINUE) {
+            engine?.keepRecording()
+            updateNotification()
             return START_NOT_STICKY
         }
         if (engine != null || RecordingState.isSaving) return START_NOT_STICKY
@@ -68,7 +86,20 @@ class RecordingService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val eng = AudioRecorderService(this) { stopAndStore(interrupted = true) }
+        val token = Any()
+        recordingToken = token
+        val eng = AudioRecorderService(this,
+            onInterrupted = { if (recordingToken === token && engine != null) stopAndStore(interrupted = true) },
+            onSilence = { needsConfirmation ->
+                if (recordingToken === token && engine != null) { RecordingState.silenceConfirmation = needsConfirmation && !RecordingState.isPaused; updateReminder(); updateNotification() }
+            },
+            onAnalysisUnavailable = {
+                if (recordingToken === token && engine != null) { RecordingState.analysisUnavailable = true; updateNotification() }
+            },
+            onDuration = { duration ->
+                if (recordingToken === token && engine != null) { RecordingState.elapsedMs = duration; updateNotification() }
+            },
+        )
         val current = runCatching { drafts.create(now, req) }.getOrNull()
         if (current == null || !eng.start(drafts.file(current))) {
             if (current != null) drafts.complete(current)
@@ -83,6 +114,7 @@ class RecordingService : Service() {
         request = req
         startedAt = eng.recordingStartedAt ?: now
         RecordingState.begin(startedAt)
+        RecordingState.backgroundAlertsUnavailable = !canSendReminder(this)
         return START_NOT_STICKY
     }
 
@@ -94,6 +126,8 @@ class RecordingService : Service() {
         if (RecordingState.isSaving) return
         val eng = engine
         engine = null
+        recordingToken = null
+        getSystemService(NotificationManager::class.java)?.cancel(REMINDER_NOTIFICATION_ID)
         val req = request
         val currentDraft = draft
         draft = null
@@ -139,6 +173,26 @@ class RecordingService : Service() {
         super.onDestroy()
     }
 
+    private fun updateReminder() {
+        val manager = getSystemService(NotificationManager::class.java) ?: return
+        if (!RecordingState.silenceConfirmation) { manager.cancel(REMINDER_NOTIFICATION_ID); return }
+        RecordingState.backgroundAlertsUnavailable = !canSendReminder(this)
+        if (RecordingState.backgroundAlertsUnavailable) return
+        val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        val stop = PendingIntent.getService(this, 1, Intent(this, RecordingService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)
+        val keep = PendingIntent.getService(this, 3, Intent(this, RecordingService::class.java).setAction(ACTION_CONTINUE), PendingIntent.FLAG_IMMUTABLE)
+        runCatching { manager.notify(REMINDER_NOTIFICATION_ID, NotificationCompat.Builder(this, REMINDER_CHANNEL_ID)
+            .setContentTitle(tr("rec.silence.title")).setContentText(tr("rec.silence.message"))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(tr("rec.silence.message")))
+            .setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentIntent(open)
+            .setPriority(NotificationCompat.PRIORITY_HIGH).setAutoCancel(true)
+            .addAction(0, tr("rec.silence.stop"), stop).addAction(0, tr("rec.silence.continue"), keep).build()) }.onFailure { RecordingState.backgroundAlertsUnavailable = true }
+    }
+
+    private fun updateNotification() {
+        if (engine != null) getSystemService(NotificationManager::class.java)?.notify(NOTIFICATION_ID, notification(startedAt))
+    }
+
     private fun notification(startedAt: Long): Notification {
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
@@ -146,18 +200,29 @@ class RecordingService : Service() {
         val stop = PendingIntent.getService(
             this, 1, Intent(this, RecordingService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE,
         )
+        val pause = PendingIntent.getService(this, 2,
+            Intent(this, RecordingService::class.java).setAction(if (RecordingState.isPaused) ACTION_RESUME else ACTION_PAUSE), PendingIntent.FLAG_IMMUTABLE)
+        val keep = PendingIntent.getService(this, 3,
+            Intent(this, RecordingService::class.java).setAction(ACTION_CONTINUE), PendingIntent.FLAG_IMMUTABLE)
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(tr("home.recording.audio"))
-            .setContentText(tr("home.audio.backgroundOk"))
+            .setContentTitle(tr(if (RecordingState.isPaused) "rec.pause.status" else "home.recording.audio"))
+            .setContentText(tr(when {
+                RecordingState.isPaused -> "rec.pause.remember"
+                RecordingState.silenceConfirmation -> "rec.silence.message"
+                RecordingState.analysisUnavailable -> "rec.silence.unavailable"
+                else -> "home.audio.backgroundOk"
+            }))
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setOngoing(true)
-            .setUsesChronometer(true)
-            .setWhen(startedAt)
+            .setUsesChronometer(!RecordingState.isPaused)
+            .setWhen(System.currentTimeMillis() - RecordingState.elapsedMs)
             .setShowWhen(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(open)
             .addAction(0, tr("home.shutter.stopAudio"), stop)
+            .addAction(0, tr(if (RecordingState.isPaused) "rec.resume.audio" else "rec.pause.audio"), pause)
+        if (RecordingState.silenceConfirmation) builder.addAction(0, tr("rec.silence.continue"), keep)
         // Android 16 起可申请提升为 Live Updates（状态栏常驻小胶囊）
         if (Build.VERSION.SDK_INT >= 36) builder.setRequestPromotedOngoing(true)
         return builder.build()
@@ -165,7 +230,12 @@ class RecordingService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "recording"
+        private const val REMINDER_CHANNEL_ID = "recording-reminders"
+        private const val REMINDER_NOTIFICATION_ID = 3
         private const val NOTIFICATION_ID = 2
+        private const val ACTION_PAUSE = "com.aiworkdeck.mobile.action.PAUSE_RECORDING"
+        private const val ACTION_RESUME = "com.aiworkdeck.mobile.action.RESUME_RECORDING"
+        private const val ACTION_CONTINUE = "com.aiworkdeck.mobile.action.CONTINUE_RECORDING"
         private const val ACTION_STOP = "com.aiworkdeck.mobile.action.STOP_RECORDING"
 
         /** 落库作用域是进程级的：服务被销毁时正在写盘的那一件也要写完。 */
@@ -185,6 +255,15 @@ class RecordingService : Service() {
                 .onFailure { ContextCompat.startForegroundService(context, intent) }
         }
 
+        fun pause(context: Context) { context.startService(Intent(context, RecordingService::class.java).setAction(ACTION_PAUSE)) }
+        fun resume(context: Context) { context.startService(Intent(context, RecordingService::class.java).setAction(ACTION_RESUME)) }
+        fun keepRecording(context: Context) { context.startService(Intent(context, RecordingService::class.java).setAction(ACTION_CONTINUE)) }
+
+        fun canSendReminder(context: Context): Boolean {
+            val manager = context.getSystemService(NotificationManager::class.java) ?: return false
+            return manager.areNotificationsEnabled() && manager.getNotificationChannel(REMINDER_CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE
+        }
+
         /** 幂等：渠道已存在时再建一次只会更新名字（界面语言跟着区域换了，系统设置里的渠道名也跟着换）。默认重要度但无声音——录音中不该被自己的通知打断。 */
         fun ensureChannel(context: Context) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -193,6 +272,11 @@ class RecordingService : Service() {
                 CHANNEL_ID, tr("notify.channel.recording"), NotificationManager.IMPORTANCE_DEFAULT,
             ).apply { setSound(null, null) }
             manager.createNotificationChannel(channel)
+            manager.createNotificationChannel(NotificationChannel(REMINDER_CHANNEL_ID, tr("notify.channel.recordingReminders"), NotificationManager.IMPORTANCE_HIGH).apply {
+                // Heads-up/vibration is noticeable without playing sound into the recording.
+                setSound(null, null)
+                enableVibration(true)
+            })
         }
     }
 }
