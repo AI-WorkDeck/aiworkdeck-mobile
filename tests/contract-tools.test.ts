@@ -269,3 +269,20 @@ test('check：billing 夹具四段都有端在消费，一段提示都不该剩'
     assert.ok(!r.notes.some((m) => m.includes(`「${section}」`)), r.notes.join('\n'))
   }
 })
+
+
+test('native preview contracts require platform allowlists and preserve consent version', () => {
+  const c = loadContract(ROOT)
+  const rendered = outputs(c)
+  assert.ok(rendered.get('android/contract/src/main/kotlin/com/aiworkdeck/contract/Capabilities.kt')?.includes(`backupConsentVersion: String = "${c.caps.backupConsentVersion}"`))
+  assert.ok(rendered.get('harmony/contract/src/main/ets/Capabilities.ets')?.includes(`backupConsentVersion: "${c.caps.backupConsentVersion}"`))
+  for (const platform of ['android', 'harmony']) {
+    const dir = tempCopy()
+    const p = join(dir, 'contract', 'capabilities.json')
+    const caps = JSON.parse(readFileSync(p, 'utf8'))
+    delete caps.previewExtensions[platform]
+    writeFileSync(p, JSON.stringify(caps))
+    const r = runChecks(dir, { quick: true })
+    assert.ok(r.problems.some((m) => m.includes('capabilities.json') && m.includes(platform)), r.problems.join('\n'))
+  }
+})

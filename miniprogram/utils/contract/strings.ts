@@ -416,6 +416,14 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
     "zh-Hans": "这个项目还没有拍摄的影像",
     "en": "No captures in this project yet"
   },
+  "library.assign": {
+    "zh-Hans": "归类到项目",
+    "en": "Assign to project"
+  },
+  "library.assignFailed": {
+    "zh-Hans": "归类失败，请重试",
+    "en": "Could not assign. Try again."
+  },
   "library.otherPending": {
     "zh-Hans": "其他项目还有 {n} 件未落盘，切换项目后可见。",
     "en": "{n} items in other projects have not landed yet. Switch projects to see them."
@@ -1172,6 +1180,10 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
     "zh-Hans": "预览失败，请重试",
     "en": "Preview failed. Try again."
   },
+  "files.noPreviewApp": {
+    "zh-Hans": "未安装可预览此格式的应用，未发起传输",
+    "en": "No installed app can preview this format. No transfer was started."
+  },
   "files.platformUnsupported": {
     "zh-Hans": "当前微信版本无法预览此格式，未发起传输，请使用 iOS App 或桌面端",
     "en": "This format cannot be previewed in WeChat. No transfer was started. Use the iOS app or desktop."
@@ -1299,6 +1311,10 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
   "rec.notice.title": {
     "zh-Hans": "录音状态",
     "en": "Recording status"
+  },
+  "rec.interruption.saving": {
+    "zh-Hans": "录音被系统中断，正在保存已录部分",
+    "en": "Recording was interrupted. Saving the recorded portion."
   },
   "rec.interruption.saved": {
     "zh-Hans": "录音因来电、其他音频占用或系统中断而停止。已录部分已保存，请到资料库试听核对；之后的声音没有录入。如需继续，请重新开始录音。",
