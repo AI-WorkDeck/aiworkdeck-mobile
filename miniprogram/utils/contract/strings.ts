@@ -416,6 +416,14 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
     "zh-Hans": "这个项目还没有拍摄的影像",
     "en": "No captures in this project yet"
   },
+  "library.assign": {
+    "zh-Hans": "归类到项目",
+    "en": "Assign to project"
+  },
+  "library.assignFailed": {
+    "zh-Hans": "归类失败，请重试",
+    "en": "Could not assign. Try again."
+  },
   "library.otherPending": {
     "zh-Hans": "其他项目还有 {n} 件未落盘，切换项目后可见。",
     "en": "{n} items in other projects have not landed yet. Switch projects to see them."
@@ -964,6 +972,10 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
     "zh-Hans": "文件服务返回了无效响应",
     "en": "The file service returned an invalid response"
   },
+  "files.error.cacheFull": {
+    "zh-Hans": "预览缓存空间不足。请先重试未完成的传输，或关闭文件页释放已完成的预览。",
+    "en": "Preview cache is full. Retry unfinished transfers, or close the files page to clear completed previews."
+  },
   "files.error.tooLarge": {
     "zh-Hans": "文件超过 200 MB 预览上限",
     "en": "This file exceeds the 200 MB preview limit"
@@ -1172,6 +1184,18 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
     "zh-Hans": "预览失败，请重试",
     "en": "Preview failed. Try again."
   },
+  "capture.saveFailed": {
+    "zh-Hans": "影像未能保存到本机，退出后可能丢失。请尽快归类到项目完成上传，或重新拍摄。",
+    "en": "Could not save this capture locally. Its temporary file may be lost after you exit. Assign it to a project and finish uploading soon, or capture it again."
+  },
+  "camera.error.start": {
+    "zh-Hans": "相机暂不可用，请重试",
+    "en": "Camera is unavailable. Try again."
+  },
+  "files.noPreviewApp": {
+    "zh-Hans": "未安装可预览此格式的应用，未发起传输",
+    "en": "No installed app can preview this format. No transfer was started."
+  },
   "files.platformUnsupported": {
     "zh-Hans": "当前微信版本无法预览此格式，未发起传输，请使用 iOS App 或桌面端",
     "en": "This format cannot be previewed in WeChat. No transfer was started. Use the iOS app or desktop."
@@ -1319,6 +1343,10 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
   "rec.notice.title": {
     "zh-Hans": "录音状态",
     "en": "Recording status"
+  },
+  "rec.interruption.saving": {
+    "zh-Hans": "录音被系统中断，正在保存已录部分",
+    "en": "Recording was interrupted. Saving the recorded portion."
   },
   "rec.interruption.saved": {
     "zh-Hans": "录音因来电、其他音频占用或系统中断而停止。已录部分已保存，请到资料库试听核对；之后的声音没有录入。如需继续，请重新开始录音。",

@@ -6,7 +6,9 @@ import { Unauthorized } from '../model/Envelope'
 import { formatDay } from '../model/Format'
 import { ScreenshotMode } from '../ScreenshotMode'
 import { ServiceLocator } from '../services/ServiceLocator'
-import { errorText } from './Feedback'
+import { AssignmentRequest } from './AssignmentRequest'
+import { ProjectFilesRequest } from './ProjectFilesRequest'
+import { errorText, toast } from './Feedback'
 
 /**
  * 选归档目标。登录后必走一次——不选项目就不知道照片该往哪去，与其让人先拍完再问，
@@ -19,6 +21,7 @@ import { errorText } from './Feedback'
 export struct ProjectPicker {
   stack: NavPathStack = new NavPathStack()
   switching: boolean = false
+  assigning: boolean = false
   @State projects: RelayProject[] = []
   @State loading: boolean = true
   @State failure: string = ''
@@ -44,6 +47,16 @@ export struct ProjectPicker {
         .alignItems(HorizontalAlign.Start)
         .width('100%')
         .margin({ top: Tk.Sp.s10, bottom: Tk.Sp.s6 })
+
+        if (!this.assigning) {
+          Text(tr('workspace.quickCapture'))
+            .height(Tk.touchMin)
+            .fontColor(Tk.L.accent)
+            .onClick((): void => {
+              AppModel.shared.selectProject(null).then((): void => { if (this.switching) this.stack.pop() })
+            })
+          Text(tr('workspace.unassignedHint')).fontSize(Tk.Ty.micro).fontColor(Tk.L.fgMuted)
+        }
 
         // 内容区吃掉中间所有空间，页脚（退出登录）永远贴在底下
         Column() {
@@ -155,11 +168,18 @@ export struct ProjectPicker {
             .width('100%')
             .constraintSize({ minHeight: Tk.touchMin })
             .alignItems(VerticalAlign.Center)
+            .onClick((): void => this.pick(p))
 
+            if (!this.assigning) {
+              Text(tr('project.files')).height(Tk.touchMin).fontColor(Tk.L.accent)
+                .onClick((): void => {
+                  ProjectFilesRequest.project = p
+                  this.stack.pushPath(new NavPathInfo('ProjectFiles', ''))
+                })
+            }
             Divider().color(Tk.L.rule)
           }
           .width('100%')
-          .onClick((): void => this.pick(p))
         }
       }, (p: RelayProject): string => projectId(p))
     }
@@ -197,7 +217,19 @@ export struct ProjectPicker {
     this.loading = false
   }
 
+  private async assign(p: RelayProject): Promise<void> {
+    for (const id of AssignmentRequest.ids) await ServiceLocator.store.setProject(id, p)
+    AssignmentRequest.ids = []
+    await AppModel.shared.refresh()
+    this.stack.pop()
+    if (!ScreenshotMode.enabled) await ServiceLocator.queue.kick()
+  }
+
   private pick(p: RelayProject): void {
+    if (this.assigning) {
+      this.assign(p).catch((): void => toast(this.getUIContext(), tr('library.assignFailed')))
+      return
+    }
     AppModel.shared.selectProject(p).then((): void => {
       // 换项目是从设置页进来的一次往返，选完退回设置；登录后的那次由路由接管
       if (this.switching) this.stack.pop()

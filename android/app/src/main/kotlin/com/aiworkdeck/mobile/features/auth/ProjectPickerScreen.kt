@@ -37,11 +37,10 @@ import com.aiworkdeck.mobile.services.Unauthorized
 import kotlinx.coroutines.launch
 
 /**
- * 选归档目标。登录后必走一次——不选项目就不知道照片该往哪去，与其让人先拍完再问，
- * 不如进门就定。镜像 iOS `ProjectPickerView`。
+ * 选择后续采集或未归类记录的归档目标；关闭仍可继续采集。
  */
 @Composable
-fun ProjectPickerScreen(model: AppModel) {
+fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, onSelect: (RelayProject) -> Unit = { model.selectProject(it) }) {
     val backend = ServiceLocator.backend
     val scope = rememberCoroutineScope()
     var projects by remember { mutableStateOf<List<RelayProject>>(emptyList()) }
@@ -77,6 +76,7 @@ fun ProjectPickerScreen(model: AppModel) {
             Modifier.padding(top = Tk.Sp.s10, bottom = Tk.Sp.s6),
             verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2),
         ) {
+            Action(tr("workspace.quickCapture"), onClick = onClose)
             Eyebrow(tr("project.eyebrow"))
             Text(tr("project.title"), style = Fonts.display(), color = Tk.L.fg)
             Text(
@@ -105,7 +105,7 @@ fun ProjectPickerScreen(model: AppModel) {
                     items(projects, key = { it.id }) { p ->
                         Row(
                             Modifier.fillMaxWidth().heightIn(min = Tk.touchMin)
-                                .clickable { model.selectProject(p) },
+                                .clickable { onSelect(p) },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(Modifier.weight(1f)) {

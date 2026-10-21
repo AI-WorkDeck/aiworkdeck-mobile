@@ -297,6 +297,8 @@ function renderKtCaps(c) {
 
 object ContractCapabilities {
     const val client: String = "android"
+    const val backupConsentVersion: String = ${kq(c.caps.backupConsentVersion)}
+    val previewExtensions: List<String> = listOf(${(c.caps.previewExtensions.android ?? []).map(kq).join(', ')})
     const val backgroundUpload: Boolean = ${caps.backgroundUpload.android}
     val maxVideoSeconds: Int? = ${v(caps.maxVideoSeconds.android)}
     const val continuousSegments: Boolean = ${caps.continuousSegments.android}
@@ -430,7 +432,7 @@ ${etsTypedConst('ContractStates', 'ContractStatesShape', value, { transitions: '
 function renderEtsCaps(c) {
   const caps = c.caps.capabilities
   const value = Object.assign(
-    { client: 'harmony' },
+    { client: 'harmony', backupConsentVersion: c.caps.backupConsentVersion, previewExtensions: c.caps.previewExtensions.harmony ?? [] },
     Object.fromEntries(Object.entries(caps).map(([k, v]) => [k, v.harmony])),
     { degradedNotice: Object.fromEntries(Object.entries(caps).filter(([, x]) => x.degradedNotice).map(([k, x]) => [k, x.degradedNotice])) },
   )

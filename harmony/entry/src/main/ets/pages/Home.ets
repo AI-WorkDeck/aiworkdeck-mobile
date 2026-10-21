@@ -1,6 +1,7 @@
 import { abilityAccessCtrl, common, PermissionRequestResult, Permissions, Want } from '@kit.AbilityKit'
 import { fileUri } from '@kit.CoreFileKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
+import { BackupConsentService } from '../services/BackupConsentService'
 import { AppModel } from '../AppModel'
 import { StatusDot } from '../design/Components'
 import { tr } from '../design/L10n'
@@ -88,6 +89,8 @@ export struct Home {
   private videoProject: RelayProject | null = null
   private videoLoc: Loc | null = null
   private surfaceId: string = ''
+  private visible: boolean = false
+  private foreground: boolean = true
   /** 这一屏还在不在。异步回调回来时组件可能已经销毁，往里写 @State 是错误日志甚至崩溃。 */
   private alive: boolean = false
   private tickId: number = -1
@@ -114,6 +117,7 @@ export struct Home {
     this.tick()
     this.tickId = setInterval((): void => this.tick(), TICK_MS)
     this.askPermissions()
+    BackupConsentService.promptFirstUse(this.getUIContext(), (): boolean => this.alive)
   }
 
   aboutToDisappear(): void {
@@ -139,6 +143,7 @@ export struct Home {
    * 回前台把预览重开：摄像头在后台留不住。
    */
   private onLifecycle(foreground: boolean): void {
+    this.foreground = foreground
     if (foreground) {
       this.readPermissions()
       this.openCamera()
@@ -192,12 +197,14 @@ export struct Home {
     // 不在这里放开相机，镜头就一直亮着（系统指示灯常亮、耗电、别的应用拿不到摄像头）。
     // `onShown` / `onHidden`：`component/nav_destination.d.ts:684,703`，@since 10。
     .onHidden((): void => {
+      this.visible = false
       this.stopVideoAndStore()
       this.camera.close().catch((e: Object): void => {
         hilog.warn(DOMAIN, TAG, 'close on hidden failed: %{public}s', `${e}`)
       })
     })
     .onShown((): void => {
+      this.visible = true
       this.readPermissions()
       this.openCamera()
     })
@@ -224,6 +231,11 @@ export struct Home {
           this.surfaceId = this.xctl.getXComponentSurfaceId()
           this.openCamera()
         })
+        .onDestroy((): void => {
+          this.surfaceId = ''
+          this.camera.close().catch((): void => {})
+        })
+        .onAreaChange((): void => this.camera.updatePreviewRotation())
         .width('100%')
         .height('100%')
     } else {
@@ -268,6 +280,12 @@ export struct Home {
             .fontSize(Tk.Ty.small)
             .fontColor(Tk.D.fg)
             .onClick((): void => { this.stack.pushPath(new NavPathInfo('Library', '')) })
+        }
+        if (!this.recordingAudio && this.recordingMessage.length > 0) {
+          Text(tr('rec.retrySave')).height(Tk.touchMin).fontColor(Tk.D.fg)
+            .onClick((): void => {
+              RecorderService.shared.recoverDrafts().then((): Promise<void> => AppModel.shared.refresh())
+            })
         }
         // 录音中说一句「退后台也在录」：用户开会时最怕的就是切出去一下就断了
         if (this.recordingAudio) {
@@ -329,6 +347,7 @@ export struct Home {
       .alignItems(VerticalAlign.Center)
 
       Text(this.projectName)
+        .onClick((): void => this.stack.pushPath(new NavPathInfo('ProjectPickerSwitch', '')))
         .fontSize(Tk.Ty.title)
         .fontColor(Tk.D.fg)
         .maxLines(1)
@@ -530,7 +549,7 @@ export struct Home {
   }
 
   private openCamera(): void {
-    if (RecorderService.shared.state.isRecording || !this.hasCamera || this.mode === CapMode.audio || this.surfaceId.length === 0) return
+    if (!this.alive || !this.visible || !this.foreground || RecorderService.shared.state.isRecording || !this.hasCamera || this.mode === CapMode.audio || this.surfaceId.length === 0) return
     this.camera.open(this.surfaceId).catch((e: Object): void => {
       hilog.error(DOMAIN, TAG, 'open camera failed: %{public}s', `${e}`)
     })
@@ -726,7 +745,7 @@ export struct Home {
   private syncModel(): void {
     const model: AppModel = AppModel.shared
     const p: RelayProject | null = model.selectedProject
-    this.projectName = p === null ? '' : p.name
+    this.projectName = p === null ? tr('library.unknownProject') : p.name
     const tally: Tally = model.tally()
     this.total = tally.total
     this.tallyText = tallySummary(tally)

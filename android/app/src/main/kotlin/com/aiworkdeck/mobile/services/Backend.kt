@@ -4,6 +4,7 @@ import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.model.RelayProject
 import com.aiworkdeck.mobile.model.CatalogProject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import okhttp3.*
@@ -29,6 +30,7 @@ class Backend(
     private val client: OkHttpClient = OkHttpClient(),
     /** 请求头 X-App-Language 的值（zh-CN / en-US），同样每次现取，跟着区域走。 */
     private val languageProvider: () -> String = { AccountRegion.cn.appLanguage },
+    private val accountActive: () -> Boolean = { true },
 ) {
     /** 固定主机，测试用。 */
     constructor(baseUrl: String, session: SessionStore, client: OkHttpClient = OkHttpClient()) : this({ baseUrl }, session, client)
@@ -71,6 +73,27 @@ class Backend(
         json.decodeFromJsonElement<UploadResult>(el)
     }
 
+    fun accountSnapshot(): Backend {
+        val url = baseUrl
+        val id = session.current()
+        val language = languageProvider()
+        val frozen = MemorySessionStore().also { if (id != null) it.save(id) }
+        return Backend({ url }, frozen, client, { language }) { id != null && baseUrl == url && session.current() == id }
+    }
+    suspend fun backupConsent(): BackupConsent = bare("/api/mobile/backup-consent")
+    suspend fun setBackupConsent(enabled: Boolean): BackupConsent {
+        val body = buildJsonObject { put("enabled", enabled); put("consentVersion", com.aiworkdeck.contract.ContractCapabilities.backupConsentVersion) }
+        val result = execute(Request.Builder().url(baseUrl + "/api/mobile/backup-consent").put(body.toString().toRequestBody(jsonType)))
+        val value = json.parseToJsonElement(result).jsonObject
+        checkEnvelopeCode(value)
+        return json.decodeFromJsonElement(value)
+    }
+    fun projectFiles(root: File): ProjectFilesService {
+        val url = baseUrl
+        val id = session.current() ?: throw Unauthorized()
+        return ProjectFilesService(url, id, languageProvider(), root, client) { baseUrl == url && session.current() == id }
+    }
+
     // ---- 内部 ----
     private suspend fun post(path: String, body: JsonObject): String =
         execute(Request.Builder().url(baseUrl + path).post(body.toString().toRequestBody(jsonType)))
@@ -99,10 +122,14 @@ class Backend(
         )
     }
     private suspend fun execute(b: Request.Builder): String = withContext(Dispatchers.IO) {
+        check(accountActive()) { tr("files.error.closed") }
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
         session.current()?.let { b.header("X-Session-Id", it) }
         b.header("X-App-Language", languageProvider())
         client.newCall(b.build()).execute().use { resp ->
             val text = resp.body?.string() ?: ""
+            check(accountActive()) { tr("files.error.closed") }
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
             if (!resp.isSuccessful) throw ApiError(resp.code, tr("error.server", mapOf("code" to resp.code)))
             text
         }

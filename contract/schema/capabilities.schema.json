@@ -5,7 +5,7 @@
   "required": ["version", "clients", "capabilities", "previewExtensions", "backupConsentVersion"],
   "additionalProperties": false,
   "properties": {
-    "previewExtensions": {"type": "object", "required": ["ios", "miniprogram"], "additionalProperties": false, "properties": {"ios": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "miniprogram": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}}},
+    "previewExtensions": {"type": "object", "required": ["ios", "miniprogram", "android", "harmony"], "additionalProperties": false, "properties": {"ios": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "miniprogram": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "android": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "harmony": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}}},
     "backupConsentVersion": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
     "version": { "type": "integer", "minimum": 1 },
     "clients": { "$comment": "端名与顺序都钉死：lib.mjs 的四个渲染函数按这些名字取值", "const": ["ios", "miniprogram", "android", "harmony"] },

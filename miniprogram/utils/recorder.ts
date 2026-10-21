@@ -9,10 +9,8 @@
  * 避免 onStop 的「到顶还是用户停」二义。每段经 enqueueCapture 入上传队列，
  * 段号从 1 递增，文件名形如 录音_yyyyMMdd_HHmmss_段N.mp3。
  *
- * 系统中断（dev-board#406）：微信语音/视频通话会触发 onInterruptionBegin，录音被系统
- * 暂停；onInterruptionEnd 时 resume() 续录进同一段，onResume 到达才算真正续上。
- * resume 失败走 onError 既有路径。页面 onShow 时若仍 interrupted，可用
- * resumeIfInterrupted 再补一次 resume。
+ * 系统中断：立即请求停止，等待 onStop 给出片段并确认留底后结束；不自动恢复。
+ * 只有接近单段时长上限的完整片段可以自动续录，系统提前停止不能冒充到顶。
  */
 
 import type { RelayProject } from './api'
@@ -29,16 +27,19 @@ export interface RecorderCallbacks {
   onFinish: () => void
   /** 录音出错（含续录失败），会话已结束 */
   onError: (message: string) => void
-  /** 系统中断开始（true）/ 中断后已续录（false） */
+  /** 系统中断开始，正在停止并保存 */
   onInterrupted?: (interrupted: boolean) => void
 }
 
 interface Session extends RecorderCallbacks {
-  project: RelayProject
+  project: RelayProject | null
   segmentIndex: number
   manualStop: boolean
-  /** 被系统中断（通话等）且尚未续上 */
+  /** 被系统中断（通话等），停止后必须提示 */
   interrupted: boolean
+  finalizing: boolean
+  segmentStarted: boolean
+  errorTimer: ReturnType<typeof setTimeout> | null
   elapsedMs: number
   resumedAt: number | null
 }
@@ -46,6 +47,7 @@ interface Session extends RecorderCallbacks {
 let starting = false
 let manager: WechatMiniprogram.RecorderManager | null = null
 let session: Session | null = null
+let notice: string | null = null
 
 function getManager(): WechatMiniprogram.RecorderManager {
   if (manager) return manager
@@ -53,54 +55,67 @@ function getManager(): WechatMiniprogram.RecorderManager {
 
   manager.onStop((res) => {
     const s = session
-    if (!s) return
+    if (!s || s.finalizing || (!s.segmentStarted && !s.manualStop)) return
+    clearErrorTimer(s)
     pauseClock(s)
-    if (res.tempFilePath) {
-      enqueueCapture(res.tempFilePath, 'audio', s.project, s.segmentIndex)
+    s.segmentStarted = false
+    s.finalizing = true
+    if (!res.tempFilePath || !(res.duration > 0) || !(res.fileSize > 0)) {
+      finishError(s)
+      return
     }
-    if (s.manualStop) {
-      session = null
-      s.onFinish()
-    } else {
-      // 时长到顶：静默续录下一段（不弹窗，与录像的逐段确认刻意不同）
-      s.segmentIndex += 1
-      s.onSegment(s.segmentIndex)
-      startSegment()
-    }
+    // RecorderManager's duration is milliseconds. Allow its final frame to fall just
+    // short of the configured limit; an early system stop never starts another segment.
+    const complete = res.duration >= SEGMENT_DURATION_MS - 1000
+    const continueRecording = complete && !s.manualStop && !s.interrupted
+    try {
+      enqueueCapture(res.tempFilePath, 'audio', s.project, s.segmentIndex, (saved) => {
+        if (session !== s || !s.finalizing) return
+        if (!saved) { finishError(s); return }
+        if (continueRecording && !s.manualStop && !s.interrupted) {
+          s.finalizing = false
+          s.segmentIndex += 1
+          s.onSegment(s.segmentIndex)
+          startSegment()
+        } else {
+          session = null
+          if (s.interrupted || !s.manualStop) notice = t('rec.interruption.saved')
+          s.onFinish()
+        }
+      })
+    } catch { finishError(s) }
   })
 
   manager.onError(() => {
     const s = session
-    if (!s) return
-    session = null
-    s.onError(t('rec.failed'))
+    // An error delivered after onStop must not discard a file already being saved.
+    if (!s || s.finalizing || s.errorTimer !== null) return
+    // Native errors carry no session ID. Before onStart, allow its acknowledgement
+    // to settle a late prior error; a genuine failed start still times out.
+    s.errorTimer = setTimeout(() => finishError(s), 5000)
+    if (s.segmentStarted || s.manualStop) {
+      s.interrupted = true
+      s.onInterrupted?.(true)
+      stopRecording()
+    }
   })
 
-  // 系统中断（微信通话等）：开始时记 interrupted 让 UI 显示暂停态；
-  // 结束时 resume 续录同一段，onResume 到达才清 interrupted。这三个也只绑一次。
   manager.onInterruptionBegin(() => {
     const s = session
     if (!s) return
     pauseClock(s)
     s.interrupted = true
     s.onInterrupted?.(true)
-  })
-
-  manager.onInterruptionEnd(() => {
-    if (!session || session.manualStop) return
-    manager?.resume()
+    stopRecording()
   })
 
   manager.onStart(() => {
-    if (session) session.resumedAt = Date.now()
-  })
-
-  manager.onResume(() => {
     const s = session
-    if (!s || !s.interrupted) return
+    if (!s || s.finalizing) { manager?.stop(); return }
+    s.segmentStarted = true
+    if (s.manualStop) { manager?.stop(); return }
+    clearErrorTimer(s)
     s.resumedAt = Date.now()
-    s.interrupted = false
-    s.onInterrupted?.(false)
   })
 
   return manager
@@ -154,13 +169,13 @@ export function isRecording(): boolean {
 }
 
 /** 开始一次录音会话；返回是否真的开录了（权限被拒 / 已在录则 false）。 */
-export async function startRecording(project: RelayProject, callbacks: RecorderCallbacks): Promise<boolean> {
+export async function startRecording(project: RelayProject | null, callbacks: RecorderCallbacks): Promise<boolean> {
   if (session || starting) return false
   starting = true
   try {
     const ok = await ensureRecordAuth()
     if (!ok) return false
-    session = { project, segmentIndex: 1, manualStop: false, interrupted: false,
+    session = { project, segmentIndex: 1, manualStop: false, interrupted: false, finalizing: false, segmentStarted: false, errorTimer: null,
       elapsedMs: 0, resumedAt: null, ...callbacks }
     startSegment()
     return session !== null
@@ -171,13 +186,28 @@ export async function startRecording(project: RelayProject, callbacks: RecorderC
 export function stopRecording(): void {
   if (!session || session.manualStop) return
   session.manualStop = true
-  getManager().stop()
+  pauseClock(session)
+  if (!session.finalizing) getManager().stop()
 }
 
-/** 页面 onShow 兜底：中断结束事件没送到时，回到前台再补一次 resume。 */
-export function resumeIfInterrupted(): void {
-  if (!session || !session.interrupted || session.manualStop) return
-  getManager().resume()
+function clearErrorTimer(s: Session): void {
+  if (s.errorTimer !== null) clearTimeout(s.errorTimer)
+  s.errorTimer = null
+}
+
+function finishError(s: Session): void {
+  if (session !== s) return
+  clearErrorTimer(s)
+  session = null
+  notice = t('rec.failed')
+  s.onError(notice)
+}
+
+/** Keep notices while the capture page is hidden or has been recreated. */
+export function takeRecordingNotice(): string | null {
+  const result = notice
+  notice = null
+  return result
 }
 
 function pauseClock(s: Session): void {

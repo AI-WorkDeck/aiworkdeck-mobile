@@ -17,7 +17,7 @@ import { listItems, tallyFor, subscribe, pollStatus, processQueue, enqueueCaptur
 import { dotClass, projectId, tallyTotal, PHASE_LABEL, type Tally } from '../../utils/phase'
 import { t } from '../../utils/i18n'
 import { reportDiag } from '../../utils/diag'
-import { startRecording, stopRecording, isRecording, resumeIfInterrupted, recordingSnapshot, bindRecordingCallbacks } from '../../utils/recorder'
+import { startRecording, stopRecording, isRecording, takeRecordingNotice, recordingSnapshot, bindRecordingCallbacks } from '../../utils/recorder'
 import { CAPS, DEGRADED_NOTICE } from '../../utils/contract/capabilities'
 import { thumbFor, setVideoThumb, markThumbBroken } from '../../utils/thumbs'
 
@@ -128,13 +128,14 @@ Page({
   segmentHandled: true,
   /** 手动停止意图：timeoutCallback 恰好赶上时不再续下一段 */
   manualStopping: false,
+  videoProject: null as RelayProject | null,
 
   onLoad() {
     const app = getApp<AppGlobal>()
     this.setData({
       metrics: app.globalData.metrics,
       saveToAlbum: wx.getStorageSync(KEY_SAVE_ALBUM) === true,
-      recordInterruptedText: t('rec.paused.interrupted'),
+      recordInterruptedText: t('rec.interruption.saving'),
       audioNote: CAPS.backgroundRecording === false ? t(DEGRADED_NOTICE.backgroundRecording) : '',
     })
   },
@@ -150,6 +151,7 @@ Page({
     this.setData({
       project: { name: project?.name ?? t('home.selectProject'), archivePath: todayArchivePath() },
       archiveTo: project ? t('home.archiveTo', { path: todayArchivePath() }) : '',
+      modeNote: project ? MODE_NOTES[this.data.mode] : t('workspace.unassignedHint'),
     })
 
     // 录音态与真实 recorder 对齐：页面被 reLaunch 重建等场景下不残留假录制中
@@ -162,10 +164,8 @@ Page({
     } else if (this.data.mode === 'audio' && this.data.recording && !isRecording()) {
       this.stopRecordUi()
     }
-    // 通话结束事件没送到时，回前台补一次续录
-    resumeIfInterrupted()
-
     this.visible = true
+    this.showRecordingNotice()
     // 安卓从别的页面返回时，上一块原生相机可能还没释放；晚一拍再挂，避免新实例初始化失败
     // 变成一块盖住整页的白画布（dev-board#536）。首次进入也走这条，300ms 肉眼无感。
     setTimeout(() => { if (this.visible) this.mountCamera() }, 300)
@@ -191,7 +191,7 @@ Page({
     this.stopPolling()
     this.stopWatermark()
     // 页面隐藏相机即停：录像中尽力收走当前段，不让已录内容白丢。
-    // 录音不停——requiredBackgroundModes audio 支持后台续录，维持既有行为。
+    // 录音交给 RecorderManager；后台能力仍以契约提示为准，系统中断会结束并保存。
     if (this.data.mode === 'video' && this.data.recording) {
       this.manualStopping = true
       // 卸载放在 stopRecord 的回调里：先卸原生组件，这一段就收不回来了
@@ -211,7 +211,7 @@ Page({
   },
 
   onUnload() {
-    bindRecordingCallbacks({ onSegment: () => {}, onFinish: () => {}, onError: () => {} })
+    bindRecordingCallbacks({ onSegment: () => {}, onFinish: () => {}, onError: () => {}, onInterrupted: () => {} })
     this.visible = false
     // 页面正在销毁，只丢引用不 setData
     this.cameraCtx = null
@@ -272,8 +272,7 @@ Page({
   refresh() {
     // 只看当前项目：最近缩略图与三段计数都跟着项目走
     const project = getSelectedProject()
-    if (!project) return
-    const pid = projectId({ deviceId: project.deviceId, projectKey: project.key, projectUid: project.projectUid })
+    const pid = projectId({ deviceId: project?.deviceId ?? '', projectKey: project?.key ?? '', projectUid: project?.projectUid })
     const latest = listItems(pid)[0]
     const recent: RecentDisplay | null = latest
       ? {
@@ -285,7 +284,7 @@ Page({
       : null
     const tally = tallyFor(pid)
     const failedSuffix = tally.failed > 0 ? t('tally.failedSuffix', { m: tally.failed }) : ''
-    this.setData({ tally, failedSuffix, total: tallyTotal(tally), recent })
+    this.setData({ tally, failedSuffix, total: project ? tallyTotal(tally) : listItems(pid).length, recent })
   },
 
   // ---------- 水印（仅界面叠加，不写入影像文件） ----------
@@ -351,7 +350,7 @@ Page({
       return
     }
     this.unmountCamera()
-    this.setData({ mode, modeNote: MODE_NOTES[mode], cameraState: 'pending' })
+    this.setData({ mode, modeNote: getSelectedProject() ? MODE_NOTES[mode] : t('workspace.unassignedHint'), cameraState: 'pending' })
     if (mode !== 'audio') wx.nextTick(() => this.mountCamera())
   },
 
@@ -360,7 +359,6 @@ Page({
   onShutter() {
     if (isRecording()) { stopRecording(); return }
     const project = getSelectedProject()
-    if (!project) { this.onSwitchProject(); return }
     wx.vibrateShort({ type: 'light' })
 
     const mode = this.data.mode
@@ -452,7 +450,7 @@ Page({
 
   // ---------- 照片 ----------
 
-  takePhoto(project: RelayProject) {
+  takePhoto(project: RelayProject | null) {
     this.camera().takePhoto({
       quality: 'high',
       success: (res) => {
@@ -469,6 +467,7 @@ Page({
   // ---------- 录像：30 秒到顶自动续下一段（连续分段，D6 界面明示） ----------
 
   startVideo() {
+    this.videoProject = getSelectedProject()
     this.recordStartedAt = Date.now()
     this.setData({ recording: true, recordSegment: 1, recordElapsed: '00:00' })
     this.startRecordTimer()
@@ -507,8 +506,8 @@ Page({
     if (this.segmentHandled) return
     this.segmentHandled = true
 
-    const project = getSelectedProject()
-    if (project && res.tempVideoPath) {
+    const project = this.videoProject
+    if (res.tempVideoPath) {
       // 段号先抓下来：续录分支马上就会把 recordSegment 加一
       const videoPath = res.tempVideoPath
       const thumbPath = res.tempThumbPath
@@ -533,16 +532,19 @@ Page({
   audioCallbacks() {
     return {
       onSegment: (segmentIndex: number) => this.setData({ recordSegment: segmentIndex }),
-      onFinish: () => this.stopRecordUi(),
-      onError: (message: string) => {
-        this.stopRecordUi()
-        wx.showToast({ title: message, icon: 'none' })
-      },
+      onFinish: () => { this.stopRecordUi(); this.showRecordingNotice() },
+      onError: () => { this.stopRecordUi(); this.showRecordingNotice() },
       onInterrupted: (recordInterrupted: boolean) => this.setData({ recordInterrupted }),
     }
   },
 
-  async onStartAudio(project: RelayProject) {
+  showRecordingNotice() {
+    if (!this.visible) return
+    const content = takeRecordingNotice()
+    if (content) wx.showModal({ title: t('rec.notice.title'), content, showCancel: false })
+  },
+
+  async onStartAudio(project: RelayProject | null) {
     const started = await startRecording(project, this.audioCallbacks())
     if (!started) return
 
@@ -587,7 +589,6 @@ Page({
   async onSystemCapture() {
     if (this.data.recording) return
     const project = getSelectedProject()
-    if (!project) { this.onSwitchProject(); return }
 
     const media = await this.chooseFromSystem(['image', 'video'])
     if (!media) return
@@ -604,7 +605,7 @@ Page({
   },
 
   /** 单段录满后询问是否续录下一段，取消则结束循环 */
-  async recordMoreSegments(project: RelayProject, segmentIndex: number) {
+  async recordMoreSegments(project: RelayProject | null, segmentIndex: number) {
     const { confirm } = await wx.showModal({
       title: `已录制第 ${segmentIndex} 段（单段最长 60 秒）`,
       content: '继续录制下一段吗？',
