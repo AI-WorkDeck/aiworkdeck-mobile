@@ -30,6 +30,7 @@ final class AudioRecorderService: NSObject {
     static let shared = AudioRecorderService()
     private(set) var isRecording = false
     private(set) var isInterrupted = false
+    private(set) var isPaused = false
     private(set) var isBusy = false
     private(set) var permissionDenied = false
     private(set) var recordingSeconds = 0
@@ -103,6 +104,7 @@ final class AudioRecorderService: NSObject {
         timer = nil
         activity.end()
         isRecording = false
+        isPaused = false
         isInterrupted = false
         recordingSeconds = 0
         lastSavedID = nil
@@ -212,6 +214,7 @@ final class AudioRecorderService: NSObject {
             self.draft = draft
             clock.start(at: Date())
             isRecording = true
+            isPaused = false
             startVoiceMonitoring()
             isInterrupted = false
             recordingSeconds = 0
@@ -231,10 +234,11 @@ final class AudioRecorderService: NSObject {
     /// Use recorded duration, not wall time: a suspended timer is not evidence of audio.
     private func synchronize() {
         guard let r = recorder, isRecording else { return }
-        let changed = isInterrupted != !r.isRecording
+        let interrupted = !r.isRecording && !isPaused
+        let changed = isInterrupted != interrupted
         clock.synchronize(seconds: max(clock.elapsedBase, r.currentTime), running: r.isRecording, at: Date())
         recordingSeconds = Int(clock.elapsed(at: Date()))
-        isInterrupted = !r.isRecording
+        isInterrupted = interrupted
         if changed { activity.update(state: activityState) }
     }
 
@@ -247,8 +251,37 @@ final class AudioRecorderService: NSObject {
             clearSilenceReminder()
             self.lastVoiceResultAt = nil
         }
-        if !r.isRecording { await stop(interrupted: true) }
+        if !r.isRecording && !isPaused { await stop(interrupted: true) }
         else { activity.update(state: activityState) }
+    }
+
+    func togglePause() async {
+        guard isRecording, !isBusy else { return }
+#if DEBUG
+        if recorder == nil && ProcessInfo.processInfo.arguments.contains("-AWDPauseRecordingUITest") {
+            isPaused.toggle()
+            return
+        }
+#endif
+        guard let r = recorder else { return }
+        if isPaused {
+            isBusy = true
+            defer { isBusy = false }
+            guard await configureAudioSession(active: true), r.record() else {
+                notice = tr("rec.resume.failed")
+                return
+            }
+            isPaused = false
+            lastError = nil
+            startVoiceMonitoring()
+        } else {
+            r.pause()
+            guard !r.isRecording else { return }
+            isPaused = true
+            stopVoiceMonitoring()
+        }
+        synchronize()
+        activity.update(state: activityState)
     }
 
     func recordingSceneChanged(active: Bool) {
@@ -273,7 +306,7 @@ final class AudioRecorderService: NSObject {
         lastVoiceResultAt = nil
         let monitor = VoiceActivityMonitor(onResult: { [weak self] start, end, voice in
             Task { @MainActor in
-                guard let self, self.isRecording, self.voiceGeneration == generation else { return }
+                guard let self, self.isRecording, !self.isPaused, self.voiceGeneration == generation else { return }
                 self.lastVoiceResultAt = ProcessInfo.processInfo.systemUptime
                 let wasPending = self.silence.needsConfirmation
                 self.silence.observe(start: start, end: end, voice: voice)
@@ -322,10 +355,11 @@ final class AudioRecorderService: NSObject {
     }
 
 #if DEBUG
-    func beginFakeRecording(seconds: Int) {
-        guard Shot.isOn || ProcessInfo.processInfo.arguments.contains("-AWDSilenceReminderUITest") else { return }
+    func beginFakeRecording(seconds: Int, paused: Bool = false) {
+        guard Shot.isOn || ProcessInfo.processInfo.arguments.contains("-AWDSilenceReminderUITest") || ProcessInfo.processInfo.arguments.contains("-AWDPauseRecordingUITest") else { return }
         isRecording = true
         recordingSeconds = seconds
+        isPaused = paused
         if ProcessInfo.processInfo.arguments.contains("-AWDSilenceReminderUITest") {
             silence.observe(start: 0, end: 300, voice: false)
         }

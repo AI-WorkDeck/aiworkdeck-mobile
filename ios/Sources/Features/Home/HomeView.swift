@@ -43,6 +43,19 @@ struct HomeView: View {
         !visiblePreviews.isEmpty && !paused && scenePhase == .active && mode != .audio && !recorder.isRecording && !recorder.isBusy
     }
 
+    private var capturePaused: Bool {
+        recorder.isRecording ? recorder.isPaused : camera.isRecordingPaused
+    }
+
+    private var resumeLabel: String {
+        tr(recorder.isRecording ? "rec.resume.audio" : "rec.resume.video")
+    }
+
+    private func toggleCapturePause() {
+        if recorder.isRecording { Task { await recorder.togglePause() } }
+        else { camera.toggleRecordingPause() }
+    }
+
     var body: some View {
         GeometryReader { geometry in
             // Keep one view hierarchy: replacing HStack/VStack also replaces the
@@ -81,6 +94,7 @@ struct HomeView: View {
             }
 #endif
             if recorder.isRecording { mode = .audio }
+            else if camera.isRecording { mode = .video }
         }
         .onChange(of: mode) { _, m in
             // 离开录像档就把麦克风还回去：只有录像收声需要它，留着就会在下一次
@@ -259,6 +273,14 @@ struct HomeView: View {
                     }
             }
 
+            if camera.isRecordingPaused {
+                pauseNotice
+                    .padding(T.Sp.s4)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.black.opacity(0.85))
+                    .padding(T.Sp.s4)
+            }
+
             // 快门白闪：唯一的「拍到了」即时反馈，比任何提示都快
             if showFlash {
                 Color.white.transition(.opacity)
@@ -331,14 +353,39 @@ struct HomeView: View {
         VStack(spacing: T.Sp.s3) {
             if camera.isRecording || recorder.isRecording {
                 HStack(spacing: T.Sp.s1) {
-                    Circle().fill(T.S.failed).frame(width: 7, height: 7)
+                    if capturePaused {
+                        Image(systemName: "pause.fill").foregroundStyle(T.S.waitingOnDark)
+                    } else {
+                        Circle().fill(T.S.failed).frame(width: 7, height: 7)
+                    }
                     Text(timeString(camera.isRecording ? camera.recordingSeconds
                                                        : recorder.recordingSeconds))
                         .font(T.F.mono(13, .medium))
                         .foregroundStyle(.white)
-                    Text(camera.isRecording ? tr("home.recording.video") : tr("home.recording.audio"))
+                    Text(capturePaused ? tr("rec.pause.status") : camera.isRecording ? tr("home.recording.video") : tr("home.recording.audio"))
                         .font(T.F.nano())
                         .foregroundStyle(.white.opacity(0.55))
+                    if capturePaused {
+                        Button(tr("rec.silence.stop")) {
+                            if recorder.isRecording { Task { await recorder.stop() } }
+                            else { Task { await camera.toggleRecording() } }
+                        }
+                        .font(T.F.small())
+                        .foregroundStyle(T.S.failed)
+                        .frame(minHeight: T.touchMin)
+                        .disabled(recorder.isBusy)
+                        .accessibilityIdentifier("capture.stopPaused")
+                    } else if recorder.isRecording || camera.canPauseRecording {
+                        Button(action: toggleCapturePause) {
+                            Label(tr(recorder.isRecording ? "rec.pause.audio" : "rec.pause.video"), systemImage: "pause.fill")
+                                .font(T.F.small())
+                                .frame(minHeight: T.touchMin)
+                                .padding(.leading, T.Sp.s3)
+                        }
+                        .foregroundStyle(.white)
+                        .disabled(recorder.isBusy || camera.isChangingRecordingPause)
+                        .accessibilityIdentifier("capture.pause")
+                    }
                 }
                 .frame(minHeight: 28)
             } else {
@@ -471,6 +518,7 @@ struct HomeView: View {
 
     private var shutter: some View {
         Button {
+            if capturePaused { toggleCapturePause(); return }
             if recorder.isRecording {
                 Task { await recorder.stop() }
                 return
@@ -489,7 +537,11 @@ struct HomeView: View {
         } label: {
             ZStack {
                 Circle().stroke(.white.opacity(0.9), lineWidth: 2).frame(width: 74, height: 74)
-                if camera.isRecording || recorder.isRecording {
+                if capturePaused {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(T.S.waitingOnDark)
+                } else if camera.isRecording || recorder.isRecording {
                     RoundedRectangle(cornerRadius: 5).fill(T.S.failed).frame(width: 30, height: 30)
                 } else {
                     Circle()
@@ -501,12 +553,13 @@ struct HomeView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(recorder.isBusy || camera.isCapturingPhoto || camera.isStartingRecording)
+        .disabled(recorder.isBusy || camera.isCapturingPhoto || camera.isStartingRecording || (capturePaused && camera.isChangingRecordingPause))
         .accessibilityIdentifier("capture.shutter")
         .accessibilityLabel(shutterLabel)
     }
 
     private var shutterLabel: String {
+        if capturePaused { return resumeLabel }
         if camera.isRecording { return tr("home.shutter.stopVideo") }
         if recorder.isRecording { return tr("home.shutter.stopAudio") }
         switch mode {
@@ -557,12 +610,16 @@ struct HomeView: View {
                         .font(T.F.hero())
                         .monospacedDigit()
                         .foregroundStyle(.white)
-                    HStack(spacing: T.Sp.s2) {
-                        if recorder.isRecording {
-                            Circle().fill(T.S.failed).frame(width: 7, height: 7)
+                    if recorder.isPaused {
+                        pauseNotice
+                    } else {
+                        HStack(spacing: T.Sp.s2) {
+                            if recorder.isRecording {
+                                Circle().fill(T.S.failed).frame(width: 7, height: 7)
+                            }
+                            Eyebrow(text: recorder.isRecording ? tr("home.recording.audio") : tr("home.audio.hint"),
+                                    color: .white.opacity(0.55))
                         }
-                        Eyebrow(text: recorder.isRecording ? tr("home.recording.audio") : tr("home.audio.hint"),
-                                color: .white.opacity(0.55))
                     }
                     if let error = recorder.lastError {
                         Text(error).font(T.F.micro()).foregroundStyle(T.S.failed)
@@ -584,6 +641,30 @@ struct HomeView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var pauseNotice: some View {
+        VStack(spacing: T.Sp.s3) {
+            Label(tr("rec.pause.status"), systemImage: "pause.circle.fill")
+                .font(T.F.heading())
+                .foregroundStyle(T.S.waitingOnDark)
+                .multilineTextAlignment(.center)
+                .accessibilityIdentifier("recording.paused")
+            Text(tr("rec.pause.remember"))
+                .font(T.F.small())
+                .foregroundStyle(.white)
+            Button(action: toggleCapturePause) {
+                Label(resumeLabel, systemImage: "play.fill")
+                    .font(T.F.heading())
+                    .padding(.horizontal, T.Sp.s4)
+                    .frame(minHeight: T.touchMin)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(T.S.waitingOnDark)
+            .foregroundStyle(.black)
+            .disabled(recorder.isBusy || camera.isChangingRecordingPause)
+            .accessibilityIdentifier("capture.resume")
         }
     }
 
