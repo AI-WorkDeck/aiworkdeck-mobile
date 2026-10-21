@@ -17,8 +17,8 @@ struct RecordingLiveActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: T.Sp.s2) {
-                        RecordingDot()
-                        Text(tr("home.recording.audio", locale: context.attributes.locale))
+                        RecordingDot(paused: context.state.paused)
+                        Text(tr(context.state.paused ? "rec.pause.status" : "home.recording.audio", locale: context.attributes.locale))
                             .font(T.F.nano())
                             .tracking(0.4)
                             .foregroundStyle(T.D.fgMuted)
@@ -45,7 +45,7 @@ struct RecordingLiveActivity: Widget {
                     .padding(.horizontal, T.Sp.s2)
                 }
             } compactLeading: {
-                RecordingDot()
+                RecordingDot(paused: context.state.paused)
             } compactTrailing: {
                 RecordingTimer(state: context.state)
                     .font(T.F.mono(13, .medium))
@@ -53,7 +53,7 @@ struct RecordingLiveActivity: Widget {
                     // 定宽：数字每秒变化，不定宽会让灵动岛跟着抖
                     .frame(width: 44, alignment: .trailing)
             } minimal: {
-                RecordingDot()
+                RecordingDot(paused: context.state.paused)
             }
         }
     }
@@ -69,8 +69,8 @@ private struct RecordingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: T.Sp.s3) {
             HStack(spacing: T.Sp.s2) {
-                RecordingDot()
-                Text(tr("home.recording.audio", locale: locale))
+                RecordingDot(paused: state.paused)
+                Text(tr(state.paused ? "rec.pause.status" : "home.recording.audio", locale: locale))
                     .font(T.F.nano())
                     .tracking(0.4)
                     .foregroundStyle(T.D.fgMuted)
@@ -94,8 +94,13 @@ private struct RecordingCard: View {
 // MARK: - 零件
 
 private struct RecordingDot: View {
+    var paused: Bool
     var body: some View {
-        Circle().fill(T.S.failed).frame(width: 8, height: 8)
+        if paused {
+            Image(systemName: "pause.fill").foregroundStyle(T.S.waitingOnDark)
+        } else {
+            Circle().fill(T.S.failed).frame(width: 8, height: 8)
+        }
     }
 }
 
@@ -103,9 +108,9 @@ private struct PausedNotice: View {
     let locale: String?
 
     var body: some View {
-        Text(tr("rec.paused.interrupted", locale: locale))
+        Text(tr("rec.pause.remember", locale: locale))
             .font(T.F.micro())
-            .foregroundStyle(T.D.fgMuted)
+            .foregroundStyle(T.S.waitingOnDark)
     }
 }
 

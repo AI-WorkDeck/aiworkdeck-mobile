@@ -28,6 +28,8 @@ final class CameraService: NSObject {
     private(set) var isInterrupted = false
     private(set) var isRecording = false
     private(set) var isStartingRecording = false
+    private(set) var isRecordingPaused = false
+    private(set) var isChangingRecordingPause = false
     private(set) var permissionDenied = false
     private(set) var recordingSeconds = 0
     var mode: Mode = .photo
@@ -47,6 +49,7 @@ final class CameraService: NSObject {
     private let movieOutput = AVCaptureMovieFileOutput()
     private var timer: Timer?
     private var recordingRequest: CameraCaptureRequests.Request?
+    private var recordingURL: URL?
 
     /// 用户意图与麦克风归属都记在这里，具体动作由本类执行（见文件末尾的
     /// CameraSessionControl 一节）。拆开是为了让判定能被单测钉住。
@@ -256,6 +259,7 @@ final class CameraService: NSObject {
         recordingRequest = request
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("rec-\(UUID().uuidString).mov")
+        recordingURL = url
         let angle = rotation?.videoRotationAngleForHorizonLevelCapture ?? 90
         sessionQueue.async { [movieOutput, weak self] in
             guard let self else { return }
@@ -265,10 +269,59 @@ final class CameraService: NSObject {
             movieOutput.startRecording(to: url, recordingDelegate: self)
         }
         isRecording = true
+        isRecordingPaused = false
         recordingSeconds = 0
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.recordingSeconds += 1 }
+            Task { @MainActor in
+                guard let self else { return }
+                let url = self.recordingURL
+                let seconds = await self.recordedVideoSeconds()
+                if self.isRecording, self.recordingURL == url { self.recordingSeconds = seconds }
+            }
+        }
+    }
+
+    var canPauseRecording: Bool {
+        if #available(iOS 18.0, *) { return true }
+        return false
+    }
+
+    func toggleRecordingPause() {
+        guard #available(iOS 18.0, *), isRecording, !isChangingRecordingPause else { return }
+#if DEBUG
+        if recordingURL == nil && ProcessInfo.processInfo.arguments.contains("-AWDPausedVideoUITest") {
+            isRecordingPaused.toggle()
+            return
+        }
+#endif
+        isChangingRecordingPause = true
+        let pause = !isRecordingPaused
+        sessionQueue.async { [movieOutput, weak self] in
+            guard movieOutput.isRecording || movieOutput.isRecordingPaused else {
+                Task { @MainActor in self?.isChangingRecordingPause = false }
+                return
+            }
+            if pause { movieOutput.pauseRecording() }
+            else { movieOutput.resumeRecording() }
+        }
+    }
+
+#if DEBUG
+    func beginFakePausedVideo() {
+        guard ProcessInfo.processInfo.arguments.contains("-AWDPausedVideoUITest") else { return }
+        isRecording = true
+        isRecordingPaused = true
+        recordingSeconds = 35
+    }
+#endif
+
+    private func recordedVideoSeconds() async -> Int {
+        await withCheckedContinuation { continuation in
+            sessionQueue.async { [movieOutput] in
+                let seconds = movieOutput.recordedDuration.seconds
+                continuation.resume(returning: seconds.isFinite ? max(0, Int(seconds)) : 0)
+            }
         }
     }
 }
@@ -371,6 +424,29 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
 }
 
 extension CameraService: AVCaptureFileOutputRecordingDelegate {
+    @available(iOS 18.0, *)
+    nonisolated func fileOutput(_ output: AVCaptureFileOutput, didPauseRecordingTo fileURL: URL,
+                                from connections: [AVCaptureConnection]) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let seconds = await self.recordedVideoSeconds()
+            guard self.isRecording, self.recordingURL == fileURL else { return }
+            self.recordingSeconds = seconds
+            self.isRecordingPaused = true
+            self.isChangingRecordingPause = false
+        }
+    }
+
+    @available(iOS 18.0, *)
+    nonisolated func fileOutput(_ output: AVCaptureFileOutput, didResumeRecordingTo fileURL: URL,
+                                from connections: [AVCaptureConnection]) {
+        Task { @MainActor [weak self] in
+            guard let self, self.isRecording, self.recordingURL == fileURL else { return }
+            self.isRecordingPaused = false
+            self.isChangingRecordingPause = false
+        }
+    }
+
     nonisolated func fileOutput(
         _ output: AVCaptureFileOutput,
         didFinishRecordingTo outputFileURL: URL,
@@ -383,6 +459,9 @@ extension CameraService: AVCaptureFileOutputRecordingDelegate {
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.isRecording = false
+            self.recordingURL = nil
+            self.isRecordingPaused = false
+            self.isChangingRecordingPause = false
             self.timer?.invalidate()
             self.timer = nil
             self.recordingSeconds = 0

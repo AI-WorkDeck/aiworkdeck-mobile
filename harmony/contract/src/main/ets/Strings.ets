@@ -1324,6 +1324,34 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "zh-Hans": "人声提醒暂不可用，录音仍在继续，请记得手动停止。",
     "en": "Voice reminders are unavailable. Recording is still running; please remember to stop it manually."
   },
+  "rec.pause.audio": {
+    "zh-Hans": "暂停录音",
+    "en": "Pause audio"
+  },
+  "rec.pause.video": {
+    "zh-Hans": "暂停录像",
+    "en": "Pause video"
+  },
+  "rec.resume.audio": {
+    "zh-Hans": "继续录音",
+    "en": "Resume audio"
+  },
+  "rec.resume.video": {
+    "zh-Hans": "继续录像",
+    "en": "Resume video"
+  },
+  "rec.pause.status": {
+    "zh-Hans": "已暂停 · 当前未录制",
+    "en": "Paused · Not recording"
+  },
+  "rec.pause.remember": {
+    "zh-Hans": "请记得继续录制",
+    "en": "Remember to resume recording"
+  },
+  "rec.resume.failed": {
+    "zh-Hans": "暂时无法继续录音，仍处于暂停状态，可重试或停止并保存。",
+    "en": "Unable to resume audio. Recording is still paused. Retry, or stop and save."
+  },
   "rec.silence.title": {
     "zh-Hans": "是否停止录音？",
     "en": "Stop recording?"
@@ -1436,34 +1464,6 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "zh-Hans": "请复制地址，在浏览器中打开并完成设置，然后返回密码登录。",
     "en": "Copy this address and open it in your browser. Finish setup, then return to sign in with your password."
   },
-  "rec.pause.audio": {
-    "zh-Hans": "暂停录音",
-    "en": "Pause audio"
-  },
-  "rec.pause.video": {
-    "zh-Hans": "暂停录像",
-    "en": "Pause video"
-  },
-  "rec.resume.audio": {
-    "zh-Hans": "继续录音",
-    "en": "Resume audio"
-  },
-  "rec.resume.video": {
-    "zh-Hans": "继续录像",
-    "en": "Resume video"
-  },
-  "rec.pause.status": {
-    "zh-Hans": "已暂停 · 当前未录制",
-    "en": "Paused · Not recording"
-  },
-  "rec.pause.remember": {
-    "zh-Hans": "请记得继续录制",
-    "en": "Remember to resume recording"
-  },
-  "rec.resume.failed": {
-    "zh-Hans": "暂时无法继续录音，仍处于暂停状态，可重试或停止并保存。",
-    "en": "Unable to resume audio. Recording is still paused. Retry, or stop and save."
-  },
   "rec.pause.video.segmentNote": {
     "zh-Hans": "暂停会保存当前片段，继续后开始新片段。",
     "en": "Pausing saves this clip. Resuming starts a new clip."
@@ -1483,5 +1483,13 @@ export const ContractStrings: Record<string, Record<string, string>> = {
   "notify.channel.recordingReminders": {
     "zh-Hans": "录音提醒",
     "en": "Recording reminders"
+  },
+  "rec.silence.stop.short": {
+    "zh-Hans": "停录保存",
+    "en": "Stop"
+  },
+  "rec.silence.continue.short": {
+    "zh-Hans": "继续录音",
+    "en": "Keep"
   }
 }
