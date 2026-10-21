@@ -43,14 +43,14 @@ fun BackupConsentScreen(onClose: () -> Unit) {
                 Text(tr(if (state.enabled) "backup.enabled" else "backup.disabled"))
                 if (!state.subscriptionActive) Text(tr("backup.subscriptionRequired"))
                 if (state.enabled) TextButton(onClick = { disable = true }, enabled = !busy) { Text(tr("backup.disable"), color = Tk.L.accent) }
-                else if (state.subscriptionActive) Button(onClick = { save(true) }, enabled = !busy) { Text(tr("backup.enable")) }
+                else if (state.subscriptionActive) Button(onClick = { save(true) }, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = Tk.L.accent, contentColor = Tk.D.fg)) { Text(tr("backup.enable")) }
                 if (!state.decided) TextButton(onClick = { save(false) }, enabled = !busy) { Text(tr("backup.decline"), color = Tk.L.accent) }
             }
-            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Tk.L.accent, trackColor = Tk.L.rule)
             error?.let { Text(it, color = Tk.S.failed); TextButton(onClick = { scope.launch { load() } }, enabled = !busy) { Text(tr("project.retry"), color = Tk.L.accent) } }
             TextButton(onClick = onClose, enabled = !busy) { Text(tr("common.close"), color = Tk.L.accent) }
         }
-        if (disable) AlertDialog(onDismissRequest = { disable = false }, title = { Text(tr("backup.disable"), color = Tk.L.accent) }, text = { Text(tr("backup.disableMessage")) },
+        if (disable) AlertDialog(onDismissRequest = { disable = false }, containerColor = Tk.L.bg, titleContentColor = Tk.L.fg, textContentColor = Tk.L.fg, title = { Text(tr("backup.disable"), color = Tk.L.accent) }, text = { Text(tr("backup.disableMessage")) },
             confirmButton = { TextButton(onClick = { disable = false; save(false) }) { Text(tr("backup.disable"), color = Tk.L.accent) } },
             dismissButton = { TextButton(onClick = { disable = false }) { Text(tr("common.cancel"), color = Tk.L.accent) } })
     }

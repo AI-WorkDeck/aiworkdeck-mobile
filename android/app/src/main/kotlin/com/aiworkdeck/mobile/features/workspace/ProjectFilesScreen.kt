@@ -38,7 +38,7 @@ fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
         WorkdeckTheme(dark = false) {
             Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(Tk.Sp.gutter)) {
                 Text(tr("files.error.closed"))
-                TextButton(onClick = onClose) { Text(tr("common.close")) }
+                TextButton(onClick = onClose) { Text(tr("common.close"), color = Tk.L.accent) }
             }
         }
         return
@@ -90,13 +90,13 @@ fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
         Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(Tk.Sp.gutter)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(project.name, style = Fonts.heading(), modifier = Modifier.weight(1f))
-                TextButton(onClick = onClose) { Text(tr("common.close")) }
+                TextButton(onClick = onClose) { Text(tr("common.close"), color = Tk.L.accent) }
             }
-            OutlinedTextField(value = query, onValueChange = { query = it }, label = { Text(tr("workspace.searchFiles")) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Tk.L.accent, unfocusedBorderColor = Tk.L.rule, cursorColor = Tk.L.accent, focusedLabelColor = Tk.L.accent, unfocusedLabelColor = Tk.L.fgMuted), value = query, onValueChange = { query = it }, label = { Text(tr("workspace.searchFiles")) }, modifier = Modifier.fillMaxWidth())
             Text(folder.ifEmpty { tr("files.root") }, style = Fonts.small())
-            if (folder.isNotEmpty()) TextButton(onClick = { folder = folder.substringBeforeLast('/', "") }) { Text(tr("files.parent")) }
-            if (loading || busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text(tr(if (loading) "workspace.loading" else "workspace.downloading")) }
-            error?.let { Text(it, color = Tk.S.failed); TextButton(onClick = { scope.launch { load() } }, enabled = !busy && !loading) { Text(tr("project.retry")) } }
+            if (folder.isNotEmpty()) TextButton(onClick = { folder = folder.substringBeforeLast('/', "") }) { Text(tr("files.parent"), color = Tk.L.accent) }
+            if (loading || busy) { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Tk.L.accent, trackColor = Tk.L.rule); Text(tr(if (loading) "workspace.loading" else "workspace.downloading")) }
+            error?.let { Text(it, color = Tk.S.failed); TextButton(onClick = { scope.launch { load() } }, enabled = !busy && !loading) { Text(tr("project.retry"), color = Tk.L.accent) } }
             if (truncated) Text(tr("workspace.limit"), style = Fonts.small())
             val entries = if (query.isBlank()) folderEntries(files, folder) else files.filter { !it.isFolder && (it.name.contains(query, true) || it.path.contains(query, true)) }.map { FileEntry(it.rowID, it.name, it.path, it) }
             if (entries.isEmpty() && !loading) Text(tr("files.empty"))
@@ -111,10 +111,10 @@ fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
             }
         }
         quote?.let { (file, credits) ->
-            AlertDialog(onDismissRequest = { quote = null }, title = { Text(tr("workspace.download")) },
+            AlertDialog(onDismissRequest = { quote = null }, containerColor = Tk.L.bg, titleContentColor = Tk.L.fg, textContentColor = Tk.L.fg, title = { Text(tr("workspace.download"), color = Tk.L.accent) },
                 text = { Text(tr("workspace.quote", mapOf("name" to file.name, "credits" to credits))) },
-                confirmButton = { TextButton(onClick = { quote = null; scope.launch { open(file) } }) { Text(tr("workspace.download")) } },
-                dismissButton = { TextButton(onClick = { quote = null }) { Text(tr("common.cancel")) } })
+                confirmButton = { TextButton(onClick = { quote = null; scope.launch { open(file) } }) { Text(tr("workspace.download"), color = Tk.L.accent) } },
+                dismissButton = { TextButton(onClick = { quote = null }) { Text(tr("common.cancel"), color = Tk.L.accent) } })
         }
     }
 }
