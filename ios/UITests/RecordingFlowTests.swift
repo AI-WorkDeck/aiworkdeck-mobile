@@ -18,6 +18,45 @@ final class RecordingFlowTests: XCTestCase {
     }
 
     @MainActor
+    func testPausedAudioIsObviousAndCanResumeAndPauseAgain() {
+        checkPausedCapture(argument: "-AWDPauseRecordingUITest", resume: "Resume audio", stop: "Stop recording")
+    }
+
+    @MainActor
+    func testPausedVideoIsObviousAndCanResumeAndPauseAgain() {
+        checkPausedCapture(argument: "-AWDPausedVideoUITest", resume: "Resume video", stop: "Stop recording")
+    }
+
+    @MainActor
+    private func checkPausedCapture(argument: String, resume: String, stop: String) {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-AWDRecordingUITest", argument]
+        app.launch()
+        let paused = app.staticTexts["recording.paused"]
+        XCTAssertTrue(paused.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["capture.stopPaused"].isHittable)
+        XCTAssertEqual(app.buttons["capture.shutter"].label, resume)
+        let controls = [paused, app.buttons["capture.shutter"], app.buttons["capture.stopPaused"], app.buttons["capture.resume"]]
+        let geometry = XCTAttachment(string: (["app=\(app.frame)"] + controls.map { "\($0.identifier): \($0.frame), hittable=\($0.isHittable)" }).joined(separator: "\n"))
+        geometry.name = argument + " geometry"; geometry.lifetime = .keepAlways; add(geometry)
+        for control in controls {
+            XCTAssertTrue(control.isHittable)
+            XCTAssertTrue(app.frame.contains(control.frame), "Paused controls must remain visible")
+        }
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = argument
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        app.buttons["capture.resume"].tap()
+        XCTAssertFalse(paused.exists)
+        XCTAssertEqual(app.buttons["capture.shutter"].label, stop)
+        app.buttons["capture.pause"].tap()
+        XCTAssertTrue(paused.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["capture.shutter"].label, resume)
+    }
+
+    @MainActor
     func testSilenceReminderOffersSaveAndContinuesWithoutStopping() {
         continueAfterFailure = false
         let app = XCUIApplication()

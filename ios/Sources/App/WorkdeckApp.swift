@@ -91,6 +91,12 @@ private struct RootView: View {
                 if ProcessInfo.processInfo.arguments.contains("-AWDSilenceReminderUITest") {
                     recorder.beginFakeRecording(seconds: 300)
                 }
+                if ProcessInfo.processInfo.arguments.contains("-AWDPauseRecordingUITest") {
+                    recorder.beginFakeRecording(seconds: 35, paused: true)
+                }
+                if ProcessInfo.processInfo.arguments.contains("-AWDPausedVideoUITest") {
+                    CameraService.shared.beginFakePausedVideo()
+                }
 #endif
             }
         }
