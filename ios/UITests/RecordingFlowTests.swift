@@ -37,6 +37,13 @@ final class RecordingFlowTests: XCTestCase {
         XCTAssertTrue(paused.waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["capture.stopPaused"].isHittable)
         XCTAssertEqual(app.buttons["capture.shutter"].label, resume)
+        let controls = [paused, app.buttons["capture.shutter"], app.buttons["capture.stopPaused"], app.buttons["capture.resume"]]
+        let geometry = XCTAttachment(string: (["app=\(app.frame)"] + controls.map { "\($0.identifier): \($0.frame), hittable=\($0.isHittable)" }).joined(separator: "\n"))
+        geometry.name = argument + " geometry"; geometry.lifetime = .keepAlways; add(geometry)
+        for control in controls {
+            XCTAssertTrue(control.isHittable)
+            XCTAssertTrue(app.frame.contains(control.frame), "Paused controls must remain visible")
+        }
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = argument
         screenshot.lifetime = .keepAlways

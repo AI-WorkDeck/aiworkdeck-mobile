@@ -632,7 +632,7 @@ struct HomeView: View {
                         Button(tr("rec.saved.open"), action: onOpenLibrary)
                             .font(T.F.small()).foregroundStyle(.white)
                     }
-                    if recorder.isRecording {
+                    if recorder.isRecording && !recorder.isPaused {
                         // 中断后不会自动开麦；强制退出只能在下次启动检查草稿。
                         Text(tr("rec.background.limit"))
                             .font(T.F.micro())
