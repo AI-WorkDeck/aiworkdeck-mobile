@@ -1,102 +1,31 @@
 <nav-bar title="{{navTitle}}" />
-
 <view class="page" style="padding-bottom: {{metrics.bottomInset}}px;">
-
-  <!-- 账号区域（dev-board#839）：右上角一个胶囊开关，点任意位置翻面，滑块垫在当前项下面。
-       大陆版默认，下面的登录流程原样不动；海外版整页转英文，小程序登不了（请求域名须 ICP 备案），
-       换成说明 + 下载 App。外层 .tappable 保 44pt 可点区，里面的轨道做得紧凑。 -->
   <view class="region-bar">
-    <view
-      class="region tappable"
-      bindtap="onToggleRegion"
-      aria-role="switch"
-      aria-label="{{regionA11y}}"
-    >
-      <view class="region__track region__track--{{region}}">
-        <view class="region__thumb"></view>
+    <view class="region tappable" bindtap="onToggleRegion" aria-role="switch" aria-label="{{regionA11y}}">
+      <view class="region__track region__track--{{region}}"><view class="region__thumb"></view>
         <text class="region__label region__label--cn">{{regionCnText}}</text>
         <text class="region__label region__label--intl">{{regionIntlText}}</text>
       </view>
     </view>
   </view>
-
   <block wx:if="{{!showLogin}}">
     <view class="notice">{{notice}}</view>
-    <view class="submit tappable" bindtap="onGetApp">
-      <text class="submit__text">{{getAppText}}</text>
-    </view>
+    <view class="submit tappable" bindtap="onGetApp"><text class="submit__text">{{getAppText}}</text></view>
   </block>
-
   <block wx:if="{{showLogin}}">
-    <view class="hero">
-      <view class="hero__title">手机号登录</view>
-      <view class="hero__sub">登录后可在此查看桌面端项目，并同步现场拍摄的影像</view>
+    <view class="hero"><view class="hero__title">{{navTitle}}</view><view class="hero__sub">{{hintText}}</view></view>
+    <view class="form">
+      <view class="field"><text class="field__label">{{phoneLabel}}</text>
+        <input class="field__input mono" type="number" maxlength="11" placeholder="{{phonePlaceholder}}" value="{{phone}}" disabled="{{loggingIn}}" bindinput="onPhoneInput" />
+      </view><view class="rule"></view>
+      <view class="field"><text class="field__label">{{passwordLabel}}</text>
+        <input class="field__input" password="{{true}}" maxlength="128" placeholder="{{reviewMode ? reviewCredential : passwordPlaceholder}}" value="{{password}}" disabled="{{loggingIn}}" bindinput="onPasswordInput" />
+      </view><view class="rule"></view>
     </view>
-
-    <!-- 首屏就是一键登录：微信绑定的手机号直接换会话，不用等短信（dev-board#534）。
-         拒绝授权或服务端没开通时，下面的短信表单接着用，不是死路。 -->
-    <button
-      class="submit tappable {{wxLoggingIn ? 'submit--disabled' : ''}}"
-      open-type="getPhoneNumber"
-      bindgetphonenumber="onGetPhone"
-      disabled="{{wxLoggingIn}}"
-    >
-      <text class="submit__text">{{wxLoggingIn ? '登录中…' : wxPhoneText}}</text>
-    </button>
-
-    <view wx:if="{{!smsOpen}}" class="alt tappable" bindtap="onOpenSms">
-      <text class="alt__text">{{useSmsText}}</text>
-    </view>
-
-    <block wx:if="{{smsOpen}}">
-      <view class="form">
-        <view class="field">
-          <text class="field__label">{{phoneLabel}}</text>
-          <input
-            class="field__input mono"
-            type="number"
-            maxlength="11"
-            placeholder="请输入 11 位手机号"
-            placeholder-class="field__placeholder"
-            value="{{phone}}"
-            bindinput="onPhoneInput"
-          />
-        </view>
-        <view class="rule"></view>
-
-        <view class="field">
-          <text class="field__label">{{codeLabel}}</text>
-          <view class="field__row">
-            <input
-              class="field__input field__input--code mono"
-              type="number"
-              maxlength="6"
-              placeholder="6 位验证码"
-              placeholder-class="field__placeholder"
-              value="{{code}}"
-              bindinput="onCodeInput"
-            />
-            <view
-              class="code-btn tappable {{sendDisabled ? 'code-btn--disabled' : ''}}"
-              bindtap="onSendCode"
-            >
-              <text class="code-btn__text">{{codeButtonText}}</text>
-            </view>
-          </view>
-        </view>
-        <view class="rule"></view>
-      </view>
-
-      <view
-        class="submit submit--sms tappable {{submitDisabled ? 'submit--disabled' : ''}}"
-        bindtap="onLogin"
-      >
-        <text class="submit__text">{{loggingIn ? '登录中…' : submitText}}</text>
-      </view>
-    </block>
-
-    <view class="footer">
-      <text class="footer__text">登录即代表同意将拍摄影像同步至你的 AI WorkDeck 桌面端</text>
-    </view>
+    <view class="submit tappable {{submitDisabled ? 'submit--disabled' : ''}}" bindtap="onLogin"><text class="submit__text">{{loggingIn ? workingText : submitText}}</text></view>
+    <view class="alt tappable" bindtap="onReview"><text class="alt__text">{{reviewMode ? passwordModeText : reviewText}}</text></view>
+    <view class="alt tappable" bindtap="onRegister"><text class="alt__text">{{registerText}}</text></view>
+    <view class="alt tappable" bindtap="onReset"><text class="alt__text">{{resetText}}</text></view>
+    <view class="footer"><text class="footer__text">{{webHint}}</text></view>
   </block>
 </view>

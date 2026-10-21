@@ -3,6 +3,19 @@ import XCTest
 
 /// 账号区域（dev-board#837）：解析缺省 / 已存、主机映射、按区域可用的登录方式。
 final class AccountRegionTests: XCTestCase {
+    func testWebsiteFlowPreservesLegacyEmailIntentWithoutIdentityInURL() {
+        for flow in ["register", "reset"] {
+            XCTAssertEqual(accountFlowURL(region: .cn, method: .email, flow: flow).absoluteString,
+                           "https://aiworkdeck.com/zh/account?flow=\(flow)&legacyEmail=1")
+            XCTAssertEqual(accountFlowURL(region: .cn, method: .phone, flow: flow).absoluteString,
+                           "https://aiworkdeck.com/zh/account?flow=\(flow)")
+            XCTAssertEqual(accountFlowURL(region: .intl, method: .email, flow: flow).absoluteString,
+                           "https://workdeck.ai/en/account?flow=\(flow)")
+        }
+        XCTAssertEqual(accountFlowURL(region: .cn, method: .email, flow: "reset&email=private@example.invalid").query,
+                       "flow=register&legacyEmail=1")
+    }
+
     private var defaults: UserDefaults!
     private let suite = "AccountRegionTests"
 

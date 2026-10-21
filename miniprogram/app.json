@@ -9,7 +9,8 @@
     "pages/recharge/recharge",
     "pages/settings/settings",
     "pages/start/start",
-    "pages/download/download"
+    "pages/download/download",
+    "pages/account/account"
   ],
   "window": {
     "backgroundTextStyle": "dark",

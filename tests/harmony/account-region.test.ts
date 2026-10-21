@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   AccountRegion, DEFAULT_REGION, LoginMethod,
-  appLanguageOf, baseUrlOf, billingAvailableIn, defaultLoginMethodOf, localeOf, loginMethodsOf,
+  accountFlowUrl, appLanguageOf, baseUrlOf, billingAvailableIn, defaultLoginMethodOf, localeOf, loginMethodsOf,
   regionFromStored, regionLabelKey, switchRegion,
 } from '../../harmony/entry/src/main/ets/model/AccountRegion.ets'
 import { L10n, LOCALE_EN, LOCALE_ZH, tr, trIn } from '../../harmony/entry/src/main/ets/design/L10n.ets'
@@ -104,4 +104,16 @@ test('同区重复点不动任何存储（不误清当前项目）', async () =>
   assert.equal(await switchRegion(AccountRegion.cn, AccountRegion.cn, sink), false)
   assert.equal(sink.project, 'dev-1:p-1')
   assert.deepEqual(sink.calls, [])
+})
+
+test('website flow carries legacy email intent only for CN email and no entered identity', () => {
+  for (const flow of ['register', 'reset']) {
+    assert.equal(accountFlowUrl(AccountRegion.cn, LoginMethod.email, flow), `https://aiworkdeck.com/zh/account?flow=${flow}&legacyEmail=1`)
+    assert.equal(accountFlowUrl(AccountRegion.cn, LoginMethod.phone, flow), `https://aiworkdeck.com/zh/account?flow=${flow}`)
+    assert.equal(accountFlowUrl(AccountRegion.intl, LoginMethod.email, flow), `https://workdeck.ai/en/account?flow=${flow}`)
+  }
+  assert.equal(accountFlowUrl(AccountRegion.cn, LoginMethod.email, 'reset&email=private@example.invalid'),
+    'https://aiworkdeck.com/zh/account?flow=register&legacyEmail=1')
+  assert.match(trIn(LOCALE_ZH, 'login.legacyEmailHint'), /验证手机号.*验证原邮箱.*保留原手机端数据/)
+  assert.match(trIn(LOCALE_EN, 'login.legacyEmailHint'), /verify a phone number.*verify your original email.*keep your mobile data/)
 })

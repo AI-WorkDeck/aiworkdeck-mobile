@@ -3,6 +3,7 @@ package com.aiworkdeck.mobile
 import com.aiworkdeck.contract.ContractStrings
 import com.aiworkdeck.mobile.design.L10n
 import com.aiworkdeck.mobile.design.tr
+import com.aiworkdeck.mobile.features.auth.accountFlowUrl
 import com.aiworkdeck.mobile.features.auth.Method
 import com.aiworkdeck.mobile.features.auth.defaultMethod
 import com.aiworkdeck.mobile.features.auth.loginMethods
@@ -124,6 +125,16 @@ class AccountRegionTest {
         // intl flavor → intl，cn flavor → cn
         val expected = if (BuildConfig.FLAVOR == "intl") AccountRegion.intl else AccountRegion.cn
         assertEquals(expected, AccountRegion.ofDefault(BuildConfig.DEFAULT_REGION))
+    }
+
+    @Test fun websiteFlowPreservesLegacyEmailIntentWithoutIdentityInUrl() {
+        for (flow in listOf("register", "reset")) {
+            assertEquals("https://aiworkdeck.com/zh/account?flow=$flow&legacyEmail=1", accountFlowUrl(AccountRegion.cn, Method.Email, flow))
+            assertEquals("https://aiworkdeck.com/zh/account?flow=$flow", accountFlowUrl(AccountRegion.cn, Method.Phone, flow))
+            assertEquals("https://workdeck.ai/en/account?flow=$flow", accountFlowUrl(AccountRegion.intl, Method.Email, flow))
+        }
+        assertEquals("https://aiworkdeck.com/zh/account?flow=register&legacyEmail=1",
+            accountFlowUrl(AccountRegion.cn, Method.Email, "reset&email=private@example.invalid"))
     }
 
     @Test fun loginMethodsPerRegion() {

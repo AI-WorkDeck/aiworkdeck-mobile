@@ -37,6 +37,9 @@ class Backend(
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
     private val jsonType = "application/json; charset=utf-8".toMediaType()
 
+    suspend fun accountLogin(account: String, password: String): LoginResult =
+        login(post("/api/auth/account-login", buildJsonObject { put("account", account); put("password", password) }))
+
     suspend fun sendLoginCode(phone: String) { envelope(post("/api/auth/sms-login/send-code", buildJsonObject { put("phone", phone) })) }
     suspend fun verifyLoginCode(phone: String, code: String): LoginResult =
         login(post("/api/auth/sms-login/verify", buildJsonObject { put("phone", phone); put("code", code) }))
@@ -80,6 +83,7 @@ class Backend(
     private fun envelope(text: String): JsonObject { val el = json.parseToJsonElement(text).jsonObject; checkEnvelopeCode(el); return el }
     private fun login(text: String): LoginResult {
         val r = json.decodeFromJsonElement<LoginResult>(envelope(text)["data"] ?: throw ApiError(1, tr("error.server", mapOf("code" to 1))))
+        if (r.sessionId.isBlank() || r.user.id <= 0) throw ApiError(1, tr("error.loginNoData"))
         session.save(r.sessionId); return r
     }
     /** 全站信封：code 0 成功；4010 未登录（清会话）；其他为业务错误。裸数组不进这里。

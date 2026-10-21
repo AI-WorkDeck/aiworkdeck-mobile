@@ -1,8 +1,9 @@
 # 复制成同目录的 notes.txt 后填写（notes.txt 已 gitignore）。
 # 这份文本会原样进 App Store Connect 的「审核备注」。
 
-本应用需要账号才能使用，登录方式为手机号或邮箱 + 6 位验证码。
-已在下方 demo_user.txt / demo_password.txt 提供审核专用账号与获取验证码的方式。
+本应用需要账号才能使用，普通用户通过手机号或邮箱及密码登录；注册、找回密码在官网完成。
+审核时，请先点击“应用商店审核”（App review），再输入 demo_user.txt / demo_password.txt
+提供的审核专用账号与凭证并登录，无需请求验证码。
 
 配套说明：影像最终归档到桌面端（macOS / Windows）的项目目录，
 桌面端下载：https://www.aiworkdeck.com/zh
