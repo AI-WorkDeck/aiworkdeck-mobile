@@ -76,6 +76,10 @@ function watermarkTime(): string {
   )
 }
 
+function recordTimeText(seconds: number): string {
+  return `${Math.floor(seconds / 60)}`.padStart(2, '0') + ':' + `${seconds % 60}`.padStart(2, '0')
+}
+
 Page({
   data: {
     Icon,
@@ -130,7 +134,6 @@ Page({
   pollTimer: null as number | null,
   recordTimer: null as number | null,
   wmTimer: null as number | null,
-  recordStartedAt: 0,
   cameraCtx: null as WechatMiniprogram.CameraContext | null,
   /** 当前录像段是否已被收走（timeoutCallback 与 stopRecord 只允许一方入队） */
   segmentHandled: true,
@@ -485,7 +488,6 @@ Page({
 
   startVideo() {
     this.videoProject = getSelectedProject()
-    this.recordStartedAt = Date.now()
     this.videoElapsedMs = 0
     this.videoResumedAt = Date.now()
     this.videoPauseRequested = false
@@ -572,6 +574,7 @@ Page({
   freezeVideoClock() {
     if (this.videoResumedAt) this.videoElapsedMs += Math.max(0, Date.now() - this.videoResumedAt)
     this.videoResumedAt = 0
+    this.setData({ recordElapsed: recordTimeText(Math.floor(this.videoElapsedMs / 1000)) })
   },
 
   stopVideoSegmentForPause() {
@@ -615,7 +618,8 @@ Page({
       onFinish: () => { this.stopRecordUi(); this.showRecordingNotice() },
       onError: () => { this.stopRecordUi(); this.showRecordingNotice() },
       onInterrupted: (recordInterrupted: boolean) => this.setData({ recordInterrupted, pausePending: false }),
-      onPaused: (recordPaused: boolean) => this.setData({ recordPaused, pausePending: false }),
+      onPaused: (recordPaused: boolean) => this.setData({ recordPaused, pausePending: false,
+        recordElapsed: recordTimeText(recordingSnapshot()?.elapsedSeconds ?? 0) }),
       onMonitorUnavailable: () => this.setData({ silenceUnavailable: true }),
       onSilence: () => this.showSilenceReminder(),
     }
@@ -645,7 +649,6 @@ Page({
     const started = await startRecording(project, this.audioCallbacks())
     if (!started) return
 
-    this.recordStartedAt = Date.now()
     this.setData({ recording: true, recordPaused: false, pausePending: false, silenceUnavailable: recordingSnapshot()?.monitorUnavailable ?? false, recordSegment: 1, recordElapsed: '00:00' })
     this.startRecordTimer()
   },
@@ -658,6 +661,7 @@ Page({
   // ---------- 录制计时（录像/录音共用） ----------
 
   stopRecordUi() {
+    this.videoGeneration += 1
     this.stopRecordTimer()
     this.setData({ recordPaused: false, pausePending: false, silenceUnavailable: false, recording: false, recordElapsed: '00:00', recordSegment: 1, recordInterrupted: false })
   },
@@ -668,9 +672,7 @@ Page({
       const total = this.data.mode === 'audio'
         ? (recordingSnapshot()?.elapsedSeconds ?? 0)
         : Math.floor((this.videoElapsedMs + (this.videoResumedAt ? Date.now() - this.videoResumedAt : 0)) / 1000)
-      const mm = `${Math.floor(total / 60)}`.padStart(2, '0')
-      const ss = `${total % 60}`.padStart(2, '0')
-      this.setData({ recordElapsed: `${mm}:${ss}` })
+      this.setData({ recordElapsed: recordTimeText(total) })
     }, 1000)
   },
 

@@ -4,6 +4,7 @@
 #include <multimedia/player_framework/native_avbuffer.h>
 #include <multimedia/player_framework/native_avmuxer.h>
 #include "VoiceFrames.h"
+#include "EncodedPacket.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -117,10 +118,10 @@ private:
         auto *r = static_cast<Recording *>(user);
         OH_AVCodecBufferAttr attr{};
         if (OH_AVBuffer_GetBufferAttr(buffer, &attr) != AV_ERR_OK) r->failed = true;
-        else if (attr.flags & AVCODEC_BUFFER_FLAGS_EOS) {
-            std::lock_guard<std::mutex> lock(r->mutex); r->eos = true;
-        } else if (!(attr.flags & AVCODEC_BUFFER_FLAGS_CODEC_DATA) && attr.size > 0 &&
-                   OH_AVMuxer_WriteSampleBuffer(r->muxer, r->track, buffer) != AV_ERR_OK) r->failed = true;
+        else if (!consumeEncodedPacket(attr.size, attr.flags & AVCODEC_BUFFER_FLAGS_CODEC_DATA,
+                attr.flags & AVCODEC_BUFFER_FLAGS_EOS,
+                [r, buffer] { return OH_AVMuxer_WriteSampleBuffer(r->muxer, r->track, buffer) == AV_ERR_OK; },
+                [r] { std::lock_guard<std::mutex> lock(r->mutex); r->eos = true; })) r->failed = true;
         OH_AudioCodec_FreeOutputBuffer(codec, index);
         r->ready.notify_all();
     }

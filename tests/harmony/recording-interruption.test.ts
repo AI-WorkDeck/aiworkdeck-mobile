@@ -159,3 +159,19 @@ test('AAC finalization failure preserves playable prefix and reports the interru
   assert.equal(f.stored.length, 1)
   assert.equal(f.service.state.message, 'rec.interruption.saved')
 })
+
+
+test('stop while hardware pause is pending is saved after pause resolves instead of being dropped', async () => {
+  const f = recorderFixture()
+  let paused: () => void = () => {}
+  f.service.recorder = { pause: () => new Promise<void>(resolve => { paused = resolve }),
+    stop: async () => {}, release: async () => {} }
+  f.service.state.begin(Date.now())
+  const operation = f.service.pause()
+  await f.service.stop()
+  assert.equal(f.stored.length, 0)
+  paused()
+  await operation
+  assert.equal(f.service.state.isRecording, false)
+  assert.equal(f.stored.length, 1)
+})

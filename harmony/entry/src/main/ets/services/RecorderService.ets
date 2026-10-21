@@ -1,6 +1,5 @@
 import { abilityAccessCtrl, bundleManager, PermissionRequestResult, Permissions, Want, wantAgent, WantAgent } from '@kit.AbilityKit'
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit'
-import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo as fs } from '@kit.CoreFileKit'
 import { media } from '@kit.MediaKit'
 import { JSON as ArkJson, util } from '@kit.ArkTS'
@@ -45,6 +44,7 @@ export class RecorderService {
   private loc: Loc | null = null
   private bgRunning: boolean = false
   private busy: boolean = false
+  private stopRequested: boolean = false
   private interruptedDuringStart: boolean = false
   private encodingInterrupted: boolean = false
 
@@ -59,13 +59,13 @@ export class RecorderService {
     this.busy = true
     this.interruptedDuringStart = false
     this.encodingInterrupted = false
+    this.stopRequested = false
     try {
       const started: boolean = await this.startInner(project, loc)
       if (!started) this.state.setMessage(tr('rec.startFailed'))
       return started
     } finally {
-      this.busy = false
-      if (this.interruptedDuringStart && this.state.isRecording) this.finishInterrupted()
+      await this.finishOperation()
     }
   }
 
@@ -94,7 +94,7 @@ export class RecorderService {
     try {
       recorder = await PcmRecorder.create(file.fd)
     } catch (e) {
-      hilog.error(DOMAIN, TAG, 'createAVRecorder failed: %{public}s', messageOf(e))
+      hilog.error(DOMAIN, TAG, 'create PCM/AAC recorder failed: %{public}s', messageOf(e))
       this.closeAndRemove(file, path)
       await this.stopBackground()
       return false
@@ -110,7 +110,7 @@ export class RecorderService {
       const draft: Record<string, Object> = { 'capturedAt': Date.now() }
       const draftFd: fs.File = fs.openSync(path + '.json', fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC)
       try { fs.writeSync(draftFd.fd, ArkJson.stringify(draft)) } finally { fs.closeSync(draftFd) }
-      // 先挂事件再 prepare：prepare/start 自己就会推状态，晚挂就会漏掉第一条
+      // Bind callbacks before starting the microphone so interruptions cannot go unnoticed.
       this.listen(recorder)
       await recorder.start()
     } catch (e) {
@@ -145,7 +145,8 @@ export class RecorderService {
    * 里等人工捞，也不能因为写 manifest 出错就把它抹掉。
    */
   async stop(interrupted: boolean = false): Promise<CaptureItem | null> {
-    if (this.busy) return null
+    if (this.busy) { this.stopRequested = true; return null }
+    this.stopRequested = false
     if (!this.state.isRecording && this.recorder === null) return null
     this.busy = true
     const startedAt: number = this.state.startedAt
@@ -235,8 +236,7 @@ export class RecorderService {
     } catch (_) {
       this.interruptedDuringStart = true
     } finally {
-      this.busy = false
-      if (this.interruptedDuringStart) { this.interruptedDuringStart = false; this.finishInterrupted() }
+      await this.finishOperation()
     }
   }
 
@@ -248,8 +248,20 @@ export class RecorderService {
       await recorder.resume()
       this.state.markUserResumed(Date.now())
     } catch (_) { this.state.setMessage(tr('rec.resume.failed')) } finally {
-      this.busy = false
-      if (this.interruptedDuringStart) { this.interruptedDuringStart = false; this.finishInterrupted() }
+      await this.finishOperation()
+    }
+  }
+
+  private async finishOperation(): Promise<void> {
+    this.busy = false
+    const interrupted: boolean = this.interruptedDuringStart
+    this.interruptedDuringStart = false
+    if (interrupted && this.state.isRecording) {
+      this.state.markInterrupted(Date.now())
+      await this.stop(true)
+    } else if (this.stopRequested) {
+      this.stopRequested = false
+      await this.stop()
     }
   }
 

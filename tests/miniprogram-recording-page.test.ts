@@ -119,3 +119,19 @@ test('video pause saves the current segment before exposing resume and resume fa
   save.success({ savedFilePath: '/synthetic/saved-segment2.mp4' })
   assert.equal(instance.data.recording, false)
 })
+test('late video start callbacks cannot mutate a later audio capture UI', () => {
+  const instance = page()
+  instance.data.mode = 'video'
+  let startOptions: any
+  let stops = 0
+  instance.camera = () => ({ startRecord(o: any) { startOptions = o }, stopRecord() { stops++ } })
+  instance.startVideo()
+  instance.stopRecordUi()
+  instance.data.mode = 'audio'
+  instance.data.recording = true
+  instance.manualStopping = true
+  startOptions.success()
+  startOptions.fail()
+  assert.equal(instance.data.recording, true)
+  assert.equal(stops, 0)
+})

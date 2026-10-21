@@ -46,6 +46,68 @@ class AudioPipelineDeviceTest {
         assertTrue("speech frames: $voiceFrames", voiceFrames > 20)
     }
 
+    /** Controlled classified input to the actual running service callback; not a microphone-silence test. */
+    @Test fun testClassifiedSilenceReachesDialogNotificationAndContinue() {
+        val context = instrumentation.targetContext
+        val intent = android.content.Intent(context, com.aiworkdeck.mobile.MainActivity::class.java)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            .putExtra("awdScreenshot", true).putExtra("awdScreen", "home")
+        val activity = instrumentation.startActivitySync(intent)
+        try {
+            instrumentation.runOnMainSync { RecordingService.start(context, null, null) }
+            val threadClass = Class.forName("android.app.ActivityThread")
+            val current = threadClass.getDeclaredMethod("currentActivityThread").apply { isAccessible = true }.invoke(null)
+            val servicesField = threadClass.getDeclaredField("mServices").apply { isAccessible = true }
+            var service: RecordingService? = null
+            repeat(50) {
+                instrumentation.runOnMainSync {
+                    val services = servicesField.get(current) as Map<*, *>
+                    service = services.values.filterIsInstance<RecordingService>().firstOrNull()
+                }
+                if (service == null) Thread.sleep(100)
+            }
+            val running = checkNotNull(service)
+            val engine = RecordingService::class.java.getDeclaredField("engine").apply { isAccessible = true }.get(running)
+            assertNotNull(engine)
+            val monitor = RecordingSilence()
+            VoiceActivityDetector().use { detector ->
+                repeat(15_000) { monitor.observe(20, detector.isSpeech(ShortArray(960))) }
+            }
+            assertTrue(monitor.needsConfirmation)
+            @Suppress("UNCHECKED_CAST")
+            val callback = AudioRecorderService::class.java.getDeclaredField("onSilence").apply { isAccessible = true }.get(engine) as (Boolean) -> Unit
+            instrumentation.runOnMainSync { callback(monitor.needsConfirmation) }
+            Thread.sleep(800)
+            val manager = context.getSystemService(android.app.NotificationManager::class.java)
+            assertTrue(manager.activeNotifications.any { it.id == 3 && it.notification.channelId == "recording-reminders" })
+            assertTrue(RecordingState.isRecording)
+            assertTrue(RecordingState.silenceConfirmation)
+            val screenshot = instrumentation.uiAutomation.takeScreenshot()
+            java.io.FileOutputStream(File(context.cacheDir, "controlled-silence-dialog.png")).use {
+                screenshot.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+            }
+            instrumentation.uiAutomation.clearCache()
+            fun find(node: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
+                if (node == null) return null
+                if (node.text?.toString() == "Keep recording") return node
+                for (i in 0 until node.childCount) find(node.getChild(i))?.let { return it }
+                return null
+            }
+            val root = instrumentation.uiAutomation.rootInActiveWindow
+            var action = checkNotNull(find(root)) { "continue action must be visible" }
+            while (!action.isClickable && action.parent != null) action = action.parent
+            assertTrue(action.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
+            Thread.sleep(500)
+            assertFalse(RecordingState.silenceConfirmation)
+            assertTrue(RecordingState.isRecording)
+            assertFalse(manager.activeNotifications.any { it.id == 3 })
+        } finally {
+            instrumentation.runOnMainSync { RecordingService.stop(context) }
+            Thread.sleep(700)
+            instrumentation.runOnMainSync { activity.finish() }
+        }
+    }
+
     @Test fun testStreamingAacHasOnlyWrittenSamplesAndRemainsPlayable() {
         val file = File(instrumentation.targetContext.cacheDir, "pipeline-device-test.m4a")
         try {

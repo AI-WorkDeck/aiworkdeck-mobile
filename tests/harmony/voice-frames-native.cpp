@@ -1,10 +1,25 @@
 #include "../../harmony/entry/src/main/cpp/VoiceFrames.h"
+#include "../../harmony/entry/src/main/cpp/EncodedPacket.h"
 #include <cassert>
 #include <cstdio>
 #include <fstream>
 #include <iterator>
 #include <vector>
 int main(int argc, char **argv) {
+    std::vector<int> events;
+    const auto write = [&events] { events.push_back(1); return true; };
+    const auto end = [&events] { events.push_back(2); };
+    assert(consumeEncodedPacket(128, false, true, write, end));
+    assert((events == std::vector<int>{1, 2})); // final payload before EOS acknowledgement
+    events.clear();
+    assert(consumeEncodedPacket(2, true, true, write, end));
+    assert((events == std::vector<int>{2})); // codec config is not audio
+    events.clear();
+    assert(!consumeEncodedPacket(128, false, true, [] { return false; }, end));
+    assert((events == std::vector<int>{2})); // failure retained, EOS still wakes finalizer
+    events.clear();
+    assert(consumeEncodedPacket(0, false, true, write, end));
+    assert((events == std::vector<int>{2}));
     assert(argc == 2);
     VoiceFrames voice;
     std::vector<int16_t> zero(480, 0);
@@ -29,5 +44,5 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i + 480 <= bytes.size() / 2; i += 480, t += 10)
         if (voice.push(pcm + i, 480, t) == 0) heardVoice = true;
     assert(heardVoice);
-    std::puts("PASS: real WebRTC 300 s threshold; missing frames; pause/reset; partial frames; voice PCM resets silence");
+    std::puts("PASS: real WebRTC 300 s threshold; AAC final payload before EOS; missing frames; pause/reset; partial frames; voice PCM resets silence");
 }
