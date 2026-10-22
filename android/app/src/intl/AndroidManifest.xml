@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- intl（Google Play）专属：声明 BILLING 权限。Play Console 要先看到带此权限的包才允许建应用内商品
-     （dev-board#665）；正式接 Play Billing Library 时该库会自带同一条权限，届时可删。 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="com.android.vending.BILLING" />
-</manifest>
+<!-- intl 尚未实现 Play Billing（dev-board#665），不声明未使用的 BILLING 权限。
+     正式接入 BillingClient 后由库合并所需权限与版本信息（dev-board#1425）。 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
