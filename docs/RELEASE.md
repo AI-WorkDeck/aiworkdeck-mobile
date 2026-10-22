@@ -1,12 +1,15 @@
 # 正式上架流程
 
-两个发布面：iOS 与微信小程序。前者走 App Store 审核，后者走微信公众平台审核。
+本页介绍 iOS 与微信小程序的商店流程。Android 签名交付见 [android/README.md](../android/README.md)，
+鸿蒙见 [harmony/README.md](../harmony/README.md)。iOS 走 App Store 审核，小程序走微信公众平台审核。
 TestFlight / 体验版的日常发布见 `fastlane/Fastfile` 的 `beta` 与
 `scripts/mp-upload.js`，这份文档只讲**正式上架**。
 
 分工的口径：能用 API 做的都收在 `scripts/asc-listing.py`，凭据从
 `fastlane/.env` 读（内容见 `5-Tech/EXTERNAL_SERVICES.md` §6）。剩下几项
 Apple 没开放 API，只能在网页做，逐条列在第 3 节——那几项没做完，提审会被挡。
+
+尽调协作的版本安排、在审版本保护和命令见 [本轮发布准备](releases/2026-10-22-dd-client.md)。
 
 ```bash
 set -a; . fastlane/.env; set +a
@@ -23,7 +26,7 @@ set -a; . fastlane/.env; set +a
 | 上架区域 | **全球 175 个区**（2026-09-05 起） |
 | 文案语言 | zh-Hans（主语言）+ en-US（1.0.1 起） |
 | fastlane lane | `release`（CI 是 `ci_appstore`） |
-| Xcode target | `Workdeck` + `WorkdeckLiveActivity`（scheme `Workdeck`） |
+| Xcode target | `Workdeck` + `WorkdeckLiveActivity` + `WorkdeckWatch`（scheme `Workdeck`） |
 
 > 历史：iOS 曾有第二条 App 记录（香港主体，`com.aiworkdeck.mobile`，Team
 > `X9B97KVA84`），1.0.0(19) 被 4.3(a) Spam 驳回，2026-09-05 起整体并入北京主体，
@@ -31,19 +34,24 @@ set -a; . fastlane/.env; set +a
 
 ### 1.1 描述文件
 
-App 是**两个 bundle**：主 App + 录音 Live Activity 扩展（dev-board#404），
-各要一份 App Store 描述文件。两份都不走 `sigh`（Distribution 证书 579SG95VN2 的
+App 是**三个 bundle**：主 App、录音 Live Activity 扩展和 Watch App，
+各要一份 App Store 描述文件。三份都不走 `sigh`（Distribution 证书 579SG95VN2 的
 私钥是本机 openssl 生成的，fastlane 拿不到），由人在 ASC 建好后进 CI secret。
 
 | Bundle ID | 描述文件名 | 来源 |
 |---|---|---|
 | `com.aiworkdeck.mobile.cn` | `AI WorkDeck AppStore` | 人工在 ASC 建，CI secret `APPSTORE_PROFILE_B64` |
 | `com.aiworkdeck.mobile.cn.LiveActivity` | `AI WorkDeck LiveActivity AppStore` | 用 ASC API 建（同一张 Distribution 证书 579SG95VN2），CI secret `LA_PROFILE_B64`；文件与 ID 见总表 §6.7 |
+| `com.aiworkdeck.mobile.cn.watchkitapp` | `AI WorkDeck Watch AppStore` | CI secret `WATCH_PROFILE_B64`；文件与 ID 见总表 §6.7 |
 
 扩展的描述文件或 secret 缺失时，`ci_appstore` 会在 exportArchive 因扩展没有描述文件
 而失败——先把 secret 补上再跑。
 
 ## 2. 命令序列
+
+先读 ASC 的当前版本状态。存在正在审核的版本时，可以上传下一版本的 TestFlight 构建，
+但不要直接运行 `setversion` / `text` / `attach`：脚本没有找到可编辑版本时会返回最新版本，
+可能选中现有审单。等待现有版本上架，再创建本次版本记录并核对版本号后继续。
 
 **先看打包机的系统**：`sw_vers` 显示 beta（BuildVersion 形如 `26A5421a`，
 数字长、小写字母结尾）就**不要在本机打正式包**——包里的 `BuildMachineOSBuild`
@@ -188,7 +196,10 @@ ASC → 版本 → 媒体，或用 deliver 传 `fastlane/screenshots/`。
 `AppModel` 里有 `-AWDScreenshotMode` 启动参数（**只编进 Debug**），跳过登录
 直接摆出 `DemoData` 的项目与统计，省得为截图去准备账号；影像本身仍需真拍。
 
-## 4. 微信小程序 0.29.0 提审
+## 4. 微信小程序提审（以下为历史 0.29.0 操作记录）
+
+以下记录不代表当前线上版本或登录方式。每次发版先核对公众平台版本管理和当前应用的实际登录入口；
+尽调协作还需配置并真机验证 `case.aiworkdeck.com` 的业务域名，不能用开发工具的 `urlCheck: false` 代替。
 
 小程序的提审与发布只能维护者在公众平台手点，`scripts/mp-upload.js` 只负责
 把包传到「版本管理」。0.29.0 已上传并已设为体验版（2026-08-31）。
