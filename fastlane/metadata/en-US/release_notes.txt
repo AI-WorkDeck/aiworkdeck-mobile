@@ -1,3 +1,3 @@
-1. Improved capture and project-list layouts during rotation, preserving the camera preview and restoring the title and list position in portrait.
-2. Fixed camera startup after audio saving or recovery finishes, without having to switch between Audio and Photo modes.
-3. Updated sign-in with passwords and entry points for account registration and password recovery.
+1. Voice inactivity reminder: after 5 minutes without detected speech, choose whether to stop and save or keep recording. Recording continues until you choose.
+2. Pause and resume audio in the same recording. Video pause and resume is also available on iOS 18 and later.
+3. A prominent paused indicator makes it clear when recording is stopped temporarily, with resume and save controls. The audio Lock Screen activity also shows the paused state.
