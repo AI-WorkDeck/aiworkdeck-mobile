@@ -3,6 +3,10 @@ package com.aiworkdeck.contract
 
 object ContractStrings {
     val table: Map<String, Map<String, String>> = mapOf(
+        "dd.title" to mapOf("zh-Hans" to "受邀尽调", "en" to "Client checklists"),
+        "dd.open" to mapOf("zh-Hans" to "凭邀请码加入尽调项目", "en" to "Join a checklist with an invitation code"),
+        "dd.unavailable" to mapOf("zh-Hans" to "当前区域暂未提供尽调协作", "en" to "Client checklists are not available in this region yet"),
+        "dd.openFailed" to mapOf("zh-Hans" to "暂时无法打开尽调清单，请稍后重试", "en" to "Unable to open the checklist. Please try again."),
         "subscription.available" to mapOf("zh-Hans" to "订阅可用额度", "en" to "Subscription available"),
         "subscription.weekly" to mapOf("zh-Hans" to "当前周已用 / 上限", "en" to "Current week used / limit"),
         "subscription.monthly" to mapOf("zh-Hans" to "当前周期已用 / 上限", "en" to "Current period used / limit"),

@@ -2,10 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "contract/capabilities.json 的形状。加它的原因（dev-board#425 复审）：在此之前 capabilities.json 没有任何校验——把 \"android\" 打成 \"andriod\"，gen 出来的安卓生成物是字符串 \"undefined\"，check.mjs 依旧全绿退出码 0，四端能力开关静默失真。\n\n所以这里**端名与取值都是封闭的**：每个能力必须恰好给出 ios / miniprogram / android / harmony 四端（多一个少一个都红），取值只能是该能力自己那套枚举。新增能力或新增端 = 契约变更，要同时改这份 schema 与 contract/tools/lib.mjs 的四端渲染。",
   "type": "object",
-  "required": ["version", "clients", "capabilities", "previewExtensions", "backupConsentVersion", "voiceReminderSeconds"],
+  "required": ["version", "clients", "capabilities", "previewExtensions", "backupConsentVersion", "voiceReminderSeconds", "ddClientPortalUrl"],
   "additionalProperties": false,
   "properties": {
     "previewExtensions": {"type": "object", "required": ["ios", "miniprogram", "android", "harmony"], "additionalProperties": false, "properties": {"ios": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "miniprogram": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "android": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "harmony": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}}},
+    "ddClientPortalUrl": {"type": "string", "pattern": "^https://"},
     "voiceReminderSeconds": { "type": "integer", "const": 300 },
     "backupConsentVersion": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
     "version": { "type": "integer", "minimum": 1 },

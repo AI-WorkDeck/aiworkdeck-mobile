@@ -83,6 +83,7 @@ android {
 
 dependencies {
     implementation(project(":contract"))
+    implementation("androidx.browser:browser:1.10.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

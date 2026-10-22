@@ -1,5 +1,6 @@
 import SwiftUI
 import QuickLook
+import SafariServices
 
 /// One navigation hierarchy survives compact/regular transitions. Browsing never
 /// changes the destination of an in-flight capture.
@@ -15,7 +16,7 @@ struct WorkspaceView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     private enum Route: String, Identifiable {
-        case capture, library, queue, settings, probe
+        case capture, library, queue, settings, probe, dueDiligence
         var id: String { rawValue }
     }
 
@@ -26,6 +27,12 @@ struct WorkspaceView: View {
                 if let error {
                     Text(error).foregroundStyle(T.S.failed)
                     Button(tr("project.retry")) { Task { await load() } }
+                }
+                if AccountRegion.current == .cn {
+                    Button { route = .dueDiligence } label: {
+                        Label(tr("dd.title"), systemImage: "checklist")
+                    }
+                    .accessibilityIdentifier("workspace.dueDiligence")
                 }
                 ForEach(projects.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }) { project in
                     NavigationLink(value: project) {
@@ -104,6 +111,9 @@ struct WorkspaceView: View {
                 QueueView(onClose: { self.route = nil }).environment(model)
             case .settings:
                 SettingsView(onClose: { self.route = nil }).environment(model)
+            case .dueDiligence:
+                DdClientPortalView()
+                    .ignoresSafeArea()
             case .probe:
                 #if DEBUG
                 DualCapturePrototypeView(project: selected, onClose: { self.route = nil })
@@ -415,4 +425,12 @@ private struct FileQuickLook: UIViewControllerRepresentable {
         func numberOfPreviewItems(in controller: QLPreviewController) -> Int { 1 }
         func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> any QLPreviewItem { url as NSURL }
     }
+}
+
+/// An invitation opens within the full app and cannot overwrite SessionStore or the selected capture project.
+private struct DdClientPortalView: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: URL(string: ContractCapabilities.ddClientPortalURL)!)
+    }
+    func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
 }

@@ -2,6 +2,7 @@
 
 <view class="page" style="padding-bottom: {{metrics.bottomInset}}px;">
 
+  <view wx:if="{{!assigning}}" class="item tappable" bindtap="onOpenDd"><text class="item__name">{{ddTitle}}</text><text class="item__files">{{ddOpen}}</text><image class="item__chevron" src="{{Icon.chevron}}" mode="aspectFit" /></view>
   <view wx:if="{{loading}}" class="status">
     <text class="status__text">加载中…</text>
   </view>

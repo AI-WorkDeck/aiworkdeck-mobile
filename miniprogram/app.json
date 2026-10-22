@@ -5,6 +5,7 @@
     "pages/login/login",
     "pages/project/project",
     "pages/files/files",
+    "pages/dd-client/dd-client",
     "pages/queue/queue",
     "pages/recharge/recharge",
     "pages/settings/settings",

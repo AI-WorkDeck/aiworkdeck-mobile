@@ -2,9 +2,9 @@
   "version": 1,
   "files": {
     "transfer-state.json": "5e7f5ce8c5096f0cd251096db1ea3d9fc9cfb6d92845dd01b10823ca47abf5fd",
-    "strings.json": "75c29b953e2b844dbd3719abf19cbc64a551343b0944d995bc6bbcbf87e9a217",
+    "strings.json": "619d2986e7d1f3884ec4637bb29cdc177dc3655903995fae05a4c0b632e4c881",
     "tokens.json": "40e405666974bcfccc40b5d69b80018af812d2a5029e319840e01a41052cd311",
-    "capabilities.json": "fcf68b84ee1cb763ab1eff72568e5ac1dcefee3279553d486bc095df4fdab333",
+    "capabilities.json": "5fd38e7e389a07b19859c31338469d3fd29616f3297eea4a1855f9727e266c80",
     "products.json": "34892377f9cc00aace5dca4e65d654deb2ad2e1521d30d0770ff063e0f7c9ac7"
   }
 }

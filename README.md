@@ -112,3 +112,12 @@ docs/specs/              设计文档
 - 贡献适用内核仓库的 [CLA](https://github.com/AI-WorkDeck/aiworkdeck/blob/master/legal/CLA.md)（对贡献内容的双许可再授权集中于公司主体）。
 - 商标：AI WorkDeck 标识（K 形图形）已在中国注册（第 9 类）；「AI WorkDeck」文字为商号与未注册商标（™），受反不正当竞争法保护——见 [TRADEMARKS.md](https://github.com/AI-WorkDeck/aiworkdeck/blob/master/legal/TRADEMARKS.md)。
 - 治理与社区：见内核仓库 [GOVERNANCE.md](https://github.com/AI-WorkDeck/aiworkdeck/blob/master/GOVERNANCE.md)。
+
+
+### 受邀尽调（dev-board #1421）
+
+完整手机 App 内保留原账户与项目目录。客户在“受邀尽调”入口输入律师的邀请码，清单、拍照/选文件、核验反馈与律师复核共用案件库 `/client/` 页面。入口地址由 `contract/capabilities.json` 的 `ddClientPortalUrl` 生成，不在各端手抄；目前仅大陆账户显示入口。
+
+iOS 从工作区列表打开系统应用内浏览器，Android 从首页打开 Custom Tab，鸿蒙从首页或设置打开 ArkWeb 页面；小程序项目列表打开 `web-view`。不把 App 的账户凭据传给网页，不调用原生 SessionStore 登录切换。网页邀请会话保留于当前标签页的 sessionStorage，刷新可恢复；关闭该网页会话后需重新输入邀请码。鸿蒙拍照调用系统相机选择器，普通附件调用文件选择器。
+
+上线必须同时部署新的客户门户和案件库后端；原生构建通过不表示门户已更新。小程序需将门户的 HTTPS 域名按微信业务域名流程登记并真机验证。系统通知由门户/桌面开启权限后呈现；本改动不包含手机 App 已关闭时的 APNs/厂商推送。手机页面的真实拍照、上传与文件下载仍须在新门户部署后验收。

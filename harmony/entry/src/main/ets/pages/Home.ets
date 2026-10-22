@@ -351,6 +351,10 @@ export struct Home {
           .layoutWeight(2)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (ServiceLocator.region === 'cn') {
+          Text(tr('dd.title')).fontSize(Tk.Ty.nano).fontColor(Tk.D.fgMuted).height(Tk.touchMin)
+            .onClick((): void => { this.stack.pushPath(new NavPathInfo('DdClient', '')) })
+        }
         Text(tr('home.settings'))
           .fontSize(Tk.Ty.nano)
           .fontColor(Tk.D.fgMuted)

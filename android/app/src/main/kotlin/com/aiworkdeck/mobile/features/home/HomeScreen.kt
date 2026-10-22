@@ -1,5 +1,9 @@
 package com.aiworkdeck.mobile.features.home
 
+import androidx.browser.customtabs.CustomTabsIntent
+import com.aiworkdeck.contract.ContractCapabilities
+import com.aiworkdeck.mobile.services.ServiceLocator
+import com.aiworkdeck.mobile.services.AccountRegion
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -267,6 +271,10 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
         Row {
             androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Projects) }, enabled = !camera.isRecording) { Text(project?.name ?: tr("library.unknownProject"), color = Tk.D.fg) }
             if (project != null) androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Files) }, enabled = !camera.isRecording) { Text(tr("workspace.files"), color = Tk.D.fg) }
+            if (ServiceLocator.prefs.accountRegion == AccountRegion.cn) androidx.compose.material3.TextButton(
+                onClick = { CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, android.net.Uri.parse(ContractCapabilities.ddClientPortalUrl)) },
+                enabled = !camera.isRecording && !RecordingState.isRecording,
+            ) { Text(tr("dd.title"), color = Tk.D.fg) }
             if (landscape) androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("home.settings"), color = Tk.D.fg) }
         }
         if (!landscape) Header(
