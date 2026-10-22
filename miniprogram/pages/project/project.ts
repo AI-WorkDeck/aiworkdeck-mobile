@@ -23,6 +23,8 @@ function catalogGroup(list: RelayProject[]): ProjectGroup[] {
 Page({
   data: {
     Icon,
+    ddTitle: t('dd.title'),
+    ddOpen: t('dd.open'),
     emptyText: t('empty.projects'),
     navTitle: t('project.title'),
     retryText: t('project.retry'),
@@ -50,6 +52,8 @@ Page({
       showBack: getCurrentPages().length > 1,
     })
   },
+
+  onOpenDd() { wx.navigateTo({ url: '/pages/dd-client/dd-client' }) },
 
   onShow() {
     this.loadProjects()

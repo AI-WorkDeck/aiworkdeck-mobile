@@ -19,6 +19,7 @@
                             "degradedNotice": "cap.noIntlAccount" }
   },
   "previewExtensions": {"ios": ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tif", "tiff", "docx", "pptx", "xlsx", "pdf", "m4a", "mp3", "wav", "aac", "caf", "aif", "aiff", "mp4", "mov", "m4v"], "miniprogram": ["jpg", "jpeg", "png", "gif", "docx", "pptx", "xlsx", "pdf", "m4a", "mp3", "wav", "aac", "mp4"], "android": ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tif", "tiff", "docx", "pptx", "xlsx", "pdf", "m4a", "mp3", "wav", "aac", "caf", "aif", "aiff", "mp4", "mov", "m4v"], "harmony": ["jpg", "jpeg", "png", "gif", "webp", "bmp", "docx", "pptx", "xlsx", "pdf", "m4a", "mp3", "wav", "aac", "mp4"]},
+  "ddClientPortalUrl": "https://case.aiworkdeck.com/client/",
   "voiceReminderSeconds": 300,
   "backupConsentVersion": "2026-10-11"
 }

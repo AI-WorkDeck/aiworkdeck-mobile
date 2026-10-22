@@ -172,6 +172,10 @@ export struct Settings {
   @Builder
   archiveGroup() {
     this.eyebrow(tr('settings.archiveTarget'))
+    if (ServiceLocator.region === 'cn') {
+      Text(tr('dd.title')).fontSize(Tk.Ty.small).fontColor(Tk.L.accent).height(Tk.touchMin)
+        .onClick((): void => { this.stack.pushPath(new NavPathInfo('DdClient', '')) })
+    }
     this.infoRow(tr('home.eyebrow'), this.projectName)
     Text(tr('backup.title') + ' · ' + (this.backup === null ? DASH : tr(this.backup.enabled ? 'backup.enabled' : 'backup.disabled')))
       .height(Tk.touchMin).fontColor(Tk.L.accent)

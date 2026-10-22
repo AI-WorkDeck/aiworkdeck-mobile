@@ -13,6 +13,7 @@ import { Queue } from './Queue'
 import { Settings } from './Settings'
 import { ProjectFiles } from './ProjectFiles'
 import { Viewer } from './Viewer'
+import { DdClient } from './DdClient'
 
 const DOMAIN: number = 0x0000
 const TAG: string = 'Root'
@@ -97,6 +98,8 @@ struct Root {
       ProjectPicker({ stack: this.stack, switching: true })
     } else if (name === 'ProjectAssign') {
       ProjectPicker({ stack: this.stack, assigning: true })
+    } else if (name === 'DdClient') {
+      DdClient({ stack: this.stack })
     } else if (name === 'ProjectFiles') {
       ProjectFiles({ stack: this.stack })
     } else if (name === PAGE_SETTINGS) {

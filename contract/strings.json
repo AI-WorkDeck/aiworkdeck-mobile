@@ -1,4 +1,8 @@
 {
+  "dd.title": {"zh-Hans": "受邀尽调", "en": "Client checklists"},
+  "dd.open": {"zh-Hans": "凭邀请码加入尽调项目", "en": "Join a checklist with an invitation code"},
+  "dd.unavailable": {"zh-Hans": "当前区域暂未提供尽调协作", "en": "Client checklists are not available in this region yet"},
+  "dd.openFailed": {"zh-Hans": "暂时无法打开尽调清单，请稍后重试", "en": "Unable to open the checklist. Please try again."},
   "subscription.available": {"zh-Hans": "订阅可用额度", "en": "Subscription available"},
   "subscription.weekly": {"zh-Hans": "当前周已用 / 上限", "en": "Current week used / limit"},
   "subscription.monthly": {"zh-Hans": "当前周期已用 / 上限", "en": "Current period used / limit"},
