@@ -35,7 +35,7 @@ struct QueueView: View {
                     }.padding(.horizontal, T.Sp.gutter)
                 }
                 .background(T.L.bg)
-                .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 420)
+                .foldAwareSidebarWidth(in: geometry, minimum: 280, ideal: 340)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .principal) {
@@ -76,7 +76,7 @@ struct QueueView: View {
                     }
                 }
             }
-            .navigationSplitViewStyle(.balanced)
+            .navigationSplitViewStyle(.automatic)
             .environment(\.horizontalSizeClass, wide ? .regular : .compact)
             .onChange(of: wide, initial: true) { _, wide in
                 columnVisibility = !wide && selectedID != nil ? .detailOnly : .all

@@ -82,13 +82,13 @@ struct LibraryView: View {
                 } else {
                     NavigationSplitView(columnVisibility: $columnVisibility, preferredCompactColumn: $compactColumn) {
                         browser
-                            .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 400)
+                            .foldAwareSidebarWidth(in: geometry, minimum: 280, ideal: 320)
                             .toolbar(.hidden, for: .navigationBar)
                     } detail: {
                         detail(wide: wide)
                             .toolbar(.hidden, for: .navigationBar)
                     }
-                    .navigationSplitViewStyle(.balanced)
+                    .navigationSplitViewStyle(.automatic)
                     .environment(\.horizontalSizeClass, wide ? .regular : .compact)
                 }
             }

@@ -63,7 +63,7 @@ struct SettingsView: View {
                 }
                 .navigationTitle(tr("home.settings"))
                 .navigationBarTitleDisplayMode(.inline)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 300)
+                .foldAwareSidebarWidth(in: geometry, minimum: 200, ideal: 240)
             } detail: {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -253,7 +253,7 @@ struct SettingsView: View {
                 }
             }
             }
-            .navigationSplitViewStyle(.balanced)
+            .navigationSplitViewStyle(.automatic)
             .onChange(of: wide, initial: true) { _, wide in
                 columnVisibility = wide ? .all : .detailOnly
             }
