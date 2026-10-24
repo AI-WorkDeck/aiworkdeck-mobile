@@ -35,7 +35,24 @@ jobs:
           trap 'xcrun simctl delete "$DEVICE_ID"' EXIT
           xcrun simctl boot "$DEVICE_ID"
           xcrun simctl bootstatus "$DEVICE_ID" -b
-          xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -collect-test-diagnostics never -test-timeouts-enabled YES -default-test-execution-time-allowance 900 -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:WorkdeckTests -only-testing:WorkdeckUITests/LoginFlowTests -only-testing:WorkdeckUITests/CrossScreenRotationTests -only-testing:WorkdeckUITests/WorkspaceFlowTests/testCaptureLayoutSurvivesRepeatedRotationAndProjectEntry -only-testing:WorkdeckUITests/WorkspaceFlowTests/testLandscapeLoginControlsRemainReachableAfterShowingKeyboard CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"
+          TESTS=(
+            -only-testing:WorkdeckTests
+            -only-testing:WorkdeckUITests/LoginFlowTests
+            -only-testing:WorkdeckUITests/DuoSecondaryScreensTests
+            -only-testing:WorkdeckUITests/DuoWorkspaceContinuityTests
+          )
+          # XCUIDevice.orientation does not change Duo's physical pose in DeviceHub.
+          # Exercise those rotations on iPhone; Duo pose/split-view acceptance is
+          # recorded separately with the active inner display before release.
+          if [ '${{ matrix.device }}' = iphone ]; then
+            TESTS+=(
+              -only-testing:WorkdeckUITests/CrossScreenRotationTests
+              -only-testing:WorkdeckUITests/CaptureContinuityTests
+              -only-testing:WorkdeckUITests/WorkspaceFlowTests/testCaptureLayoutSurvivesRepeatedRotationAndProjectEntry
+              -only-testing:WorkdeckUITests/WorkspaceFlowTests/testLandscapeLoginControlsRemainReachableAfterShowingKeyboard
+            )
+          fi
+          xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -collect-test-diagnostics never -test-timeouts-enabled YES -default-test-execution-time-allowance 900 -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$DEVICE_ID" "${TESTS[@]}" CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"
       - name: Export simulator screenshots and recordings
         if: always()
         run: |
