@@ -92,9 +92,26 @@ protocol ProjectFilesServing: Sendable {
     func preparePull(project: RelayProject, file: RemoteProjectFile) async throws -> ProjectFilePull
     /// Call only after the user accepts the quote. Repeat the same pull to retry.
     func download(_ pull: ProjectFilePull) async throws -> URL
+    /// Keeps a shared cached preview alive until this reader releases its handle.
+    func preview(project: RelayProject, file: RemoteProjectFile) async throws -> ProjectFilePreview
     func cancel(_ pull: ProjectFilePull) async throws
     func removePreview(_ url: URL) async
     func close() async
+}
+
+final class ProjectFilePreview: Sendable {
+    let url: URL
+    private let release: @Sendable () -> Void
+    init(url: URL, release: @escaping @Sendable () -> Void) { self.url = url; self.release = release }
+    deinit { release() }
+}
+
+extension ProjectFilesServing {
+    func preview(project: RelayProject, file: RemoteProjectFile) async throws -> ProjectFilePreview {
+        let pull = try await preparePull(project: project, file: file)
+        let url = try await download(pull)
+        return ProjectFilePreview(url: url) { Task { await self.removePreview(url) } }
+    }
 }
 
 /// Directory navigation uses metadata only; entering a folder never pulls bytes.

@@ -14,6 +14,7 @@ struct WorkspaceView: View {
     @State private var client: (any ProjectFilesServing)?
     @State private var route: Route?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var readingBusy = false
 
     private enum Route: String, Identifiable {
         case capture, library, queue, settings, probe, dueDiligence
@@ -50,6 +51,7 @@ struct WorkspaceView: View {
                     Text(tr("project.emptyHint")).foregroundStyle(.secondary)
                 }
             }
+            .disabled(readingBusy)
             .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: tr("workspace.searchProjects"))
             .navigationTitle(tr("workspace.title"))
             // The large title disappears when iPhone split navigation collapses
@@ -76,7 +78,7 @@ struct WorkspaceView: View {
             if let selected, let client {
                 ProjectContentsView(project: selected, client: client, onReadingChanged: { reading in
                     columnVisibility = reading ? .detailOnly : .all
-                })
+                }, onBusyChanged: { readingBusy = $0 })
                     .environment(model)
                     .navigationTitle(selected.name)
                     .toolbar {
@@ -180,6 +182,7 @@ private struct ProjectContentsView: View {
     let project: RelayProject
     let client: any ProjectFilesServing
     var onReadingChanged: (Bool) -> Void = { _ in }
+    var onBusyChanged: (Bool) -> Void = { _ in }
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showingFileList = false
     @State private var focusReading = false
@@ -282,6 +285,7 @@ private struct ProjectContentsView: View {
             }
         }
         .onChange(of: download?.id) { _, value in onReadingChanged(value != nil) }
+        .onChange(of: downloadBusy) { _, value in onBusyChanged(value) }
         .task(id: storageKey) {
             if loadedProjectID != storageKey {
                 query = ""; scrollID = nil; directory = ""
@@ -320,6 +324,7 @@ private struct ProjectContentsView: View {
                 }
                 .padding(.horizontal)
                 .accessibilityIdentifier("workspace.storageLocation")
+                .disabled(downloadBusy)
             }
             TextField(tr("workspace.searchFiles"), text: $query)
                 .textFieldStyle(.roundedBorder).padding(.horizontal)
@@ -407,7 +412,7 @@ private struct ProjectContentsView: View {
         let targetKey = storageKey
         generation = request
         loading = true; error = nil
-        if loadedProjectID != targetKey { listing = nil }
+        if loadedProjectID != targetKey { listing = nil; loadedProjectID = nil }
         do {
             let result = try await client.files(in: target)
             try Task.checkCancellation()
@@ -427,9 +432,9 @@ private struct FileDownloadView: View {
     let project: RelayProject
     let file: RemoteProjectFile
     let client: any ProjectFilesServing
-    @State private var pull: ProjectFilePull?
     @State private var quote: ProjectFileQuote?
-    @State private var url: URL?
+    @State private var preview: ProjectFilePreview?
+    private var url: URL? { preview?.url }
     @State private var busy = false
     let onClose: () -> Void
     let onBusyChanged: (Bool) -> Void
@@ -479,9 +484,6 @@ private struct FileDownloadView: View {
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .task { await loadQuote() }
         .onChange(of: busy) { _, value in onBusyChanged(value) }
-        .onDisappear {
-            if let url { Task { await client.removePreview(url) } }
-        }
     }
 
     private func loadQuote() async {
@@ -496,12 +498,10 @@ private struct FileDownloadView: View {
         guard file.supportsPreview else { return }
         busy = true; error = nil
         do {
-            if pull == nil { pull = try await client.preparePull(project: project, file: file) }
-            guard let pull else { return }
-            url = try await client.download(pull)
+            preview = try await client.preview(project: project, file: file)
         } catch let error as ProjectFileTerminalError {
             self.error = error.localizedDescription
-            pull = nil; approved = false; quote = nil
+            approved = false; quote = nil
         } catch { self.error = error.localizedDescription }
         busy = false
     }

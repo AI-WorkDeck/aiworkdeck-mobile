@@ -11,16 +11,32 @@ struct FilePaneGeometry {
     init(size: CGSize, reserved: [CGRect], reading: Bool, showList: Bool, focus: Bool) {
         let full = CGRect(origin: .zero, size: size)
         let hidden = full.offsetBy(dx: size.width, dy: 0)
+        let division = reserved.first { rect in
+            rect.intersects(full) && (rect.height >= size.height * 0.8 || rect.width >= size.width * 0.8)
+        }
+        // A single pane must also stay clear of the active fold. Prefer the
+        // reading side above/right; lists use the opposite side.
+        let singleReader: CGRect
+        let singleList: CGRect
+        if let division, division.height >= size.height * 0.8,
+           division.minX > 0, division.maxX < size.width {
+            singleList = CGRect(x: 0, y: 0, width: division.minX, height: size.height)
+            singleReader = CGRect(x: division.maxX, y: 0, width: size.width - division.maxX, height: size.height)
+        } else if let division, division.width >= size.width * 0.8,
+                  division.minY > 0, division.maxY < size.height {
+            singleReader = CGRect(x: 0, y: 0, width: size.width, height: division.minY)
+            singleList = CGRect(x: 0, y: division.maxY, width: size.width, height: size.height - division.maxY)
+        } else {
+            singleReader = full; singleList = full
+        }
+        let largerList = singleList.width * singleList.height >= singleReader.width * singleReader.height ? singleList : singleReader
         guard reading else {
-            list = full; reader = hidden; listVisible = true; readerVisible = false
+            list = largerList; reader = hidden; listVisible = true; readerVisible = false
             return
         }
         if showList {
-            list = full; reader = hidden; listVisible = true; readerVisible = false
+            list = largerList; reader = hidden; listVisible = true; readerVisible = false
             return
-        }
-        let division = reserved.first { rect in
-            rect.intersects(full) && (rect.height >= size.height * 0.8 || rect.width >= size.width * 0.8)
         }
         if !focus, let division, division.height >= size.height * 0.8,
            division.minX >= 240, size.width - division.maxX >= 240 {
@@ -38,9 +54,9 @@ struct FilePaneGeometry {
             reader = CGRect(x: width, y: 0, width: size.width - width, height: size.height)
             listVisible = true; readerVisible = true
         } else {
-            list = showList ? full : hidden
-            reader = showList ? hidden : full
-            listVisible = showList; readerVisible = !showList
+            list = hidden
+            reader = singleReader.width * singleReader.height >= singleList.width * singleList.height ? singleReader : singleList
+            listVisible = false; readerVisible = true
         }
     }
 }
