@@ -47,6 +47,8 @@ final class AudioRecorderService: NSObject {
 
     private var recorder: AVAudioRecorder?
     private var draft: RecordingDraft?
+    /// The destination captured at start, including an explicitly unassigned recording.
+    var activeDraft: RecordingDraft? { draft }
     private var clock = RecordingClock()
     private var timer: Timer?
     private let activity = RecordingActivityController()
