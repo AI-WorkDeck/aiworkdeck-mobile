@@ -78,7 +78,9 @@ struct WorkspaceView: View {
             if let selected, let client {
                 ProjectContentsView(project: selected, client: client, onReadingChanged: { reading in
                     columnVisibility = reading ? .detailOnly : .all
-                }, onBusyChanged: { readingBusy = $0 })
+                }, onBusyChanged: { busy in
+                    if self.selected?.id == selected.id { readingBusy = busy }
+                })
                     .environment(model)
                     .navigationTitle(selected.name)
                     .toolbar {
@@ -100,6 +102,10 @@ struct WorkspaceView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .onChange(of: selected?.id) { _, _ in
+            readingBusy = false
+            columnVisibility = .all
+        }
         .tint(T.L.accent)
         .task {
             client = model.workspaceFiles()

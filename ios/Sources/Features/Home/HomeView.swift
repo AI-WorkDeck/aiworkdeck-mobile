@@ -588,6 +588,9 @@ struct HomeView: View {
         Button {
             if capturePaused { toggleCapturePause(); return }
             if recorder.isRecording {
+                // Keep a resumed draft's destination visible while stop saves it.
+                recordingDestination = destination
+                recordingProject = destinationProject
                 Task { await recorder.stop() }
                 return
             }
