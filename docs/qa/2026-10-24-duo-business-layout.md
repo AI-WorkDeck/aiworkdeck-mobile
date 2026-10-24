@@ -46,6 +46,8 @@
 
 本地产物位于 `/tmp/awd-duo-oct24/`，独立回归另见 `/tmp/awd-capture-1127-legacy-final.xcresult`、`/tmp/awd-duo-library-fold-width.xcresult`、`/tmp/awd-final-review-54546d1.xcresult`。最终本地组合使用当前产品源码（`54546d1`；后续 `c2fc746` 仅改签名工具）。远端检查仍须通过，不能将本地结果混称完整发布验收。
 
+单独补测录音集成时给测试模拟器授予麦克风权限，但运行停在首次通知权限弹窗；已通过激活外屏截图确认，随后结束本次测试进程，未计为通过。`final-audio-integration.xcresult`、`audio-integration-pending-outer.png` 保留该未完成尝试。普通 iPhone 的既有 AAC 集成通过记录仍有效，不替代本轮 Duo 或真机验收。
+
 ## 正式签名与上传边界
 
 本地 `beta/release` 改用原位 P12 与口令文件，创建随机口令的临时钥匙串，只配置本次签名，结束或异常时移除自己的条目。默认钥匙串保持不变，其他任务添加的条目保留。构建号从全 App 的 builds 与 buildUploads 读取，仍须串行发布。
