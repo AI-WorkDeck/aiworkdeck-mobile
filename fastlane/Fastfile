@@ -1,3 +1,8 @@
+require "open3"
+require "securerandom"
+require "shellwords"
+require "tmpdir"
+
 # 全程走 App Store Connect API Key，不做交互登录、不碰 2FA。
 # Key 是 Admin 角色（创建 Distribution 证书必须 Admin，Developer 角色会卡住）。
 #
@@ -31,10 +36,8 @@ end
 # 改这条 lane 前先读：
 # 1) 凭据走 jwzy 团队那套 ASC Key（Admin），从 fastlane/.env 读
 #    （ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_PATH）。
-# 2) 不跑 cert/sigh：Distribution 证书 579SG95VN2 的私钥是本机 openssl 生成的，
-#    fastlane 拿不到；2026-08-20 已导入 fastlane_build keychain，profile
-#    （AI WorkDeck AppStore / VCM2ZDV8KD）也已装进本机。机器重装后照
-#    5-Tech/EXTERNAL_SERVICES.md §6.7 把 p12 与 .mobileprovision 装回来即可。
+# 2) 不跑 cert/sigh：从总表 §6.7 的原位 p12 导入临时 keychain，结束后删除。
+#    三份既有 .mobileprovision 须先安装；本地参数见 LOCAL_SIGNING.md。
 #    另：这张证书的公钥/SHA-1 已绑 App 备案，撤销重建=同步做备案变更。
 # 3) 不需要把构建挂进测试组：内部测试组（942673b0…）建的时候
 #    就是 hasAccessToAllBuilds，构建处理完自动对组可见。
@@ -60,48 +63,93 @@ def check_release_ipa(path)
   sh("python3", File.expand_path("../scripts/check-ios-release.py", __dir__), "ipa", path)
 end
 
+# security 的参数含口令，不能用会回显命令的 fastlane sh。
+def local_signing_security(*args)
+  output, _error, status = Open3.capture3("/usr/bin/security", *args)
+  UI.user_error!("Local signing #{args.first} failed (exit #{status.exitstatus}); command output withheld") unless status.success?
+  output
+end
+
+def local_signing_keychains
+  local_signing_security("list-keychains", "-d", "user").lines.map { |line| line.strip.delete_prefix('"').delete_suffix('"') }
+end
+
+def with_local_signing_keychain
+  paths = %w[DIST_P12_PATH DIST_P12_PASSWORD_FILE].map do |name|
+    value = ENV[name].to_s
+    UI.user_error!("Set #{name} to the existing asset path (EXTERNAL_SERVICES.md §6.7)") if value.empty?
+    path = File.expand_path(value)
+    UI.user_error!("#{name} must reference a readable file") unless File.file?(path) && File.readable?(path)
+    path
+  end
+  p12_password = File.read(paths[1]).strip
+  UI.user_error!("DIST_P12_PASSWORD_FILE is empty") if p12_password.empty?
+  keychain_password = SecureRandom.hex(32)
+  Dir.mktmpdir("awd-signing-") do |dir|
+    keychain = File.join(dir, "signing.keychain-db")
+    begin
+      local_signing_security("create-keychain", "-p", keychain_password, keychain)
+      local_signing_security("set-keychain-settings", "-lut", "7200", keychain)
+      local_signing_security("unlock-keychain", "-p", keychain_password, keychain)
+      local_signing_security("import", paths[0], "-k", keychain, "-P", p12_password,
+                             "-T", "/usr/bin/codesign", "-T", "/usr/bin/security")
+      local_signing_security("set-key-partition-list", "-S", "apple-tool:,apple:,codesign:",
+                             "-s", "-k", keychain_password, keychain)
+      local_signing_security("list-keychains", "-d", "user", "-s", keychain, *local_signing_keychains.reject { |path| path == keychain })
+      yield keychain
+    ensure
+      if File.exist?(keychain)
+        begin
+          # Preserve concurrent additions; remove only this helper's keychain.
+          own_path = File.realpath(keychain)
+          remaining = local_signing_keychains.reject { |path| (File.realpath(path) rescue File.expand_path(path)) == own_path }
+          local_signing_security("list-keychains", "-d", "user", "-s", *remaining)
+        ensure
+          local_signing_security("delete-keychain", keychain)
+        end
+      end
+    end
+  end
+ensure
+  p12_password&.clear
+  keychain_password&.clear
+end
+
+def next_app_build_number
+  python = ENV.fetch("ASC_PYTHON", File.expand_path("../.venv/bin/python", __dir__))
+  value = sh(python, File.expand_path("../scripts/asc-next-build.py", __dir__)).strip
+  UI.user_error!("asc-next-build.py did not return a positive build number") unless value.match?(/\A[1-9]\d*\z/)
+  value.to_i
+end
+
+# Build-only helper: no ASC calls or uploads. beta/release retain their upload steps.
+def build_local_ipa(build)
+  UI.user_error!("Build number must be a positive integer") unless build.to_s.match?(/\A[1-9]\d*\z/)
+  check_release_environment
+  root = File.expand_path("..", __dir__)
+  sh("xcodegen", "generate", "--spec", File.join(root, "ios/project.yml"), "--project", File.join(root, "ios"))
+  with_local_signing_keychain do |keychain|
+    flags = Shellwords.escape("--keychain #{Shellwords.escape(keychain)}")
+    ipa = build_app(
+      project: File.join(root, "ios/Workdeck.xcodeproj"), scheme: "Workdeck", configuration: "Release",
+      export_method: "app-store", output_directory: File.join(root, "ios/build"), output_name: "Workdeck.ipa",
+      xcargs: "CURRENT_PROJECT_VERSION=#{build} OTHER_CODE_SIGN_FLAGS=#{flags}",
+      skip_profile_detection: true,
+      export_options: { signingStyle: "manual", teamID: "8WKHZVR2W8", provisioningProfiles: app_store_profiles, manageAppVersionAndBuildNumber: false }
+    )
+    check_release_ipa(ipa)
+    ipa
+  end
+end
+
 platform :ios do
   desc "打包并上传 TestFlight（com.aiworkdeck.mobile.cn，ASC App 6803309103）"
   lane :beta do
-    check_release_environment
     key = asc_key
-
-    # 用专属 keychain，不用 login.keychain——避免 codesign 撞 ACL 弹窗 /
-    # errSecInternalComponent。这台机上 fastlane_build 已经有 Distribution 私钥。
-    kc_path = File.expand_path("~/Library/Keychains/fastlane_build-db")
-    UI.user_error!("fastlane_build keychain 不存在，先照 EXTERNAL_SERVICES.md §6.7 恢复") unless File.exist?(kc_path)
-    unlock_keychain(path: "fastlane_build", password: "fastlane_build", set_default: false)
-
-    # 构建号取 TestFlight 上的最新值 +1：ASC 对重复 build 号会报
-    # ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE，Claws 踩过。
-    build = latest_testflight_build_number(
-      api_key: key, app_identifier: "com.aiworkdeck.mobile.cn", initial_build_number: 0
-    ) + 1
+    build = next_app_build_number
     UI.message("本次 build 号 #{build}")
-    # 不用 increment_build_number 改 xcodeproj——工程是 XcodeGen 从 project.yml 生成的，
-    # 改了下次 generate 就冲掉，build 号永远停在 1，ASC 会按重复号拒收（Claws 踩过）。
-    # 走 xcargs 在构建期注入。
-    sh("cd .. && xcodegen generate --spec ios/project.yml --project ios") rescue nil
+    ipa = build_local_ipa(build)
 
-    ipa = build_app(
-      project: "ios/Workdeck.xcodeproj",
-      scheme: "Workdeck",
-      configuration: "Release",
-      export_method: "app-store",
-      output_directory: "ios/build",
-      output_name: "Workdeck.ipa",
-      xcargs: "CURRENT_PROJECT_VERSION=#{build}",
-      # 只认下面显式给的映射，不让 gym 自己去扫工程里各 target 的签名设置——
-      # 扫出来的东西一旦与手建 profile 对不上，xcodebuild 直接 EXPORT FAILED。
-      skip_profile_detection: true,
-      export_options: {
-        signingStyle: "manual",
-        teamID: "8WKHZVR2W8",
-        provisioningProfiles: app_store_profiles
-      }
-    )
-
-    check_release_ipa(ipa)
     upload_to_testflight(
       ipa: ipa,
       api_key: key,
@@ -138,39 +186,11 @@ end
 platform :ios do
   desc "打正式版包并上传（App Store 侧用 scripts/asc-listing.py 收尾）"
   lane :release do
-    check_release_environment
     key = asc_key
-
-    kc_path = File.expand_path("~/Library/Keychains/fastlane_build-db")
-    UI.user_error!("fastlane_build keychain 不存在，先照 EXTERNAL_SERVICES.md §6.7 恢复") unless File.exist?(kc_path)
-    unlock_keychain(path: "fastlane_build", password: "fastlane_build", set_default: false)
-
-    # 构建号仍然跟 TestFlight 上的最大值走：正式版与测试版在 ASC 里共用
-    # 同一个构建号空间，各算各的一定撞 DUPLICATE。
-    build = latest_testflight_build_number(
-      api_key: key, app_identifier: "com.aiworkdeck.mobile.cn", initial_build_number: 0
-    ) + 1
+    build = next_app_build_number
     UI.message("#{marketing_version} (#{build})")
-    sh("cd .. && xcodegen generate --spec ios/project.yml --project ios") rescue nil
+    ipa = build_local_ipa(build)
 
-    ipa = build_app(
-      project: "ios/Workdeck.xcodeproj",
-      scheme: "Workdeck",
-      configuration: "Release",
-      export_method: "app-store",
-      output_directory: "ios/build",
-      output_name: "Workdeck.ipa",
-      xcargs: "CURRENT_PROJECT_VERSION=#{build}",
-      # 理由同 beta：只认下面显式给的 profile 映射。
-      skip_profile_detection: true,
-      export_options: {
-        signingStyle: "manual",
-        teamID: "8WKHZVR2W8",
-        provisioningProfiles: app_store_profiles
-      }
-    )
-
-    check_release_ipa(ipa)
     upload_to_testflight(
       ipa: ipa,
       api_key: key,
