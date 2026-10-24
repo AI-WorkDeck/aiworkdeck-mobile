@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 import plistlib
+import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -52,6 +54,53 @@ class ReleaseChecks(unittest.TestCase):
             info = self.metadata(); info[key] = bad
             with self.subTest(key=key, value=bad), self.assertRaises(ValueError):
                 release.check_metadata(info)
+
+    def test_suffix_free_beta_rc_and_unknown_toolchains_cannot_ship(self):
+        # Apple released these beta/RC Xcode builds without a lowercase suffix.
+        # The beta case keeps the approved SDK to isolate the Xcode rejection.
+        for xcode, xcode_metadata, xcode_build, sdk, sdk_build in [
+            ("27.1", "2710", "27A9269", "27.1", "24A94232"),
+            ("27.2", "2720", "27B48", "27.2", "24B113"),
+            ("27.1", "2710", "27A9276", "27.1", "24A94232"),
+            ("27.1", "2710", "27A9275", "27.1", "24A94233"),
+        ]:
+            with self.subTest(xcode_build=xcode_build, sdk_build=sdk_build):
+                with self.assertRaisesRegex(ValueError, "not verified for release"):
+                    release.check_environment("26A434", f"Xcode {xcode}\nBuild version {xcode_build}", sdk, sdk_build)
+                info = self.metadata()
+                info.update(DTXcode=xcode_metadata, DTXcodeBuild=xcode_build,
+                            DTSDKName="iphoneos" + sdk, DTSDKBuild=sdk_build)
+                with self.assertRaisesRegex(ValueError, "not verified for release"):
+                    release.check_metadata(info)
+
+    def test_suffix_free_rc_and_unverified_macos_cannot_ship(self):
+        for build in ("26B118", "26A435", None):
+            with self.subTest(build=build):
+                with self.assertRaisesRegex(ValueError, "macOS build.*not verified"):
+                    release.check_environment(build, "Xcode 27.1\nBuild version 27A9275", "27.1", "24A94232")
+                info = self.metadata(); info["BuildMachineOSBuild"] = build
+                with self.assertRaisesRegex(ValueError, "macOS build.*not verified"):
+                    release.check_metadata(info)
+
+    def test_known_builds_with_mismatched_versions_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "versions do not match"):
+            release.check_environment("26A434", "Xcode 27.2\nBuild version 27A9275", "27.1", "24A94232")
+        for key, value in (("DTXcode", "2720"), ("DTSDKName", "iphoneos27.2")):
+            info = self.metadata(); info[key] = value
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, "versions do not match"):
+                release.check_metadata(info)
+
+    def test_unverified_ipa_exits_nonzero_before_fastlane_can_upload(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "beta.ipa"
+            info = self.metadata(); info["DTXcodeBuild"] = "27A9269"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("Payload/Workdeck.app/Info.plist", plistlib.dumps(info))
+            result = subprocess.run([sys.executable, release.__file__, "ipa", str(path)],
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("not verified for release", result.stderr)
+            self.assertEqual(result.stdout, "")
 
     def test_ambiguous_ipa_cannot_ship(self):
         with tempfile.TemporaryDirectory() as folder:

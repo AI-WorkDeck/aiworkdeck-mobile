@@ -7,30 +7,39 @@ import re
 import subprocess
 import zipfile
 
-MIN_VERSION = (27, 1)
+# Verified on 2026-10-24; new builds require an explicit review of Apple releases
+# and the runner image before adding them here. Build-number shape is not proof:
+# Xcode 27.1 beta (27A9269) and macOS 27.2 RC (26B118) have no lowercase suffix.
+# https://developer.apple.com/news/releases/?id=10152026a
+# https://developer.apple.com/news/releases/
+# https://github.com/actions/runner-images/blob/bf53d8b8e0ec75c9f9ef200efc8a4cf21ce128b6/images/macos/xcode-27-arm64-Readme.md
+VERIFIED_TOOLCHAINS = {
+    ("27A9275", "24A94232"): {"xcode": "27.1", "DTXcode": "2710", "sdk": "27.1"},
+}
+VERIFIED_MACOS_BUILDS = {"26A434"}  # macOS 27.0.1; xcode-27 image 20261012.0260.1
 
 
-def version(value):
-    if not re.fullmatch(r"\d+\.\d+(?:\.\d+)?", value):
-        raise ValueError(f"Unrecognized version: {value!r}")
-    return tuple(map(int, value.split(".")))
+def check_macos_build(value):
+    if value not in VERIFIED_MACOS_BUILDS:
+        raise ValueError(f"macOS build {value!r} is not verified for release; review the allowlist before shipping")
 
 
-def release_build(value, label):
-    # Final Xcode 27.1 uses the same build as its RC, despite the runner's path.
-    if not re.fullmatch(r"\d+[A-Z]\d+", str(value)):
-        raise ValueError(f"{label} is missing or is not a release build: {value!r}")
+def verified_toolchain(xcode_build, sdk_build):
+    toolchain = VERIFIED_TOOLCHAINS.get((xcode_build, sdk_build))
+    if toolchain is None:
+        raise ValueError(f"Xcode/SDK builds {xcode_build!r}/{sdk_build!r} are not verified for release; "
+                         "review the allowlist before shipping")
+    return toolchain
 
 
 def check_environment(os_build, xcode_output, sdk_version, sdk_build):
-    release_build(os_build, "macOS")
+    check_macos_build(os_build)
     match = re.fullmatch(r"Xcode ([\d.]+)\s+Build version (\S+)", xcode_output.strip())
-    if not match or version(match[1]) < MIN_VERSION:
-        raise ValueError("Release requires Xcode 27.1 or newer")
-    release_build(match[2], "Xcode")
-    if version(sdk_version) < MIN_VERSION:
-        raise ValueError("Release requires iPhoneOS SDK 27.1 or newer")
-    release_build(sdk_build, "iPhoneOS SDK")
+    if not match:
+        raise ValueError("Unrecognized Xcode version output")
+    toolchain = verified_toolchain(match[2], sdk_build)
+    if (match[1], sdk_version) != (toolchain["xcode"], toolchain["sdk"]):
+        raise ValueError("Xcode/iPhoneOS SDK versions do not match the verified release builds")
     return {"macOSBuild": os_build, "xcode": match[1], "xcodeBuild": match[2],
             "sdk": sdk_version, "sdkBuild": sdk_build}
 
@@ -40,14 +49,11 @@ def check_metadata(info):
         raise ValueError("IPA does not contain the AI WorkDeck main app")
     if info.get("DTPlatformName") != "iphoneos":
         raise ValueError("IPA must target iPhoneOS, not a simulator")
-    xcode = str(info.get("DTXcode", ""))
-    if not xcode.isdigit() or int(xcode) < 2710:
-        raise ValueError("IPA was not built with Xcode 27.1 or newer")
-    sdk = re.fullmatch(r"iphoneos([\d.]+)", str(info.get("DTSDKName", "")))
-    if not sdk or version(sdk[1]) < MIN_VERSION:
-        raise ValueError("IPA was not built with iPhoneOS SDK 27.1 or newer")
-    for key in ("BuildMachineOSBuild", "DTXcodeBuild", "DTSDKBuild"):
-        release_build(info.get(key), key)
+    check_macos_build(info.get("BuildMachineOSBuild"))
+    toolchain = verified_toolchain(info.get("DTXcodeBuild"), info.get("DTSDKBuild"))
+    if (str(info.get("DTXcode", "")), info.get("DTSDKName")) != (
+            toolchain["DTXcode"], "iphoneos" + toolchain["sdk"]):
+        raise ValueError("IPA Xcode/iPhoneOS SDK versions do not match the verified release builds")
     return {key: info.get(key) for key in (
         "CFBundleIdentifier", "CFBundleShortVersionString", "CFBundleVersion",
         "DTXcode", "DTXcodeBuild", "DTSDKName", "DTSDKBuild", "BuildMachineOSBuild")}
