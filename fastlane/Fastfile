@@ -51,9 +51,19 @@ def asc_key
   )
 end
 
+# Check both the selected toolchain and the exported binary before any upload.
+def check_release_environment
+  sh("python3", File.expand_path("../scripts/check-ios-release.py", __dir__), "environment")
+end
+
+def check_release_ipa(path)
+  sh("python3", File.expand_path("../scripts/check-ios-release.py", __dir__), "ipa", path)
+end
+
 platform :ios do
   desc "打包并上传 TestFlight（com.aiworkdeck.mobile.cn，ASC App 6803309103）"
   lane :beta do
+    check_release_environment
     key = asc_key
 
     # 用专属 keychain，不用 login.keychain——避免 codesign 撞 ACL 弹窗 /
@@ -73,7 +83,7 @@ platform :ios do
     # 走 xcargs 在构建期注入。
     sh("cd .. && xcodegen generate --spec ios/project.yml --project ios") rescue nil
 
-    build_app(
+    ipa = build_app(
       project: "ios/Workdeck.xcodeproj",
       scheme: "Workdeck",
       configuration: "Release",
@@ -91,7 +101,9 @@ platform :ios do
       }
     )
 
+    check_release_ipa(ipa)
     upload_to_testflight(
+      ipa: ipa,
       api_key: key,
       app_identifier: "com.aiworkdeck.mobile.cn",
       # 不等处理完是为了省 5-15 分钟；内部测试组是 hasAccessToAllBuilds，
@@ -126,6 +138,7 @@ end
 platform :ios do
   desc "打正式版包并上传（App Store 侧用 scripts/asc-listing.py 收尾）"
   lane :release do
+    check_release_environment
     key = asc_key
 
     kc_path = File.expand_path("~/Library/Keychains/fastlane_build-db")
@@ -140,7 +153,7 @@ platform :ios do
     UI.message("#{marketing_version} (#{build})")
     sh("cd .. && xcodegen generate --spec ios/project.yml --project ios") rescue nil
 
-    build_app(
+    ipa = build_app(
       project: "ios/Workdeck.xcodeproj",
       scheme: "Workdeck",
       configuration: "Release",
@@ -157,7 +170,9 @@ platform :ios do
       }
     )
 
+    check_release_ipa(ipa)
     upload_to_testflight(
+      ipa: ipa,
       api_key: key,
       app_identifier: "com.aiworkdeck.mobile.cn",
       skip_waiting_for_build_processing: true,
@@ -191,6 +206,7 @@ end
 platform :ios do
   desc "CI：发行版 macOS 上打正式包并上传"
   lane :ci_appstore do
+    check_release_environment
     setup_ci   # 建临时 keychain 并设为默认（fastlane_tmp_keychain，空口令）
 
     # 取构建号要走 ASC API 的 python 脚本，venv 先备好
@@ -232,7 +248,7 @@ platform :ios do
     sh("cd .. && .venv/bin/python -m unittest discover -s scripts/tests")
     build = sh("cd .. && .venv/bin/python scripts/asc-next-build.py").strip.to_i
     UI.message("CI #{marketing_version} (#{build})")
-    build_app(
+    ipa = build_app(
       project: "ios/Workdeck.xcodeproj", scheme: "Workdeck", configuration: "Release",
       export_method: "app-store", output_directory: "ios/build", output_name: "Workdeck.ipa",
       xcargs: "CURRENT_PROJECT_VERSION=#{build}",
@@ -241,7 +257,8 @@ platform :ios do
         signingStyle: "manual", teamID: "8WKHZVR2W8",
         provisioningProfiles: app_store_profiles
       })
-    upload_to_testflight(api_key: key, app_identifier: "com.aiworkdeck.mobile.cn",
+    check_release_ipa(ipa)
+    upload_to_testflight(ipa: ipa, api_key: key, app_identifier: "com.aiworkdeck.mobile.cn",
                          skip_waiting_for_build_processing: true,
                          changelog: ENV["CHANGELOG"] || "CI 构建（发行版 macOS）。")
   end

@@ -17,26 +17,17 @@ jobs:
     concurrency:
       group: appstore-upload
       cancel-in-progress: false
-    runs-on: macos-latest
+    # macos-latest still ships Xcode 26.6. The Xcode 27 image has the release
+    # 27.1 toolchain (27A9275), even if its resolved directory contains "RC".
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
-      - name: 环境自检（runner 必须是发行版 macOS——整个工作流存在的原因）
-        run: |
-          sw_vers
-          BUILD=$(sw_vers -buildVersion)
-          # beta/seed 的 BuildVersion 是「主版本+字母+4~5 位数字+小写字母」（如 26A5421a）
-          if [[ "$BUILD" =~ ^[0-9]+[A-Z][0-9]{4,}[a-z]$ ]]; then
-            echo "::error::runner 系统 $BUILD 像是 beta 版，打出来的包会被 ITMS-90111 拒"
-            exit 1
-          fi
-
-      - name: 选最新的非 beta Xcode
-        run: |
-          XC=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)
-          if [ -n "$XC" ]; then sudo xcode-select -s "$XC"; fi
-          xcodebuild -version
+      - name: 检查发行版系统、Xcode 与 iOS SDK（至少 27.1）
+        run: python3 scripts/check-ios-release.py environment
 
       - name: 安装 xcodegen 与 fastlane
         run: |
