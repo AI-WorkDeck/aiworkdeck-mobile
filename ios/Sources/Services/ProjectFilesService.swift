@@ -16,6 +16,7 @@ actor ProjectFilesService: ProjectFilesServing {
     private var desktopAvailability: [String: Bool] = [:]
     private var downloads: [UUID: Task<URL, Error>] = [:]
     private var previews: [UUID: Preview] = [:]
+    private var previewReaders: [UUID: Int] = [:]
     private var bytesOnDisk: Int64 = 0
     private var ledger: [String: Pending]?
 
@@ -211,8 +212,32 @@ actor ProjectFilesService: ProjectFilesServing {
         try saveLedger()
     }
 
+    func preview(project: RelayProject, file: RemoteProjectFile) async throws -> ProjectFilePreview {
+        // Reserve before the first suspension: closing another reader cannot
+        // delete the shared file between preparePull and download.
+        let pull = try preparePull(project: project, file: file)
+        previewReaders[pull.requestID, default: 0] += 1
+        do {
+            let url = try await download(pull)
+            try ensureOpen()
+            return ProjectFilePreview(url: url) {
+                Task { await self.releasePreview(pull.requestID) }
+            }
+        } catch {
+            releasePreview(pull.requestID)
+            throw error
+        }
+    }
+
+    private func releasePreview(_ requestID: UUID) {
+        let remaining = max(0, (previewReaders[requestID] ?? 0) - 1)
+        previewReaders[requestID] = remaining == 0 ? nil : remaining
+        if remaining == 0, let preview = previews[requestID] { removePreview(preview.url) }
+    }
+
     func removePreview(_ url: URL) {
-        guard let entry = previews.first(where: { $0.value.url == url }) else { return }
+        guard let entry = previews.first(where: { $0.value.url == url }),
+              previewReaders[entry.key, default: 0] == 0 else { return }
         try? FileManager.default.removeItem(at: entry.value.url)
         bytesOnDisk -= entry.value.size
         previews[entry.key] = nil
@@ -223,6 +248,7 @@ actor ProjectFilesService: ProjectFilesServing {
         for task in downloads.values { task.cancel() }
         try? FileManager.default.removeItem(at: cacheDirectory)
         previews.removeAll()
+        previewReaders.removeAll()
         // In-flight streams release their own reserved bytes when cancellation resumes them.
     }
 

@@ -14,6 +14,7 @@ struct WorkspaceView: View {
     @State private var client: (any ProjectFilesServing)?
     @State private var route: Route?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var readingBusy = false
 
     private enum Route: String, Identifiable {
         case capture, library, queue, settings, probe, dueDiligence
@@ -50,6 +51,7 @@ struct WorkspaceView: View {
                     Text(tr("project.emptyHint")).foregroundStyle(.secondary)
                 }
             }
+            .disabled(readingBusy)
             .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: tr("workspace.searchProjects"))
             .navigationTitle(tr("workspace.title"))
             // The large title disappears when iPhone split navigation collapses
@@ -74,7 +76,11 @@ struct WorkspaceView: View {
             }
         } detail: {
             if let selected, let client {
-                ProjectContentsView(project: selected, client: client)
+                ProjectContentsView(project: selected, client: client, onReadingChanged: { reading in
+                    columnVisibility = reading ? .detailOnly : .all
+                }, onBusyChanged: { busy in
+                    if self.selected?.id == selected.id { readingBusy = busy }
+                })
                     .environment(model)
                     .navigationTitle(selected.name)
                     .toolbar {
@@ -96,6 +102,10 @@ struct WorkspaceView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .onChange(of: selected?.id) { _, _ in
+            readingBusy = false
+            columnVisibility = .all
+        }
         .tint(T.L.accent)
         .task {
             client = model.workspaceFiles()
@@ -157,10 +167,32 @@ struct WorkspaceView: View {
     }
 }
 
+/// Used by the recording panel. The client and file navigation live for this capture flow.
+struct CaptureProjectContentsView: View {
+    @Environment(AppModel.self) private var model
+    let project: RelayProject
+    @State private var client: (any ProjectFilesServing)?
+
+    var body: some View {
+        Group {
+            if let client {
+                ProjectContentsView(project: project, client: client)
+            } else { ProgressView() }
+        }
+        .task { if client == nil { client = model.workspaceFiles() } }
+    }
+}
+
 private struct ProjectContentsView: View {
     @Environment(AppModel.self) private var model
     let project: RelayProject
     let client: any ProjectFilesServing
+    var onReadingChanged: (Bool) -> Void = { _ in }
+    var onBusyChanged: (Bool) -> Void = { _ in }
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var showingFileList = false
+    @State private var focusReading = false
+    @State private var downloadBusy = false
     @State private var tab = "files"
     @State private var query = ""
     @State private var listing: ProjectFileListing?
@@ -200,24 +232,89 @@ private struct ProjectContentsView: View {
                 Text(tr("workspace.records")).tag("records")
             }
             .pickerStyle(.segmented)
+            .disabled(downloadBusy)
             .padding()
+            .onChange(of: tab) { _, _ in closeReading() }
             if tab == "records" {
                 LibraryView(onClose: { tab = "files" }, fixedProject: project, embedded: true)
                     .environment(model)
                     .preferredColorScheme(.dark)
             } else {
-                files
+                GeometryReader { proxy in
+                    let geometry = FilePaneGeometry(size: proxy.size, reserved: reservedFrames(in: proxy),
+                                                    reading: download != nil, showList: showingFileList,
+                                                    focus: focusReading || typeSize.isAccessibilitySize)
+                    FilePaneLayout(geometry: geometry) {
+                        files
+                            .clipped()
+                            .opacity(geometry.listVisible ? 1 : 0)
+                            .allowsHitTesting(geometry.listVisible)
+                            .accessibilityHidden(!geometry.listVisible)
+                        ZStack {
+                            if let target = download {
+                                FileDownloadView(project: target.project, file: target.file, client: client,
+                                                 onClose: closeReading, onBusyChanged: { busy in
+                                                     if download?.id == target.id { downloadBusy = busy }
+                                                 })
+                                    .id(target.id)
+                            }
+                        }
+                        .clipped()
+                        .opacity(geometry.readerVisible ? 1 : 0)
+                        .allowsHitTesting(geometry.readerVisible)
+                        .accessibilityHidden(!geometry.readerVisible)
+                    }
+                    .clipped()
+                }
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if download != nil {
+                HStack {
+                    Button {
+                        showingFileList.toggle()
+                        focusReading = false
+                    } label: {
+                        Label(tr(showingFileList ? "workspace.returnReading" : "workspace.fileList"), systemImage: "list.bullet")
+                    }
+                    .accessibilityIdentifier("workspace.toggleFileList")
+                    Spacer()
+                    Button {
+                        focusReading.toggle(); showingFileList = false
+                    } label: {
+                        Label(tr("workspace.focusReading"), systemImage: "arrow.up.left.and.arrow.down.right")
+                    }
+                    .accessibilityIdentifier("workspace.focusReading")
+                }
+                .buttonStyle(.bordered)
+                .padding(.horizontal)
+            }
+        }
+        .onChange(of: download?.id) { _, value in onReadingChanged(value != nil) }
+        .onChange(of: downloadBusy) { _, value in onBusyChanged(value) }
         .task(id: storageKey) {
             if loadedProjectID != storageKey {
                 query = ""; scrollID = nil; directory = ""
+                closeReading()
                 await load()
             }
         }
-        .sheet(item: $download) { target in
-            FileDownloadView(project: target.project, file: target.file, client: client)
+    }
+
+    private func closeReading() {
+        download = nil; showingFileList = false; focusReading = false; downloadBusy = false
+    }
+
+    private func reservedFrames(in proxy: GeometryProxy) -> [CGRect] {
+        if #available(iOS 27.1, *) {
+            return (proxy.reservedRegions(kind: .division) + proxy.reservedRegions(kind: .occlusion))
+                .filter(\.isActive).map { region in
+                    CGRect(x: region.frame.minX - region.margins.leading, y: region.frame.minY - region.margins.top,
+                           width: region.frame.width + region.margins.leading + region.margins.trailing,
+                           height: region.frame.height + region.margins.top + region.margins.bottom)
+                }
         }
+        return []
     }
 
     private var files: some View {
@@ -233,6 +330,7 @@ private struct ProjectContentsView: View {
                 }
                 .padding(.horizontal)
                 .accessibilityIdentifier("workspace.storageLocation")
+                .disabled(downloadBusy)
             }
             TextField(tr("workspace.searchFiles"), text: $query)
                 .textFieldStyle(.roundedBorder).padding(.horizontal)
@@ -278,7 +376,10 @@ private struct ProjectContentsView: View {
                         Divider()
                     }
                     ForEach(visibleFiles, id: \.rowID) { file in
-                        Button { download = DownloadSelection(file: file, project: storageProject) } label: {
+                        Button {
+                            download = DownloadSelection(file: file, project: storageProject)
+                            showingFileList = false
+                        } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "doc")
                                 VStack(alignment: .leading, spacing: 4) {
@@ -294,6 +395,8 @@ private struct ProjectContentsView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .disabled(downloadBusy)
+                        .background(download?.file.rowID == file.rowID ? T.L.accentWash : Color.clear)
                         .id(file.rowID)
                         .accessibilityIdentifier("workspace.file.\(file.id)")
                         Divider()
@@ -315,7 +418,7 @@ private struct ProjectContentsView: View {
         let targetKey = storageKey
         generation = request
         loading = true; error = nil
-        if loadedProjectID != targetKey { listing = nil }
+        if loadedProjectID != targetKey { listing = nil; loadedProjectID = nil }
         do {
             let result = try await client.files(in: target)
             try Task.checkCancellation()
@@ -332,63 +435,65 @@ private struct ProjectContentsView: View {
 }
 
 private struct FileDownloadView: View {
-    @Environment(\.dismiss) private var dismiss
     let project: RelayProject
     let file: RemoteProjectFile
     let client: any ProjectFilesServing
-    @State private var pull: ProjectFilePull?
     @State private var quote: ProjectFileQuote?
-    @State private var url: URL?
+    @State private var preview: ProjectFilePreview?
+    private var url: URL? { preview?.url }
     @State private var busy = false
+    let onClose: () -> Void
+    let onBusyChanged: (Bool) -> Void
     @State private var approved = false
     @State private var error: String?
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            HStack {
+                Text(file.name).font(.headline).lineLimit(2)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                Button(tr("common.close"), action: onClose).disabled(busy)
+                    .fixedSize().frame(minHeight: T.touchMin).layoutPriority(1)
+                    .accessibilityIdentifier("workspace.closeReading")
+            }.padding()
             Group {
                 if let url {
                     FileQuickLook(url: url)
                         .accessibilityIdentifier("workspace.preview")
                 } else {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text(file.path).font(.subheadline).foregroundStyle(.secondary)
-                        if !file.supportsPreview { Text(tr("workspace.unsupportedPreview")).accessibilityIdentifier("workspace.unsupported") }
-                        if busy { ProgressView(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudDownload" : "workspace.downloading")) }
-                        if let error { Text(error).foregroundStyle(T.S.failed) }
-                        if let quote, !approved {
-                            Text((project.isCloud || file.source == "backup" || file.source == "cloud") ? tr("workspace.cloudHint") : tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)]))
-                            Button(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudOpen" : "workspace.download")) { approved = true; Task { await download() } }
-                                .buttonStyle(.borderedProminent)
-                                .accessibilityIdentifier("workspace.confirmDownload")
-                                .disabled(busy)
-                        } else if approved, !busy {
-                            Text(tr("workspace.downloadRetryHint"))
-                            Button(tr("workspace.retryDownload")) { Task { await download() } }
-                                .accessibilityIdentifier("workspace.retryDownload")
-                        } else if !busy, error != nil {
-                            Button(tr("project.retry")) { Task { await loadQuote() } }
-                        }
-                        Spacer()
-                    }.padding()
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: T.Sp.s4) {
+                            Text(file.path).font(.subheadline).foregroundStyle(.secondary)
+                            if !file.supportsPreview { Text(tr("workspace.unsupportedPreview")).accessibilityIdentifier("workspace.unsupported") }
+                            if busy { ProgressView(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudDownload" : "workspace.downloading")) }
+                            if let error { Text(error).foregroundStyle(T.S.failed) }
+                            if let quote, !approved {
+                                Text((project.isCloud || file.source == "backup" || file.source == "cloud") ? tr("workspace.cloudHint") : tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)]))
+                                Button(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudOpen" : "workspace.download")) { approved = true; Task { await download() } }
+                                    .buttonStyle(.borderedProminent)
+                                    .accessibilityIdentifier("workspace.confirmDownload")
+                                    .disabled(busy)
+                            } else if approved, !busy {
+                                Text(tr("workspace.downloadRetryHint"))
+                                Button(tr("workspace.retryDownload")) { Task { await download() } }
+                                    .accessibilityIdentifier("workspace.retryDownload")
+                            } else if !busy, error != nil {
+                                Button(tr("project.retry")) { Task { await loadQuote() } }
+                            }
+                            Spacer()
+                        }.padding().frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
-            .navigationTitle(file.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(tr("common.close")) { dismiss() }.disabled(busy)
-                }
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .interactiveDismissDisabled(busy)
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .task { await loadQuote() }
-        .onDisappear {
-            if let url { Task { await client.removePreview(url) } }
-        }
+        .onChange(of: busy) { _, value in onBusyChanged(value) }
     }
 
     private func loadQuote() async {
-        guard file.supportsPreview else { return }
+        guard file.supportsPreview, quote == nil, url == nil, !busy else { return }
         busy = true; error = nil
         do { quote = try await client.quote(for: file, in: project) }
         catch { self.error = error.localizedDescription }
@@ -399,12 +504,10 @@ private struct FileDownloadView: View {
         guard file.supportsPreview else { return }
         busy = true; error = nil
         do {
-            if pull == nil { pull = try await client.preparePull(project: project, file: file) }
-            guard let pull else { return }
-            url = try await client.download(pull)
+            preview = try await client.preview(project: project, file: file)
         } catch let error as ProjectFileTerminalError {
             self.error = error.localizedDescription
-            pull = nil; approved = false; quote = nil
+            approved = false; quote = nil
         } catch { self.error = error.localizedDescription }
         busy = false
     }

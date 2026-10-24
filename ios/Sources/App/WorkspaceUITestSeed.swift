@@ -51,6 +51,9 @@ actor WorkspaceUITestSeed: ProjectFilesServing {
         ProjectFilePull(project: project, file: file)
     }
     func download(_ pull: ProjectFilePull) async throws -> URL {
+        if ProcessInfo.processInfo.arguments.contains("-AWDWorkspaceSlowDownload") {
+            try await Task.sleep(for: .seconds(2))
+        }
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appendingPathComponent("sample.pdf")

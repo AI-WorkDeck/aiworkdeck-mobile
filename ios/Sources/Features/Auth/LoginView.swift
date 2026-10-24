@@ -76,6 +76,8 @@ struct LoginView: View {
                 Text(tr(region == .cn && method == .email ? "login.legacyEmailHint" : "login.webHint"))
                     .font(T.F.micro()).foregroundStyle(T.L.fgMuted)
             }.padding(T.Sp.gutter)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity)
         }.background(T.L.bg)
         .accessibilityIdentifier("login.scroll")
         .scrollDismissesKeyboard(.interactively)

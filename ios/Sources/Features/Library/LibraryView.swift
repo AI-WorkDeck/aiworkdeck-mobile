@@ -21,15 +21,22 @@ struct LibraryView: View {
     @State private var selected: Set<UUID> = []
     @State private var confirmDelete = false
     @State private var viewer: ViewerTarget?
+    @State private var compactColumn: NavigationSplitViewColumn = .sidebar
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var focusPreview = false
+    @State private var scrollID: UUID?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var appeared = false
     @State private var movingItem: CaptureItem?
     @State private var moveError: String?
 
-    /// 全屏看大图的目标：同一天的件 + 起始下标。
+    /// 预览目标：同一天的件 + 当前下标。
     private struct ViewerTarget: Identifiable {
-        let items: [CaptureItem]
-        let index: Int
-        var id: UUID { items[index].id }
+        let dayID: Date
+        var items: [CaptureItem]
+        var index: Int
+        var id: Date { dayID }
     }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -51,43 +58,58 @@ struct LibraryView: View {
     private var selectedItems: [CaptureItem] { items.filter { selected.contains($0.id) } }
     private var isGrid: Bool { viewMode == "grid" }
 
-    private var gridColumns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: 1.5), count: max(2, min(4, columns)))
+    private func gridColumns(width: CGFloat) -> [GridItem] {
+        let minimumWidth: CGFloat = dynamicTypeSize.isAccessibilitySize ? 156 : 104
+        let count = max(1, min(columns, Int(width / minimumWidth)))
+        return Array(repeating: GridItem(.flexible(), spacing: 1.5), count: count)
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            T.D.bg.ignoresSafeArea()
-
-            ScrollView {
-                if items.isEmpty {
-                    emptyState
-                } else if isGrid {
-                    grid
+        GeometryReader { geometry in
+            let wide = horizontalSizeClass == .regular && geometry.size.width >= 700 &&
+                geometry.size.width > geometry.size.height && !dynamicTypeSize.isAccessibilitySize
+            Group {
+                if embedded {
+                    // The workspace already owns split navigation. Keep its record
+                    // browser mounted while a record is being inspected.
+                    ZStack {
+                        browser
+                            .opacity(viewer == nil ? 1 : 0)
+                            .allowsHitTesting(viewer == nil)
+                            .accessibilityHidden(viewer != nil)
+                        if viewer != nil { detail(wide: false) }
+                    }
                 } else {
-                    list
+                    NavigationSplitView(columnVisibility: $columnVisibility, preferredCompactColumn: $compactColumn) {
+                        browser
+                            .foldAwareSidebarWidth(in: geometry, minimum: 280, ideal: 320)
+                            .toolbar(.hidden, for: .navigationBar)
+                    } detail: {
+                        detail(wide: wide)
+                            .toolbar(.hidden, for: .navigationBar)
+                    }
+                    .navigationSplitViewStyle(.automatic)
+                    .environment(\.horizontalSizeClass, wide ? .regular : .compact)
                 }
             }
-            .scrollIndicators(.hidden)
-
-            VStack(spacing: T.Sp.s2) {
-                topBar
-                Picker(tr("library.open"), selection: $audioOnly) {
-                    Text(tr("library.all")).tag(false)
-                    Text(tr("library.audio")).tag(true)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, T.Sp.gutter)
+            .onChange(of: wide, initial: true) { _, wide in
+                columnVisibility = focusPreview || (!wide && viewer != nil) ? .detailOnly : .all
             }
-        }
-        .overlay(alignment: .bottom) {
-            if selecting { deleteDock } else { dock }
+            .onChange(of: viewer?.id) { _, _ in
+                columnVisibility = focusPreview || (!wide && viewer != nil) ? .detailOnly : .all
+            }
         }
         .onAppear { appeared = true }
-        .onChange(of: fixedProject?.id) { _, _ in selected = []; selecting = false; viewer = nil }
-        .onChange(of: audioOnly) { _, _ in selected = []; selecting = false }
-        .fullScreenCover(item: $viewer) { target in
-            ViewerView(items: target.items, index: target.index) { viewer = nil }
+        .onChange(of: fixedProject?.id) { _, _ in selected = []; selecting = false; closePreview() }
+        .onChange(of: audioOnly) { _, _ in selected = []; selecting = false; closePreview() }
+        .onChange(of: items.map(\.id)) { _, validIDs in
+            guard var target = viewer else { return }
+            let selectedID = target.items[target.index].id
+            target.items.removeAll { !validIDs.contains($0.id) }
+            if let index = target.items.firstIndex(where: { $0.id == selectedID }) {
+                target.index = index
+                viewer = target
+            } else { closePreview() }
         }
         .sheet(item: $movingItem) { item in
             ProjectPickerView(onClose: { movingItem = nil }, onSelect: { target in
@@ -115,14 +137,70 @@ struct LibraryView: View {
         }
     }
 
+    private var browser: some View {
+        GeometryReader { geometry in
+            ScrollView {
+                if items.isEmpty { emptyState }
+                else if isGrid { grid(width: geometry.size.width) }
+                else { list }
+            }
+            .scrollPosition(id: $scrollID)
+            .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                VStack(spacing: T.Sp.s2) {
+                    topBar
+                    Picker(tr("library.open"), selection: $audioOnly) {
+                        Text(tr("library.all")).tag(false)
+                        Text(tr("library.audio")).tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, T.Sp.gutter)
+                    .padding(.bottom, T.Sp.s2)
+                }.background(T.D.bg)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if selecting { deleteDock } else { dock }
+            }
+        }
+        .background(T.D.bg)
+        .accessibilityIdentifier("library.browser")
+    }
+
+    @ViewBuilder
+    private func detail(wide: Bool) -> some View {
+        if let target = viewer {
+            let currentItems = target.items.map { original in items.first(where: { $0.id == original.id }) ?? original }
+            ViewerView(items: currentItems, index: target.index, onClose: closePreview,
+                       onSelect: { viewer?.index = $0 },
+                       onToggleFocus: wide ? {
+                           focusPreview.toggle()
+                           columnVisibility = focusPreview ? .detailOnly : .all
+                       } : nil,
+                       isFocused: focusPreview)
+                .id(target.id)
+        } else {
+            ContentUnavailableView(tr("library.chooseRecord"), systemImage: "photo.on.rectangle")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(T.D.bg)
+        }
+    }
+
+    private func closePreview() {
+        viewer = nil
+        focusPreview = false
+        compactColumn = .sidebar
+        columnVisibility = .all
+    }
+
     // MARK: - 网格
 
-    private var grid: some View {
-        LazyVGrid(columns: gridColumns, spacing: 1.5, pinnedViews: [.sectionHeaders]) {
+    private func grid(width: CGFloat) -> some View {
+        LazyVGrid(columns: gridColumns(width: width), spacing: 1.5, pinnedViews: [.sectionHeaders]) {
             ForEach(days) { day in
                 Section {
                     ForEach(Array(day.items.enumerated()), id: \.element.id) { index, item in
                         cell(item, in: day)
+                            .id(item.id)
                             .opacity(appeared || reduceMotion ? 1 : 0)
                             .offset(y: appeared || reduceMotion ? 0 : 10)
                             .animation(
@@ -135,53 +213,61 @@ struct LibraryView: View {
                 }
             }
         }
-        // 顶栏与底座都是浮层，内容要自己让开，否则首末两行永远被压住
-        .padding(.top, 140)
-        .padding(.bottom, 130)
+        .scrollTargetLayout()
     }
 
-    /// 非选择态点一件 = 全屏看，左右滑同一天的其他件
+    /// 非选择态点一件 = 预览，左右滑同一天的其他件
     private func open(_ item: CaptureItem, in day: LibraryGrouping.DaySection) {
         guard let i = day.items.firstIndex(where: { $0.id == item.id }) else { return }
-        viewer = ViewerTarget(items: day.items, index: i)
+        viewer = ViewerTarget(dayID: day.id, items: day.items, index: i)
+        compactColumn = .detail
     }
 
     private func cell(_ item: CaptureItem, in day: LibraryGrouping.DaySection) -> some View {
         let checked = selected.contains(item.id)
-        return EvidenceThumb(item: item, onDark: true)
-            .aspectRatio(1, contentMode: .fill)
-            .overlay(alignment: .topTrailing) {
-                StatusDot(state: item.state, onDark: true)
-                    .padding(8)
-            }
-            .overlay(alignment: .bottomLeading) {
-                Text(RelativeTime.clock(item.capturedAt))
-                    .font(T.F.mono(10))
-                    .tracking(0.4)
-                    .foregroundStyle(.white.opacity(0.5))
-                    .padding(8)
-            }
-            .overlay(alignment: .bottom) {
-                if item.state == .uploading {
-                    // 进度直接画在图上。单独开一栏进度条会把注意力从影像上拉走。
-                    GeometryReader { geo in
-                        Rectangle()
-                            .fill(T.S.movingOnDark)
-                            .frame(width: geo.size.width * item.progress, height: 2)
-                    }
-                    .frame(height: 2)
+        return Button {
+            if selecting { toggle(item.id) } else { open(item, in: day) }
+        } label: {
+            EvidenceThumb(item: item, onDark: true)
+                .aspectRatio(1, contentMode: .fill)
+                .overlay(alignment: .topTrailing) {
+                    StatusDot(state: item.state, onDark: true)
+                        .padding(8)
                 }
-            }
-            .overlay { if selecting { selectionMark(checked) } }
-            .contentShape(Rectangle())
-            .onTapGesture { if selecting { toggle(item.id) } else { open(item, in: day) } }
-            .contextMenu { moveButton(item) }
-            .accessibilityElement()
-            .accessibilityIdentifier("library.item.\(item.id)")
-            .accessibilityLabel(
-                "\(kindLabel(item.kind))，\(RelativeTime.clock(item.capturedAt))，\(item.state.caption)"
-            )
-            .accessibilityAddTraits(selecting && checked ? [.isButton, .isSelected] : selecting ? .isButton : [])
+                .overlay(alignment: .bottomLeading) {
+                    Text(RelativeTime.clock(item.capturedAt))
+                        .font(T.F.mono(10))
+                        .tracking(0.4)
+                        .foregroundStyle(.white.opacity(0.5))
+                        .padding(8)
+                }
+                .overlay(alignment: .bottom) {
+                    if item.state == .uploading {
+                        // 进度直接画在图上。单独开一栏进度条会把注意力从影像上拉走。
+                        GeometryReader { geo in
+                            Rectangle()
+                                .fill(T.S.movingOnDark)
+                                .frame(width: geo.size.width * item.progress, height: 2)
+                        }
+                        .frame(height: 2)
+                    }
+                }
+                .overlay { if selecting { selectionMark(checked) } }
+                .overlay {
+                    if !selecting, viewer?.items[viewer?.index ?? 0].id == item.id {
+                        Rectangle().stroke(T.L.accent, lineWidth: 3)
+                    }
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .contextMenu { moveButton(item) }
+        .accessibilityElement()
+        .accessibilityIdentifier("library.item.\(item.id)")
+        .accessibilityLabel(
+            "\(kindLabel(item.kind))，\(RelativeTime.clock(item.capturedAt))，\(item.state.caption)"
+        )
+        .accessibilityAddTraits(selecting && checked ? [.isButton, .isSelected] : .isButton)
     }
 
     private func selectionMark(_ checked: Bool) -> some View {
@@ -211,7 +297,7 @@ struct LibraryView: View {
             ForEach(days) { day in
                 Section {
                     ForEach(day.items) { item in
-                        row(item, in: day)
+                        row(item, in: day).id(item.id)
                         Hairline(color: T.D.rule)
                     }
                 } header: {
@@ -219,8 +305,7 @@ struct LibraryView: View {
                 }
             }
         }
-        .padding(.top, 140)
-        .padding(.bottom, 130)
+        .scrollTargetLayout()
     }
 
     private func row(_ item: CaptureItem, in day: LibraryGrouping.DaySection) -> some View {
@@ -282,7 +367,7 @@ struct LibraryView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, T.Sp.gutter)
-        .padding(.top, 96 + T.Sp.s10)
+        .padding(.top, T.Sp.s10)
     }
 
     private func toggle(_ id: UUID) {
@@ -300,24 +385,34 @@ struct LibraryView: View {
     // MARK: - 顶栏（玻璃压在影像上）
 
     private var topBar: some View {
-        HStack(spacing: T.Sp.s3) {
-            if !embedded {
-                Button(action: onClose) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(T.D.fg)
-                        .frame(width: T.touchMin, height: T.touchMin)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: T.Sp.s2) {
+                if !embedded {
+                    Button(action: onClose) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(T.D.fg)
+                            .frame(width: T.touchMin, height: T.touchMin)
+                    }
+                    .accessibilityLabel(tr("common.back"))
                 }
-                .accessibilityLabel(tr("common.back"))
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
                 if let fixedProject { Text(fixedProject.name).lineLimit(1) }
                 else { projectMenu }
-                tallyRow
+                Spacer(minLength: 0)
+                selectButton
             }
-            Spacer(minLength: 0)
-            tools
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 0) {
+                    tallyRow.fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 0)
+                    tools
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    tallyRow
+                    tools
+                }
+            }
+            .padding(.leading, T.Sp.s2)
         }
         .padding(.leading, T.Sp.s2)
         .padding(.trailing, T.Sp.s3)
@@ -339,6 +434,7 @@ struct LibraryView: View {
                 Button {
                     viewingID = p.id
                     selected = []
+                    closePreview()
                 } label: {
                     if p.id == viewing.id {
                         Label(p.name, systemImage: "checkmark")
@@ -390,7 +486,7 @@ struct LibraryView: View {
         .padding(.trailing, T.Sp.s2)
     }
 
-    /// 列数 → 视图 → 选择。三个小按钮，不做工具栏。
+    /// 列数和视图工具。
     private var tools: some View {
         HStack(spacing: 0) {
             if isGrid && !selecting {
@@ -407,15 +503,18 @@ struct LibraryView: View {
                     viewMode = isGrid ? "list" : "grid"
                 }
             }
-            Button(selecting ? tr("common.cancel") : tr("library.select")) {
-                selecting.toggle()
-                selected = []
-            }
-            .font(T.F.small())
-            .foregroundStyle(T.D.fg)
-            .frame(minWidth: T.touchMin, minHeight: T.touchMin)
-            .disabled(items.isEmpty)
         }
+    }
+
+    private var selectButton: some View {
+        Button(selecting ? tr("common.cancel") : tr("library.select")) {
+            selecting.toggle()
+            selected = []
+        }
+        .font(T.F.small())
+        .foregroundStyle(T.D.fg)
+        .frame(minWidth: T.touchMin, minHeight: T.touchMin)
+        .disabled(items.isEmpty)
     }
 
     private func toolButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
