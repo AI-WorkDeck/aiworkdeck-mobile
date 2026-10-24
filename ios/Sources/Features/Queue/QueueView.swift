@@ -77,6 +77,7 @@ struct QueueView: View {
                 }
             }
             .navigationSplitViewStyle(.balanced)
+            .environment(\.horizontalSizeClass, wide ? .regular : .compact)
             .onChange(of: wide, initial: true) { _, wide in
                 columnVisibility = !wide && selectedID != nil ? .detailOnly : .all
             }

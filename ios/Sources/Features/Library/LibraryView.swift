@@ -89,6 +89,7 @@ struct LibraryView: View {
                             .toolbar(.hidden, for: .navigationBar)
                     }
                     .navigationSplitViewStyle(.balanced)
+                    .environment(\.horizontalSizeClass, wide ? .regular : .compact)
                 }
             }
             .onChange(of: wide, initial: true) { _, wide in
