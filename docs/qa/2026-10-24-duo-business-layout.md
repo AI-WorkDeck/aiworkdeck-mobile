@@ -41,7 +41,8 @@
 | 普通 iPhone／iOS 26.5 | 独立树 145 项，144 通过、1 项 Java fixture 缺失跳过、0 失败；包含实际 AAC 与旋转、暂停、继续、保存 |
 | 本地签名 helper | 主任务重跑 Ruby 9 项／46 断言、语法、契约全部通过；另有独立复核 |
 | 工具链门禁 | 已核实正式 Xcode／SDK／macOS 构建号白名单；未知构建及旧 SDK 拒绝发布。版本字符串本身不作为正式版证明 |
-| 最终本地原生组合 | `final-native-tests.xcresult` 共 162 项：160 通过、2 跳过、0 失败。包含 157 项单测及登录、资料库、队列、设置、文件阅读共 5 项 UI 测试；跳过项为 Duo 录音中断集成及需 Java fixture 的 HTTP 闭环，不能计为通过 |
+| 最终本地原生组合 | `final-native-tests.xcresult` 共 162 项：160 通过、2 跳过、0 失败。包含 157 项单测及登录、资料库、队列、设置、文件阅读共 5 项 UI 测试；跳过项为缺少模拟器麦克风授权的录音集成及需 Java fixture 的 HTTP 闭环，不能计为通过 |
+| 最终独立复核 | iPhone 17 Pro Max／iOS 26.5：文件服务、分栏、播放器、侧栏 41／41，四个新页面 UI 4／4 通过；审阅含 `c2fc746` 签名修改，未发现新的代码阻断；未独立重跑真实归档或真机采集 |
 
 本地产物位于 `/tmp/awd-duo-oct24/`，独立回归另见 `/tmp/awd-capture-1127-legacy-final.xcresult`、`/tmp/awd-duo-library-fold-width.xcresult`、`/tmp/awd-final-review-54546d1.xcresult`。最终本地组合使用当前产品源码（`54546d1`；后续 `c2fc746` 仅改签名工具）。远端检查仍须通过，不能将本地结果混称完整发布验收。
 
