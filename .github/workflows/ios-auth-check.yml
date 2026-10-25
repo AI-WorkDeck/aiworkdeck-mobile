@@ -50,6 +50,7 @@ jobs:
               -only-testing:WorkdeckUITests/CaptureContinuityTests
               -only-testing:WorkdeckUITests/WorkspaceFlowTests/testCaptureLayoutSurvivesRepeatedRotationAndProjectEntry
               -only-testing:WorkdeckUITests/WorkspaceFlowTests/testLandscapeLoginControlsRemainReachableAfterShowingKeyboard
+              -only-testing:WorkdeckUITests/WorkspaceFlowTests/testProjectFilesQuotePreviewAndRotationContinuity
             )
           fi
           xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -collect-test-diagnostics never -test-timeouts-enabled YES -default-test-execution-time-allowance 900 -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$DEVICE_ID" "${TESTS[@]}" CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"

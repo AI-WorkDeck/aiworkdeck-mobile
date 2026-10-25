@@ -199,6 +199,7 @@ private struct ProjectContentsView: View {
     @State private var downloadBusy = false
     @State private var tab = "files"
     @State private var query = ""
+    @FocusState private var searchFocused: Bool
     @State private var listing: ProjectFileListing?
     @State private var loadedProjectID: String?
     @State private var loading = false
@@ -337,6 +338,7 @@ private struct ProjectContentsView: View {
                 .disabled(downloadBusy)
             }
             TextField(tr("workspace.searchFiles"), text: $query)
+                .focused($searchFocused)
                 .textFieldStyle(.roundedBorder).padding(.horizontal)
                 .accessibilityIdentifier("workspace.fileSearch")
             if query.isEmpty {
@@ -381,6 +383,8 @@ private struct ProjectContentsView: View {
                     }
                     ForEach(visibleFiles, id: \.rowID) { file in
                         Button {
+                            searchFocused = false
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                             download = DownloadSelection(file: file, project: storageProject)
                             showingFileList = false
                         } label: {

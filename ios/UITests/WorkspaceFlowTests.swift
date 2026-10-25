@@ -286,6 +286,8 @@ final class WorkspaceFlowTests: XCTestCase {
         XCTAssertEqual(search.value as? String, "document-12")
         let wideShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); wideShot.name = "Workspace landscape"; wideShot.lifetime = .keepAlways; add(wideShot)
         file.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.keyboards.firstMatch)
+        waitForExpectations(timeout: 5)
         let confirm = app.buttons["workspace.confirmDownload"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         XCTAssertFalse(app.otherElements["workspace.preview"].exists)
