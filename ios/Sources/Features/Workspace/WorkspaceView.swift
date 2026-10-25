@@ -14,6 +14,7 @@ struct WorkspaceView: View {
     @State private var client: (any ProjectFilesServing)?
     @State private var route: Route?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var compactColumn: NavigationSplitViewColumn = .sidebar
     @State private var readingBusy = false
 
     private enum Route: String, Identifiable {
@@ -22,7 +23,7 @@ struct WorkspaceView: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        NavigationSplitView(columnVisibility: $columnVisibility, preferredCompactColumn: $compactColumn) {
             List(selection: $selected) {
                 if loading { ProgressView().accessibilityIdentifier("workspace.loading") }
                 if let error {
@@ -105,6 +106,7 @@ struct WorkspaceView: View {
         .onChange(of: selected?.id) { _, _ in
             readingBusy = false
             columnVisibility = .all
+            compactColumn = selected == nil ? .sidebar : .detail
         }
         .tint(T.L.accent)
         .task {
