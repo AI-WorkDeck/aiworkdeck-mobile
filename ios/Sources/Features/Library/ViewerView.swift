@@ -1,12 +1,35 @@
 import AVKit
 import SwiftUI
 
-/// 全屏看大图。深色底，左右滑切换同一天的其他件；照片可缩放，录像/录音走系统播放器。
+/// 记录预览。深色底，左右滑切换同一天的其他件；照片可缩放，录像/录音走系统播放器。
 /// 顶部只放核对要用的三样：时间、状态、哈希前缀。不做编辑、不做分享——取证件不该从这里流出去。
 struct ViewerView: View {
     let items: [CaptureItem]
-    @State var index: Int
+    @State private var index: Int
+    private let requestedIndex: Int
     var onClose: () -> Void
+    var onSelect: ((Int) -> Void)?
+    var onToggleFocus: (() -> Void)?
+    var isFocused: Bool
+    @State private var showingDetails = false
+    @State private var playback = RecordPlayback()
+#if DEBUG
+    var playbackForTesting: ((RecordPlayback) -> Void)?
+#endif
+
+    init(items: [CaptureItem], index: Int, onClose: @escaping () -> Void,
+         onSelect: ((Int) -> Void)? = nil, onToggleFocus: (() -> Void)? = nil,
+         isFocused: Bool = false) {
+        self.items = items
+        self.requestedIndex = index
+        self._index = State(initialValue: index)
+        self.onClose = onClose
+        self.onSelect = onSelect
+        self.onToggleFocus = onToggleFocus
+        self.isFocused = isFocused
+    }
+
+    private var selectedIndex: Int { min(max(index, 0), items.count - 1) }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -18,9 +41,27 @@ struct ViewerView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .ignoresSafeArea()
 
-            topBar
+        }
+        .safeAreaInset(edge: .top, spacing: 0) { topBar }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if showingDetails { details }
+        }
+        .onAppear {
+#if DEBUG
+            playbackForTesting?(playback)
+#endif
+        }
+        .onChange(of: requestedIndex) { _, value in index = value }
+        .onChange(of: index) { _, value in onSelect?(value) }
+        .onChange(of: items[selectedIndex].id) { _, id in
+            if playback.itemID != id { playback.stop() }
+        }
+        .onChange(of: AudioRecorderService.shared.isRecording) { _, recording in
+            if recording { playback.blockRecording() }
+        }
+        .onChange(of: CameraService.shared.isRecording) { _, recording in
+            if recording { playback.blockRecording() }
         }
         .preferredColorScheme(.dark)
     }
@@ -31,14 +72,17 @@ struct ViewerView: View {
         case .photo:
             ZoomablePhoto(item: item)
         case .video, .audio:
-            MediaPlayerPage(item: item, selected: items[index].id == item.id)
+            MediaPlayerPage(item: item, selected: items[selectedIndex].id == item.id, playback: playback)
         }
     }
 
     private var topBar: some View {
-        let item = items[min(max(index, 0), items.count - 1)]
+        let item = items[selectedIndex]
         return HStack(spacing: T.Sp.s3) {
-            Button(action: onClose) {
+            Button {
+                playback.stop()
+                onClose()
+            } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
@@ -61,6 +105,20 @@ struct ViewerView: View {
                     .foregroundStyle(.white.opacity(0.5))
             }
             Spacer(minLength: 0)
+            Button { showingDetails.toggle() } label: {
+                Image(systemName: "info.circle")
+                    .frame(width: T.touchMin, height: T.touchMin)
+            }
+            .accessibilityLabel(tr("viewer.details"))
+            .accessibilityIdentifier("viewer.details")
+            if let onToggleFocus {
+                Button(action: onToggleFocus) {
+                    Image(systemName: isFocused ? "sidebar.left" : "arrow.up.left.and.arrow.down.right")
+                        .frame(width: T.touchMin, height: T.touchMin)
+                }
+                .accessibilityLabel(tr(isFocused ? "viewer.showList" : "viewer.focus"))
+                .accessibilityIdentifier("viewer.focus")
+            }
             Text("\(index + 1) / \(items.count)")
                 .font(T.F.mono(11))
                 .foregroundStyle(.white.opacity(0.6))
@@ -75,6 +133,22 @@ struct ViewerView: View {
                 .ignoresSafeArea(edges: .top)
         }
     }
+
+    private var details: some View {
+        let item = items[selectedIndex]
+        return ScrollView {
+            VStack(alignment: .leading, spacing: T.Sp.s2) {
+                Text(item.project?.name ?? tr("library.unknownProject")).font(T.F.heading())
+                Text(item.state.detail)
+                Text(item.state.whereItIs).foregroundStyle(.secondary)
+                Text(item.capturedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .standard).locale(L10n.formatLocale)))
+                Text(item.manifest.sha256).font(T.F.mono(10)).textSelection(.enabled)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(T.Sp.gutter)
+        }
+        .frame(maxHeight: 200)
+        .background(T.D.bg)
+    }
+
 }
 
 /// 照片页：双指缩放、双击 1x / 2.5x 切换、放大后可拖。
@@ -148,72 +222,123 @@ private struct ZoomablePhoto: View {
     }
 }
 
-/// 录像与录音都交给系统播放器：录音没有画面，播放器本身就是界面，再叠一个波形符号说明这是声音。
+/// The player belongs to the selected record, not to either navigation column.
+/// Resizing and collapsing the split view therefore do not recreate playback.
+@MainActor
+@Observable
+final class RecordPlayback {
+    private(set) var player: AVPlayer?
+    private(set) var itemID: UUID?
+    private(set) var playing = false
+    private(set) var message: String?
+    private var generation = UUID()
+    private let isRecording: () -> Bool
+
+    init(isRecording: @escaping () -> Bool = {
+        AudioRecorderService.shared.isRecording || AudioRecorderService.shared.isBusy ||
+            CameraService.shared.isRecording || CameraService.shared.isStartingRecording
+    }) {
+        self.isRecording = isRecording
+    }
+
+    private var recording: Bool { isRecording() }
+
+    func prepare(_ item: CaptureItem) async {
+        guard !recording else { blockRecording(); return }
+        if itemID == item.id, player != nil { return }
+        stop()
+        itemID = item.id
+        let request = UUID()
+        generation = request
+        guard FileManager.default.fileExists(atPath: item.localURL.path) else {
+            message = tr("player.unavailable"); return
+        }
+        let asset = AVURLAsset(url: item.localURL)
+        guard (try? await asset.load(.isPlayable)) == true else {
+            if generation == request { message = tr("player.unavailable") }
+            return
+        }
+        guard !Task.isCancelled, generation == request else { return }
+        guard !recording else { blockRecording(); return }
+        guard await configureAudioSession(active: true, playback: true) else {
+            if generation == request { message = tr("player.unavailable") }
+            return
+        }
+        guard !Task.isCancelled, generation == request, !recording else { return }
+        player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        message = nil
+    }
+
+    func toggle() {
+        guard !recording else { blockRecording(); return }
+        guard let player else { return }
+        if playing { player.pause() }
+        else {
+            if player.currentTime() >= (player.currentItem?.duration ?? .positiveInfinity) {
+                player.seek(to: .zero)
+            }
+            player.play()
+        }
+        playing.toggle()
+    }
+
+    func didEnd(_ ended: AVPlayerItem) {
+        guard ended === player?.currentItem else { return }
+        playing = false
+        player?.seek(to: .zero)
+    }
+
+    func blockRecording() {
+        stop()
+        message = tr("player.stopRecordingFirst")
+    }
+
+    func stop() {
+        generation = UUID()
+        player?.pause()
+        player = nil
+        itemID = nil
+        playing = false
+        message = nil
+    }
+}
+
 private struct MediaPlayerPage: View {
     let item: CaptureItem
     let selected: Bool
-    @State private var player: AVPlayer?
-    @State private var playing = false
-    @State private var message: String?
+    let playback: RecordPlayback
+
+    private var playbackActive: Bool {
+        selected && !AudioRecorderService.shared.isRecording && !AudioRecorderService.shared.isBusy &&
+            !CameraService.shared.isRecording && !CameraService.shared.isStartingRecording
+    }
 
     var body: some View {
-        ZStack {
-            if let message {
+        Group {
+            if selected, let message = playback.message {
                 Text(message).foregroundStyle(.white).padding(T.Sp.gutter)
             } else if item.kind == .audio {
                 VStack(spacing: T.Sp.s4) {
-                    Image(systemName: "waveform")
-                        .font(.system(size: 44, weight: .light))
+                    Image(systemName: "waveform").font(.system(size: 44, weight: .light))
                     Text(tr("home.mode.audio")).font(T.F.heading())
-                    Button {
-                        guard let player else { return }
-                        if playing { player.pause() }
-                        else {
-                            if player.currentTime() >= (player.currentItem?.duration ?? .positiveInfinity) {
-                                player.seek(to: .zero)
-                            }
-                            player.play()
-                        }
-                        playing.toggle()
-                    } label: {
-                        Label(tr(playing ? "player.pause" : "player.play"),
-                              systemImage: playing ? "pause.fill" : "play.fill")
+                    Button(action: playback.toggle) {
+                        Label(tr(playback.playing ? "player.pause" : "player.play"),
+                              systemImage: playback.playing ? "pause.fill" : "play.fill")
                             .frame(minHeight: T.touchMin)
                     }
                     .accessibilityIdentifier("media.playback")
-                    .disabled(player == nil)
-                }
-                .foregroundStyle(.white)
-            } else if let player {
-                VideoPlayer(player: player).ignoresSafeArea()
+                    .disabled(!selected || playback.player == nil)
+                }.foregroundStyle(.white)
+            } else if selected, let player = playback.player {
+                VideoPlayer(player: player)
             }
         }
-        .task(id: selected) {
-            guard selected else { player?.pause(); playing = false; return }
-            guard !AudioRecorderService.shared.isRecording, !AudioRecorderService.shared.isBusy else {
-                message = tr("player.stopRecordingFirst")
-                return
-            }
-            guard FileManager.default.fileExists(atPath: item.localURL.path),
-                  await configureAudioSession(active: true, playback: true) else {
-                message = tr("player.unavailable")
-                return
-            }
-            guard !Task.isCancelled else { return }
-            let asset = AVURLAsset(url: item.localURL)
-            guard (try? await asset.load(.isPlayable)) == true else {
-                message = tr("player.unavailable")
-                return
-            }
-            guard !Task.isCancelled else { return }
-            message = nil
-            player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        .task(id: playbackActive) {
+            if selected { await playback.prepare(item) }
+            else if playback.itemID == item.id { playback.stop() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { note in
-            guard let ended = note.object as? AVPlayerItem, ended === player?.currentItem else { return }
-            playing = false
-            player?.seek(to: .zero)
+            if let ended = note.object as? AVPlayerItem { playback.didEnd(ended) }
         }
-        .onDisappear { player?.pause(); player = nil; playing = false }
     }
 }

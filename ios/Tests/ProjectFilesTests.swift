@@ -430,6 +430,42 @@ final class ProjectFilesTests: XCTestCase {
         await service.close()
     }
 
+    func testTwoReadersShareOneDownloadAndReleaseIndependently() async throws {
+        var pulls = 0
+        ProjectFilesURLProtocol.handler = { request in
+            switch request.url!.lastPathComponent {
+            case "pull": pulls += 1; return .json(#"{"code":0,"id":26}"#)
+            case "26": return .json(#"{"code":0,"transfer":{"id":26,"kind":"PULL","status":"STAGED","fileSize":3}}"#)
+            case "content": return .binary(Data([1, 2, 3]))
+            case "ack": return .json(#"{"code":0}"#)
+            default: throw URLError(.badURL)
+            }
+        }
+        let service = client()
+        var workspace: ProjectFilePreview? = try await service.preview(project: project, file: file)
+        var recording: ProjectFilePreview? = try await service.preview(project: project, file: file)
+        let url = try XCTUnwrap(workspace?.url)
+        XCTAssertEqual(recording?.url, url)
+        XCTAssertEqual(pulls, 1)
+        workspace = nil
+        // A direct cleanup request also cannot invalidate a live reader.
+        await service.removePreview(url)
+        XCTAssertEqual(try Data(contentsOf: url), Data([1, 2, 3]))
+        var reopened: ProjectFilePreview? = try await service.preview(project: project, file: file)
+        XCTAssertEqual(reopened?.url, url)
+        XCTAssertEqual(pulls, 1)
+        recording = nil
+        await service.removePreview(url)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        reopened = nil
+        let deleted = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            !FileManager.default.fileExists(atPath: url.path)
+        }, object: nil)
+        await fulfillment(of: [deleted], timeout: 3)
+        await service.close()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+    }
+
     func testPendingPollHasBoundedTimeoutWithoutAcknowledgement() async throws {
         var polls = 0
         ProjectFilesURLProtocol.handler = { request in

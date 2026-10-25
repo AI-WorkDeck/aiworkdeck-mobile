@@ -14,6 +14,12 @@ struct SettingsView: View {
     @State private var showRecharge = false
     @State private var showProjects = false
     @State private var showBackup = false
+    @State private var category: String? = "settings.archiveTarget"
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var compactColumn: NavigationSplitViewColumn = .detail
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private let categories = ["settings.media", "settings.archiveTarget", "backup.title", "watch.title", "settings.account", "settings.about"]
 
     /// 本端走内购（契约 capabilities.recharge = "iap"）。取这个值而不是写死 true：
     /// 契约改成别的通道时这一行会跟着变，界面不会偷偷留着一个错的入口。
@@ -47,9 +53,21 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        GeometryReader { geometry in
+            let wide = horizontalSizeClass == .regular && geometry.size.width >= 700 &&
+                geometry.size.width > geometry.size.height && !dynamicTypeSize.isAccessibilitySize
+            NavigationSplitView(columnVisibility: $columnVisibility, preferredCompactColumn: $compactColumn) {
+                List(categories, id: \.self, selection: $category) { key in
+                    NavigationLink(value: key) { Text(tr(key)) }
+                        .accessibilityIdentifier("settings.category." + key)
+                }
+                .navigationTitle(tr("home.settings"))
+                .navigationBarTitleDisplayMode(.inline)
+                .foldAwareSidebarWidth(in: geometry, minimum: 200, ideal: 240)
+            } detail: {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    if !wide || category == "settings.media" {
                     group(tr("settings.media")) {
                         Toggle(isOn: $saveToAlbum) {
                             VStack(alignment: .leading, spacing: 2) {
@@ -80,7 +98,9 @@ struct SettingsView: View {
 
                         infoRow(tr("settings.originals"), tr("settings.originals.hint"))
                     }
+                    }
 
+                    if !wide || category == "settings.archiveTarget" {
                     group(tr("settings.archiveTarget")) {
                         infoRow(tr("home.eyebrow"), model.project.name)
                         infoRow(tr("settings.relay"), usageCaption)
@@ -93,7 +113,9 @@ struct SettingsView: View {
                             .foregroundStyle(T.L.accent)
                             .frame(minHeight: T.touchMin, alignment: .leading)
                     }
+                    }
 
+                    if !wide || category == "backup.title" {
                     group(tr("backup.title")) {
                         if let consent = model.backupConsent {
                             Text(tr(consent.enabled ? "backup.enabled" : "backup.disabled"))
@@ -103,7 +125,9 @@ struct SettingsView: View {
                             .accessibilityIdentifier("settings.backup")
                             .frame(minHeight: T.touchMin)
                     }
+                    }
 
+                    if !wide || category == "watch.title" {
                     group(tr("watch.title")) {
                         Text(tr("watch.phoneHint"))
                             .font(T.F.small()).foregroundStyle(T.L.fgMuted)
@@ -116,7 +140,9 @@ struct SettingsView: View {
                         }
                         .frame(minHeight: T.touchMin)
                     }
+                    }
 
+                    if !wide || category == "settings.account" {
                     group(tr("settings.account")) {
                         infoRow(tr("settings.signedIn"), model.account?.displayName ?? "—")
                         // 还没读完时整行不渲染，见 BalanceState 上的注释。
@@ -157,16 +183,22 @@ struct SettingsView: View {
                             .foregroundStyle(T.L.fgMuted)
                             .frame(minHeight: T.touchMin, alignment: .leading)
                     }
+                    }
 
+                    if !wide || category == "settings.about" {
                     group(tr("settings.about")) {
                         infoRow(tr("settings.version"), Device.facts.appVersion)
                         infoRow(tr("settings.help"), "hi@aiworkdeck.com")
                     }
+                    }
                 }
                 .padding(.horizontal, T.Sp.gutter)
                 .padding(.bottom, T.Sp.s16)
+                .frame(maxWidth: 640)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .background(T.L.bg)
+            .navigationBarBackButtonHidden()
             // 进页面拉一次用量。失败静默——占位「—」比一条报错更符合这行信息的分量
             .task {
 #if DEBUG
@@ -220,6 +252,14 @@ struct SettingsView: View {
                     }
                 }
             }
+            }
+            .navigationSplitViewStyle(.automatic)
+            .environment(\.horizontalSizeClass, wide ? .regular : .compact)
+            // Keep compact navigation independent from wide-window visibility.
+            .onChange(of: wide, initial: true) { _, _ in
+                columnVisibility = .all
+            }
+            .onChange(of: category) { _, _ in compactColumn = .detail }
         }
     }
 

@@ -13,6 +13,7 @@ struct HomeView: View {
 
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// 有全屏浮层（队列/影像/设置）压在上面时停相机省电；录像中除外，不能断录。
     let paused: Bool
@@ -20,6 +21,7 @@ struct HomeView: View {
     var onOpenLibrary: () -> Void
     var onOpenQueue: () -> Void
     var onOpenSettings: () -> Void
+    var projectContents: ((RelayProject) -> AnyView)? = nil
 
     /// 三个采集服务都是进程级单例。@Observable 对象不必用 @State 持有，body 里读它的
     /// 属性照样被观察；反过来用 @State 持有反而有害——初始值表达式每次重建结构体都会
@@ -36,6 +38,42 @@ struct HomeView: View {
     @State private var mode: CapMode = .photo
     @State private var showFlash = false
     @State private var visiblePreviews: Set<UUID> = []
+    @State private var recordingDestination: FieldProject?
+    @State private var recordingProject: RelayProject?
+    @State private var recentViewer: RecentViewer?
+    @State private var showArchiveDetails = false
+
+    private struct RecentViewer: Identifiable {
+        let items: [CaptureItem]
+        let index: Int
+        var id: UUID { items[index].id }
+    }
+
+    private var audioMode: Bool { mode == .audio || recorder.isRecording }
+    private var capturing: Bool { camera.isRecording || camera.isStartingRecording || recorder.isRecording || recorder.isBusy }
+    private var destination: FieldProject {
+        if let draft = recorder.activeDraft {
+            return FieldProject(id: draft.project?.id ?? LibraryProject.unknownID,
+                                name: draft.project?.name ?? tr("project.none"),
+                                archivePath: tr("archive.path", ["date": Self.archiveDate.string(from: draft.startedAt)]))
+        }
+        return capturing ? (recordingDestination ?? model.project) : model.project
+    }
+    private var destinationProject: RelayProject? {
+        if let draft = recorder.activeDraft { return draft.project }
+        return capturing && recordingDestination != nil ? recordingProject : model.selectedProject
+    }
+    private var destinationItems: [CaptureItem] {
+        LibraryGrouping.items(model.items, in: destinationProject?.id ?? LibraryProject.unknownID, project: destinationProject)
+    }
+
+    private var destinationTally: TransferTally { TransferTally.of(destinationItems) }
+
+    private static let archiveDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 
     // CameraService defers startup while audio is busy. Observe completion so
     // the camera starts automatically without a mode switch.
@@ -58,18 +96,30 @@ struct HomeView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            // Keep one view hierarchy: replacing HStack/VStack also replaces the
-            // attached AVCaptureVideoPreviewLayer during each rotation.
-            ScrollView {
-                CaptureLayout(viewport: geometry.size) {
-                    header
-                    stage
-                    controls
+            CaptureLayout(viewport: geometry.size, audio: audioMode,
+                          reservedAreas: CaptureLayout.reservedAreas(in: geometry),
+                          allowsColumns: !dynamicTypeSize.isAccessibilitySize) {
+                Group {
+                    if audioMode { recordingMaterials }
+                    else { stage }
                 }
+                .clipped()
+                ScrollView {
+                    VStack(spacing: 0) {
+                        header
+                        controls
+                        if audioMode { audioStage.padding(.horizontal, T.Sp.gutter) }
+                        if !audioMode { recentCaptures }
+                    }
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .accessibilityIdentifier("capture.controls")
             }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background(T.D.bg.ignoresSafeArea())
+        .fullScreenCover(item: $recentViewer) { target in
+            ViewerView(items: target.items, index: target.index, onClose: { recentViewer = nil })
+        }
         .task {
             // 采集失败与落库失败走同一个字段：失败必须有个落点，不能只留在日志里
             camera.onError = { msg in model.lastError = msg }
@@ -162,16 +212,33 @@ struct HomeView: View {
                 .accessibilityIdentifier("capture.settings")
             }
 
-            Text(model.project.name)
-                .font(T.F.title())
-                .kerning(-0.2)
-                .foregroundStyle(T.D.fg)
-                .lineLimit(1)
-
-            Text(tr("home.archiveTo", ["path": model.project.archivePath]))
-                .font(T.F.nano())
-                .tracking(0.4)
-                .foregroundStyle(.white.opacity(0.4))
+            HStack {
+                Text(destination.name)
+                    .font(T.F.title())
+                    .accessibilityIdentifier("capture.destination")
+                    .kerning(-0.2)
+                    .foregroundStyle(T.D.fg)
+                    .lineLimit(showArchiveDetails ? nil : 1)
+                Spacer(minLength: T.Sp.s1)
+                Button {
+                    withAnimation(T.A.fast) { showArchiveDetails.toggle() }
+                } label: {
+                    Image(systemName: showArchiveDetails ? "chevron.up" : "chevron.down")
+                        .font(T.F.small())
+                        .frame(width: T.touchMin, height: T.touchMin)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.55))
+                .accessibilityLabel(tr("settings.archiveTarget"))
+                .accessibilityIdentifier("capture.archiveDetails")
+            }
+            if showArchiveDetails {
+                Text(tr("home.archiveTo", ["path": destination.archivePath]))
+                    .font(T.F.nano())
+                    .tracking(0.4)
+                    .foregroundStyle(.white.opacity(0.4))
+            }
 
             tallyLine
                 .padding(.top, T.Sp.s1)
@@ -197,11 +264,11 @@ struct HomeView: View {
 
     private var tallyLine: some View {
         HStack(spacing: 0) {
-            count(model.tally.uploading, TransferPhase.uploading.caption, T.S.waitingOnDark, failed: model.tally.failed)
+            count(destinationTally.uploading, TransferPhase.uploading.caption, T.S.waitingOnDark, failed: destinationTally.failed)
             divider
-            count(model.tally.staged, TransferPhase.staged.caption, T.S.movingOnDark)
+            count(destinationTally.staged, TransferPhase.staged.caption, T.S.movingOnDark)
             divider
-            count(model.tally.landed, TransferPhase.landed.caption, T.S.arrivedOnDark)
+            count(destinationTally.landed, TransferPhase.landed.caption, T.S.arrivedOnDark)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(minHeight: 28)
@@ -214,7 +281,7 @@ struct HomeView: View {
     }
 
     private var tallyA11y: String {
-        let t = model.tally
+        let t = destinationTally
         let f = t.failed > 0 ? tr("tally.summary.failedPart", ["m": String(t.failed)]) : ""
         return tr("tally.summary", ["u": String(t.uploading), "f": f, "s": String(t.staged), "l": String(t.landed)])
     }
@@ -248,9 +315,7 @@ struct HomeView: View {
 
     private var stage: some View {
         ZStack {
-            if mode == .audio || recorder.isRecording {
-                audioStage
-            } else if let seed = screenshotSeed {
+            if let seed = screenshotSeed {
                 // 模拟器没有摄像头，取景区是全黑的。截图模式下用一张现场照片顶上，
                 // 水印照旧叠在上面——叠加层本来就与相机会话无关。
                 GeometryReader { geo in
@@ -305,7 +370,7 @@ struct HomeView: View {
                     .font(T.F.mono(12, .medium))
                     .foregroundStyle(.white.opacity(0.78))
             }
-            Text(model.project.name)
+            Text(destination.name)
                 .font(T.F.micro())
                 .foregroundStyle(.white.opacity(0.6))
                 .lineLimit(1)
@@ -361,6 +426,7 @@ struct HomeView: View {
                     Text(timeString(camera.isRecording ? camera.recordingSeconds
                                                        : recorder.recordingSeconds))
                         .font(T.F.mono(13, .medium))
+                        .accessibilityIdentifier("recording.elapsed")
                         .foregroundStyle(.white)
                     Text(capturePaused ? tr("rec.pause.status") : camera.isRecording ? tr("home.recording.video") : tr("home.recording.audio"))
                         .font(T.F.nano())
@@ -464,7 +530,7 @@ struct HomeView: View {
         Button(action: onOpenLibrary) {
             VStack(spacing: 3) {
                 Group {
-                    if let last = model.currentItems.first {
+                    if let last = destinationItems.first {
                         EvidenceThumb(item: last, onDark: true)
                             .overlay(alignment: .topLeading) {
                                 StatusDot(state: last.state, size: 4, onDark: true)
@@ -491,7 +557,7 @@ struct HomeView: View {
 
     private var counter: some View {
         VStack(alignment: .trailing, spacing: 1) {
-            Text("\(model.tally.total)")
+            Text("\(destinationTally.total)")
                 .font(T.F.mono(17, .medium))
                 .monospacedDigit()
                 .foregroundStyle(.white)
@@ -509,6 +575,8 @@ struct HomeView: View {
     /// CameraCaptureRequests snapshots this callback at shutter time. Returning
     /// from Settings can change the next destination without rewriting a capture.
     private func bindCaptureDestination() {
+        recordingDestination = model.project
+        recordingProject = model.selectedProject
         let captureProject = model.selectedProject
         camera.onCaptured = { data, kind, at in
             let loc = stamper.last
@@ -520,6 +588,9 @@ struct HomeView: View {
         Button {
             if capturePaused { toggleCapturePause(); return }
             if recorder.isRecording {
+                // Keep a resumed draft's destination visible while stop saves it.
+                recordingDestination = destination
+                recordingProject = destinationProject
                 Task { await recorder.stop() }
                 return
             }
@@ -532,7 +603,10 @@ struct HomeView: View {
                 if !camera.isRecording { bindCaptureDestination() }
                 Task { await camera.toggleRecording() }
             case .audio:
-                Task { await recorder.toggle(project: model.selectedProject, location: stamper.last) }
+                recordingDestination = model.project
+                recordingProject = model.selectedProject
+                let project = model.selectedProject
+                Task { await recorder.toggle(project: project, location: stamper.last) }
             }
         } label: {
             ZStack {
@@ -598,20 +672,22 @@ struct HomeView: View {
 
     // MARK: - 录音舞台
 
-    /// 录音模式没有取景画面：深色底，等宽计时器就是全部的界面。
+    /// Keep the recording status compact so project materials remain readable.
     private var audioStage: some View {
         Group {
             if recorder.permissionDenied {
                 micDenied
             } else {
                 VStack(spacing: T.Sp.s3) {
-                    Text(timeString(recorder.recordingSeconds))
-                        .accessibilityIdentifier("recording.elapsed")
-                        .font(T.F.hero())
-                        .monospacedDigit()
-                        .foregroundStyle(.white)
+                    if !recorder.isRecording {
+                        Text(timeString(recorder.recordingSeconds))
+                            .accessibilityIdentifier("recording.elapsed")
+                            .font(T.F.title())
+                            .monospacedDigit()
+                            .foregroundStyle(.white)
+                    }
                     if recorder.isPaused {
-                        pauseNotice
+                        audioPauseNotice
                     } else {
                         HStack(spacing: T.Sp.s2) {
                             if recorder.isRecording {
@@ -641,6 +717,101 @@ struct HomeView: View {
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var recordingMaterials: some View {
+        if let project = destinationProject, let projectContents {
+            projectContents(project)
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: T.Sp.s3) {
+                    Text(tr("workspace.records"))
+                        .font(T.F.heading()).foregroundStyle(T.D.fg)
+                    if destinationItems.isEmpty {
+                        Text(tr("home.recent.empty"))
+                            .font(T.F.small()).foregroundStyle(.secondary)
+                    }
+                    ForEach(destinationItems) { item in
+                        Button { openRecent(item) } label: {
+                            HStack(spacing: T.Sp.s3) {
+                                EvidenceThumb(item: item, onDark: true).frame(width: 44, height: 44)
+                                VStack(alignment: .leading, spacing: T.Sp.s1) {
+                                    Text(RelativeTime.clock(item.capturedAt)).font(T.F.mono(13))
+                                    Text(item.state.caption).font(T.F.small()).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                            }
+                            .foregroundStyle(T.D.fg)
+                            .frame(minHeight: T.touchMin)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("capture.record.\(item.id)")
+                    }
+                }
+                .padding(T.Sp.gutter)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private var recentCaptures: some View {
+        VStack(alignment: .leading, spacing: T.Sp.s2) {
+            Text(tr("home.recent")).font(T.F.nano()).foregroundStyle(.secondary)
+            if destinationItems.isEmpty {
+                Text(tr("home.recent.empty")).font(T.F.micro()).foregroundStyle(.secondary)
+            } else {
+                ScrollView(.horizontal) {
+                    HStack(spacing: T.Sp.s2) {
+                        ForEach(destinationItems.prefix(8)) { item in
+                            Button { openRecent(item) } label: {
+                                EvidenceThumb(item: item, onDark: true)
+                                    .frame(width: 56, height: 56)
+                                    .overlay(alignment: .bottomTrailing) {
+                                        StatusDot(state: item.state, size: 5, onDark: true).padding(T.Sp.s1)
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(tr("library.open") + " " + RelativeTime.clock(item.capturedAt))
+                            .accessibilityIdentifier("capture.recent.\(item.id)")
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, T.Sp.gutter)
+        .padding(.vertical, T.Sp.s3)
+    }
+
+    private func openRecent(_ item: CaptureItem) {
+        let items = destinationItems
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        recentViewer = RecentViewer(items: items, index: index)
+    }
+
+    private var audioPauseNotice: some View {
+        HStack(spacing: T.Sp.s3) {
+            VStack(alignment: .leading, spacing: T.Sp.s1) {
+                Text(tr("rec.pause.status"))
+                    .font(T.F.small())
+                    .foregroundStyle(T.S.waitingOnDark)
+                    .accessibilityIdentifier("recording.paused")
+                Text(tr("rec.pause.remember")).font(T.F.small()).foregroundStyle(.white)
+            }
+            Spacer(minLength: 0)
+            Button(action: toggleCapturePause) {
+                Image(systemName: "play.fill").frame(width: T.touchMin, height: T.touchMin)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(T.S.waitingOnDark)
+            .foregroundStyle(.black)
+            .disabled(recorder.isBusy)
+            .accessibilityLabel(resumeLabel)
+            .accessibilityIdentifier("capture.resume")
         }
     }
 

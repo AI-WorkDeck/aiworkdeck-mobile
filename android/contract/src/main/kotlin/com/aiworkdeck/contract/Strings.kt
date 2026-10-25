@@ -3,6 +3,17 @@ package com.aiworkdeck.contract
 
 object ContractStrings {
     val table: Map<String, Map<String, String>> = mapOf(
+        "home.recent" to mapOf("zh-Hans" to "近期记录", "en" to "Recent captures"),
+        "home.recent.empty" to mapOf("zh-Hans" to "采集的照片、录像和录音会显示在这里", "en" to "Your photos, videos and recordings appear here"),
+        "library.chooseRecord" to mapOf("zh-Hans" to "选择一条记录查看", "en" to "Select a record to preview"),
+        "viewer.focus" to mapOf("zh-Hans" to "专注查看", "en" to "Focus preview"),
+        "viewer.showList" to mapOf("zh-Hans" to "显示记录列表", "en" to "Show records"),
+        "viewer.details" to mapOf("zh-Hans" to "记录详情", "en" to "Record details"),
+        "queue.chooseItem" to mapOf("zh-Hans" to "选择一项查看传输详情", "en" to "Select a transfer to inspect"),
+        "queue.details" to mapOf("zh-Hans" to "传输详情", "en" to "Transfer details"),
+        "workspace.fileList" to mapOf("zh-Hans" to "文件列表", "en" to "File list"),
+        "workspace.focusReading" to mapOf("zh-Hans" to "专注阅读", "en" to "Focus reading"),
+        "workspace.returnReading" to mapOf("zh-Hans" to "返回阅读", "en" to "Return to reading"),
         "dd.title" to mapOf("zh-Hans" to "受邀尽调", "en" to "Client checklists"),
         "dd.open" to mapOf("zh-Hans" to "凭邀请码加入尽调项目", "en" to "Join a checklist with an invitation code"),
         "dd.unavailable" to mapOf("zh-Hans" to "当前区域暂未提供尽调协作", "en" to "Client checklists are not available in this region yet"),

@@ -186,7 +186,11 @@ struct CaptureFlowView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(tr("workspace.closeCapture"), action: onClose)
+                Button(action: onClose) {
+                    Label(tr("workspace.closeCapture"), systemImage: "folder")
+                        .frame(minHeight: T.touchMin)
+                        .contentShape(Rectangle())
+                }
                     .accessibilityIdentifier("capture.close")
                     .disabled(CameraService.shared.isRecording || CameraService.shared.isStartingRecording || CameraService.shared.isCapturingPhoto || AudioRecorderService.shared.isBusy)
                 Spacer()
@@ -209,7 +213,8 @@ struct CaptureFlowView: View {
             paused: route != nil || model.showBackupPrompt,
             onOpenLibrary: { route = .library },
             onOpenQueue: { route = .queue },
-            onOpenSettings: { route = .settings }
+            onOpenSettings: { route = .settings },
+            projectContents: { AnyView(CaptureProjectContentsView(project: $0)) }
         )
         .environment(model)
         .preferredColorScheme(.dark)
