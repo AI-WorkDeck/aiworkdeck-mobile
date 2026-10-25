@@ -78,11 +78,10 @@ struct QueueView: View {
             }
             .navigationSplitViewStyle(.automatic)
             .environment(\.horizontalSizeClass, wide ? .regular : .compact)
-            .onChange(of: wide, initial: true) { _, wide in
-                columnVisibility = !wide && selectedID != nil ? .detailOnly : .all
-            }
-            .onChange(of: selectedID) { _, _ in
-                columnVisibility = !wide && selectedID != nil ? .detailOnly : .all
+            // Compact navigation uses compactColumn. Hiding the sidebar there
+            // can be written back by UIKit after the window expands again.
+            .onChange(of: wide, initial: true) { _, _ in
+                columnVisibility = .all
             }
         }
         .onChange(of: model.currentProjectID) { _, _ in

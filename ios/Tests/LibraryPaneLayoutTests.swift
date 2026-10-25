@@ -4,6 +4,37 @@ import XCTest
 
 @MainActor
 final class LibraryPaneLayoutTests: XCTestCase {
+    func testQueueAndSettingsRestoreBothColumnsAfterCompactWindowWithoutReplacingSplit() async throws {
+        for content in [AnyView(QueueView(onClose: {})), AnyView(SettingsView(onClose: {}))] {
+            let state = LibraryWindowState()
+            let host = UIHostingController(rootView: SecondaryWindowHarness(state: state, content: content))
+            let window = UIWindow(frame: CGRect(origin: .zero, size: state.size))
+            window.rootViewController = host
+            host.traitOverrides.horizontalSizeClass = .regular
+            window.makeKeyAndVisible()
+            defer { window.isHidden = true; window.rootViewController = nil }
+            try await settle(host)
+            let original = try XCTUnwrap(split(in: host))
+            XCTAssertEqual(original.displayMode, .oneBesideSecondary)
+
+            for size in [CGSize(width: 470, height: 669), CGSize(width: 951, height: 669),
+                         CGSize(width: 669, height: 951), CGSize(width: 951, height: 669)] {
+                state.size = size
+                window.frame.size = size
+                host.view.frame = window.bounds
+                try await settle(host)
+                let current = try XCTUnwrap(split(in: host))
+                XCTAssertTrue(current === original, "Window changes must preserve the navigation container")
+                if size.width > size.height {
+                    XCTAssertFalse(current.isCollapsed)
+                    XCTAssertEqual(current.displayMode, .oneBesideSecondary, "Both columns must return with the wide window")
+                } else {
+                    XCTAssertTrue(current.isCollapsed, "The compact window must show one full-width column")
+                }
+            }
+        }
+    }
+
     func testRegularHostCollapsesUnselectedPortraitAndLargeTextWithoutReplacingSplit() async throws {
         let windowState = LibraryWindowState()
         let host = UIHostingController(rootView: LibraryWindowHarness(state: windowState, model: AppModel()))
@@ -62,6 +93,19 @@ private struct LibraryWindowHarness: View {
             .environment(model)
             .environment(\.horizontalSizeClass, .regular)
             .environment(\.dynamicTypeSize, state.textSize)
+            .frame(width: state.size.width, height: state.size.height)
+    }
+}
+
+private struct SecondaryWindowHarness: View {
+    let state: LibraryWindowState
+    let content: AnyView
+    @State private var model = AppModel()
+
+    var body: some View {
+        content
+            .environment(model)
+            .environment(\.horizontalSizeClass, .regular)
             .frame(width: state.size.width, height: state.size.height)
     }
 }

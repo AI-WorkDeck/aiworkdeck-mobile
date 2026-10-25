@@ -15,7 +15,7 @@ struct SettingsView: View {
     @State private var showProjects = false
     @State private var showBackup = false
     @State private var category: String? = "settings.archiveTarget"
-    @State private var columnVisibility: NavigationSplitViewVisibility = .detailOnly
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var compactColumn: NavigationSplitViewColumn = .detail
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -254,8 +254,10 @@ struct SettingsView: View {
             }
             }
             .navigationSplitViewStyle(.automatic)
-            .onChange(of: wide, initial: true) { _, wide in
-                columnVisibility = wide ? .all : .detailOnly
+            .environment(\.horizontalSizeClass, wide ? .regular : .compact)
+            // Keep compact navigation independent from wide-window visibility.
+            .onChange(of: wide, initial: true) { _, _ in
+                columnVisibility = .all
             }
             .onChange(of: category) { _, _ in compactColumn = .detail }
         }
