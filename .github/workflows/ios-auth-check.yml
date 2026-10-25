@@ -23,7 +23,11 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p test_ios_release.py -v
       - name: Install Duo runtime
         if: matrix.device == 'duo'
-        run: xcodebuild -downloadPlatform iOS -buildVersion 27.1 -architectureVariant arm64
+        run: |
+          if ! python3 scripts/create-ios-ci-simulator.py duo --check-only; then
+            xcodebuild -downloadPlatform iOS -buildVersion 27.1 -architectureVariant arm64
+          fi
+          python3 scripts/create-ios-ci-simulator.py duo --check-only
       - run: brew install xcodegen
       - name: Generate project
         working-directory: ios

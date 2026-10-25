@@ -30,10 +30,13 @@ def select_device(runtimes, family):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("family", choices=("iphone", "duo"))
+    parser.add_argument("--check-only", action="store_true", help="Check availability without creating a device")
     args = parser.parse_args()
     inventory = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "runtimes", "-j"]))
     runtime, device = select_device(inventory["runtimes"], args.family)
     print(f"Testing {device['name']} / iOS {runtime['version']} ({runtime['buildversion']})", file=sys.stderr)
+    if args.check_only:
+        return
     udid = subprocess.check_output(["xcrun", "simctl", "create", f"AWD CI {args.family}",
                                     device["identifier"], runtime["identifier"]], text=True).strip()
     print(udid)

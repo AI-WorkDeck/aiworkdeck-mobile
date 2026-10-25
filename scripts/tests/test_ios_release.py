@@ -1,10 +1,12 @@
 import importlib.util
+import json
 from pathlib import Path
 import plistlib
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 
@@ -137,6 +139,19 @@ class SimulatorSelection(unittest.TestCase):
             runtimes = self.runtimes(); runtimes[1].update(change)
             with self.subTest(change=change), self.assertRaises(ValueError):
                 simulator.select_device(runtimes, "duo")
+
+    def test_check_only_does_not_create_a_device(self):
+        with patch.object(sys, "argv", ["simulator", "duo", "--check-only"]), patch.object(
+                simulator.subprocess, "check_output", return_value=json.dumps({"runtimes": self.runtimes()})) as command:
+            simulator.main()
+        command.assert_called_once_with(["xcrun", "simctl", "list", "runtimes", "-j"])
+
+    def test_check_only_rejects_missing_duo(self):
+        with patch.object(sys, "argv", ["simulator", "duo", "--check-only"]), patch.object(
+                simulator.subprocess, "check_output", return_value=json.dumps({"runtimes": self.runtimes()[:1]})) as command:
+            with self.assertRaisesRegex(ValueError, "No compatible"):
+                simulator.main()
+        command.assert_called_once_with(["xcrun", "simctl", "list", "runtimes", "-j"])
 
 
 if __name__ == "__main__":
