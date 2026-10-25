@@ -23,7 +23,10 @@ struct WorkspaceView: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility, preferredCompactColumn: $compactColumn) {
+        NavigationSplitView(columnVisibility: Binding(
+            get: { selected == nil ? .all : columnVisibility },
+            set: { columnVisibility = selected == nil ? .all : $0 }
+        ), preferredCompactColumn: $compactColumn) {
             List(selection: $selected) {
                 if loading { ProgressView().accessibilityIdentifier("workspace.loading") }
                 if let error {
@@ -106,7 +109,6 @@ struct WorkspaceView: View {
         .onChange(of: selected?.id) { _, _ in
             readingBusy = false
             columnVisibility = .all
-            compactColumn = selected == nil ? .sidebar : .detail
         }
         .tint(T.L.accent)
         .task {
