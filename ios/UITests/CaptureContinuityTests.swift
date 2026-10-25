@@ -20,9 +20,31 @@ final class CaptureContinuityTests: XCTestCase {
         let audio = app.buttons["capture.mode.audio"]
         XCTAssertTrue(audio.waitForExistence(timeout: 10)); audio.tap()
         let shutter = app.buttons["capture.shutter"]
+        var previousFrame: CGRect?
+        // Switching to audio moves the shutter; wait for its frame to settle before tapping once.
+        expectation(for: NSPredicate { _, _ in
+            guard audio.isSelected, app.staticTexts["recording.elapsed"].exists,
+                  shutter.label == "Start recording", shutter.isEnabled, shutter.isHittable else {
+                previousFrame = nil
+                return false
+            }
+            let frame = shutter.frame
+            defer { previousFrame = frame }
+            return previousFrame == frame
+        }, evaluatedWith: shutter)
+        waitForExpectations(timeout: 10)
         shutter.tap()
-        allowPermissionPrompts()
-        expectation(for: NSPredicate(format: "label == %@", "Stop recording"), evaluatedWith: shutter)
+        let permissionAlert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        // Notification authorization can arrive well after the microphone prompt closes.
+        expectation(for: NSPredicate { _, _ in
+            if permissionAlert.exists {
+                for label in ["Allow", "允许", "OK"] where permissionAlert.buttons[label].exists {
+                    permissionAlert.buttons[label].tap()
+                    break
+                }
+            }
+            return shutter.label == "Stop recording"
+        }, evaluatedWith: shutter)
         waitForExpectations(timeout: 30)
         let destination = app.staticTexts["capture.destination"]
         XCTAssertEqual(destination.label, "华创科技 A 轮尽调")
