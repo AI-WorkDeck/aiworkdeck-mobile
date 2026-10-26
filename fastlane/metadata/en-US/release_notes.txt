@@ -1,3 +1,3 @@
-1. China-region accounts can open invited due diligence projects from the project list using a lawyer's access code, while keeping the current app account.
-2. Read checklist requirements and reference examples, take photos or upload files, and view verification feedback and lawyer confirmation.
-3. Submit replacement materials, request manual review, and revisit submission history to complete document collection with your lawyer.
+1. Choose from more interface languages in Settings.
+2. Improve Traditional Chinese and other translations, with right-to-left layouts for supported languages.
+3. Refresh screen text more consistently after switching languages across projects, capture, and settings.
