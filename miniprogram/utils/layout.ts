@@ -90,7 +90,7 @@ export function getMetrics(): Metrics {
 
   if (degraded) {
     // 真机上看到这条，说明该机型的度量需要单独处理，不要忽略
-    console.warn('[layout] 度量走了兜底值', cached)
+    console.warn('[layout] fallback metrics used', cached)
   }
 
   return cached

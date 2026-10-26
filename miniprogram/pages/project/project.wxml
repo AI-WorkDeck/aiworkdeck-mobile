@@ -4,7 +4,7 @@
 
   <view wx:if="{{!assigning}}" class="item tappable" bindtap="onOpenDd"><text class="item__name">{{ddTitle}}</text><text class="item__files">{{ddOpen}}</text><image class="item__chevron" src="{{Icon.chevron}}" mode="aspectFit" /></view>
   <view wx:if="{{loading}}" class="status">
-    <text class="status__text">加载中…</text>
+    <text class="status__text">{{loadingText}}</text>
   </view>
 
   <view wx:elif="{{errorMessage}}" class="status">
@@ -17,7 +17,7 @@
   <view wx:elif="{{groups.length === 0}}" class="status">
     <text class="status__text">{{emptyText}}</text>
     <view class="status__btn tappable" bindtap="onRefresh">
-      <text>刷新</text>
+      <text>{{refreshText}}</text>
     </view>
   </view>
 

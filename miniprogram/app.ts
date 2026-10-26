@@ -2,6 +2,7 @@ import { getMetrics, metricsToStyle, type Metrics } from './utils/layout'
 import { getGlassMode, type GlassMode } from './utils/capability'
 import { recoverOnLaunch } from './utils/queue'
 import { reportDiag } from './utils/diag'
+import { t } from './utils/i18n'
 
 interface GlobalData {
   metrics: Metrics
@@ -26,7 +27,7 @@ App<{ globalData: GlobalData }>({
     recoverOnLaunch()
 
     // 真机诊断：体验版把脚本错误原文弹出来（dev-board#536 白屏定位）
-    wx.onError((msg) => reportDiag('脚本错误', String(msg)))
-    wx.onUnhandledRejection((res) => reportDiag('未处理异常', String(res && res.reason)))
+    wx.onError((msg) => reportDiag(t('diag.scriptError'), String(msg)))
+    wx.onUnhandledRejection((res) => reportDiag(t('diag.unhandledRejection'), String(res && res.reason)))
   },
 })

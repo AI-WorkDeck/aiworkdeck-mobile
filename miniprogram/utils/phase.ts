@@ -9,10 +9,22 @@ import { t } from './i18n'
 
 export type { QueueState, Phase }
 
+export function getPhaseLabel(phase: Phase): string {
+  return t(PHASE_LABEL_KEY[phase])
+}
+
+export function phaseLabels(): Record<Phase, string> {
+  return {
+    uploading: getPhaseLabel('uploading'),
+    staged: getPhaseLabel('staged'),
+    landed: getPhaseLabel('landed'),
+  }
+}
+
 export const PHASE_LABEL: Record<Phase, string> = {
-  uploading: t(PHASE_LABEL_KEY.uploading),
-  staged: t(PHASE_LABEL_KEY.staged),
-  landed: t(PHASE_LABEL_KEY.landed),
+  get uploading() { return getPhaseLabel('uploading') },
+  get staged() { return getPhaseLabel('staged') },
+  get landed() { return getPhaseLabel('landed') },
 }
 
 export function phaseOf(state: QueueState): Phase {

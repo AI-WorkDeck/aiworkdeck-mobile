@@ -141,13 +141,14 @@ function fileNameFor(mediaType: 'image' | 'video' | 'audio', at: Date, segmentIn
   const stamp =
     `${at.getFullYear()}${pad2(at.getMonth() + 1)}${pad2(at.getDate())}_` +
     `${pad2(at.getHours())}${pad2(at.getMinutes())}${pad2(at.getSeconds())}`
+  const seg = t('file.segmentSuffix', { n: segmentIndex ?? 1 })
   if (mediaType === 'image') {
-    return `照片_${stamp}.jpg`
+    return `${t('file.prefix.photo')}_${stamp}.jpg`
   }
   if (mediaType === 'audio') {
-    return `录音_${stamp}_段${segmentIndex ?? 1}.mp3`
+    return `${t('file.prefix.voice')}_${stamp}_${seg}.mp3`
   }
-  return `录像_${stamp}_段${segmentIndex ?? 1}.mp4`
+  return `${t('file.prefix.video')}_${stamp}_${seg}.mp4`
 }
 
 // ---------- 入队 ----------

@@ -50,7 +50,7 @@ function waitingText(item: QueueItem): string {
   if (item.state !== 'uploaded') return ''
   const seconds = item.waitingSeconds ?? 0
   if (seconds < 60) return ''
-  return t('home.desktop.waited', { t: `${Math.floor(seconds / 60)} 分钟` })
+  return t('home.desktop.waited', { t: t('time.minutesDuration', { n: Math.floor(seconds / 60) }) })
 }
 
 /** iOS 的 JSC 解析不带时区的 ISO 字符串不可靠，手工拆字段按本地时间构造 */
@@ -67,7 +67,7 @@ function expiresText(item: QueueItem): string {
   if (ts === null) return ''
   if (ts - Date.now() >= 3 * 24 * 3600 * 1000) return ''
   const d = new Date(ts)
-  return t('queue.expiresOn', { date: `${d.getMonth() + 1}月${d.getDate()}日` })
+  return t('queue.expiresOn', { date: t('time.monthDay', { m: d.getMonth() + 1, d: d.getDate() }) })
 }
 
 function kindOf(mediaType: QueueItem['mediaType']): DisplayItem['kind'] {

@@ -27,6 +27,8 @@ Page({
     ddOpen: t('dd.open'),
     emptyText: t('empty.projects'),
     navTitle: t('project.title'),
+    loadingText: t('common.loading'),
+    refreshText: t('common.refresh'),
     retryText: t('project.retry'),
     filesText: t('project.files'),
     metrics: {} as Metrics,

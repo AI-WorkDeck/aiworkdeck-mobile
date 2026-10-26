@@ -301,3 +301,27 @@ test('recording contracts reject reminder drift and unknown video pause behavior
     assert.ok(r.problems.some((m) => m.includes('capabilities.json') && m.includes(key)), r.problems.join('\n'))
   }
 })
+
+test('check：未进 strings.json 的硬编码中文在四端都会被拦住', () => {
+  const dir = tempCopy()
+  for (const rel of outputs(loadContract(ROOT)).keys()) {
+    const src = join(ROOT, rel)
+    if (existsSync(src)) cpSync(src, join(dir, rel))
+  }
+  cpSync(join(ROOT, 'contract', 'tools', 'wxss-footer.css'), join(dir, 'contract', 'tools', 'wxss-footer.css'))
+  mkdirSync(join(dir, 'miniprogram', 'pages', 'index'), { recursive: true })
+  const wxml = join(dir, 'miniprogram', 'pages', 'index', 'index.wxml')
+  writeFileSync(wxml, '<view><text>完全未登记的新中文句子</text></view>\n')
+  const r = runChecks(dir, { quick: false })
+  assert.ok(r.problems.some((m) => m.includes('index.wxml') && m.includes('硬编码中文')), r.problems.join('\n'))
+})
+
+test('check：strings.json 占位符不一致或缺语言要红', () => {
+  const dir = tempCopy()
+  const p = join(dir, 'contract', 'strings.json')
+  const s = JSON.parse(readFileSync(p, 'utf8'))
+  s['delete.title'].en = 'Delete {count} items'
+  writeFileSync(p, JSON.stringify(s, null, 2))
+  const r = runChecks(dir, { quick: true })
+  assert.ok(r.problems.some((m) => m.includes('delete.title') && m.includes('占位符不一致')), r.problems.join('\n'))
+})
