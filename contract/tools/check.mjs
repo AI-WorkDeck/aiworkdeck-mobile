@@ -221,18 +221,52 @@ function walk(dir, exts, skip, out = []) {
   return out
 }
 
-const CJK = /[\u4e00-\u9fff]/
+const CJK = /\p{Script=Han}/u
 /** 带占位的文案拆出的片段短于这个长度就不查了：太短，误报比漏报还烦 */
 const MIN_SEGMENT = 3
+
+/** 允许保留在源码里的少量非词典中文（语言选择器原生标签、字体名、调试种子与内部不变式日志） */
+const ALLOWED_CJK_TOKENS = ['简体中文', '中文', 'PingFang SC', "name: '走查项目'"]
+const ALLOWED_CJK_FILE_SUFFIXES = [
+  'ios/Sources/App/Screenshots.swift',
+  'android/app/src/main/kotlin/com/aiworkdeck/mobile/ScreenshotMode.kt',
+  'harmony/entry/src/main/ets/ScreenshotMode.ets',
+]
+const ALLOWED_CJK_LINE_PATTERNS = [
+  /\b(?:albumLogger|logger)\.(?:warning|info)\s*\(/,
+  /\b(?:preconditionFailure|DecodingError\.dataCorrupted|IOException)\s*\(/,
+  /\berror\s*\(\s*"(?:未知|契约)/,
+]
+
+function checkStrings(c, problems) {
+  const placeholders = (s) => [...String(s ?? '').matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
+  for (const [k, v] of Object.entries(c.strings ?? {})) {
+    const zh = v?.['zh-Hans']
+    const en = v?.en
+    if (typeof zh !== 'string' || zh.trim().length === 0) problems.push(`strings.json 的 ${k} 缺少 zh-Hans 文案`)
+    if (typeof en !== 'string' || en.trim().length === 0) problems.push(`strings.json 的 ${k} 缺少 en 文案`)
+    if (typeof zh === 'string' && typeof en === 'string' && placeholders(zh) !== placeholders(en)) {
+      problems.push(`strings.json 的 ${k} 占位符不一致：zh-Hans={${placeholders(zh)}} vs en={${placeholders(en)}}`)
+    }
+  }
+}
 
 /** 注释里的中文不算内联文案（说明为什么这么写常常要引用原文） */
 function stripComments(text) {
   return text
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' '))
     .split('\n')
     .map((l) => l.replace(/\/\/.*$/, ''))
     .join('\n')
+}
+
+function isAllowedCjkLine(rel, line) {
+  if (ALLOWED_CJK_FILE_SUFFIXES.some((s) => rel.endsWith(s))) return true
+  if (ALLOWED_CJK_LINE_PATTERNS.some((re) => re.test(line))) return true
+  let rest = line
+  for (const tok of ALLOWED_CJK_TOKENS) rest = rest.split(tok).join('')
+  return !CJK.test(rest)
 }
 
 function checkInline(c, problems) {
@@ -247,11 +281,12 @@ function checkInline(c, problems) {
   }
   const files = [
     ...walk(join(c.root, 'ios', 'Sources'), ['.swift'], ['/Contract/']),
+    ...walk(join(c.root, 'ios', 'Workdeck'), ['.swift'], ['L10n.generated.swift']),
     ...walk(join(c.root, 'ios', 'Shared'), ['.swift'], []),
     ...walk(join(c.root, 'ios', 'LiveActivity'), ['.swift'], []),
     ...walk(join(c.root, 'miniprogram', 'pages'), ['.ts', '.wxml'], []),
     ...walk(join(c.root, 'miniprogram', 'components'), ['.ts', '.wxml'], []),
-    ...walk(join(c.root, 'miniprogram', 'utils'), ['.ts'], ['/utils/contract/']),
+    ...walk(join(c.root, 'miniprogram', 'utils'), ['.ts'], ['/utils/contract/', 'strings.ts']),
     ...walk(join(c.root, 'android', 'app', 'src', 'main'), ['.kt'], []),
     ...walk(join(c.root, 'harmony', 'entry', 'src', 'main'), ['.ets'], []),
   ]
@@ -266,11 +301,16 @@ function checkInline(c, problems) {
       }
     }
     const seen = new Set()
-    for (const line of text.split('\n')) {
+    const lines = text.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
       for (const { seg, zh } of segments) {
         if (!line.includes(seg) || seen.has(seg)) continue
         seen.add(seg)
         problems.push(`内联文案片段「${seg}」（出自「${zh}」）于 ${rel}：改用 strings.json 的键`)
+      }
+      if (CJK.test(line) && !isAllowedCjkLine(rel, line)) {
+        problems.push(`内联硬编码中文于 ${rel}:${i + 1}（${line.trim()}）：改用 strings.json 的键`)
       }
     }
   }
@@ -289,6 +329,7 @@ export function runChecks(root, { quick = false } = {}) {
   let c
   try { c = loadContract(root) } catch (e) { return { ok: false, problems: [`contract/ 读不进来：${e.message}`], notes } }
   checkManifest(c, problems)
+  checkStrings(c, problems)
   checkReferences(c, problems)
   checkDataSchemas(c, problems)
   checkFixtures(c, problems)

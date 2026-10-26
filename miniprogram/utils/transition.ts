@@ -3,7 +3,7 @@ import { MAX_AUTO_RETRIES, TRANSITIONS, type QueueState, type TransferEvent } fr
 function guardOk(guard: string | undefined, attempts: number): boolean {
   if (!guard) return true
   if (guard === 'attempts <= maxAutoRetries') return attempts <= MAX_AUTO_RETRIES
-  throw new Error(`未知 guard: ${guard}`)
+  throw new Error(`contract guard unknown: ${guard}`)
 }
 
 /** 迁移表驱动。无匹配规则 → null（非法迁移，调用方应拒绝并记日志）；有规则但 guard 不满足 → 原态。 */

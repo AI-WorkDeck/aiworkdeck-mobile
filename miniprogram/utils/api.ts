@@ -174,7 +174,7 @@ export function setSelectedProject(p: RelayProject | null): void {
  */
 export function readEnvelope<T>(statusCode: number, body: unknown, opts: { bare?: boolean } = {}): T {
   if (statusCode < 200 || statusCode >= 300) {
-    throw new ApiError(-1, `服务器返回 ${statusCode}`)
+    throw new ApiError(-1, t('error.httpStatus', { code: statusCode }))
   }
   if (Array.isArray(body)) {
     return body as T
@@ -192,7 +192,7 @@ export function readEnvelope<T>(statusCode: number, body: unknown, opts: { bare?
       // 鉴权失败是 HTTP 200 + {code:4010}，不是 401——实测行为，见契约红线。
       setSession(null)
       wx.reLaunch({ url: '/pages/login/login' })
-      throw new ApiError(4010, '请先登录')
+      throw new ApiError(4010, t('error.signInRequired'))
     }
     throw new ApiError(env.code, env.message || t('error.generic'), env.kind ?? null, env.outTradeNo ?? null)
   }
@@ -230,7 +230,7 @@ function request<T>(
       fail: () => {
         // 网络层失败要与业务失败分开说：用户看到「验证码错误」和看到
         // 「连不上服务器」会做完全不同的事。
-        reject(new ApiError(-1, '连不上服务器，检查网络后重试'))
+        reject(new ApiError(-1, t('error.unreachable')))
       },
     })
   })
@@ -460,16 +460,16 @@ export function wxPhoneStart(code: string, ref: string): Promise<WxStartResult> 
         // 官网端错误码翻译成用户能行动的话（文案红线：不出现「登录/未授权/请先」）
         const msg =
           body.error === 'invalid_wx_code'
-            ? '授权凭证已失效，重新点一次按钮即可'
+            ? t('error.wxAuthExpired')
             : body.error === 'unsupported_region'
-              ? body.message || '目前仅支持中国大陆手机号'
+              ? body.message || t('error.regionCnOnly')
               : body.error === 'rate_limited'
-                ? '操作太频繁，稍等一分钟再试'
-                : '服务暂时不可用，稍后再试'
+                ? t('error.rateLimited')
+                : t('error.serviceUnavailable')
         reject(new ApiError(-1, msg))
       },
       fail: () => {
-        reject(new ApiError(-1, '连不上服务器，检查网络后重试'))
+        reject(new ApiError(-1, t('error.unreachable')))
       },
     })
   })
@@ -544,7 +544,7 @@ export function uploadMedia(opts: {
         }
       },
       fail: () => {
-        reject(new ApiError(-1, '连不上服务器，检查网络后重试'))
+        reject(new ApiError(-1, t('error.unreachable')))
       },
     })
     if (opts.onProgress) {

@@ -10,7 +10,7 @@ import type { Metrics } from '../../utils/layout'
 import { getSelectedProject } from '../../utils/api'
 import { listItems, removeItems, subscribe, pollStatus, isAssigned, type QueueItem } from '../../utils/queue'
 import {
-  deleteWarning, dotClass, groupByDay, projectsIn, stateText, tallyOf, PHASE_LABEL, type Tally,
+  deleteWarning, dotClass, groupByDay, phaseLabels, projectsIn, stateText, tallyOf, PHASE_LABEL, type Tally,
 } from '../../utils/phase'
 import { thumbFor, markThumbBroken } from '../../utils/thumbs'
 import { t } from '../../utils/i18n'
@@ -73,6 +73,10 @@ function colsA11yFor(cols: number): string {
   return t('library.columns.a11y', { n: cols })
 }
 
+function colsLabelFor(cols: number): string {
+  return t('library.columns', { n: cols })
+}
+
 Page({
   data: {
     Icon,
@@ -86,11 +90,13 @@ Page({
     viewingName: '',
     viewingUnassigned: false,
     unassignedHint: t('workspace.unassignedHint'),
+    switchProjectHint: t('library.switchProjectHint'),
     projects: [] as Array<{ id: string; name: string }>,
     tally: { uploading: 0, failed: 0, staged: 0, landed: 0 } as Tally,
     failedSuffix: '',
     days: [] as Array<{ key: string; title: string; items: Cell[] }>,
     cols: 3,
+    colsLabel: colsLabelFor(3),
     colsA11y: colsA11yFor(3),
     view: 'grid' as 'grid' | 'list',
     viewA11y: viewA11yFor('grid'),
@@ -119,6 +125,7 @@ Page({
     this.setData({
       metrics: app.globalData.metrics,
       cols,
+      colsLabel: colsLabelFor(cols),
       colsA11y: colsA11yFor(cols),
       view,
       viewLabel: viewLabelFor(view),
@@ -178,6 +185,9 @@ Page({
     }))
     const tally = tallyOf(items.filter(isAssigned))
     this.setData({
+      phaseLabel: phaseLabels(),
+      switchProjectHint: t('library.switchProjectHint'),
+      colsLabel: colsLabelFor(this.data.cols),
       projects,
       viewingId,
       viewingName,
@@ -215,7 +225,7 @@ Page({
   onToggleCols() {
     const cols = this.data.cols >= 4 ? 2 : this.data.cols + 1
     wx.setStorageSync(KEY_COLS, cols)
-    this.setData({ cols, colsA11y: colsA11yFor(cols) })
+    this.setData({ cols, colsLabel: colsLabelFor(cols), colsA11y: colsA11yFor(cols) })
   },
 
   onToggleView() {
@@ -266,7 +276,7 @@ Page({
       return
     }
     if (!cell.filePath) {
-      wx.showToast({ title: '原件已不在本机', icon: 'none' })
+      wx.showToast({ title: t('library.fileMissing'), icon: 'none' })
       return
     }
     // previewMedia 最多 50 项；按同一天里能预览的件组
@@ -278,7 +288,7 @@ Page({
     wx.previewMedia({
       sources,
       current,
-      fail: () => wx.showToast({ title: '打不开这件影像', icon: 'none' }),
+      fail: () => wx.showToast({ title: t('library.openFailed'), icon: 'none' }),
     })
   },
 
@@ -300,7 +310,7 @@ Page({
     }
     this.stopAudio()
     if (!cell.filePath) {
-      wx.showToast({ title: '录音原件已不在本机', icon: 'none' })
+      wx.showToast({ title: t('player.fileMissing'), icon: 'none' })
       return
     }
     const ctx = wx.createInnerAudioContext()
@@ -309,12 +319,12 @@ Page({
     ctx.onEnded(() => this.stopAudio())
     ctx.onError(() => {
       this.stopAudio()
-      wx.showToast({ title: '播放失败', icon: 'none' })
+      wx.showToast({ title: t('player.playFailed'), icon: 'none' })
     })
     ctx.play()
     this.audio = ctx
     this.audioId = cell.clientMediaId
-    wx.showToast({ title: `播放 ${cell.time} 的录音，再点一次停止`, icon: 'none', duration: 2000 })
+    wx.showToast({ title: t('player.playingToast', { time: cell.time }), icon: 'none', duration: 2000 })
   },
 
   stopAudio() {

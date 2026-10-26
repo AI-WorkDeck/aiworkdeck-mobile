@@ -152,7 +152,7 @@ Page({
         if (placed.pay === 'cancelled') {
           this.settle(t('recharge.cancelled'))
         } else {
-          reportDiag('支付失败', lastPayError || '(微信未返回 errMsg)')
+          reportDiag(t('diag.payFailed'), lastPayError || t('diag.noWxErrMsg'))
           this.settle(`${t('recharge.failed')} ${lastPayError}`.trim())
         }
         return

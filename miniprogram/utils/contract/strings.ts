@@ -1551,5 +1551,237 @@ export const STRINGS: Record<string, { 'zh-Hans': string; en: string }> = {
   "rec.silence.continue.short": {
     "zh-Hans": "继续录音",
     "en": "Keep"
+  },
+  "home.modeNote.photo": {
+    "zh-Hans": "拍摄内容自动归入今天的现场影像；水印仅屏幕显示，不写入照片",
+    "en": "Captures go into today's field media. The watermark is on-screen only and not burned into photos."
+  },
+  "home.modeNote.video": {
+    "zh-Hans": "录像单段最长 30 秒，自动连续分段归档；本端录像为记录用途，证据用途请用 iOS 端",
+    "en": "Video records in automatic 30-second segments. Video on this client is for record-keeping; use the iOS app for evidentiary recording."
+  },
+  "home.modeNote.audio": {
+    "zh-Hans": "录音自动归入今天的现场录音，单段满 10 分钟自动续录",
+    "en": "Audio goes into today's field audio and continues automatically every 10 minutes."
+  },
+  "home.permission.cameraTitle": {
+    "zh-Hans": "相机权限未开启",
+    "en": "Camera access is off"
+  },
+  "home.permission.cameraSub": {
+    "zh-Hans": "取景拍摄需要使用相机。请在设置里打开「摄像头」权限后回到本页。",
+    "en": "Camera access is required to take photos and videos. Enable Camera in Settings and return here."
+  },
+  "home.permission.goSettings": {
+    "zh-Hans": "去设置",
+    "en": "Open Settings"
+  },
+  "home.permission.goSettings.short": {
+    "zh-Hans": "去设置",
+    "en": "Open"
+  },
+  "home.permission.systemCamera": {
+    "zh-Hans": "改用系统相机拍摄",
+    "en": "Use system camera instead"
+  },
+  "home.audio.recordingHint": {
+    "zh-Hans": "录音中，每段录满 10 分钟自动续录下一段",
+    "en": "Recording; auto-continues every 10 minutes"
+  },
+  "home.audio.idleHint": {
+    "zh-Hans": "按下方按钮开始录音",
+    "en": "Tap the button below to start recording"
+  },
+  "rec.segmentLabel": {
+    "zh-Hans": "第 {n} 段",
+    "en": "Part {n}"
+  },
+  "home.gallery.a11y": {
+    "zh-Hans": "查看图集",
+    "en": "Open gallery"
+  },
+  "home.shutter.startRecord": {
+    "zh-Hans": "开始录制",
+    "en": "Start recording"
+  },
+  "home.shutter.stopRecord": {
+    "zh-Hans": "停止录制",
+    "en": "Stop recording"
+  },
+  "home.album.a11y": {
+    "zh-Hans": "拍摄件同时存入系统相册，当前{state}",
+    "en": "Also save captures to system album, currently {state}"
+  },
+  "home.album.short": {
+    "zh-Hans": "存相册",
+    "en": "Album"
+  },
+  "common.stateOn": {
+    "zh-Hans": "开",
+    "en": "On"
+  },
+  "common.stateOff": {
+    "zh-Hans": "关",
+    "en": "Off"
+  },
+  "common.loading": {
+    "zh-Hans": "加载中…",
+    "en": "Loading…"
+  },
+  "common.refresh": {
+    "zh-Hans": "刷新",
+    "en": "Refresh"
+  },
+  "rec.stopCurrentFirst": {
+    "zh-Hans": "请先停止当前录制",
+    "en": "Stop the current recording first"
+  },
+  "camera.notReady": {
+    "zh-Hans": "相机未就绪",
+    "en": "Camera not ready"
+  },
+  "album.deniedAppOnly": {
+    "zh-Hans": "没有相册权限，影像仍只留在应用内",
+    "en": "No album access; captures stay inside the app"
+  },
+  "album.saveFailedReauth": {
+    "zh-Hans": "没能存入相册：点「存相册」重新授权",
+    "en": "Could not save to album: tap Album to re-authorize"
+  },
+  "album.saveFailed": {
+    "zh-Hans": "没能存入相册",
+    "en": "Could not save to album"
+  },
+  "capture.photoFailed": {
+    "zh-Hans": "拍摄失败",
+    "en": "Capture failed"
+  },
+  "capture.incomplete": {
+    "zh-Hans": "拍摄未完成",
+    "en": "Capture not completed"
+  },
+  "rec.segmentDoneTitle": {
+    "zh-Hans": "已录制第 {n} 段（单段最长 60 秒）",
+    "en": "Part {n} recorded (up to 60s per clip)"
+  },
+  "rec.segmentContinuePrompt": {
+    "zh-Hans": "继续录制下一段吗？",
+    "en": "Continue recording the next clip?"
+  },
+  "library.switchProjectHint": {
+    "zh-Hans": "点标题切换项目",
+    "en": "Tap title to switch project"
+  },
+  "library.fileMissing": {
+    "zh-Hans": "原件已不在本机",
+    "en": "Original file is no longer on this device"
+  },
+  "library.openFailed": {
+    "zh-Hans": "打不开这件影像",
+    "en": "Unable to open this capture"
+  },
+  "player.fileMissing": {
+    "zh-Hans": "录音原件已不在本机",
+    "en": "Original audio file is no longer on this device"
+  },
+  "player.playFailed": {
+    "zh-Hans": "播放失败",
+    "en": "Playback failed"
+  },
+  "player.playingToast": {
+    "zh-Hans": "播放 {time} 的录音，再点一次停止",
+    "en": "Playing {time} audio. Tap again to stop"
+  },
+  "settings.signOut.confirm": {
+    "zh-Hans": "退出后需要重新用手机号登录。",
+    "en": "You will need to sign in again after signing out."
+  },
+  "settings.signOut.action": {
+    "zh-Hans": "退出",
+    "en": "Exit"
+  },
+  "time.minutesDuration": {
+    "zh-Hans": "{n} 分钟",
+    "en": "{n} min"
+  },
+  "time.monthDay": {
+    "zh-Hans": "{m}月{d}日",
+    "en": "{m}/{d}"
+  },
+  "file.prefix.photo": {
+    "zh-Hans": "照片",
+    "en": "Photo"
+  },
+  "file.prefix.video": {
+    "zh-Hans": "录像",
+    "en": "Video"
+  },
+  "file.prefix.voice": {
+    "zh-Hans": "录音",
+    "en": "Audio"
+  },
+  "file.segmentSuffix": {
+    "zh-Hans": "段{n}",
+    "en": "part{n}"
+  },
+  "rec.permission.title": {
+    "zh-Hans": "需要麦克风权限",
+    "en": "Microphone access required"
+  },
+  "rec.permission.message": {
+    "zh-Hans": "录音需要使用麦克风。请在设置里打开「麦克风」权限后重试。",
+    "en": "Microphone access is required to record audio. Enable Microphone in Settings and try again."
+  },
+  "error.httpStatus": {
+    "zh-Hans": "服务器返回 {code}",
+    "en": "Server returned {code}"
+  },
+  "error.signInRequired": {
+    "zh-Hans": "请先登录",
+    "en": "Please sign in first"
+  },
+  "error.unreachable": {
+    "zh-Hans": "连不上服务器，检查网络后重试",
+    "en": "Cannot reach server. Check your network and try again."
+  },
+  "error.wxAuthExpired": {
+    "zh-Hans": "授权凭证已失效，重新点一次按钮即可",
+    "en": "Authorization expired. Tap the button again."
+  },
+  "error.regionCnOnly": {
+    "zh-Hans": "目前仅支持中国大陆手机号",
+    "en": "Only Mainland China mobile numbers are supported right now."
+  },
+  "error.rateLimited": {
+    "zh-Hans": "操作太频繁，稍等一分钟再试",
+    "en": "Too many attempts. Wait a minute and try again."
+  },
+  "error.serviceUnavailable": {
+    "zh-Hans": "服务暂时不可用，稍后再试",
+    "en": "Service temporarily unavailable. Try again shortly."
+  },
+  "diag.cameraError": {
+    "zh-Hans": "相机错误",
+    "en": "Camera error"
+  },
+  "diag.noErrMsg": {
+    "zh-Hans": "(无 errMsg)",
+    "en": "(no errMsg)"
+  },
+  "diag.payFailed": {
+    "zh-Hans": "支付失败",
+    "en": "Payment error"
+  },
+  "diag.noWxErrMsg": {
+    "zh-Hans": "(微信未返回 errMsg)",
+    "en": "(no WeChat errMsg)"
+  },
+  "diag.scriptError": {
+    "zh-Hans": "脚本错误",
+    "en": "Script error"
+  },
+  "diag.unhandledRejection": {
+    "zh-Hans": "未处理异常",
+    "en": "Unhandled rejection"
   }
 }

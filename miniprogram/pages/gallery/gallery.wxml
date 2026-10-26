@@ -2,7 +2,7 @@
      导航高度只用全局度量（metrics），页面不自己测量。 -->
 <nav-bar
   title="{{viewingName}}"
-  subtitle="{{projects.length > 1 ? '点标题切换项目' : ''}}"
+  subtitle="{{projects.length > 1 ? switchProjectHint : ''}}"
   show-back="{{true}}"
   dark="{{true}}"
   scroll-top="{{scrollTop}}"
@@ -15,7 +15,7 @@
       bindtap="onToggleCols"
       aria-label="{{colsA11y}}"
     >
-      <text class="tools__text mono">{{cols}} 列</text>
+      <text class="tools__text mono">{{colsLabel}}</text>
     </view>
     <view
       wx:if="{{!selecting}}"

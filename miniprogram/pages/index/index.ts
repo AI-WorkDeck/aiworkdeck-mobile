@@ -14,7 +14,7 @@ import { Icon } from '../../utils/icons'
 import type { Metrics } from '../../utils/layout'
 import { getSession, getSelectedProject, type RelayProject } from '../../utils/api'
 import { listItems, tallyFor, subscribe, pollStatus, processQueue, enqueueCapture, type QueueItem } from '../../utils/queue'
-import { dotClass, projectId, tallyTotal, PHASE_LABEL, type Tally } from '../../utils/phase'
+import { dotClass, phaseLabels, projectId, tallyTotal, PHASE_LABEL, type Tally } from '../../utils/phase'
 import { t } from '../../utils/i18n'
 import { reportDiag } from '../../utils/diag'
 import { startRecording, stopRecording, isRecording, takeRecordingNotice, recordingSnapshot, bindRecordingCallbacks, pauseRecording, resumeRecording, answerSilenceReminder } from '../../utils/recorder'
@@ -34,11 +34,49 @@ const KEY_SAVE_ALBUM = 'awd.saveToAlbum'
 
 type CaptureMode = 'photo' | 'video' | 'audio'
 
+const MODE_NOTE_KEY: Record<CaptureMode, string> = {
+  photo: 'home.modeNote.photo',
+  video: 'home.modeNote.video',
+  audio: 'home.modeNote.audio',
+}
+
 /** D6：能力边界明示，不能默默降级 */
-const MODE_NOTES: Record<CaptureMode, string> = {
-  photo: '拍摄内容自动归入今天的现场影像；水印仅屏幕显示，不写入照片',
-  video: '录像单段最长 30 秒，自动连续分段归档；本端录像为记录用途，证据用途请用 iOS 端',
-  audio: '录音自动归入今天的现场录音，单段满 10 分钟自动续录',
+function modeNoteFor(mode: CaptureMode): string {
+  return t(MODE_NOTE_KEY[mode])
+}
+
+function buildLabels() {
+  return {
+    photo: t('home.mode.photo'),
+    video: t('home.mode.video'),
+    audio: t('home.mode.audio'),
+    shoot: t('home.shutter.photo'),
+    startRecord: t('home.shutter.startRecord'),
+    stopRecord: t('home.shutter.stopRecord'),
+    on: t('common.on'),
+    off: t('common.off'),
+    stateOn: t('common.stateOn'),
+    stateOff: t('common.stateOff'),
+    saveToAlbumShort: t('home.album.short'),
+    albumOnA11y: t('home.album.a11y', { state: t('common.on') }),
+    albumOffA11y: t('home.album.a11y', { state: t('common.off') }),
+    openGalleryA11y: t('home.gallery.a11y'),
+    cameraDeniedTitle: t('home.permission.cameraTitle'),
+    cameraDeniedSub: t('home.permission.cameraSub'),
+    openSettings: t('home.permission.goSettings'),
+    systemCamera: t('home.permission.systemCamera'),
+    audioRecordingHint: t('home.audio.recordingHint'),
+    audioIdleHint: t('home.audio.idleHint'),
+    pauseAudio: t('rec.pause.audio'), pauseVideo: t('rec.pause.video'),
+    resumeAudio: t('rec.resume.audio'), resumeVideo: t('rec.resume.video'),
+    paused: t('rec.pause.status'), remember: t('rec.pause.remember'),
+    videoPauseNote: t('rec.pause.video.segmentNote'),
+    silenceUnavailable: t('rec.silence.unavailable'),
+  }
+}
+
+function segmentText(n: number): string {
+  return t('rec.segmentLabel', { n })
 }
 
 /** 底部最近缩略图入口的展示结构 */
@@ -88,26 +126,14 @@ Page({
     project: { name: '', archivePath: '' },
     archiveTo: '',
     /** 三档模式与快门的可读标签走词典（与 iOS / 安卓同键） */
-    labels: {
-      photo: t('home.mode.photo'),
-      video: t('home.mode.video'),
-      audio: t('home.mode.audio'),
-      shoot: t('home.shutter.photo'),
-      on: t('common.on'),
-      off: t('common.off'),
-      pauseAudio: t('rec.pause.audio'), pauseVideo: t('rec.pause.video'),
-      resumeAudio: t('rec.resume.audio'), resumeVideo: t('rec.resume.video'),
-      paused: t('rec.pause.status'), remember: t('rec.pause.remember'),
-      videoPauseNote: t('rec.pause.video.segmentNote'),
-      silenceUnavailable: t('rec.silence.unavailable'),
-    },
+    labels: buildLabels(),
     settingsLabel: t('settings.title'),
     tally: { uploading: 0, failed: 0, staged: 0, landed: 0 } as Tally,
     failedSuffix: '',
     total: 0,
     recent: null as RecentDisplay | null,
     mode: 'photo' as CaptureMode,
-    modeNote: MODE_NOTES.photo,
+    modeNote: modeNoteFor('photo'),
     /** pending：等相机初始化；ready：取景中；denied：权限被拒/初始化失败 */
     cameraState: 'pending' as 'pending' | 'ready' | 'denied',
     /** <camera> 原生组件挂不挂。只在本页可见时为 true，见 mountCamera/unmountCamera（dev-board#536） */
@@ -118,6 +144,7 @@ Page({
     silenceUnavailable: false,
     recordElapsed: '00:00',
     recordSegment: 1,
+    recordSegmentText: segmentText(1),
     /** 录音被系统中断（通话等），中断结束自动续录 */
     recordInterrupted: false,
     recordInterruptedText: '',
@@ -165,9 +192,14 @@ Page({
     void promptBackupOnFirstUse()
     const project = getSelectedProject()
     this.setData({
+      phaseLabel: phaseLabels(),
+      labels: buildLabels(),
+      settingsLabel: t('settings.title'),
+      recordInterruptedText: t('rec.interruption.saving'),
+      audioNote: CAPS.backgroundRecording === false ? t(DEGRADED_NOTICE.backgroundRecording) : '',
       project: { name: project?.name ?? t('home.selectProject'), archivePath: todayArchivePath() },
       archiveTo: project ? t('home.archiveTo', { path: todayArchivePath() }) : '',
-      modeNote: project ? MODE_NOTES[this.data.mode] : t('workspace.unassignedHint'),
+      modeNote: project ? modeNoteFor(this.data.mode) : t('workspace.unassignedHint'),
     })
 
     // 录音态与真实 recorder 对齐：页面被 reLaunch 重建等场景下不残留假录制中
@@ -175,6 +207,7 @@ Page({
     if (recording) {
       bindRecordingCallbacks(this.audioCallbacks())
       this.setData({ mode: 'audio', recording: true, recordSegment: recording.segmentIndex,
+        recordSegmentText: segmentText(recording.segmentIndex),
         recordInterrupted: recording.interrupted, recordPaused: recording.paused, pausePending: recording.pausePending,
         silenceUnavailable: recording.monitorUnavailable })
       this.startRecordTimer()
@@ -331,7 +364,7 @@ Page({
   },
 
   onCameraError(e?: { detail?: { errMsg?: string } }) {
-    reportDiag('相机错误', String(e && e.detail && e.detail.errMsg ? e.detail.errMsg : '(无 errMsg)'))
+    reportDiag(t('diag.cameraError'), String(e && e.detail && e.detail.errMsg ? e.detail.errMsg : t('diag.noErrMsg')))
     // 权限被拒与初始化失败走同一个降级态：明示 + 去设置 + 系统相机兜底
     if (this.data.recording && this.data.mode === 'video') {
       this.stopRecordUi()
@@ -366,11 +399,11 @@ Page({
     if (mode === this.data.mode) return
     // 录制中锁死模式切换，先停再切
     if (this.data.recording) {
-      wx.showToast({ title: '请先停止当前录制', icon: 'none' })
+      wx.showToast({ title: t('rec.stopCurrentFirst'), icon: 'none' })
       return
     }
     this.unmountCamera()
-    this.setData({ mode, modeNote: getSelectedProject() ? MODE_NOTES[mode] : t('workspace.unassignedHint'), cameraState: 'pending' })
+    this.setData({ mode, modeNote: getSelectedProject() ? modeNoteFor(mode) : t('workspace.unassignedHint'), cameraState: 'pending' })
     if (mode !== 'audio') wx.nextTick(() => this.mountCamera())
   },
 
@@ -392,7 +425,7 @@ Page({
     }
 
     if (this.data.cameraState !== 'ready') {
-      wx.showToast({ title: '相机未就绪', icon: 'none' })
+      wx.showToast({ title: t('camera.notReady'), icon: 'none' })
       return
     }
 
@@ -426,7 +459,7 @@ Page({
               scope: 'scope.writePhotosAlbum',
               success: () => this.setAlbumEnabled(true),
               fail: () => {
-                wx.showToast({ title: '没有相册权限，影像仍只留在应用内', icon: 'none' })
+                wx.showToast({ title: t('album.deniedAppOnly'), icon: 'none' })
               },
             })
           }
@@ -456,7 +489,7 @@ Page({
         filePath: tempFilePath,
         fail: (e: { errMsg?: string }) => {
           const denied = (e.errMsg || '').includes('auth')
-          wx.showToast({ title: denied ? '没能存入相册：点「存相册」重新授权' : '没能存入相册', icon: 'none' })
+          wx.showToast({ title: denied ? t('album.saveFailedReauth') : t('album.saveFailed'), icon: 'none' })
         },
         complete: () => resolve(),
       }
@@ -479,7 +512,7 @@ Page({
         })
       },
       fail: () => {
-        wx.showToast({ title: '拍摄失败', icon: 'none' })
+        wx.showToast({ title: t('capture.photoFailed'), icon: 'none' })
       },
     })
   },
@@ -492,7 +525,7 @@ Page({
     this.videoResumedAt = Date.now()
     this.videoPauseRequested = false
     this.videoGeneration += 1
-    this.setData({ recording: true, recordPaused: false, pausePending: false, recordSegment: 1, recordElapsed: '00:00' })
+    this.setData({ recording: true, recordPaused: false, pausePending: false, recordSegment: 1, recordSegmentText: segmentText(1), recordElapsed: '00:00' })
     this.startRecordTimer()
     this.manualStopping = false
     this.startVideoSegment()
@@ -515,7 +548,8 @@ Page({
         this.segmentHandled = true
         if (resuming && !this.manualStopping) {
           this.videoPauseRequested = true
-          this.setData({ recordPaused: true, pausePending: false, recordSegment: Math.max(1, this.data.recordSegment - 1) })
+          const prevSeg = Math.max(1, this.data.recordSegment - 1)
+          this.setData({ recordPaused: true, pausePending: false, recordSegment: prevSeg, recordSegmentText: segmentText(prevSeg) })
           wx.showToast({ title: t('rec.resume.videoFailed'), icon: 'none' })
         } else {
           this.stopRecordUi()
@@ -558,7 +592,8 @@ Page({
       } else if (this.videoPauseRequested && !this.manualStopping) {
         this.setData({ recordPaused: true, pausePending: false })
       } else if (timedOut && !this.manualStopping) {
-        this.setData({ recordSegment: segment + 1 })
+        const nextSeg = segment + 1
+        this.setData({ recordSegment: nextSeg, recordSegmentText: segmentText(nextSeg) })
         this.startVideoSegment()
       } else this.stopRecordUi()
     }
@@ -601,7 +636,8 @@ Page({
     this.setData({ pausePending: true })
     if (this.data.recordPaused) {
       this.videoPauseRequested = false
-      this.setData({ recordSegment: this.data.recordSegment + 1 })
+      const nextSeg = this.data.recordSegment + 1
+      this.setData({ recordSegment: nextSeg, recordSegmentText: segmentText(nextSeg) })
       this.startVideoSegment()
     } else {
       this.videoPauseRequested = true
@@ -614,7 +650,7 @@ Page({
 
   audioCallbacks() {
     return {
-      onSegment: (segmentIndex: number) => this.setData({ recordSegment: segmentIndex }),
+      onSegment: (segmentIndex: number) => this.setData({ recordSegment: segmentIndex, recordSegmentText: segmentText(segmentIndex) }),
       onFinish: () => { this.stopRecordUi(); this.showRecordingNotice() },
       onError: () => { this.stopRecordUi(); this.showRecordingNotice() },
       onInterrupted: (recordInterrupted: boolean) => this.setData({ recordInterrupted, pausePending: false }),
@@ -649,7 +685,7 @@ Page({
     const started = await startRecording(project, this.audioCallbacks())
     if (!started) return
 
-    this.setData({ recording: true, recordPaused: false, pausePending: false, silenceUnavailable: recordingSnapshot()?.monitorUnavailable ?? false, recordSegment: 1, recordElapsed: '00:00' })
+    this.setData({ recording: true, recordPaused: false, pausePending: false, silenceUnavailable: recordingSnapshot()?.monitorUnavailable ?? false, recordSegment: 1, recordSegmentText: segmentText(1), recordElapsed: '00:00' })
     this.startRecordTimer()
   },
 
@@ -663,7 +699,7 @@ Page({
   stopRecordUi() {
     this.videoGeneration += 1
     this.stopRecordTimer()
-    this.setData({ recordPaused: false, pausePending: false, silenceUnavailable: false, recording: false, recordElapsed: '00:00', recordSegment: 1, recordInterrupted: false })
+    this.setData({ recordPaused: false, pausePending: false, silenceUnavailable: false, recording: false, recordElapsed: '00:00', recordSegment: 1, recordSegmentText: segmentText(1), recordInterrupted: false })
   },
 
   startRecordTimer() {
@@ -706,8 +742,8 @@ Page({
   /** 单段录满后询问是否续录下一段，取消则结束循环 */
   async recordMoreSegments(project: RelayProject | null, segmentIndex: number) {
     const { confirm } = await wx.showModal({
-      title: `已录制第 ${segmentIndex} 段（单段最长 60 秒）`,
-      content: '继续录制下一段吗？',
+      title: t('rec.segmentDoneTitle', { n: segmentIndex }),
+      content: t('rec.segmentContinuePrompt'),
     })
     if (!confirm) return
 
@@ -738,7 +774,7 @@ Page({
     } catch (err) {
       const message = (err as { errMsg?: string })?.errMsg || ''
       if (!message.includes('cancel')) {
-        wx.showToast({ title: '拍摄未完成', icon: 'none' })
+        wx.showToast({ title: t('capture.incomplete'), icon: 'none' })
       }
       return null
     }
@@ -769,7 +805,7 @@ Page({
 
   onSwitchProject() {
     if (this.data.recording) {
-      wx.showToast({ title: '请先停止当前录制', icon: 'none' })
+      wx.showToast({ title: t('rec.stopCurrentFirst'), icon: 'none' })
       return
     }
     wx.navigateTo({ url: '/pages/project/project' })

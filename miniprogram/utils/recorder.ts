@@ -204,9 +204,9 @@ function ensureRecordAuth(): Promise<boolean> {
       success: () => resolve(true),
       fail: () => {
         wx.showModal({
-          title: '需要麦克风权限',
-          content: '录音需要使用麦克风。请在设置里打开「麦克风」权限后重试。',
-          confirmText: '去设置',
+          title: t('rec.permission.title'),
+          content: t('rec.permission.message'),
+          confirmText: t('home.permission.goSettings.short'),
           success: (res) => {
             if (!res.confirm) {
               resolve(false)

@@ -2,8 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   phaseOf, stateText, dotClass, tallyOf, tallyTotal, projectId,
-  groupByDay, deleteWarning, projectsIn,
+  groupByDay, deleteWarning, projectsIn, PHASE_LABEL, getPhaseLabel,
 } from '../miniprogram/utils/phase.ts'
+import { setLocale } from '../miniprogram/utils/i18n.ts'
 
 test('phase mapping', () => {
   assert.equal(phaseOf('waiting'), 'uploading')
@@ -67,4 +68,22 @@ test('projectsIn current first, others by name', () => {
   // 丙(bǐng) 排在 乙(yǐ) 前：按拼音与按码点结论一致，小程序运行时没有 ICU 也不变
   assert.deepEqual(ps.map((p) => p.id), ['d:1', 'd:3', 'd:2'])
   assert.deepEqual(projectsIn([], cur), [{ id: 'd:1', name: '甲' }])
+})
+
+test('PHASE_LABEL and getPhaseLabel resolve dynamically across locale changes', () => {
+  try {
+    setLocale('zh-Hans')
+    assert.equal(PHASE_LABEL.uploading, '上传中')
+    assert.equal(PHASE_LABEL.staged, '已暂存')
+    assert.equal(PHASE_LABEL.landed, '已落盘')
+    assert.equal(getPhaseLabel('uploading'), '上传中')
+
+    setLocale('en')
+    assert.equal(PHASE_LABEL.uploading, 'Uploading')
+    assert.equal(PHASE_LABEL.staged, 'Staged')
+    assert.equal(PHASE_LABEL.landed, 'Landed')
+    assert.equal(getPhaseLabel('uploading'), 'Uploading')
+  } finally {
+    setLocale('zh-Hans')
+  }
 })
