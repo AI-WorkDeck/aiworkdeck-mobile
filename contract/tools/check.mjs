@@ -225,8 +225,7 @@ const CJK = /\p{Script=Han}/u
 /** 带占位的文案拆出的片段短于这个长度就不查了：太短，误报比漏报还烦 */
 const MIN_SEGMENT = 3
 
-/** 允许保留在源码里的少量非词典中文（语言选择器原生标签、字体名、调试种子与内部不变式日志） */
-const ALLOWED_CJK_TOKENS = ['简体中文', '中文', 'PingFang SC', "name: '走查项目'"]
+/** 允许保留在源码里的少量非词典中文（截图/走查调试种子与内部不变式日志） */
 const ALLOWED_CJK_FILE_SUFFIXES = [
   'ios/Sources/App/Screenshots.swift',
   'android/app/src/main/kotlin/com/aiworkdeck/mobile/ScreenshotMode.kt',
@@ -264,9 +263,8 @@ function stripComments(text) {
 function isAllowedCjkLine(rel, line) {
   if (ALLOWED_CJK_FILE_SUFFIXES.some((s) => rel.endsWith(s))) return true
   if (ALLOWED_CJK_LINE_PATTERNS.some((re) => re.test(line))) return true
-  let rest = line
-  for (const tok of ALLOWED_CJK_TOKENS) rest = rest.split(tok).join('')
-  return !CJK.test(rest)
+  if (rel.endsWith('harmony/entry/src/main/ets/entryability/EntryAbility.ets') && line.includes("name: '走查项目'")) return true
+  return false
 }
 
 function checkInline(c, problems) {
@@ -284,6 +282,8 @@ function checkInline(c, problems) {
     ...walk(join(c.root, 'ios', 'Workdeck'), ['.swift'], ['L10n.generated.swift']),
     ...walk(join(c.root, 'ios', 'Shared'), ['.swift'], []),
     ...walk(join(c.root, 'ios', 'LiveActivity'), ['.swift'], []),
+    ...walk(join(c.root, 'ios', 'Watch'), ['.swift'], []),
+    ...walk(join(c.root, 'ios', 'WatchShared'), ['.swift'], []),
     ...walk(join(c.root, 'miniprogram', 'pages'), ['.ts', '.wxml'], []),
     ...walk(join(c.root, 'miniprogram', 'components'), ['.ts', '.wxml'], []),
     ...walk(join(c.root, 'miniprogram', 'utils'), ['.ts'], ['/utils/contract/', 'strings.ts']),

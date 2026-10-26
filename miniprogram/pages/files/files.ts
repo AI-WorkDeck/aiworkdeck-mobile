@@ -25,8 +25,13 @@ Page({
     this.active = true
     this.session = getSession()
     this.project = getSelectedProject()
-    this.setData({ metrics: getApp<{ globalData: { metrics: Metrics } }>().globalData.metrics,
-      title: this.project?.name ?? t('project.files') })
+    this.setData({
+      metrics: getApp<{ globalData: { metrics: Metrics } }>().globalData.metrics,
+      title: this.project?.name ?? t('project.files'),
+      rootText: t('files.root'), parentText: t('files.parent'), emptyText: t('files.empty'),
+      loadingText: t('workspace.loading'), retryText: t('project.retry'), limitText: t('workspace.limit'),
+      audioText: t('home.mode.audio'),
+    })
     this.loadFiles()
   },
   alive() { return this.active && this.session === getSession() },

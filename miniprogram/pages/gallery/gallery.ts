@@ -185,9 +185,17 @@ Page({
     }))
     const tally = tallyOf(items.filter(isAssigned))
     this.setData({
+      allLabel: t('library.all'),
+      audioLabel: t('library.audio'),
       phaseLabel: phaseLabels(),
+      unassignedHint: t('workspace.unassignedHint'),
       switchProjectHint: t('library.switchProjectHint'),
       colsLabel: colsLabelFor(this.data.cols),
+      colsA11y: colsA11yFor(this.data.cols),
+      viewLabel: viewLabelFor(this.data.view),
+      viewA11y: viewA11yFor(this.data.view),
+      emptyText: t('library.empty'),
+      emptyHint: t('library.emptyHint'),
       projects,
       viewingId,
       viewingName,

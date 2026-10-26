@@ -71,12 +71,29 @@ Page({
     const app = getApp<AppGlobal>()
     this.setData({
       metrics: app.globalData.metrics,
+      navTitle: t('settings.title'),
+      accountLabel: t('settings.account'),
       phoneText: maskPhone(getPhone()),
+      balanceTitle: t('balance.title'),
+      rechargeText: t('recharge.entry'),
+      versionLabel: t('settings.version'),
       versionText: miniProgramVersion(),
+      signOutText: t('common.signOut'),
+      backupTitle: t('backup.title'),
     })
   },
 
   onShow() {
+    this.setData({
+      navTitle: t('settings.title'),
+      accountLabel: t('settings.account'),
+      balanceTitle: t('balance.title'),
+      rechargeText: t('recharge.entry'),
+      versionLabel: t('settings.version'),
+      versionText: miniProgramVersion(),
+      signOutText: t('common.signOut'),
+      backupTitle: t('backup.title'),
+    })
     // 从充值页返回也走这里：付完钱回来余额要是新的
     this.loadBalance()
     this.loadBackup()

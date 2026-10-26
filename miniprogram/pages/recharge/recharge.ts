@@ -37,11 +37,13 @@ interface TierRow {
   label: string
 }
 
-const TIERS: TierRow[] = PRODUCTS.wxvp.map((p) => ({
-  productId: p.productId,
-  amountCents: p.amountCents,
-  label: t('recharge.tier', { amount: formatMoney(p.amountCents, CURRENCY) }),
-}))
+function tiersFor(): TierRow[] {
+  return PRODUCTS.wxvp.map((p) => ({
+    productId: p.productId,
+    amountCents: p.amountCents,
+    label: t('recharge.tier', { amount: formatMoney(p.amountCents, CURRENCY) }),
+  }))
+}
 
 interface PendingIdem {
   key: string
@@ -118,7 +120,7 @@ Page({
     navTitle: t('recharge.title'),
     pickText: t('recharge.pick'),
     payText: t('recharge.pay'),
-    tiers: TIERS,
+    tiers: tiersFor(),
     selected: 0,
     paying: false,
     hint: '',
@@ -128,7 +130,13 @@ Page({
 
   onLoad() {
     const app = getApp<AppGlobal>()
-    this.setData({ metrics: app.globalData.metrics })
+    this.setData({
+      metrics: app.globalData.metrics,
+      navTitle: t('recharge.title'),
+      pickText: t('recharge.pick'),
+      payText: t('recharge.pay'),
+      tiers: tiersFor(),
+    })
   },
 
   onUnload() {

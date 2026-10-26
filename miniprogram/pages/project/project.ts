@@ -48,7 +48,14 @@ Page({
     this.setData({
       metrics: app.globalData.metrics,
       assigning: !!this.assignmentId,
+      ddTitle: t('dd.title'),
+      ddOpen: t('dd.open'),
+      emptyText: t('empty.projects'),
       navTitle: this.assignmentId ? t('library.assign') : t('project.title'),
+      loadingText: t('common.loading'),
+      refreshText: t('common.refresh'),
+      retryText: t('project.retry'),
+      filesText: t('project.files'),
       // 从 index「切换项目」navigateTo 过来时页面栈里还有上一页，可以返回；
       // 登录后的守门 reLaunch 过来时本页是栈底，不给返回按钮。
       showBack: getCurrentPages().length > 1,
