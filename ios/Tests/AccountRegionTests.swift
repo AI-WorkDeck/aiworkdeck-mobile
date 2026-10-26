@@ -176,7 +176,7 @@ final class AccountRegionTests: XCTestCase {
         L10n.locale = "zh-Hant"
         XCTAssertFalse(L10n.isRTL)
         XCTAssertEqual(L10n.wireCode, "zh-TW")
-        XCTAssertEqual(tr("login.region.cn"), "大陆版")
+        XCTAssertEqual(tr("login.region.cn"), "大陸版")
     }
 
     /// 切区域要清掉上一区域的已选项目（含持久化），登录新区域后落到项目选择页，

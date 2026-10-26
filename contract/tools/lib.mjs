@@ -363,10 +363,18 @@ ${num('Ty', t.Ty)}
 }
 function renderKtStrings(c) {
   const localeRows = c.locales.map((l) => `        ContractLocale(${kq(l.code)}, ${kq(l.wireCode)}, ${kq(l.nativeName)}, ${kq(l.englishName)}, ${kq(l.dir)}),`).join('\n')
-  const rows = Object.entries(c.strings).map(([k, v]) => {
-    const pairs = Object.entries(v).map(([loc, text]) => `${kq(loc)} to ${kq(text)}`).join(', ')
-    return `        ${kq(k)} to mapOf(${pairs}),`
-  }).join('\n')
+  const entries = Object.entries(c.strings)
+  const chunkSize = 50
+  const chunks = []
+  for (let i = 0; i < entries.length; i += chunkSize) {
+    const slice = entries.slice(i, i + chunkSize)
+    const rows = slice.map(([k, v]) => {
+      const pairs = Object.entries(v).map(([loc, text]) => `${kq(loc)} to ${kq(text)}`).join(', ')
+      return `        m[${kq(k)}] = mapOf(${pairs})`
+    }).join('\n')
+    chunks.push(`    private fun fillChunk${chunks.length}(m: MutableMap<String, Map<String, String>>) {\n${rows}\n    }`)
+  }
+  const chunkCalls = chunks.map((_, idx) => `        fillChunk${idx}(this)`).join('\n')
   return H('//') + `package com.aiworkdeck.contract
 
 data class ContractLocale(
@@ -381,9 +389,10 @@ object ContractStrings {
     val supportedLocales: List<ContractLocale> = listOf(
 ${localeRows}
     )
-    val table: Map<String, Map<String, String>> = mapOf(
-${rows}
-    )
+    val table: Map<String, Map<String, String>> = buildMap(${entries.length}) {
+${chunkCalls}
+    }
+${chunks.join('\n')}
 }
 `
 }
