@@ -172,6 +172,9 @@ Page({
       projectName: project?.name ?? t('library.unknownProject'),
       otherPending,
       otherPendingText: t('library.otherPending', { n: otherPending }),
+      titleText: t('queue.title'),
+      retryText: t('project.retry'),
+      emptyText: t('library.empty'),
     })
   },
 
