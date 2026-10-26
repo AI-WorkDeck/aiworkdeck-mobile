@@ -54,6 +54,6 @@ class L10nTest {
         L10n.locale = "zh-Hant"
         assertFalse(L10n.isRtl)
         assertEquals("zh-TW", L10n.wireCode)
-        assertEquals("未归类", tr("library.unknownProject"))
+        assertEquals("未歸類", tr("library.unknownProject"))
     }
 }
