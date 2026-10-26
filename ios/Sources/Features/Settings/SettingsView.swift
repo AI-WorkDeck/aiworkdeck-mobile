@@ -169,6 +169,21 @@ struct SettingsView: View {
                         }
                         // 区域登录后固定，这里只读；换区要退出登录后在登录页重选。
                         infoRow(tr("settings.region"), tr(AccountRegion.current.labelKey))
+                        HStack {
+                            Text(tr("settings.language")).font(T.F.small()).foregroundStyle(T.L.fg)
+                            Spacer()
+                            Picker(tr("settings.language"), selection: Binding(
+                                get: { L10n.preference },
+                                set: { L10n.selectLanguage($0) }
+                            )) {
+                                Text(tr("settings.languageFollowSystem")).tag(L10n.systemPreference)
+                                ForEach(L10n.supportedLocales) { loc in
+                                    Text(loc.nativeName).tag(loc.code)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .accessibilityIdentifier("settings.language")
+                        }
                         infoRow(tr("settings.server"), Backend.baseURL.host ?? "—")
                         Button(tr("common.signOut")) { model.signOut(); onClose() }
                             .font(T.F.small())

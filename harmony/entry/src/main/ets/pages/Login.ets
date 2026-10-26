@@ -1,8 +1,8 @@
 import { common, Want } from '@kit.AbilityKit'
-import { ContractCapabilities } from 'contract'
+import { ContractCapabilities, ContractLocale } from 'contract'
 import { AppModel } from '../AppModel'
 import { Pill, PrimaryButton, SegmentToggle } from '../design/Components'
-import { LOCALE_ZH, trIn } from '../design/L10n'
+import { L10n, LOCALE_SYSTEM, LOCALE_ZH, trIn } from '../design/L10n'
 import { Tk } from '../design/Tokens'
 import { AccountRegion, LoginMethod, accountFlowUrl, defaultLoginMethodOf, loginMethodsOf } from '../model/AccountRegion'
 import { LoginResult } from '../services/ApiTypes'
@@ -25,17 +25,51 @@ export struct Login {
   @State password: string = ''
   @State busy: boolean = false
   @State reviewMode: boolean = false
+  @State showLanguagePicker: boolean = false
 
   build() {
     NavDestination() {
       Scroll() {
         Column({ space: Tk.Sp.s4 }) {
-          if (ContractCapabilities.intlAccount) {
-            SegmentToggle({
-              leftLabel: this.t('login.region.cn'), rightLabel: this.t('login.region.intl'),
-              rightOn: this.region === AccountRegion.intl, a11yLabel: this.t('login.region.a11y'),
-              onToggle: (): void => this.switchRegion(),
-            })
+          Row({ space: Tk.Sp.s2 }) {
+            if (ContractCapabilities.intlAccount) {
+              SegmentToggle({
+                leftLabel: this.t('login.region.cn'), rightLabel: this.t('login.region.intl'),
+                rightOn: this.region === AccountRegion.intl, a11yLabel: this.t('login.region.a11y'),
+                onToggle: (): void => this.switchRegion(),
+              })
+            }
+            Blank()
+            Text(L10n.displayName(L10n.preference, this.locale))
+              .fontSize(Tk.Ty.small)
+              .fontColor(Tk.L.fgMuted)
+              .height(Tk.touchMin)
+              .onClick((): void => {
+                if (!this.busy) this.showLanguagePicker = !this.showLanguagePicker
+              })
+          }
+          .width('100%')
+          if (this.showLanguagePicker) {
+            Column({ space: Tk.Sp.s1 }) {
+              Text(this.t('settings.languageFollowSystem'))
+                .fontSize(Tk.Ty.small)
+                .fontColor(L10n.preference === LOCALE_SYSTEM ? Tk.L.accent : Tk.L.fg)
+                .height(Tk.touchMin)
+                .onClick((): void => {
+                  this.pickLanguage(LOCALE_SYSTEM)
+                })
+              ForEach(L10n.supportedLocales(), (loc: ContractLocale): void => {
+                Text(loc.nativeName)
+                  .fontSize(Tk.Ty.small)
+                  .fontColor(L10n.preference === loc.code ? Tk.L.accent : Tk.L.fg)
+                  .height(Tk.touchMin)
+                  .onClick((): void => {
+                    this.pickLanguage(loc.code)
+                  })
+              }, (loc: ContractLocale): string => loc.code)
+            }
+            .alignItems(HorizontalAlign.Start)
+            .width('100%')
           }
           Text(this.t('login.title')).fontSize(Tk.Ty.display).fontColor(Tk.L.fg)
           Text(this.t('login.passwordHint')).fontSize(Tk.Ty.micro).fontColor(Tk.L.fgMuted)
@@ -64,12 +98,20 @@ export struct Login {
           Text(this.t('login.forgotPassword')).fontColor(Tk.L.accent).height(Tk.touchMin)
             .onClick((): void => this.openFlow('reset'))
           Text(this.t(this.region === AccountRegion.cn && this.method === LoginMethod.email ? 'login.legacyEmailHint' : 'login.webHint')).fontSize(Tk.Ty.micro).fontColor(Tk.L.fgMuted)
-        }.width('100%').alignItems(HorizontalAlign.Start).padding(Tk.Sp.gutter)
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+        .padding(Tk.Sp.gutter)
+        .direction(L10n.isRtl(this.locale) ? Direction.Rtl : Direction.Ltr)
       }.width('100%').height('100%')
     }.hideTitleBar(true).backgroundColor(Tk.L.bg)
   }
 
   private t(key: string): string { return trIn(this.locale, key) }
+  private pickLanguage(pref: string): void {
+    this.showLanguagePicker = false
+    ServiceLocator.setLocalePreference(pref).catch((): void => {})
+  }
   private pick(method: LoginMethod): void {
     if (this.busy || this.method === method) return
     this.method = method; this.identity = ''; this.password = ''; this.reviewMode = false

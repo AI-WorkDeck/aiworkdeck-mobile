@@ -1,3 +1,5 @@
+import { L10n } from '../design/L10n'
+
 /**
  * 账号区域（dev-board#837）。大陆站与国际站是两套账号体系、两个主机，同一个人在两边是两个号。
  *
@@ -48,9 +50,17 @@ export function localeOf(region: AccountRegion): string {
   return region === AccountRegion.intl ? 'en' : 'zh-Hans'
 }
 
-/** 区域 → 请求头 `X-App-Language` 的值，后端据此选报错语言。 */
+/** 区域 → 请求头 `X-App-Language` 的默认语言值。 */
 export function appLanguageOf(region: AccountRegion): string {
   return region === AccountRegion.intl ? 'en-US' : 'zh-CN'
+}
+
+/** 当前请求头 `X-App-Language` 的实际语言值（优先使用当前活动界面语言的 wireCode）。 */
+export function currentAppLanguage(region: AccountRegion): string {
+  if (L10n.locale.length > 0) {
+    return L10n.wireCode(L10n.locale)
+  }
+  return appLanguageOf(region)
 }
 
 /**

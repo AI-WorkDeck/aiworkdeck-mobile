@@ -14,6 +14,7 @@ const KEY_SELECTED_PROJECT: string = 'selectedProject'
 const KEY_DEVICE_ID: string = 'deviceId'
 const KEY_LIBRARY_VIEW: string = 'libraryView'
 const KEY_ACCOUNT_REGION: string = 'accountRegion'
+const KEY_APP_LOCALE: string = 'appLocale'
 
 export const LIBRARY_VIEW_GRID: string = 'grid'
 export const LIBRARY_VIEW_LIST: string = 'list'
@@ -137,5 +138,28 @@ export class Prefs {
 
   async setAccountRegion(r: AccountRegion): Promise<void> {
     await this.putString(KEY_ACCOUNT_REGION, r)
+  }
+
+  appLocaleSync(): string {
+    try {
+      const v: preferences.ValueType = this.openSync().getSync(KEY_APP_LOCALE, 'system')
+      if (typeof v === 'string' && (v as string).length > 0) {
+        return v as string
+      }
+      return 'system'
+    } catch (e) {
+      hilog.warn(DOMAIN, TAG, 'appLocale unreadable: %{public}s', (e as Error).message)
+      return 'system'
+    }
+  }
+
+  async setAppLocale(v: string): Promise<void> {
+    const store: preferences.Preferences = await this.open()
+    if (v === 'system' || v.length === 0) {
+      await store.delete(KEY_APP_LOCALE)
+      await store.flush()
+    } else {
+      await this.putString(KEY_APP_LOCALE, v)
+    }
   }
 }

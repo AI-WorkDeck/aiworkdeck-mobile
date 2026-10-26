@@ -3,11 +3,12 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadContract, outputs, manifestFor } from './lib.mjs'
+import { loadContract, outputs, manifestFor, syncStringsJson } from './lib.mjs'
 
 const args = process.argv.slice(2)
 const i = args.indexOf('--root')
 const root = resolve(i >= 0 ? args[i + 1] : join(dirname(fileURLToPath(import.meta.url)), '..', '..'))
+syncStringsJson(root)
 const c = loadContract(root)
 for (const [rel, content] of outputs(c)) {
   const abs = join(root, rel)

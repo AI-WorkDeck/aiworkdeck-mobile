@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aiworkdeck.mobile.design.L10n
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.WorkdeckTheme
 import com.aiworkdeck.mobile.features.auth.LoginScreen
@@ -121,35 +125,38 @@ fun Root(model: AppModel) {
     }
 
     val dark = didRestore && isSignedIn
-    WorkdeckTheme(dark = dark) {
-        when {
-            // 恢复会话前先给一张与主界面同色的空屏，避免登录页闪一下再跳走
-            !didRestore -> Column(Modifier.fillMaxSize().background(Tk.L.bg)) {}
-            !isSignedIn -> LoginScreen(model)
-            else -> {
-                // 取景器一直在下面：图集是盖上去的一层，退回来时镜头还在原处，不用重新绑定
-                HomeScreen(model, onOpen = { overlay = it })
-                if (overlay == Overlay.Queue) {
-                    QueueScreen(model, onClose = { overlay = Overlay.None })
-                }
-                if (overlay == Overlay.Settings) {
-                    SettingsScreen(model, onClose = { overlay = Overlay.None }, onOpen = { overlay = it })
-                }
-                if (overlay == Overlay.Projects) {
-                    ProjectPickerScreen(model, onClose = { overlay = Overlay.None }, onSelect = { model.selectProject(it); overlay = Overlay.None })
-                }
-                if (overlay == Overlay.Files) {
-                    project?.let { ProjectFilesScreen(it, onClose = { overlay = Overlay.None }) }
-                }
-                if (overlay == Overlay.Backup) BackupConsentScreen(onClose = { overlay = Overlay.None })
-                if (overlay == Overlay.Library) {
-                    LibraryScreen(
-                        model = model,
-                        onOpenViewer = { items, index -> viewer = items to index },
-                        onClose = { overlay = Overlay.None },
-                    )
-                    viewer?.let { (items, index) ->
-                        ViewerScreen(items = items, start = index, onClose = { viewer = null })
+    val layoutDir = if (L10n.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+    CompositionLocalProvider(LocalLayoutDirection provides layoutDir) {
+        WorkdeckTheme(dark = dark) {
+            when {
+                // 恢复会话前先给一张与主界面同色的空屏，避免登录页闪一下再跳走
+                !didRestore -> Column(Modifier.fillMaxSize().background(Tk.L.bg)) {}
+                !isSignedIn -> LoginScreen(model)
+                else -> {
+                    // 取景器一直在下面：图集是盖上去的一层，退回来时镜头还在原处，不用重新绑定
+                    HomeScreen(model, onOpen = { overlay = it })
+                    if (overlay == Overlay.Queue) {
+                        QueueScreen(model, onClose = { overlay = Overlay.None })
+                    }
+                    if (overlay == Overlay.Settings) {
+                        SettingsScreen(model, onClose = { overlay = Overlay.None }, onOpen = { overlay = it })
+                    }
+                    if (overlay == Overlay.Projects) {
+                        ProjectPickerScreen(model, onClose = { overlay = Overlay.None }, onSelect = { model.selectProject(it); overlay = Overlay.None })
+                    }
+                    if (overlay == Overlay.Files) {
+                        project?.let { ProjectFilesScreen(it, onClose = { overlay = Overlay.None }) }
+                    }
+                    if (overlay == Overlay.Backup) BackupConsentScreen(onClose = { overlay = Overlay.None })
+                    if (overlay == Overlay.Library) {
+                        LibraryScreen(
+                            model = model,
+                            onOpenViewer = { items, index -> viewer = items to index },
+                            onClose = { overlay = Overlay.None },
+                        )
+                        viewer?.let { (items, index) ->
+                            ViewerScreen(items = items, start = index, onClose = { viewer = null })
+                        }
                     }
                 }
             }

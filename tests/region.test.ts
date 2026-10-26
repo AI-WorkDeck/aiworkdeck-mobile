@@ -2,7 +2,16 @@ import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { regionView, localeFor } from '../miniprogram/utils/region.ts'
 import { CAPS } from '../miniprogram/utils/contract/capabilities.ts'
-import { t, setLocale, getLocale } from '../miniprogram/utils/i18n.ts'
+import {
+  t,
+  setLocale,
+  getLocale,
+  normalizeLocale,
+  matchCountryToLocale,
+  wireCodeFor,
+  isRtl,
+  SUPPORTED_LOCALES,
+} from '../miniprogram/utils/i18n.ts'
 
 // i18n 的语言是模块级状态，每条用例后复位，免得串到别的测试文件
 afterEach(() => setLocale('zh-Hans'))
@@ -45,4 +54,36 @@ test('i18n: 英文下占位符替换照常，缺键仍回显键名', () => {
   setLocale('en')
   assert.equal(t('no.such.key'), 'no.such.key')
   assert.doesNotMatch(t('delete.title', { n: 3 }), /\{n\}/)
+})
+
+test('i18n: 20 语言目录、规范化、wireCode、RTL 与回退链', () => {
+  assert.equal(SUPPORTED_LOCALES.length, 20)
+  assert.equal(normalizeLocale('zh_TW'), 'zh-Hant')
+  assert.equal(normalizeLocale('zh_HK'), 'zh-Hant')
+  assert.equal(normalizeLocale('zh_CN'), 'zh-Hans')
+  assert.equal(normalizeLocale('pt_PT'), 'pt-BR')
+  assert.equal(normalizeLocale('ja-JP'), 'ja')
+  assert.equal(normalizeLocale('ar-SA'), 'ar')
+  assert.equal(wireCodeFor('zh-Hans'), 'zh-CN')
+  assert.equal(wireCodeFor('zh-Hant'), 'zh-TW')
+  assert.equal(wireCodeFor('ja'), 'ja-JP')
+  assert.equal(isRtl('ar'), true)
+  assert.equal(isRtl('en'), false)
+
+  // 20 语种均提供本地化译文（未命中键时仍按 zh-Hant -> zh-Hans、其他 -> en 回落）
+  setLocale('zh-Hant')
+  assert.equal(t('login.region.cn'), '大陸版')
+  setLocale('ja')
+  assert.notEqual(t('login.region.cn'), 'login.region.cn')
+  assert.equal(t('no.such.key'), 'no.such.key')
+
+  // Geo-IP 国家/地区代码 -> 默认语言映射
+  assert.equal(matchCountryToLocale('CN'), 'zh-Hans')
+  assert.equal(matchCountryToLocale('TW'), 'zh-Hant')
+  assert.equal(matchCountryToLocale('HK'), 'zh-Hant')
+  assert.equal(matchCountryToLocale('JP'), 'ja')
+  assert.equal(matchCountryToLocale('KR'), 'ko')
+  assert.equal(matchCountryToLocale('SA'), 'ar')
+  assert.equal(matchCountryToLocale('BR'), 'pt-BR')
+  assert.equal(matchCountryToLocale('XX'), null)
 })

@@ -72,10 +72,11 @@ test('tr 跟随 L10n.locale：切到海外版当场出英文，切回中文', ()
   }
 })
 
-test('trIn：指定语言取值、占位替换、缺译文回落中文、缺键回显', () => {
+test('trIn：指定语言取值、占位替换、多语种取值、缺键回显', () => {
   assert.equal(trIn(LOCALE_EN, 'delete.title', { n: 3 }).includes('3'), true)
   assert.notEqual(trIn(LOCALE_EN, 'delete.title', { n: 3 }), trIn(LOCALE_ZH, 'delete.title', { n: 3 }))
-  assert.equal(trIn('fr', 'login.region.cn'), '大陆版')
+  assert.notEqual(trIn('fr', 'login.region.cn'), 'login.region.cn')
+  assert.equal(trIn('zh-Hant', 'login.region.cn'), '大陸版')
   assert.equal(trIn(LOCALE_EN, 'no.such.key'), 'no.such.key')
 })
 

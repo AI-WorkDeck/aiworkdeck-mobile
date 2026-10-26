@@ -7,7 +7,7 @@
  * （见 docs/specs/2026-08-20-project-sync-relay.md）。
  */
 
-import { t } from './i18n'
+import { t, wireCodeFor } from './i18n'
 import { BACKUP_CONSENT_VERSION } from './contract/capabilities'
 import { fromCatalog, sameProject, type CatalogProject, type ProjectLocation } from './project-catalog'
 
@@ -201,7 +201,9 @@ export function readEnvelope<T>(statusCode: number, body: unknown, opts: { bare?
 
 function authHeader(): Record<string, string> {
   const session = getSession()
-  return session ? { 'X-Session-Id': session } : {}
+  const headers: Record<string, string> = { 'X-App-Language': wireCodeFor() }
+  if (session) headers['X-Session-Id'] = session
+  return headers
 }
 
 function request<T>(

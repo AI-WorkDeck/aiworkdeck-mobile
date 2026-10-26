@@ -1,13 +1,28 @@
 import { accountLogin, verifyLoginCode } from '../../utils/api'
 import type { ApiError } from '../../utils/api'
 import type { Metrics } from '../../utils/layout'
-import { t, setLocale } from '../../utils/i18n'
+import {
+  t,
+  applyRegionLocale,
+  getLocalePreference,
+  setLocalePreference,
+  getCurrentLanguageLabel,
+  getLanguagePickerOptions,
+  isRtl,
+} from '../../utils/i18n'
 import { CAPS } from '../../utils/contract/capabilities'
 import { localeFor, regionView, type LoginRegion } from '../../utils/region'
 
 interface AppGlobal { globalData: { metrics: Metrics } }
 function boundTexts(region: LoginRegion) {
+  const options = getLanguagePickerOptions()
+  const pref = getLocalePreference()
+  const idx = Math.max(0, options.findIndex((o) => o.code === pref))
   return {
+    dir: isRtl() ? 'rtl' : 'ltr',
+    languageValue: getCurrentLanguageLabel(),
+    languageOptions: options,
+    languageIndex: idx,
     navTitle: t('login.title'), phoneLabel: t('login.phone'), phonePlaceholder: t('login.phonePlaceholder'),
     passwordLabel: t('login.password'), passwordPlaceholder: t('login.passwordPlaceholder'),
     submitText: t('login.title'), workingText: t('login.working'), hintText: t('login.passwordHint'),
@@ -24,18 +39,27 @@ Page({
     region: 'cn' as LoginRegion, ...boundTexts('cn'), ...regionView('cn', CAPS.intlAccount),
   },
   onLoad() {
-    setLocale(localeFor('cn'))
-    this.setData({ metrics: getApp<AppGlobal>().globalData.metrics, ...boundTexts('cn') })
+    applyRegionLocale(localeFor('cn'))
+    this.setData({ metrics: getApp<AppGlobal>().globalData.metrics, ...boundTexts('cn'), ...regionView('cn', CAPS.intlAccount) })
   },
-  onUnload() { setLocale(localeFor('cn')) },
+  onUnload() { applyRegionLocale(localeFor('cn')) },
   refreshButtons() {
     this.setData({ submitDisabled: this.data.loggingIn || this.data.phone.length !== 11 || !this.data.password })
   },
   onToggleRegion() {
     if (this.data.loggingIn) return
     const region: LoginRegion = this.data.region === 'cn' ? 'intl' : 'cn'
-    setLocale(localeFor(region))
+    applyRegionLocale(localeFor(region))
     this.setData({ region, reviewMode: false, phone: '', password: '', ...boundTexts(region), ...regionView(region, CAPS.intlAccount) }, () => this.refreshButtons())
+  },
+  onLanguageChange(e: { detail: { value: string | number } }) {
+    if (this.data.loggingIn) return
+    const idx = Number(e.detail.value)
+    const option = this.data.languageOptions[idx]
+    if (!option) return
+    const region = this.data.region
+    setLocalePreference(option.code, localeFor(region))
+    this.setData({ ...boundTexts(region), ...regionView(region, CAPS.intlAccount) })
   },
   onGetApp() { wx.navigateTo({ url: '/pages/download/download' }) },
   onPhoneInput(e: { detail: { value: string } }) {

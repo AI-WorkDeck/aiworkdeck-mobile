@@ -8,7 +8,7 @@ import { ApiError, Unauthorized, checkEnvelope } from '../model/Envelope'
 import { SessionStore } from './SessionStore'
 import { Prefs } from './Prefs'
 import { UploadResult, asRecord, decodeUploadResult } from './ApiTypes'
-import { AccountRegion, appLanguageOf, baseUrlOf } from '../model/AccountRegion'
+import { AccountRegion, baseUrlOf, currentAppLanguage } from '../model/AccountRegion'
 
 const DOMAIN: number = 0x0000
 const TAG: string = 'Uploader'
@@ -199,7 +199,7 @@ export class Uploader {
       { name: 'file', value: file },
     ]
     const region: AccountRegion = this.region()
-    const headers: Record<string, string> = { 'X-Session-Id': sid, 'X-App-Language': appLanguageOf(region) }
+    const headers: Record<string, string> = { 'X-Session-Id': sid, 'X-App-Language': currentAppLanguage(region) }
     const conf: request.agent.Config = {
       action: request.agent.Action.UPLOAD,
       url: `${baseUrlOf(region)}/api/mobile/media`,

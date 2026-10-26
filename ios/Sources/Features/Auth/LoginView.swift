@@ -43,10 +43,25 @@ struct LoginView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: T.Sp.s4) {
-                if ContractCapabilities.intlAccount {
-                    Picker(tr("login.region.a11y"), selection: $region) {
-                        ForEach(AccountRegion.allCases, id: \.self) { r in Text(tr(r.labelKey)).tag(r) }
-                    }.pickerStyle(.segmented).disabled(busy)
+                HStack {
+                    if ContractCapabilities.intlAccount {
+                        Picker(tr("login.region.a11y"), selection: $region) {
+                            ForEach(AccountRegion.allCases, id: \.self) { r in Text(tr(r.labelKey)).tag(r) }
+                        }.pickerStyle(.segmented).disabled(busy)
+                    }
+                    Spacer()
+                    Picker(tr("settings.language"), selection: Binding(
+                        get: { L10n.preference },
+                        set: { L10n.selectLanguage($0, region: region) }
+                    )) {
+                        Text(tr("settings.languageFollowSystem")).tag(L10n.systemPreference)
+                        ForEach(L10n.supportedLocales) { loc in
+                            Text(loc.nativeName).tag(loc.code)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .disabled(busy)
+                    .accessibilityIdentifier("login.language")
                 }
                 Text(tr("login.title")).font(T.F.display()).foregroundStyle(T.L.fg)
                 Text(tr("login.passwordHint")).font(T.F.micro()).foregroundStyle(T.L.fgMuted)

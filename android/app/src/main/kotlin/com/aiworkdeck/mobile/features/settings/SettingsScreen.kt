@@ -40,6 +40,7 @@ import com.aiworkdeck.mobile.AppModel
 import com.aiworkdeck.mobile.BuildConfig
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Hairline
+import com.aiworkdeck.mobile.design.L10n
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.WorkdeckTheme
 import com.aiworkdeck.mobile.design.tr
@@ -85,6 +86,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
     // 才会把它翻成 false。
     var hideBalanceRow by remember { mutableStateOf(true) }
     var showRechargeNotice by remember { mutableStateOf(false) }
+    var showLanguagePicker by remember { mutableStateOf(false) }
     var confirmingDelete by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
@@ -162,6 +164,10 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                 Group(tr("settings.account")) {
                     InfoRow(tr("settings.signedIn"), account?.displayName ?: DASH)
                     InfoRow(tr("settings.region"), tr(region.labelKey))
+                    Column(Modifier.fillMaxWidth().noRipple { showLanguagePicker = true }) {
+                        Text(tr("settings.language"), style = Fonts.small(), color = Tk.L.fg)
+                        Text(L10n.currentDisplayName, style = Fonts.nano(), color = Tk.L.accent)
+                    }
                     InfoRow(tr("settings.server"), Uri.parse(region.baseUrl).host ?: DASH)
                     // 本期只展示余额：不放充值入口、不放任何指向官网充值的文案或链接
                     // （App Store 3.1.3 一旦出现站外购买行动号召就会触发强制内购）。
@@ -211,6 +217,37 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                 text = { Text(tr("recharge.external.body")) },
                 confirmButton = {
                     TextButton(onClick = { showRechargeNotice = false }) { Text(tr("common.close")) }
+                },
+            )
+        }
+
+        if (showLanguagePicker) {
+            AlertDialog(
+                onDismissRequest = { showLanguagePicker = false },
+                title = { Text(tr("settings.language")) },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        val options = listOf(L10n.SYSTEM_PREFERENCE to tr("settings.languageFollowSystem")) +
+                            L10n.supportedLocales.map { it.code to it.nativeName }
+                        for ((code, label) in options) {
+                            val selected = L10n.preference == code
+                            Text(
+                                text = label,
+                                style = Fonts.body(),
+                                color = if (selected) Tk.L.accent else Tk.L.fg,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = Tk.touchMin)
+                                    .noRipple {
+                                        prefs.appLocale = code
+                                        L10n.applyPreference(code, region)
+                                        showLanguagePicker = false
+                                    }
+                                    .wrapContentHeight(),
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showLanguagePicker = false }) { Text(tr("common.close")) }
                 },
             )
         }
