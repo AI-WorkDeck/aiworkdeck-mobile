@@ -8,7 +8,7 @@ import { Uploader } from './Uploader'
 import { DeviceFacts, deviceFacts } from './DeviceFacts'
 import { ContractCapabilities } from 'contract'
 import { AccountRegion, DEFAULT_REGION, RegionSwitchSink, baseUrlOf, localeOf, switchRegion } from '../model/AccountRegion'
-import { L10n, LOCALE_STORAGE_KEY } from '../design/L10n'
+import { L10n, LOCALE_STORAGE_KEY, LOCALE_SYSTEM } from '../design/L10n'
 
 /** 换区时真实的三处存储：内存区域 + 界面语言、偏好里的当前项目、偏好里的区域。 */
 class LocatorRegionSink implements RegionSwitchSink {
@@ -105,20 +105,35 @@ export class ServiceLocator {
   }
 
   /**
-   * 区域与界面语言一起换。L10n.locale 给 `tr` 同步取值；AppStorage 那一份是可观察的，
-   * 订阅了它的页面（登录页）当场重绘成新语言。
+   * 区域与界面语言一起换。若用户未显式指定语言（LOCALE_SYSTEM），则跟随区域默认语言。
    */
   static applyRegion(r: AccountRegion): void {
     ServiceLocator.regionRef = r
-    const locale: string = localeOf(r)
+    const fallback: string = localeOf(r)
+    const locale: string = L10n.preference === LOCALE_SYSTEM ? fallback : L10n.normalize(L10n.preference, fallback)
     L10n.locale = locale
     AppStorage.setOrCreate<string>(LOCALE_STORAGE_KEY, locale)
+  }
+
+  static applyLocale(pref: string): void {
+    const fallback: string = localeOf(ServiceLocator.regionRef)
+    const validPref: string = (pref.length === 0 || pref === LOCALE_SYSTEM) ? LOCALE_SYSTEM : L10n.normalize(pref, fallback)
+    L10n.preference = validPref
+    const locale: string = validPref === LOCALE_SYSTEM ? fallback : validPref
+    L10n.locale = locale
+    AppStorage.setOrCreate<string>(LOCALE_STORAGE_KEY, locale)
+  }
+
+  static async setLocalePreference(pref: string): Promise<void> {
+    ServiceLocator.applyLocale(pref)
+    await ServiceLocator.prefs.setAppLocale(L10n.preference)
   }
 
   static init(ctx: common.Context): void {
     if (ServiceLocator.ctxRef !== null) return
     const session: SessionStore = new SessionStore()
     const prefs: Prefs = new Prefs(ctx)
+    L10n.preference = prefs.appLocaleSync()
     // 本端不支持国际账号时（契约 intlAccount=false）不认偏好里的值，一律大陆
     ServiceLocator.applyRegion(ContractCapabilities.intlAccount ? prefs.accountRegionSync() : DEFAULT_REGION)
     const facts: DeviceFacts = deviceFacts(ctx)

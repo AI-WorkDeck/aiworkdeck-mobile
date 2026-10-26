@@ -5,7 +5,7 @@ import { JSON as ArkJson } from '@kit.ArkTS'
 import { ApiError, Unauthorized, checkEnvelope } from '../model/Envelope'
 import { RelayProject } from '../model/Capture'
 import { SessionStore } from './SessionStore'
-import { AccountRegion, appLanguageOf, baseUrlOf } from '../model/AccountRegion'
+import { AccountRegion, baseUrlOf, currentAppLanguage } from '../model/AccountRegion'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import {
   LoginResult, MediaStatus, MediaUsage, SubscriptionBalance, decodeSubscriptionBalance,
@@ -163,7 +163,7 @@ export class Backend {
     const sid: string | null = await this.session.current()
     if (expectedSession !== null && sid !== expectedSession) throw new Unauthorized()
     const region: AccountRegion = this.region()
-    const header: Record<string, string> = { 'X-App-Language': appLanguageOf(region) }
+    const header: Record<string, string> = { 'X-App-Language': currentAppLanguage(region) }
     if (sid !== null) header['X-Session-Id'] = sid
     const client: http.HttpRequest = http.createHttp()
     try {

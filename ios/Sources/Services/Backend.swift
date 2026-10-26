@@ -46,6 +46,9 @@ enum AccountRegion: String, CaseIterable, Sendable {
 
     static func save(_ region: AccountRegion, to defaults: UserDefaults) {
         defaults.set(region.rawValue, forKey: defaultsKey)
+        if defaults == .standard {
+            L10n.apply(region: region)
+        }
     }
 
     static var current: AccountRegion {
@@ -55,20 +58,26 @@ enum AccountRegion: String, CaseIterable, Sendable {
 }
 
 extension AccountRegion {
-    /// 请求头 `X-App-Language`：后端据此选报错语言。
+    /// 请求头 `X-App-Language`：区域默认语言代码（大陆版 zh-CN，海外版 en-US）。
     var appLanguage: String { self == .intl ? "en-US" : "zh-CN" }
 }
 
-/// 语言跟账号区域走（dev-board#837）：大陆版 zh-Hans，海外版 en。
+/// 语言默认跟账号区域走（大陆版 zh-Hans，海外版 en），当用户主动选了语言偏好时以偏好为准。
 extension L10n {
     static func locale(for region: AccountRegion) -> String {
         region == .intl ? "en" : "zh-Hans"
     }
 
-    /// 启动时按解析出的区域设一次；登录页切区域时再设一次，当场生效。
-    static func apply(region: AccountRegion) {
-        let l = locale(for: region)
-        if locale != l { locale = l }
+    /// 启动时或登录页切区域时调用：若用户未指定语言偏好（system），则跟随区域默认语言。
+    static func apply(region: AccountRegion, defaults: UserDefaults = .standard) {
+        let pref = loadPreference(from: defaults)
+        if preference != pref { preference = pref }
+        let target = pref == systemPreference ? locale(for: region) : normalize(pref, fallback: locale(for: region))
+        if locale != target { locale = target }
+    }
+
+    static func selectLanguage(_ pref: String, region: AccountRegion = .current, defaults: UserDefaults = .standard) {
+        setPreference(pref, regionFallback: locale(for: region), defaults: defaults)
     }
 }
 
@@ -237,7 +246,7 @@ actor API {
     static func request(_ url: URL) -> URLRequest {
         var req = URLRequest(url: url)
         if let sid = SessionStore.current { req.setValue(sid, forHTTPHeaderField: "X-Session-Id") }
-        req.setValue(AccountRegion.current.appLanguage, forHTTPHeaderField: "X-App-Language")
+        req.setValue(L10n.wireCode, forHTTPHeaderField: "X-App-Language")
         return req
     }
 

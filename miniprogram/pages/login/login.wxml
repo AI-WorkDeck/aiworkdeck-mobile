@@ -1,6 +1,9 @@
 <nav-bar title="{{navTitle}}" />
-<view class="page" style="padding-bottom: {{metrics.bottomInset}}px;">
+<view class="page" dir="{{dir}}" style="padding-bottom: {{metrics.bottomInset}}px;">
   <view class="region-bar">
+    <picker mode="selector" range="{{languageOptions}}" range-key="label" value="{{languageIndex}}" bindchange="onLanguageChange">
+      <view class="lang-pill tappable"><text class="lang-pill__text">{{languageValue}}</text></view>
+    </picker>
     <view class="region tappable" bindtap="onToggleRegion" aria-role="switch" aria-label="{{regionA11y}}">
       <view class="region__track region__track--{{region}}"><view class="region__thumb"></view>
         <text class="region__label region__label--cn">{{regionCnText}}</text>

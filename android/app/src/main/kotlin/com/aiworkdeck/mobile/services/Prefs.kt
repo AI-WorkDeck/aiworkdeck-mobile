@@ -64,6 +64,14 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
             editor.apply()
         }
 
+    var appLocale: String
+        get() = prefs.getString(KEY_APP_LOCALE, null) ?: "system"
+        set(value) {
+            val editor = prefs.edit()
+            if (value == "system" || value.isBlank()) editor.remove(KEY_APP_LOCALE) else editor.putString(KEY_APP_LOCALE, value)
+            editor.apply()
+        }
+
     private companion object {
         const val KEY_SAVE_TO_ALBUM = "saveToAlbum"
         const val KEY_ACCOUNT_REGION = "accountRegion"
@@ -72,5 +80,6 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
         const val KEY_LIBRARY_COLUMNS = "libraryColumns"
         const val KEY_LIBRARY_VIEW_MODE = "libraryViewMode"
         const val KEY_LIBRARY_VIEWING_PROJECT = "libraryViewingProject"
+        const val KEY_APP_LOCALE = "appLocale"
     }
 }

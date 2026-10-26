@@ -1,9 +1,9 @@
 import { hilog } from '@kit.PerformanceAnalysisKit'
-import { ContractCapabilities } from 'contract'
+import { ContractCapabilities, ContractLocale } from 'contract'
 import { BackupConsentService } from '../services/BackupConsentService'
 import { BackupConsent } from '../model/ProjectFiles'
 import { AppModel } from '../AppModel'
-import { tr } from '../design/L10n'
+import { L10n, LOCALE_SYSTEM, LOCALE_ZH, trIn } from '../design/L10n'
 import { Tk } from '../design/Tokens'
 import { formatBytes } from '../model/Format'
 import { RelayProject } from '../model/Capture'
@@ -41,7 +41,9 @@ function hostOf(url: string): string {
 @Component
 export struct Settings {
   stack: NavPathStack = new NavPathStack()
+  @StorageProp('awdLocale') locale: string = LOCALE_ZH
   @State saveToAlbum: boolean = false
+  @State showLanguagePicker: boolean = false
   @State projectName: string = DASH
   @State usage: MediaUsage | null = null
   @State subscription: SubscriptionBalance | null = null
@@ -49,6 +51,10 @@ export struct Settings {
   private token: number = -1
   /** 这一屏还在不在。异步回调回来时组件可能已经销毁，往里写 @State 是错误日志甚至崩溃。 */
   private alive: boolean = false
+
+  private t(key: string, vars?: Record<string, string | number>): string {
+    return trIn(this.locale, key, vars)
+  }
 
   aboutToAppear(): void {
     this.alive = true
@@ -106,6 +112,7 @@ export struct Settings {
       }
       .width('100%')
       .height('100%')
+      .direction(L10n.isRtl(this.locale) ? Direction.Rtl : Direction.Ltr)
     }
     .hideTitleBar(true)
     .backgroundColor(Tk.L.bg)
@@ -121,11 +128,11 @@ export struct Settings {
           .width(Tk.touchMin)
           .height(Tk.touchMin)
           .textAlign(TextAlign.Center)
-          .accessibilityText(tr('common.close'))
+          .accessibilityText(this.t('common.close'))
           .onClick((): void => {
             this.stack.pop()
           })
-        Text(tr('home.settings'))
+        Text(this.t('home.settings'))
           .fontSize(Tk.Ty.heading)
           .fontColor(Tk.L.fg)
       }
@@ -138,18 +145,18 @@ export struct Settings {
 
   @Builder
   mediaGroup() {
-    this.eyebrow(tr('settings.media'))
+    this.eyebrow(this.t('settings.media'))
     Row({ space: Tk.Sp.s3 }) {
       Column({ space: Tk.Sp.s1 }) {
-        Text(tr('settings.saveToAlbum'))
+        Text(this.t('settings.saveToAlbum'))
           .fontSize(Tk.Ty.body)
           .fontColor(Tk.L.fg)
         // 把权衡摆在这儿，让每次选择都是知情的
-        Text(tr('settings.saveToAlbum.hint'))
+        Text(this.t('settings.saveToAlbum.hint'))
           .fontSize(Tk.Ty.nano)
           .fontColor(Tk.L.fgFaint)
         // 鸿蒙没有静默写相册的路（spec H8）：开了之后每件都会弹系统确认，说在前面
-        Text(tr('settings.saveToAlbum.dialogHint'))
+        Text(this.t('settings.saveToAlbum.dialogHint'))
           .fontSize(Tk.Ty.nano)
           .fontColor(Tk.L.fgFaint)
       }
@@ -171,24 +178,24 @@ export struct Settings {
 
   @Builder
   archiveGroup() {
-    this.eyebrow(tr('settings.archiveTarget'))
+    this.eyebrow(this.t('settings.archiveTarget'))
     if (ServiceLocator.region === 'cn') {
-      Text(tr('dd.title')).fontSize(Tk.Ty.small).fontColor(Tk.L.accent).height(Tk.touchMin)
+      Text(this.t('dd.title')).fontSize(Tk.Ty.small).fontColor(Tk.L.accent).height(Tk.touchMin)
         .onClick((): void => { this.stack.pushPath(new NavPathInfo('DdClient', '')) })
     }
-    this.infoRow(tr('home.eyebrow'), this.projectName)
-    Text(tr('backup.title') + ' · ' + (this.backup === null ? DASH : tr(this.backup.enabled ? 'backup.enabled' : 'backup.disabled')))
+    this.infoRow(this.t('home.eyebrow'), this.projectName)
+    Text(this.t('backup.title') + ' · ' + (this.backup === null ? DASH : this.t(this.backup.enabled ? 'backup.enabled' : 'backup.disabled')))
       .height(Tk.touchMin).fontColor(Tk.L.accent)
-      .onClick((): void => { this.changeBackup().catch((): void => toast(this.getUIContext(), tr('backup.error'))) })
-    this.infoRow(tr('settings.relay'), this.usageCaption())
+      .onClick((): void => { this.changeBackup().catch((): void => toast(this.getUIContext(), this.t('backup.error'))) })
+    this.infoRow(this.t('settings.relay'), this.usageCaption())
     Progress({ value: this.usageFraction(), total: 100, type: ProgressType.Linear })
       .color(Tk.L.accent)
       .backgroundColor(Tk.L.sunken)
       .width('100%')
     if (this.usage?.persistentUsedBytes !== undefined) {
-      this.infoRow(tr('settings.persistent'), this.persistentCaption())
+      this.infoRow(this.t('settings.persistent'), this.persistentCaption())
     }
-    Text(tr('settings.switchProject'))
+    Text(this.t('settings.switchProject'))
       .fontSize(Tk.Ty.small)
       .fontColor(Tk.L.accent)
       .height(Tk.touchMin)
@@ -200,27 +207,64 @@ export struct Settings {
 
   @Builder
   accountGroup() {
-    this.eyebrow(tr('settings.account'))
-    this.infoRow(tr('settings.signedIn'), this.accountName())
+    this.eyebrow(this.t('settings.account'))
+    this.infoRow(this.t('settings.signedIn'), this.accountName())
     // 区域登录后固定（换区 = 退出登录后在登录页重选），这里只读显示；服务器行跟着区域走
     if (ContractCapabilities.intlAccount) {
-      this.infoRow(tr('settings.region'), tr(regionLabelKey(ServiceLocator.region)))
+      this.infoRow(this.t('settings.region'), this.t(regionLabelKey(ServiceLocator.region)))
     }
-    this.infoRow(tr('settings.server'), hostOf(ServiceLocator.baseUrl()))
+    Column({ space: Tk.Sp.s1 }) {
+      Text(this.t('settings.language'))
+        .fontSize(Tk.Ty.small)
+        .fontColor(Tk.L.fg)
+      Text(L10n.displayName(L10n.preference, this.locale))
+        .fontSize(Tk.Ty.nano)
+        .fontColor(Tk.L.accent)
+    }
+    .alignItems(HorizontalAlign.Start)
+    .width('100%')
+    .margin({ bottom: Tk.Sp.s3 })
+    .onClick((): void => {
+      this.showLanguagePicker = !this.showLanguagePicker
+    })
+    if (this.showLanguagePicker) {
+      Column({ space: Tk.Sp.s1 }) {
+        Text(this.t('settings.languageFollowSystem'))
+          .fontSize(Tk.Ty.small)
+          .fontColor(L10n.preference === LOCALE_SYSTEM ? Tk.L.accent : Tk.L.fg)
+          .height(Tk.touchMin)
+          .onClick((): void => {
+            this.pickLanguage(LOCALE_SYSTEM)
+          })
+        ForEach(L10n.supportedLocales(), (loc: ContractLocale): void => {
+          Text(loc.nativeName)
+            .fontSize(Tk.Ty.small)
+            .fontColor(L10n.preference === loc.code ? Tk.L.accent : Tk.L.fg)
+            .height(Tk.touchMin)
+            .onClick((): void => {
+              this.pickLanguage(loc.code)
+            })
+        }, (loc: ContractLocale): string => loc.code)
+      }
+      .alignItems(HorizontalAlign.Start)
+      .width('100%')
+      .padding({ left: Tk.Sp.s3, bottom: Tk.Sp.s3 })
+    }
+    this.infoRow(this.t('settings.server'), hostOf(ServiceLocator.baseUrl()))
     if (this.subscription?.active === true) {
-      this.infoRow(tr('subscription.available'), this.credits(this.subscription.availableCents))
-      this.infoRow(tr('subscription.weekly'), `${this.credits(this.subscription.weeklyUsedCents)} / ${this.credits(this.subscription.weeklyLimitCents)}`)
-      this.infoRow(tr('subscription.monthly'), `${this.credits(this.subscription.monthlyUsedCents)} / ${this.credits(this.subscription.monthlyLimitCents)}`)
+      this.infoRow(this.t('subscription.available'), this.credits(this.subscription.availableCents))
+      this.infoRow(this.t('subscription.weekly'), `${this.credits(this.subscription.weeklyUsedCents)} / ${this.credits(this.subscription.weeklyLimitCents)}`)
+      this.infoRow(this.t('subscription.monthly'), `${this.credits(this.subscription.monthlyUsedCents)} / ${this.credits(this.subscription.monthlyLimitCents)}`)
     }
     // 国际站计费未开通（dev-board#664）：国际区不放充值入口
     if (RECHARGE_CHANNEL !== 'false' && billingAvailableIn(ServiceLocator.region)) {
-      Text(tr('recharge.entry'))
+      Text(this.t('recharge.entry'))
         .fontSize(Tk.Ty.small)
         .fontColor(Tk.L.accent)
         .height(Tk.touchMin)
         .onClick((): void => this.showRechargeNotice())
     }
-    Text(tr('common.signOut'))
+    Text(this.t('common.signOut'))
       .fontSize(Tk.Ty.small)
       .fontColor(Tk.S.failed)
       .height(Tk.touchMin)
@@ -228,7 +272,7 @@ export struct Settings {
         AppModel.shared.signOut().catch((): void => {})
       })
     // 放在退出登录下面、字号更小：它比退出重得多，不该长得一样容易误点
-    Text(tr('settings.deleteAccount'))
+    Text(this.t('settings.deleteAccount'))
       .fontSize(Tk.Ty.micro)
       .fontColor(Tk.L.fgMuted)
       .height(Tk.touchMin)
@@ -238,9 +282,9 @@ export struct Settings {
 
   @Builder
   aboutGroup() {
-    this.eyebrow(tr('settings.about'))
-    this.infoRow(tr('settings.version'), ServiceLocator.facts.appVersion)
-    this.infoRow(tr('settings.package'), ServiceLocator.ctx.applicationInfo.name)
+    this.eyebrow(this.t('settings.about'))
+    this.infoRow(this.t('settings.version'), ServiceLocator.facts.appVersion)
+    this.infoRow(this.t('settings.package'), ServiceLocator.ctx.applicationInfo.name)
     this.rule()
   }
 
@@ -295,8 +339,13 @@ export struct Settings {
     this.backup = await BackupConsentService.choose(this.getUIContext(), current, session, (): boolean => this.alive)
   }
 
+  private pickLanguage(pref: string): void {
+    this.showLanguagePicker = false
+    ServiceLocator.setLocalePreference(pref).catch((): void => {})
+  }
+
   private credits(cents: number): string {
-    return tr('subscription.credits', { 'amount': (cents / 100).toFixed(2) })
+    return this.t('subscription.credits', { 'amount': (cents / 100).toFixed(2) })
   }
 
   private persistentCaption(): string {
@@ -304,7 +353,7 @@ export struct Settings {
     if (u === null || u.persistentUsedBytes === undefined) return DASH
     const used: string = formatBytes(u.persistentUsedBytes)
     if (u.persistentQuotaBytes === undefined || u.persistentQuotaAvailable === false) {
-      return tr('settings.quotaUnavailable', { 'used': used })
+      return this.t('settings.quotaUnavailable', { 'used': used })
     }
     return `${used} / ${formatBytes(u.persistentQuotaBytes)}`
   }
@@ -312,7 +361,7 @@ export struct Settings {
   private usageCaption(): string {
     const u: MediaUsage | null = this.usage
     if (u === null) return DASH
-    return tr('settings.usage', { 'used': formatBytes(u.usedBytes), 'quota': formatBytes(u.quotaBytes) })
+    return this.t('settings.usage', { 'used': formatBytes(u.usedBytes), 'quota': formatBytes(u.quotaBytes) })
   }
 
   private usageFraction(): number {
@@ -326,11 +375,11 @@ export struct Settings {
   /** 本端还不能充值时的说明。只有一个「关闭」：这不是待办，是一句去哪儿充的指路。 */
   private showRechargeNotice(): void {
     this.getUIContext().showAlertDialog({
-      title: tr('recharge.external.title'),
-      message: tr('recharge.external.body'),
+      title: this.t('recharge.external.title'),
+      message: this.t('recharge.external.body'),
       autoCancel: true,
       confirm: {
-        value: tr('common.close'),
+        value: this.t('common.close'),
         action: (): void => {},
       },
     })
@@ -342,15 +391,15 @@ export struct Settings {
    */
   private confirmDelete(): void {
     this.getUIContext().showAlertDialog({
-      title: tr('settings.deleteAccount.title'),
-      message: tr('settings.deleteAccount.confirm'),
+      title: this.t('settings.deleteAccount.title'),
+      message: this.t('settings.deleteAccount.confirm'),
       autoCancel: true,
       primaryButton: {
-        value: tr('common.cancel'),
+        value: this.t('common.cancel'),
         action: (): void => {},
       },
       secondaryButton: {
-        value: tr('settings.deleteAccount'),
+        value: this.t('settings.deleteAccount'),
         fontColor: Tk.S.failed,
         action: (): void => {
           AppModel.shared.deleteAccount().catch((e: Object): void => {

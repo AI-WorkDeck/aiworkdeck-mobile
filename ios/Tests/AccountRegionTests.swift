@@ -158,6 +158,27 @@ final class AccountRegionTests: XCTestCase {
         XCTAssertEqual(cnReq.value(forHTTPHeaderField: "X-App-Language"), "zh-CN")
     }
 
+    func testTwentyLocalesNormalizationWireCodeRtlAndFallback() {
+        defer {
+            L10n.preference = L10n.systemPreference
+            L10n.locale = "zh-Hans"
+        }
+        XCTAssertEqual(L10n.supportedLocales.count, 20)
+        XCTAssertEqual(L10n.normalize("zh_TW"), "zh-Hant")
+        XCTAssertEqual(L10n.normalize("zh-HK"), "zh-Hant")
+        XCTAssertEqual(L10n.normalize("zh_CN"), "zh-Hans")
+        XCTAssertEqual(L10n.normalize("pt-PT"), "pt-BR")
+        XCTAssertEqual(L10n.normalize("ja_JP"), "ja")
+        L10n.locale = "ar"
+        XCTAssertTrue(L10n.isRTL)
+        XCTAssertEqual(L10n.wireCode, "ar-SA")
+        XCTAssertEqual(tr("login.region.cn"), "China")
+        L10n.locale = "zh-Hant"
+        XCTAssertFalse(L10n.isRTL)
+        XCTAssertEqual(L10n.wireCode, "zh-TW")
+        XCTAssertEqual(tr("login.region.cn"), "大陆版")
+    }
+
     /// 切区域要清掉上一区域的已选项目（含持久化），登录新区域后落到项目选择页，
     /// 不会带着上一账号的项目进首页。
     @MainActor

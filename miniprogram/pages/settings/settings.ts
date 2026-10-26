@@ -13,7 +13,15 @@ import { chooseBackupConsent } from '../../utils/backup-consent'
 import { billingBalance, getPhone, logout, maskPhone, backupConsent, setBackupConsent, getSession } from '../../utils/api'
 import type { ApiError, BillingBalance } from '../../utils/api'
 import type { Metrics } from '../../utils/layout'
-import { t } from '../../utils/i18n'
+import {
+  t,
+  getLocalePreference,
+  setLocalePreference,
+  getCurrentLanguageLabel,
+  getLanguagePickerOptions,
+  isRtl,
+  type LocalePreference,
+} from '../../utils/i18n'
 import { balanceRowForError, formatMoney } from '../../utils/money'
 import { CAPS } from '../../utils/contract/capabilities'
 
@@ -45,9 +53,23 @@ function miniProgramVersion(): string {
   }
 }
 
+function languageState() {
+  const options = getLanguagePickerOptions()
+  const pref = getLocalePreference()
+  const idx = Math.max(0, options.findIndex((o) => o.code === pref))
+  return {
+    dir: isRtl() ? 'rtl' : 'ltr',
+    languageLabel: t('settings.language'),
+    languageValue: getCurrentLanguageLabel(),
+    languageOptions: options,
+    languageIndex: idx,
+  }
+}
+
 Page({
   data: {
     metrics: {} as Metrics,
+    dir: 'ltr',
     navTitle: t('settings.title'),
     accountLabel: t('settings.account'),
     phoneText: '',
@@ -61,6 +83,10 @@ Page({
     rechargeText: t('recharge.entry'),
     // 「充值后即开通统一账户」只在 NOT_CONNECTED 时说，别的态说这句是废话
     openHint: '',
+    languageLabel: t('settings.language'),
+    languageValue: '',
+    languageOptions: [] as { code: LocalePreference; label: string }[],
+    languageIndex: 0,
     versionLabel: t('settings.version'),
     versionText: '',
     signOutText: t('common.signOut'),
@@ -80,6 +106,7 @@ Page({
       versionText: miniProgramVersion(),
       signOutText: t('common.signOut'),
       backupTitle: t('backup.title'),
+      ...languageState(),
     })
   },
 
@@ -93,8 +120,29 @@ Page({
       versionText: miniProgramVersion(),
       signOutText: t('common.signOut'),
       backupTitle: t('backup.title'),
+      ...languageState(),
     })
     // 从充值页返回也走这里：付完钱回来余额要是新的
+    this.loadBalance()
+    this.loadBackup()
+  },
+
+  onLanguageChange(e: { detail: { value: string | number } }) {
+    const idx = Number(e.detail.value)
+    const option = this.data.languageOptions[idx]
+    if (!option) return
+    setLocalePreference(option.code)
+    this.setData({
+      navTitle: t('settings.title'),
+      accountLabel: t('settings.account'),
+      balanceTitle: t('balance.title'),
+      rechargeText: t('recharge.entry'),
+      versionLabel: t('settings.version'),
+      versionText: miniProgramVersion(),
+      signOutText: t('common.signOut'),
+      backupTitle: t('backup.title'),
+      ...languageState(),
+    })
     this.loadBalance()
     this.loadBackup()
   },

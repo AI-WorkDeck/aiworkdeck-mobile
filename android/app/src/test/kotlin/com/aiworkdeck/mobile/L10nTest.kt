@@ -40,4 +40,20 @@ class L10nTest {
         L10n.locale = "zh-Hans"
         assertEquals("未归类", tr("library.unknownProject"))
     }
+
+    @Test fun twentyLocalesNormalizationWireCodeRtlAndFallback() {
+        assertEquals(20, L10n.supportedLocales.size)
+        assertEquals("zh-Hant", L10n.normalize("zh_TW"))
+        assertEquals("zh-Hans", L10n.normalize("zh_CN"))
+        assertEquals("pt-BR", L10n.normalize("pt_PT"))
+        assertEquals("ja", L10n.normalize("ja-JP"))
+        L10n.locale = "ar"
+        assertTrue(L10n.isRtl)
+        assertEquals("ar-SA", L10n.wireCode)
+        assertEquals("Unassigned", tr("library.unknownProject"))
+        L10n.locale = "zh-Hant"
+        assertFalse(L10n.isRtl)
+        assertEquals("zh-TW", L10n.wireCode)
+        assertEquals("未归类", tr("library.unknownProject"))
+    }
 }

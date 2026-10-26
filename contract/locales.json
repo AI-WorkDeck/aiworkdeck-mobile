@@ -1,0 +1,142 @@
+[
+  {
+    "code": "zh-Hans",
+    "wireCode": "zh-CN",
+    "nativeName": "简体中文",
+    "englishName": "Simplified Chinese",
+    "dir": "ltr"
+  },
+  {
+    "code": "zh-Hant",
+    "wireCode": "zh-TW",
+    "nativeName": "繁體中文",
+    "englishName": "Traditional Chinese",
+    "dir": "ltr"
+  },
+  {
+    "code": "en",
+    "wireCode": "en-US",
+    "nativeName": "English",
+    "englishName": "English",
+    "dir": "ltr"
+  },
+  {
+    "code": "ja",
+    "wireCode": "ja-JP",
+    "nativeName": "日本語",
+    "englishName": "Japanese",
+    "dir": "ltr"
+  },
+  {
+    "code": "ko",
+    "wireCode": "ko-KR",
+    "nativeName": "한국어",
+    "englishName": "Korean",
+    "dir": "ltr"
+  },
+  {
+    "code": "th",
+    "wireCode": "th-TH",
+    "nativeName": "ไทย",
+    "englishName": "Thai",
+    "dir": "ltr"
+  },
+  {
+    "code": "ms",
+    "wireCode": "ms-MY",
+    "nativeName": "Bahasa Melayu",
+    "englishName": "Malay",
+    "dir": "ltr"
+  },
+  {
+    "code": "id",
+    "wireCode": "id-ID",
+    "nativeName": "Bahasa Indonesia",
+    "englishName": "Indonesian",
+    "dir": "ltr"
+  },
+  {
+    "code": "vi",
+    "wireCode": "vi-VN",
+    "nativeName": "Tiếng Việt",
+    "englishName": "Vietnamese",
+    "dir": "ltr"
+  },
+  {
+    "code": "fr",
+    "wireCode": "fr-FR",
+    "nativeName": "Français",
+    "englishName": "French",
+    "dir": "ltr"
+  },
+  {
+    "code": "de",
+    "wireCode": "de-DE",
+    "nativeName": "Deutsch",
+    "englishName": "German",
+    "dir": "ltr"
+  },
+  {
+    "code": "es",
+    "wireCode": "es-ES",
+    "nativeName": "Español",
+    "englishName": "Spanish",
+    "dir": "ltr"
+  },
+  {
+    "code": "pt-BR",
+    "wireCode": "pt-BR",
+    "nativeName": "Português (Brasil)",
+    "englishName": "Portuguese (Brazil)",
+    "dir": "ltr"
+  },
+  {
+    "code": "it",
+    "wireCode": "it-IT",
+    "nativeName": "Italiano",
+    "englishName": "Italian",
+    "dir": "ltr"
+  },
+  {
+    "code": "ru",
+    "wireCode": "ru-RU",
+    "nativeName": "Русский",
+    "englishName": "Russian",
+    "dir": "ltr"
+  },
+  {
+    "code": "el",
+    "wireCode": "el-GR",
+    "nativeName": "Ελληνικά",
+    "englishName": "Greek",
+    "dir": "ltr"
+  },
+  {
+    "code": "tr",
+    "wireCode": "tr-TR",
+    "nativeName": "Türkçe",
+    "englishName": "Turkish",
+    "dir": "ltr"
+  },
+  {
+    "code": "nl",
+    "wireCode": "nl-NL",
+    "nativeName": "Nederlands",
+    "englishName": "Dutch",
+    "dir": "ltr"
+  },
+  {
+    "code": "hi",
+    "wireCode": "hi-IN",
+    "nativeName": "हिन्दी",
+    "englishName": "Hindi",
+    "dir": "ltr"
+  },
+  {
+    "code": "ar",
+    "wireCode": "ar-SA",
+    "nativeName": "العربية",
+    "englishName": "Arabic",
+    "dir": "rtl"
+  }
+]

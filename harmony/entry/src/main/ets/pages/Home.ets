@@ -4,7 +4,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit'
 import { BackupConsentService } from '../services/BackupConsentService'
 import { AppModel } from '../AppModel'
 import { StatusDot } from '../design/Components'
-import { tr } from '../design/L10n'
+import { L10n, LOCALE_ZH, tr } from '../design/L10n'
 import { Tk } from '../design/Tokens'
 import { CaptureItem, MediaKind, RelayProject } from '../model/Capture'
 import { formatClock, formatDay } from '../model/Format'
@@ -59,6 +59,7 @@ enum CapMode {
 @Component
 export struct Home {
   stack: NavPathStack = new NavPathStack()
+  @StorageProp('awdLocale') @Watch('onLocaleChanged') locale: string = LOCALE_ZH
 
   @State mode: CapMode = CapMode.photo
   @State hasCamera: boolean = false
@@ -124,6 +125,12 @@ export struct Home {
     this.tickId = setInterval((): void => this.tick(), TICK_MS)
     this.askPermissions()
     BackupConsentService.promptFirstUse(this.getUIContext(), (): boolean => this.alive)
+  }
+
+  onLocaleChanged(): void {
+    this.syncModel()
+    this.syncRecording()
+    this.tick()
   }
 
   aboutToDisappear(): void {
@@ -197,6 +204,7 @@ export struct Home {
       }
       .width('100%')
       .height('100%')
+      .direction(L10n.isRtl(this.locale) ? Direction.Rtl : Direction.Ltr)
       .onAreaChange((_previous: Area, current: Area): void => {
         this.landscape = Number(current.width) > Number(current.height)
       })

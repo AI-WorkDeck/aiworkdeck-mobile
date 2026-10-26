@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,6 +62,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Hairline
+import com.aiworkdeck.mobile.design.L10n
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.services.AccountRegion
@@ -100,6 +103,7 @@ fun LoginScreen(model: AppModel) {
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var reviewMode by remember { mutableStateOf(false) }
+    var showLanguagePicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val focus = remember { FocusRequester() }
     fun openFlow(flow: String) {
@@ -109,11 +113,27 @@ fun LoginScreen(model: AppModel) {
     Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().imePadding()
         .verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter),
         verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
-        if (ContractCapabilities.intlAccount) {
-            RegionToggle(region, !busy) {
-                val next = model.switchAccountRegion()
-                region = next; method = defaultMethod(next); identity = ""; password = ""; error = null; reviewMode = false
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            if (ContractCapabilities.intlAccount) {
+                RegionToggle(region, !busy) {
+                    val next = model.switchAccountRegion()
+                    region = next; method = defaultMethod(next); identity = ""; password = ""; error = null; reviewMode = false
+                }
+            } else {
+                Spacer(Modifier.width(1.dp))
             }
+            Text(
+                text = L10n.currentDisplayName,
+                style = Fonts.small(),
+                color = Tk.L.fgMuted,
+                modifier = Modifier.heightIn(min = Tk.touchMin)
+                    .clickable(enabled = !busy) { showLanguagePicker = true }
+                    .padding(horizontal = Tk.Sp.s3, vertical = Tk.Sp.s2),
+            )
         }
         Text(tr("login.title"), style = Fonts.display(), color = Tk.L.fg)
         Text(tr("login.passwordHint"), style = Fonts.micro(), color = Tk.L.fgMuted)
@@ -152,6 +172,37 @@ fun LoginScreen(model: AppModel) {
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("reset") })
         Text(tr(if (region == AccountRegion.cn && method == Method.Email) "login.legacyEmailHint" else "login.webHint"),
             style = Fonts.micro(), color = Tk.L.fgMuted)
+    }
+
+    if (showLanguagePicker) {
+        AlertDialog(
+            onDismissRequest = { showLanguagePicker = false },
+            title = { Text(tr("settings.language")) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    val options = listOf(L10n.SYSTEM_PREFERENCE to tr("settings.languageFollowSystem")) +
+                        L10n.supportedLocales.map { it.code to it.nativeName }
+                    for ((code, label) in options) {
+                        val selected = L10n.preference == code
+                        Text(
+                            text = label,
+                            style = Fonts.body(),
+                            color = if (selected) Tk.L.accent else Tk.L.fg,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = Tk.touchMin)
+                                .clickable {
+                                    ServiceLocator.prefs.appLocale = code
+                                    L10n.applyPreference(code, region)
+                                    showLanguagePicker = false
+                                }
+                                .padding(vertical = Tk.Sp.s2),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguagePicker = false }) { Text(tr("common.close")) }
+            },
+        )
     }
 }
 

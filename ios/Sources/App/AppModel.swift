@@ -85,7 +85,7 @@ final class AppModel {
         if let filesClient { return filesClient }
         let client = ProjectFilesService(context: ProjectFilesContext(
             baseURL: Backend.baseURL, sessionID: SessionStore.current ?? "",
-            language: AccountRegion.current.appLanguage))
+            language: L10n.wireCode))
         filesClient = client
         return client
     }

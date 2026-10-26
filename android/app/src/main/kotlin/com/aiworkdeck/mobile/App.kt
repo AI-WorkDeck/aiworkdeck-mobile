@@ -34,10 +34,10 @@ class App : Application() {
         val backend = Backend(
             baseUrlProvider = { prefs.accountRegion.baseUrl },
             session = SessionStores.create(this),
-            languageProvider = { prefs.accountRegion.appLanguage },
+            languageProvider = { L10n.wireCode },
         )
-        // 界面语言跟随区域（已存值或 flavor 缺省）；要在任何一屏、任何通知渠道建出来之前定好
-        L10n.follow(prefs.accountRegion)
+        // 界面语言跟随已存偏好或区域；要在任何一屏、任何通知渠道建出来之前定好
+        L10n.applyPreference(prefs.appLocale, prefs.accountRegion)
         ServiceLocator.prefs = prefs
         ServiceLocator.store = store
         ServiceLocator.backend = backend

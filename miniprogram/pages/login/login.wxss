@@ -15,8 +15,25 @@
  * 两个标签定宽，滑块与标签同宽，平移一个标签宽即到另一边——不依赖文字长短。 */
 .region-bar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--s2);
   margin-top: var(--s2);
+}
+
+.lang-pill {
+  padding: 0 var(--s3);
+  height: 60rpx;
+  line-height: 60rpx;
+  border: 1rpx solid var(--rule);
+  border-radius: 999px;
+  background: var(--bg-sunken);
+}
+
+.lang-pill__text {
+  font-size: var(--t-small);
+  font-weight: 500;
+  color: var(--fg-muted);
 }
 
 .region__track {

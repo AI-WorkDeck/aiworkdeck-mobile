@@ -30,6 +30,13 @@ function checkManifest(c, problems) {
   for (const f of DATA_FILES) {
     if (c.manifest.files[f] !== expected.files[f]) problems.push(`contract.json 里 ${f} 的 sha 过期：改了数据没跑 gen`)
   }
+  if (
+    c.manifest.files['strings.json'] === expected.files['strings.json'] &&
+    Object.keys(c.localeFiles ?? {}).length > 0 &&
+    JSON.stringify(c.strings) !== JSON.stringify(c.stringsJson)
+  ) {
+    problems.push('contract/strings/*.json 与 contract/strings.json 不同步：改了数据没跑 gen')
+  }
 }
 
 /** ② 引用闭合：状态机里的每个名字都必须能在状态表 / 文案词典 / 令牌表里落地 */
@@ -237,15 +244,112 @@ const ALLOWED_CJK_LINE_PATTERNS = [
   /\berror\s*\(\s*"(?:未知|契约)/,
 ]
 
+const CJK_ALLOWED_LOCALES = new Set(['zh-Hans', 'zh-Hant', 'ja'])
+const TARGET_SCRIPT_RE = {
+  'zh-Hant': /\p{Script=Han}/gu,
+  ja: /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/gu,
+  ko: /\p{Script=Hangul}/gu,
+  th: /\p{Script=Thai}/gu,
+  ru: /\p{Script=Cyrillic}/gu,
+  el: /\p{Script=Greek}/gu,
+  hi: /\p{Script=Devanagari}/gu,
+  ar: /\p{Script=Arabic}/gu,
+}
+
 function checkStrings(c, problems) {
+  const locales = Array.isArray(c.locales) ? c.locales : []
+  if (locales.length !== 20) {
+    problems.push(`locales.json 应定义 20 种语言，当前为 ${locales.length}`)
+  }
+  const knownCodes = new Set()
+  for (const loc of locales) {
+    if (!loc?.code || !loc?.wireCode || !loc?.nativeName || !loc?.englishName || !['ltr', 'rtl'].includes(loc?.dir)) {
+      problems.push(`locales.json 条目字段不完整：${JSON.stringify(loc)}`)
+    }
+    if (knownCodes.has(loc.code)) problems.push(`locales.json 存在重复语言代码：${loc.code}`)
+    knownCodes.add(loc.code)
+  }
+  for (const code of Object.keys(c.localeFiles ?? {})) {
+    if (knownCodes.size > 0 && !knownCodes.has(code)) {
+      problems.push(`contract/strings/${code}.json 不在 locales.json 支持列表内`)
+    }
+  }
+
+  const strictAll = process.env.STRICT_ALL_LOCALES !== '0'
+  if (strictAll) {
+    for (const code of knownCodes) {
+      if (!c.localeFiles?.[code]) {
+        problems.push(`STRICT_ALL_LOCALES=1：缺少 contract/strings/${code}.json`)
+      }
+    }
+  }
+
   const placeholders = (s) => [...String(s ?? '').matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
+  const baseKeys = new Set(Object.keys(c.localeFiles?.['zh-Hans'] ?? c.strings ?? {}))
+  for (const [code, dict] of Object.entries(c.localeFiles ?? {})) {
+    for (const k of Object.keys(dict ?? {})) {
+      if (!baseKeys.has(k)) {
+        problems.push(`strings/${code}.json 含有未知键 ${k}（不在 zh-Hans.json 中）`)
+      }
+    }
+  }
+
   for (const [k, v] of Object.entries(c.strings ?? {})) {
     const zh = v?.['zh-Hans']
     const en = v?.en
     if (typeof zh !== 'string' || zh.trim().length === 0) problems.push(`strings.json 的 ${k} 缺少 zh-Hans 文案`)
     if (typeof en !== 'string' || en.trim().length === 0) problems.push(`strings.json 的 ${k} 缺少 en 文案`)
-    if (typeof zh === 'string' && typeof en === 'string' && placeholders(zh) !== placeholders(en)) {
-      problems.push(`strings.json 的 ${k} 占位符不一致：zh-Hans={${placeholders(zh)}} vs en={${placeholders(en)}}`)
+    const zhPh = typeof zh === 'string' ? placeholders(zh) : ''
+    if (typeof zh === 'string' && typeof en === 'string' && zhPh !== placeholders(en)) {
+      problems.push(`strings.json 的 ${k} 占位符不一致：zh-Hans={${zhPh}} vs en={${placeholders(en)}}`)
+    }
+    if (strictAll) {
+      for (const code of knownCodes) {
+        const text = v?.[code]
+        if (typeof text !== 'string' || text.trim().length === 0) {
+          problems.push(`strings/${code}.json 的 ${k} 缺少 ${code} 文案`)
+        }
+      }
+    }
+    for (const [code, text] of Object.entries(v ?? {})) {
+      if (code === 'zh-Hans' || code === 'en') {
+        if (code === 'en' && typeof text === 'string' && CJK.test(text)) {
+          problems.push(`strings/en.json 的 ${k} 含有未翻译汉字：${text}`)
+        }
+        continue
+      }
+      if (typeof text !== 'string' || text.trim().length === 0) {
+        problems.push(`strings/${code}.json 的 ${k} 文案为空`)
+        continue
+      }
+      if (typeof zh === 'string' && placeholders(text) !== zhPh) {
+        problems.push(`strings/${code}.json 的 ${k} 占位符不一致：zh-Hans={${zhPh}} vs ${code}={${placeholders(text)}}`)
+      }
+      if (!CJK_ALLOWED_LOCALES.has(code) && CJK.test(text)) {
+        problems.push(`strings/${code}.json 的 ${k} 含有未翻译汉字：${text}`)
+      }
+    }
+  }
+
+  if (strictAll) {
+    const enDict = c.localeFiles?.en ?? {}
+    for (const [code, dict] of Object.entries(c.localeFiles ?? {})) {
+      if (code === 'zh-Hans' || code === 'en') continue
+      const vals = Object.values(dict ?? {}).filter((s) => typeof s === 'string')
+      const joined = vals.join('').replace(/\{[^{}]+\}|\s+/g, '')
+      const scriptRe = TARGET_SCRIPT_RE[code]
+      if (scriptRe && joined.length > 0) {
+        const matched = (joined.match(scriptRe) ?? []).length
+        const ratio = matched / joined.length
+        if (ratio < 0.3) {
+          problems.push(`strings/${code}.json 目标文字字符占比过低 (${(ratio * 100).toFixed(1)}% < 30%)，疑似未翻译`)
+        }
+      }
+      const longKeys = Object.keys(enDict).filter((k) => (enDict[k] ?? '').length > 8)
+      const sameAsEn = longKeys.filter((k) => dict?.[k] === enDict[k]).length
+      if (longKeys.length > 0 && sameAsEn / longKeys.length > 0.2) {
+        problems.push(`strings/${code}.json 与 en.json 完全相同的长句占比过高 (${sameAsEn}/${longKeys.length})，存在未翻译漏项`)
+      }
     }
   }
 }

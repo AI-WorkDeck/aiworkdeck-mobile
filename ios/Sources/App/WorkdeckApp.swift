@@ -111,6 +111,7 @@ private struct RootView: View {
         }
         .animation(T.A.base, value: model.isSignedIn)
         .animation(T.A.base, value: model.selectedProject)
+        .environment(\.layoutDirection, L10n.isRTL ? .rightToLeft : .leftToRight)
     }
 
     private var recordingTest: Bool {
@@ -219,18 +220,21 @@ struct CaptureFlowView: View {
         .environment(model)
         .preferredColorScheme(.dark)
         .fullScreenCover(item: $route) { r in
-            switch r {
-            case .queue:
-                QueueView(onClose: { route = nil }).environment(model)
-                    .preferredColorScheme(.light)
-            case .settings:
-                SettingsView(onClose: { route = nil }).environment(model)
-                    .preferredColorScheme(.light)
-            case .library:
-                LibraryView(onClose: { route = nil })
-                    .environment(model)
-                    .preferredColorScheme(.dark)
+            Group {
+                switch r {
+                case .queue:
+                    QueueView(onClose: { route = nil }).environment(model)
+                        .preferredColorScheme(.light)
+                case .settings:
+                    SettingsView(onClose: { route = nil }).environment(model)
+                        .preferredColorScheme(.light)
+                case .library:
+                    LibraryView(onClose: { route = nil })
+                        .environment(model)
+                        .preferredColorScheme(.dark)
+                }
             }
+            .environment(\.layoutDirection, L10n.isRTL ? .rightToLeft : .leftToRight)
         }
     }
 }
