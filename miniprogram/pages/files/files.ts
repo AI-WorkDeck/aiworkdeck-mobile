@@ -1,3 +1,4 @@
+import { takePersonalPreview } from '../../utils/api'
 import { getSelectedProject, getSession, myProjects, fileRequest, uuid, type RelayProject } from '../../utils/api'
 import { folderEntries, mergeLiveFiles, previewKind, extension, type ProjectFile, type FileEntry } from '../../utils/project-files'
 import { validatePreview, previewQuote, hasPendingPull, pullPreview, cloudPreview, clearCompletedPreviews } from '../../utils/file-preview'
@@ -24,7 +25,7 @@ Page({
   onLoad() {
     this.active = true
     this.session = getSession()
-    this.project = getSelectedProject()
+    this.project = takePersonalPreview() ?? getSelectedProject()
     this.setData({
       metrics: getApp<{ globalData: { metrics: Metrics } }>().globalData.metrics,
       title: this.project?.name ?? t('project.files'),

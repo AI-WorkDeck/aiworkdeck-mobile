@@ -15,6 +15,7 @@ final class WorkspaceFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest"]
         app.launch()
+        openPersonalCapture(app)
         XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 10))
         let original = app.buttons["capture.shutter"].frame
         for orientation in [UIDeviceOrientation.landscapeLeft, .portrait, .landscapeRight, .portrait] {
@@ -71,10 +72,7 @@ final class WorkspaceFlowTests: XCTestCase {
 
     @MainActor
     private func openProjects(_ app: XCUIApplication) {
-        let close = app.buttons["capture.close"]
-        XCTAssertTrue(close.waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["capture.mode.photo"].exists)
-        close.tap()
+        openPersonalProjects(app)
     }
 
     @MainActor
@@ -93,6 +91,7 @@ final class WorkspaceFlowTests: XCTestCase {
         XCTAssertTrue(decline.waitForExistence(timeout: 10)); decline.tap()
         let close = app.buttons["Close"].firstMatch
         XCTAssertTrue(close.waitForExistence(timeout: 5)); close.tap()
+        openPersonalCapture(app)
         XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 5))
         app.buttons["capture.settings"].tap()
         let backup = app.buttons["settings.backup"]
@@ -112,6 +111,7 @@ final class WorkspaceFlowTests: XCTestCase {
         XCTAssertTrue(decline.waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["backup.enable"].exists)
         decline.tap()
+        openPersonalCapture(app)
         XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 5))
         XCTAssertFalse(decline.exists)
     }

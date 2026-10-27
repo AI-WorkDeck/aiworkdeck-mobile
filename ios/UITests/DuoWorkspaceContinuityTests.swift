@@ -9,8 +9,7 @@ final class DuoWorkspaceContinuityTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest", "-AWDWorkspaceSlowDownload"]
         app.launch()
-        let projects = app.buttons["capture.close"]
-        XCTAssertTrue(projects.waitForExistence(timeout: 20)); projects.tap()
+        openPersonalProjects(app)
         let alpha = app.buttons["workspace.project.alpha"]
         XCTAssertTrue(alpha.waitForExistence(timeout: 15)); alpha.tap()
         let documents = app.buttons["workspace.folder.Documents"]

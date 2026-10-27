@@ -44,6 +44,7 @@ jobs:
             -only-testing:WorkdeckUITests/LoginFlowTests
             -only-testing:WorkdeckUITests/DuoSecondaryScreensTests
             -only-testing:WorkdeckUITests/DuoWorkspaceContinuityTests
+            -only-testing:WorkdeckUITests/PersonalWorkspaceFlowTests
           )
           # XCUIDevice.orientation does not change Duo's physical pose in DeviceHub.
           # Exercise those rotations on iPhone; Duo pose/split-view acceptance is

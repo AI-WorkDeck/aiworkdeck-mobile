@@ -175,6 +175,7 @@ export struct Home {
         this.stage()
         Column() {
           this.topBar()
+          Button(tr('personal.assistant')).enabled(!this.recordingVideo).onClick((): void => { this.stack.pop() })
           Column() {
             if (this.mode === CapMode.audio) {
               this.audioStage()

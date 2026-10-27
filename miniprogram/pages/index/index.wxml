@@ -3,6 +3,7 @@
      导航高度只用全局度量（metrics），页面不自己测量。 -->
 <view class="cap" style="padding-bottom: {{metrics.bottomInset}}px;">
 
+  <button class="personal-return" bindtap="onOpenPersonal" disabled="{{recording}}">{{personalTitle}}</button>
   <!-- 顶部信息层 -->
   <view class="top" style="padding-top: {{metrics.navTotalHeight}}px;">
     <view class="top__project tappable" bindtap="onSwitchProject">

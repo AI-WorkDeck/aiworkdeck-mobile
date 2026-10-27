@@ -270,6 +270,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
     Column(Modifier.fillMaxSize().background(Tk.D.bg).safeDrawingPadding()) {
         Row {
             androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Projects) }, enabled = !camera.isRecording) { Text(project?.name ?: tr("library.unknownProject"), color = Tk.D.fg) }
+            androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Personal) }, enabled = !camera.isRecording) { Text(tr("personal.assistant"), color = Tk.D.fg) }
             if (project != null) androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Files) }, enabled = !camera.isRecording) { Text(tr("workspace.files"), color = Tk.D.fg) }
             if (ServiceLocator.prefs.accountRegion == AccountRegion.cn) androidx.compose.material3.TextButton(
                 onClick = { CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, android.net.Uri.parse(ContractCapabilities.ddClientPortalUrl)) },

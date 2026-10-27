@@ -1,6 +1,11 @@
 package com.aiworkdeck.mobile
 
 import android.os.Bundle
+import android.content.Intent
+import com.aiworkdeck.mobile.features.personal.PersonalWorkspaceScreen
+import com.aiworkdeck.mobile.features.personal.PersonalWorkspaceState
+import com.aiworkdeck.mobile.services.CalendarReminders
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -58,6 +63,8 @@ private val albumScope = CoroutineScope(
 
 class MainActivity : ComponentActivity() {
     private val model: AppModel by viewModels()
+    private var calendarEventId by mutableStateOf<String?>(null)
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); calendarEventId = intent.getStringExtra("calendarEventId") }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +86,8 @@ class MainActivity : ComponentActivity() {
             filesDir = filesDir,
         )
         model.bootstrap()
-        setContent { Root(model) }
+        calendarEventId = intent.getStringExtra("calendarEventId")
+        setContent { Root(model, calendarEventId) }
     }
 }
 
@@ -90,12 +98,18 @@ class MainActivity : ComponentActivity() {
  * 登录与选项目是普通表单屏，走浅色。
  */
 @Composable
-fun Root(model: AppModel) {
+fun Root(model: AppModel, notificationEventId: String? = null) {
+    val context = LocalContext.current
     val didRestore by model.didRestore.collectAsStateWithLifecycle()
     val isSignedIn by model.isSignedIn.collectAsStateWithLifecycle()
     val project by model.selectedProject.collectAsStateWithLifecycle()
 
-    var overlay by remember { mutableStateOf(Overlay.None) }
+    var overlay by remember { mutableStateOf(if (ScreenshotMode.enabled) Overlay.None else Overlay.Personal) }
+    var returnOverlay by remember { mutableStateOf(Overlay.Personal) }
+    var personalFileProject by remember { mutableStateOf<com.aiworkdeck.mobile.model.RelayProject?>(null) }
+    var captureStarted by remember { mutableStateOf(ScreenshotMode.enabled) }
+    val personal = remember(isSignedIn) { if (isSignedIn) PersonalWorkspaceState() else null }
+    LaunchedEffect(notificationEventId) { if (notificationEventId != null) overlay = Overlay.Personal }
     // 全屏看大图的目标：同一天的件 + 起始下标。它盖在图集之上，图集盖在取景器之上。
     var viewer by remember { mutableStateOf<Pair<List<CaptureItem>, Int>?>(null) }
 
@@ -115,7 +129,7 @@ fun Root(model: AppModel) {
     }
 
     LaunchedEffect(isSignedIn) {
-        if (!isSignedIn) { overlay = Overlay.None; viewer = null }
+        if (!isSignedIn) { overlay = Overlay.Personal; viewer = null; captureStarted = false; CalendarReminders.clear(context) }
         else if (!ScreenshotMode.enabled) {
             val consent = try { ServiceLocator.backend.backupConsent() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
             consent?.let {
@@ -134,25 +148,28 @@ fun Root(model: AppModel) {
                 !isSignedIn -> LoginScreen(model)
                 else -> {
                     // 取景器一直在下面：图集是盖上去的一层，退回来时镜头还在原处，不用重新绑定
-                    HomeScreen(model, onOpen = { overlay = it })
+                    if (captureStarted) HomeScreen(model, onOpen = { returnOverlay = Overlay.None; personalFileProject = null; overlay = it })
+                    if (overlay == Overlay.Personal && personal != null) PersonalWorkspaceScreen(personal, notificationEventId,
+                        onOpen = { returnOverlay = Overlay.Personal; if (it == Overlay.None) captureStarted = true; overlay = it },
+                        onProject = { returnOverlay = Overlay.Personal; personalFileProject = it; overlay = Overlay.Files })
                     if (overlay == Overlay.Queue) {
-                        QueueScreen(model, onClose = { overlay = Overlay.None })
+                        QueueScreen(model, onClose = { overlay = returnOverlay })
                     }
                     if (overlay == Overlay.Settings) {
-                        SettingsScreen(model, onClose = { overlay = Overlay.None }, onOpen = { overlay = it })
+                        SettingsScreen(model, onClose = { overlay = returnOverlay }, onOpen = { overlay = it })
                     }
                     if (overlay == Overlay.Projects) {
-                        ProjectPickerScreen(model, onClose = { overlay = Overlay.None }, onSelect = { model.selectProject(it); overlay = Overlay.None })
+                        ProjectPickerScreen(model, onClose = { overlay = returnOverlay }, onSelect = { model.selectProject(it); overlay = returnOverlay })
                     }
                     if (overlay == Overlay.Files) {
-                        project?.let { ProjectFilesScreen(it, onClose = { overlay = Overlay.None }) }
+                        (personalFileProject ?: project)?.let { ProjectFilesScreen(it, onClose = { overlay = returnOverlay }) }
                     }
-                    if (overlay == Overlay.Backup) BackupConsentScreen(onClose = { overlay = Overlay.None })
+                    if (overlay == Overlay.Backup) BackupConsentScreen(onClose = { overlay = returnOverlay })
                     if (overlay == Overlay.Library) {
                         LibraryScreen(
                             model = model,
                             onOpenViewer = { items, index -> viewer = items to index },
-                            onClose = { overlay = Overlay.None },
+                            onClose = { overlay = returnOverlay },
                         )
                         viewer?.let { (items, index) ->
                             ViewerScreen(items = items, start = index, onClose = { viewer = null })
@@ -164,7 +181,7 @@ fun Root(model: AppModel) {
     }
 
     // 系统返回键按浮层的层序逐层收回，不是一下退出应用
-    BackHandler(enabled = overlay != Overlay.None) {
-        if (viewer != null) viewer = null else overlay = Overlay.None
+    BackHandler(enabled = overlay != Overlay.None && overlay != Overlay.Personal) {
+        if (viewer != null) viewer = null else overlay = returnOverlay
     }
 }

@@ -94,6 +94,48 @@ class Backend(
         return ProjectFilesService(url, id, languageProvider(), root, client) { baseUrl == url && session.current() == id }
     }
 
+    fun personalAccountScope(): String? = session.current()?.takeIf { accountActive() }?.let { id ->
+        java.security.MessageDigest.getInstance("SHA-256").digest((baseUrl + ":" + id).toByteArray()).joinToString("") { "%02x".format(it) }
+    }
+    suspend fun personalStatus(): PersonalStatus = personal("assistant/status")
+    suspend fun personalCalendar(): PersonalCalendar = personal("calendar/events")
+    suspend fun personalSettings(feature: String, enabled: Boolean): PersonalSettings = personal(feature + "/settings", "PUT",
+        buildJsonObject { put("enabled", enabled); put("consentVersion", com.aiworkdeck.contract.ContractCapabilities.personalConsentVersion) })
+    suspend fun personalHistory(id: String): PersonalHistory = personal("assistant/conversations/" + java.util.UUID.fromString(id))
+    suspend fun personalRequest(id: String): PersonalReply = awaitPersonalReply(personal("assistant/requests/" + java.util.UUID.fromString(id)), id)
+    suspend fun personalChat(question: PersonalQuestion): PersonalReply = awaitPersonalReply(
+        personal("assistant/chat", "POST", json.encodeToJsonElement(question).jsonObject), question.requestId).also {
+            if (it.status != "completed") throw ApiError(1, tr("error.network"))
+        }
+    private suspend fun awaitPersonalReply(initial: PersonalReply, requestId: String): PersonalReply {
+        var reply = initial
+        var attempts = 0
+        while (reply.status == "running" && attempts++ < 120) {
+            kotlinx.coroutines.delay(2000)
+            check(reply.requestId == requestId) { tr("error.badResponse") }
+            reply = personal("assistant/requests/" + java.util.UUID.fromString(requestId))
+        }
+        check(reply.requestId == requestId) { tr("error.badResponse") }
+        return reply
+    }
+    private suspend inline fun <reified T> personal(path: String, method: String = "GET", body: JsonObject? = null): T = withContext(Dispatchers.IO) {
+        val account = session.current() ?: throw Unauthorized()
+        val host = baseUrl
+        check(accountActive()) { tr("files.error.closed") }
+        val request = Request.Builder().url(host + "/api/mobile/" + path)
+            .header("X-Session-Id", account).header("X-App-Language", languageProvider())
+        if (body != null) request.method(method, body.toString().toRequestBody(jsonType))
+        val transport = client.newBuilder().readTimeout(240, java.util.concurrent.TimeUnit.SECONDS).callTimeout(250, java.util.concurrent.TimeUnit.SECONDS).followRedirects(false).build()
+        transport.newCall(request.build()).execute().use { response ->
+            check(accountActive() && session.current() == account && baseUrl == host) { tr("files.error.closed") }
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            val text = response.body?.string() ?: ""
+            if (!response.isSuccessful) throw ApiError(response.code, tr("error.network"))
+            val result = envelope(text)
+            json.decodeFromJsonElement<T>(result["data"] ?: throw ApiError(1, tr("error.badResponse")))
+        }
+    }
+
     // ---- 内部 ----
     private suspend fun post(path: String, body: JsonObject): String =
         execute(Request.Builder().url(baseUrl + path).post(body.toString().toRequestBody(jsonType)))

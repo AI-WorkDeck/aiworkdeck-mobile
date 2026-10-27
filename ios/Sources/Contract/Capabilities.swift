@@ -6,6 +6,7 @@ enum ContractCapabilities {
     static let videoPause: String = "runtime"
     static let ddClientPortalURL = "https://case.aiworkdeck.com/client/"
     static let backupConsentVersion = "2026-10-11"
+    static let personalConsentVersion = "2026-10-27"
     static let previewExtensions: [String] = ["jpg","jpeg","png","gif","webp","heic","heif","bmp","tif","tiff","docx","pptx","xlsx","pdf","m4a","mp3","wav","aac","caf","aif","aiff","mp4","mov","m4v"]
     static let client = "ios"
     static let backgroundUpload: Bool = true

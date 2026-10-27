@@ -89,6 +89,11 @@ export function getSession(): string | null {
   return typeof v === 'string' && v ? v : null
 }
 
+export function personalAccountScope(): string | null {
+  const user = wx.getStorageSync(KEY_USER) as AccountUser | undefined
+  return getSession() && user?.id != null ? BASE_URL + ':' + String(user.id) : null
+}
+
 function clearFilePreviews(): void {
   const pulls = wx.getStorageSync('awd.filePulls') || {}
   for (const row of Object.values(pulls) as { path?: string }[]) {
@@ -100,6 +105,7 @@ function clearFilePreviews(): void {
 export function setSession(v: string | null): void {
   if (getSession() !== v) {
     clearFilePreviews()
+    wx.removeStorageSync('awd.personalConversation')
     setSelectedProject(null)
   }
   if (v) {
@@ -210,12 +216,13 @@ function request<T>(
   url: string,
   method: 'GET' | 'POST' | 'PUT',
   data?: Record<string, unknown>,
-  opts: { bare?: boolean; rootEnvelope?: boolean } = {},
+  opts: { bare?: boolean; rootEnvelope?: boolean; timeout?: number } = {},
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     wx.request({
       url: BASE_URL + url,
       method,
+      timeout: opts.timeout ?? 30000,
       data,
       header: {
         ...authHeader(),
@@ -607,4 +614,21 @@ export function backupConsent(): Promise<BackupConsent> {
 }
 export function setBackupConsent(enabled: boolean): Promise<BackupConsent> {
   return request<BackupConsent>('/api/mobile/backup-consent', 'PUT', { enabled, consentVersion: BACKUP_CONSENT_VERSION }, { bare: true })
+}
+
+/** Account-scoped personal workspace endpoints use code/data envelopes. */
+export async function personalRequest<T>(path: string, method: 'GET' | 'POST' | 'PUT' = 'GET', data?: Record<string, unknown>): Promise<T> {
+  const account = getSession()
+  if (!account) throw new ApiError(4010, t('error.signInRequired'))
+  const result = await request<T>('/api/mobile/' + path, method, data, { timeout: 240000 })
+  if (getSession() !== account) throw new ApiError(4010, t('files.error.closed'))
+  return result
+}
+
+// A preview target is not an archive destination. Consume once when opening the file page.
+let personalPreview: { session: string | null; project: RelayProject } | null = null
+export function setPersonalPreview(project: RelayProject): void { personalPreview = { session: getSession(), project } }
+export function takePersonalPreview(): RelayProject | null {
+  const value = personalPreview; personalPreview = null
+  return value?.session === getSession() ? value?.project ?? null : null
 }

@@ -57,8 +57,7 @@ final class CrossScreenRotationTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest", "-libraryViewMode", "grid"]
         app.launch()
-        let closeCapture = app.buttons["capture.close"]
-        XCTAssertTrue(closeCapture.waitForExistence(timeout: 15)); closeCapture.tap()
+        openPersonalProjects(app)
         XCTAssertTrue(app.buttons["workspace.project.alpha"].waitForExistence(timeout: 10))
         return app
     }
@@ -86,7 +85,7 @@ final class CrossScreenRotationTests: XCTestCase {
         let app = launchWorkspace()
         let quickCapture = app.buttons["workspace.quickCapture"]
         let quickCaptureBefore = quickCapture.frame
-        cycle("Project list", app: app, elements: [app.buttons["workspace.project.alpha"]])
+        cycle("Project list", app: app, elements: [app.buttons["workspace.project.alpha"], quickCapture, app.buttons["workspace.library"]])
         XCTAssertTrue(quickCapture.isHittable)
         XCTAssertEqual(quickCapture.frame, quickCaptureBefore)
         openFiles(app)

@@ -2,6 +2,7 @@
 export const VOICE_REMINDER_SECONDS = 300
 export const DD_CLIENT_PORTAL_URL = "https://case.aiworkdeck.com/client/"
 export const BACKUP_CONSENT_VERSION = "2026-10-11"
+export const PERSONAL_CONSENT_VERSION = "2026-10-27"
 export const PREVIEW_EXTENSIONS: readonly string[] = ["jpg","jpeg","png","gif","webp","heic","heif","bmp","tif","tiff","docx","pptx","xlsx","pdf","m4a","mp3","wav","aac","caf","aif","aiff","mp4","mov","m4v"]
 export const MINIPROGRAM_PREVIEW_EXTENSIONS: readonly string[] = ["jpg","jpeg","png","gif","docx","pptx","xlsx","pdf","m4a","mp3","wav","aac","mp4"]
 export const CLIENT = "miniprogram"

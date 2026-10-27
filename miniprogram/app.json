@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/personal/personal",
     "pages/index/index",
     "pages/gallery/gallery",
     "pages/login/login",

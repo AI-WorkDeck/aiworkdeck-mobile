@@ -10,6 +10,8 @@ import { Loc } from './model/Loc'
 import { RecorderService } from './services/RecorderService'
 import { ScreenshotMode } from './ScreenshotMode'
 import { ServiceLocator } from './services/ServiceLocator'
+import { PersonalConversationStore } from './services/PersonalConversationStore'
+import { CalendarReminders } from './services/CalendarReminders'
 
 const DOMAIN: number = 0x0000
 const TAG: string = 'AppModel'
@@ -210,6 +212,8 @@ export class AppModel {
    * 登出就删是灾难性的默认。
    */
   async signOut(): Promise<void> {
+    await PersonalConversationStore.clear()
+    await CalendarReminders.clear()
     await ServiceLocator.backend.logout()
     await ServiceLocator.prefs.setSelectedProject(null)
     this.stopHeartbeat()

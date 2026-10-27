@@ -121,6 +121,7 @@ function recordTimeText(seconds: number): string {
 Page({
   data: {
     Icon,
+    personalTitle: t('personal.assistant'),
     phaseLabel: PHASE_LABEL,
     metrics: {} as Metrics,
     project: { name: '', archivePath: '' },
@@ -192,6 +193,7 @@ Page({
     void promptBackupOnFirstUse()
     const project = getSelectedProject()
     this.setData({
+      personalTitle: t('personal.assistant'),
       phaseLabel: phaseLabels(),
       labels: buildLabels(),
       settingsLabel: t('settings.title'),
@@ -797,6 +799,12 @@ Page({
 
   onOpenGallery() {
     wx.navigateTo({ url: '/pages/gallery/gallery' })
+  },
+
+  onOpenPersonal() {
+    if (this.data.recording) return
+    if (getCurrentPages().length > 1) wx.navigateBack()
+    else wx.redirectTo({ url: '/pages/personal/personal' })
   },
 
   onOpenSettings() {

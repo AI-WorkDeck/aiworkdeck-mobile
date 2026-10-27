@@ -1,0 +1,22 @@
+/* SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors */
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+@import '../../styles/tokens.wxss';
+.personal { height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; padding-inline: 28rpx; background: var(--bg); color: var(--fg); gap: 20rpx; }
+.heading,.tabs,.actions,.composer { display: flex; align-items: center; gap: 12rpx; }
+.heading { justify-content: space-between; font-size: 36rpx; font-weight: 600; }
+.tabs button { flex: 1; padding: 12rpx 6rpx; font-size: 24rpx; line-height: 1.5; }
+.tabs .active { color: var(--accent); border-bottom: 4rpx solid var(--accent); }
+.content { flex: 1; min-height: 0; }
+.message,.event { padding: 24rpx 0; border-bottom: 1rpx solid var(--rule); white-space: pre-wrap; }
+.message.user { padding: 20rpx; background: var(--bg-sunken); border-radius: 16rpx; text-align: end; }
+.event { display: flex; flex-direction: column; gap: 12rpx; }
+.event-title { font-size: 32rpx; font-weight: 600; }
+.welcome { padding: 50rpx 0; font-size: 36rpx; display: flex; flex-direction: column; gap: 18rpx; }
+.muted { color: var(--fg-muted); font-size: 24rpx; }
+.notice { padding: 20rpx; background: var(--bg-sunken); font-size: 26rpx; }
+.error { color: var(--st-failed); font-size: 26rpx; }
+.composer { padding: 20rpx; border: 1rpx solid var(--rule); border-radius: 16rpx; }
+.composer textarea { flex: 1; width: auto; max-height: 240rpx; font-size: 28rpx; }
+.composer button,.source { font-size: 24rpx; }
+.actions button { flex: 1; }
+.filter { padding: 18rpx; border-bottom: 1rpx solid var(--rule); }

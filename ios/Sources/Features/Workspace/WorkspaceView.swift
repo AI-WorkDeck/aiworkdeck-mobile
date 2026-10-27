@@ -62,8 +62,9 @@ struct WorkspaceView: View {
             // back to portrait, shifting the list. Keep one title style.
             .navigationBarTitleDisplayMode(.inline)
             .refreshable { await load() }
-            .toolbar {
-                ToolbarItemGroup(placement: .bottomBar) {
+            // Reserve list space above the global tabs instead of sharing their system bar.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                HStack {
                     Button {
                         if !AudioRecorderService.shared.isRecording && !AudioRecorderService.shared.isBusy { model.captureWithoutProject() }
                         route = .capture
@@ -73,6 +74,12 @@ struct WorkspaceView: View {
                     Button { route = .library } label: { Label(tr("library.open"), systemImage: "photo.on.rectangle") }
                         .accessibilityIdentifier("workspace.library")
                 }
+                .frame(minHeight: T.touchMin)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(.bar)
+            }
+            .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button { route = .settings } label: { Image(systemName: "slider.horizontal.3") }
                         .accessibilityLabel(tr("home.settings"))
@@ -187,7 +194,7 @@ struct CaptureProjectContentsView: View {
     }
 }
 
-private struct ProjectContentsView: View {
+struct ProjectContentsView: View {
     @Environment(AppModel.self) private var model
     let project: RelayProject
     let client: any ProjectFilesServing
