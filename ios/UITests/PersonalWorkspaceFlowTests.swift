@@ -26,6 +26,16 @@ final class PersonalWorkspaceFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["workspace.project.alpha"].waitForExistence(timeout: 8))
         app.tabBars.buttons["Capture"].tap()
         XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 8))
+        app.buttons["capture.close"].tap()
+        XCTAssertTrue(app.buttons["workspace.project.alpha"].waitForExistence(timeout: 8))
+        let calendar = app.tabBars.buttons["Calendar"]
+        XCTAssertTrue(calendar.isHittable)
+        calendar.tap()
+        XCTAssertTrue(app.staticTexts["Review evidence checklist"].waitForExistence(timeout: 8))
+        let assistant = app.tabBars.buttons["Personal assistant"]
+        XCTAssertTrue(assistant.isHittable)
+        assistant.tap()
+        XCTAssertTrue(input.waitForExistence(timeout: 8))
     }
     @MainActor private func capture(_ name: String, _ app: XCUIApplication) {
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)

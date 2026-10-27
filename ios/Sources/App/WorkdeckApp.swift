@@ -174,6 +174,7 @@ struct CaptureFlowView: View {
             capture
         }
         .background(T.D.bg)
+        .toolbar(.hidden, for: .tabBar)
 #if DEBUG
         .onAppear { PersonalUITestSeed.startCaptureFixture() }
 #endif

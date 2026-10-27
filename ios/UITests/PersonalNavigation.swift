@@ -9,6 +9,8 @@ extension XCTestCase {
         entry.tap()
     }
     @MainActor func openPersonalProjects(_ app: XCUIApplication) {
+        let close = app.buttons["capture.close"]
+        if close.exists && close.isHittable { close.tap(); return }
         let entry = app.tabBars.buttons["Projects"]
         XCTAssertTrue(entry.waitForExistence(timeout: 15))
         entry.tap()
