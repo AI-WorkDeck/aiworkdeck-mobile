@@ -4,6 +4,7 @@ export interface ContractCapabilitiesShape {
   ddClientPortalUrl: string
   voiceReminderSeconds: number
   backupConsentVersion: string
+  personalConsentVersion: string
   previewExtensions: string[]
   voiceActivityReminder: boolean
   audioPause: boolean
@@ -33,6 +34,7 @@ export const ContractCapabilities: ContractCapabilitiesShape = {
   ddClientPortalUrl: "https://case.aiworkdeck.com/client/",
   voiceReminderSeconds: 300,
   backupConsentVersion: "2026-10-11",
+  personalConsentVersion: "2026-10-27",
   previewExtensions: [
     "jpg",
     "jpeg",

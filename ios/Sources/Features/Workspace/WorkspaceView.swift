@@ -187,7 +187,7 @@ struct CaptureProjectContentsView: View {
     }
 }
 
-private struct ProjectContentsView: View {
+struct ProjectContentsView: View {
     @Environment(AppModel.self) private var model
     let project: RelayProject
     let client: any ProjectFilesServing

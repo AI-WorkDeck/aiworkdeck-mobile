@@ -175,6 +175,8 @@ final class AppModel {
     /// 中转区到期表；未归类资料不会自动匹配到新区域的项目。
     /// 已拍影像各自记着拍摄时的项目，不动（队列行为见报告，沿用现状）。
     func switchRegion(to region: AccountRegion) {
+        PersonalConversationStore.clear()
+        CalendarReminders.shared.clear()
         closeWorkspaceFiles()
         AccountRegion.current = region
         L10n.apply(region: region)
@@ -205,6 +207,8 @@ final class AppModel {
     }
 
     func signOut() {
+        PersonalConversationStore.clear()
+        CalendarReminders.shared.clear()
         closeWorkspaceFiles()
         API.shared.logout()
         selectedProject = nil
@@ -221,6 +225,8 @@ final class AppModel {
     /// App Store 审核指南 5.1.1(v) 要求支持注册的 App 必须在 App 内提供这个入口。
     func deleteAccount() async throws {
         try await API.shared.deleteAccount()
+        PersonalConversationStore.clear()
+        CalendarReminders.shared.clear()
         closeWorkspaceFiles()
         account = nil
         selectedProject = nil

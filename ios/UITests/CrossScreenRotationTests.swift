@@ -57,8 +57,7 @@ final class CrossScreenRotationTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest", "-libraryViewMode", "grid"]
         app.launch()
-        let closeCapture = app.buttons["capture.close"]
-        XCTAssertTrue(closeCapture.waitForExistence(timeout: 15)); closeCapture.tap()
+        openPersonalProjects(app)
         XCTAssertTrue(app.buttons["workspace.project.alpha"].waitForExistence(timeout: 10))
         return app
     }

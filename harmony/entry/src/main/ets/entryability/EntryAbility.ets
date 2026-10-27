@@ -21,6 +21,7 @@ export default class EntryAbility extends UIAbility {
     // 装配在这里而不是页面里：后台上传任务与录音服务（Task 5）都要拿同一批实例，
     // 装配两遍就等于两条互不知情的队列。
     ServiceLocator.init(this.context);
+    this.calendarNotification(want);
     // 上架截图模式（debug-only，见 ScreenshotMode）。必须在上界面之前定下来。
     ScreenshotMode.configure(want);
     this.seeding = ScreenshotMode.enabled
@@ -57,6 +58,12 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'workdeck', '%{public}s', 'EntryAbility seeding debug project');
     return ServiceLocator.prefs.setSelectedProject(seed);
   }
+
+  private calendarNotification(want: Want): void {
+    const eventId: Object | undefined = want.parameters?.['calendarEventId'];
+    if (typeof eventId === 'string') AppStorage.setOrCreate<string>('personalCalendarEventId', eventId as string);
+  }
+  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void { this.calendarNotification(want); }
 
   onDestroy(): void {
     hilog.info(DOMAIN, 'workdeck', '%{public}s', 'EntryAbility onDestroy');

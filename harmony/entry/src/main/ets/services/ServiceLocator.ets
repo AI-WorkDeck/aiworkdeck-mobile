@@ -1,4 +1,5 @@
 import { common } from '@kit.AbilityKit'
+import { PersonalConversationStore } from './PersonalConversationStore'
 import { Backend } from './Backend'
 import { EvidenceStore } from './EvidenceStore'
 import { Prefs } from './Prefs'
@@ -101,6 +102,7 @@ export class ServiceLocator {
    * 同时清掉本机记着的当前项目（见 switchRegion）。
    */
   static async setRegion(r: AccountRegion): Promise<void> {
+    await PersonalConversationStore.clear()
     await switchRegion(ServiceLocator.regionRef, r, new LocatorRegionSink())
   }
 

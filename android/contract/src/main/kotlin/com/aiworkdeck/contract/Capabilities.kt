@@ -9,6 +9,7 @@ object ContractCapabilities {
     const val videoPause: String = "native"
     const val ddClientPortalUrl: String = "https://case.aiworkdeck.com/client/"
     const val backupConsentVersion: String = "2026-10-11"
+    const val personalConsentVersion: String = "2026-10-27"
     val previewExtensions: List<String> = listOf("jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tif", "tiff", "docx", "pptx", "xlsx", "pdf", "m4a", "mp3", "wav", "aac", "caf", "aif", "aiff", "mp4", "mov", "m4v")
     const val backgroundUpload: Boolean = true
     val maxVideoSeconds: Int? = null

@@ -14,6 +14,7 @@ import { Settings } from './Settings'
 import { ProjectFiles } from './ProjectFiles'
 import { Viewer } from './Viewer'
 import { DdClient } from './DdClient'
+import { Personal } from './Personal'
 
 const DOMAIN: number = 0x0000
 const TAG: string = 'Root'
@@ -39,11 +40,13 @@ const PAGE_QUEUE: string = 'Queue'
 @Entry
 @Component
 struct Root {
+  @StorageProp('personalCalendarEventId') @Watch('showCalendar') notificationId: string = ''
   private readonly stack: NavPathStack = new NavPathStack()
   @State @Watch('applyRoute') route: Route = Route.boot
   private token: number = -1
 
   aboutToAppear(): void {
+    if (!AppStorage.has('personalCalendarEventId')) AppStorage.setOrCreate<string>('personalCalendarEventId', '')
     this.token = AppModel.shared.subscribe((): void => {
       const r: Route = AppModel.shared.route
       if (this.route !== r) this.route = r
@@ -57,11 +60,16 @@ struct Root {
     if (this.token >= 0) AppModel.shared.unsubscribe(this.token)
   }
 
+  private showCalendar(): void {
+    if (this.notificationId.length === 0 || this.route !== Route.home) return
+    if (this.stack.getAllPathName().includes('Personal')) this.stack.popToName('Personal', false)
+  }
+
   applyRoute(): void {
     this.stack.clear(false)
     if (this.route === Route.login) this.stack.pushPath(new NavPathInfo(PAGE_LOGIN, ''), false)
     else if (this.route === Route.projects) this.stack.pushPath(new NavPathInfo(PAGE_PROJECTS, ''), false)
-    else if (this.route === Route.home) this.stack.pushPath(new NavPathInfo(PAGE_HOME, ''), false)
+    else if (this.route === Route.home) this.stack.pushPath(new NavPathInfo(ScreenshotMode.enabled ? PAGE_HOME : 'Personal', ''), false)
     // boot：什么都不推，露出 Navigation 自己那张与主界面同色的空屏
     this.applyScreenshotScreen()
   }
@@ -98,6 +106,8 @@ struct Root {
       ProjectPicker({ stack: this.stack, switching: true })
     } else if (name === 'ProjectAssign') {
       ProjectPicker({ stack: this.stack, assigning: true })
+    } else if (name === 'Personal') {
+      Personal({ stack: this.stack })
     } else if (name === 'DdClient') {
       DdClient({ stack: this.stack })
     } else if (name === 'ProjectFiles') {

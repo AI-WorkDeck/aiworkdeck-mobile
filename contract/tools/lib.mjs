@@ -181,6 +181,7 @@ function renderTsCaps(c, client) {
   return H('//') + `export const VOICE_REMINDER_SECONDS = ${c.caps.voiceReminderSeconds}
 export const DD_CLIENT_PORTAL_URL = ${q(c.caps.ddClientPortalUrl)}
 export const BACKUP_CONSENT_VERSION = ${q(c.caps.backupConsentVersion)}
+export const PERSONAL_CONSENT_VERSION = ${q(c.caps.personalConsentVersion)}
 export const PREVIEW_EXTENSIONS: readonly string[] = ${q(c.caps.previewExtensions.ios)}
 export const MINIPROGRAM_PREVIEW_EXTENSIONS: readonly string[] = ${q(c.caps.previewExtensions.miniprogram)}
 export const CLIENT = ${q(client)}
@@ -321,6 +322,7 @@ function renderSwiftCaps(c) {
     static let videoPause: String = ${q(caps.videoPause?.ios)}
     static let ddClientPortalURL = ${q(c.caps.ddClientPortalUrl)}
     static let backupConsentVersion = ${q(c.caps.backupConsentVersion)}
+    static let personalConsentVersion = ${q(c.caps.personalConsentVersion)}
     static let previewExtensions: [String] = ${q(c.caps.previewExtensions.ios)}
     static let client = "ios"
     static let backgroundUpload: Bool = ${caps.backgroundUpload.ios}
@@ -439,6 +441,7 @@ object ContractCapabilities {
     const val videoPause: String = ${kq(caps.videoPause?.android)}
     const val ddClientPortalUrl: String = ${kq(c.caps.ddClientPortalUrl)}
     const val backupConsentVersion: String = ${kq(c.caps.backupConsentVersion)}
+    const val personalConsentVersion: String = ${kq(c.caps.personalConsentVersion)}
     val previewExtensions: List<String> = listOf(${(c.caps.previewExtensions.android ?? []).map(kq).join(', ')})
     const val backgroundUpload: Boolean = ${caps.backgroundUpload.android}
     val maxVideoSeconds: Int? = ${v(caps.maxVideoSeconds.android)}
@@ -577,7 +580,7 @@ ${etsTypedConst('ContractStates', 'ContractStatesShape', value, { transitions: '
 function renderEtsCaps(c) {
   const caps = c.caps.capabilities
   const value = Object.assign(
-    { client: 'harmony', ddClientPortalUrl: c.caps.ddClientPortalUrl, voiceReminderSeconds: c.caps.voiceReminderSeconds, backupConsentVersion: c.caps.backupConsentVersion, previewExtensions: c.caps.previewExtensions.harmony ?? [] },
+    { client: 'harmony', ddClientPortalUrl: c.caps.ddClientPortalUrl, voiceReminderSeconds: c.caps.voiceReminderSeconds, backupConsentVersion: c.caps.backupConsentVersion, personalConsentVersion: c.caps.personalConsentVersion, previewExtensions: c.caps.previewExtensions.harmony ?? [] },
     Object.fromEntries(Object.entries(caps).map(([k, v]) => [k, v.harmony])),
     { degradedNotice: Object.fromEntries(Object.entries(caps).filter(([, x]) => x.degradedNotice).map(([k, x]) => [k, x.degradedNotice])) },
   )
@@ -595,6 +598,8 @@ export function outputs(c) {
   const kt = 'android/contract/src/main/kotlin/com/aiworkdeck/contract'
   const ets = 'harmony/contract/src/main/ets'
   return new Map([
+    ...c.locales.map(({ code }) => [`ios/Resources/${code}.lproj/Localizable.strings`,
+      `// SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors\n// SPDX-License-Identifier: AGPL-3.0-or-later\n// ${HEADER}\n"personal.reminders" = ${JSON.stringify(c.strings['personal.reminders'][code])};\n`]),
     ['miniprogram/styles/tokens.wxss', renderWxss(c)],
     ['miniprogram/utils/contract/states.ts', renderTsStates(c)],
     ['miniprogram/utils/contract/strings.ts', renderTsStrings(c)],

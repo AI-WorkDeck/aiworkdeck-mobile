@@ -33,6 +33,7 @@ final class RecordingFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDRecordingUITest", argument]
         app.launch()
+        openPersonalCapture(app)
         let paused = app.staticTexts["recording.paused"]
         XCTAssertTrue(paused.waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["capture.stopPaused"].isHittable)
@@ -62,6 +63,7 @@ final class RecordingFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDRecordingUITest", "-AWDSilenceReminderUITest"]
         app.launch()
+        openPersonalCapture(app)
         let alert = app.alerts["Stop recording?"]
         XCTAssertTrue(alert.waitForExistence(timeout: 15))
         XCTAssertTrue(alert.buttons["Stop and save"].isHittable)
@@ -82,7 +84,8 @@ final class RecordingFlowTests: XCTestCase {
         app.launchArguments = ["-AWDWorkspaceUITest", "-libraryViewMode", "grid"]
         app.launch()
         dismissEarlierRecordingNotice(in: app)
-        // The current app opens capture first; projects are reached via Back.
+        openPersonalCapture(app)
+        // Enter the same Capture tab used by signed-in users.
         let mode = app.buttons["capture.mode.audio"]
         XCTAssertTrue(mode.waitForExistence(timeout: 10)); mode.tap()
         let shutter = app.buttons["capture.shutter"]
@@ -128,6 +131,7 @@ final class RecordingFlowTests: XCTestCase {
         shot.lifetime = .keepAlways; add(shot)
     }
 
+    @MainActor
     func testTerminatedRecordingReportsRecoveryWithoutRestarting() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
@@ -137,6 +141,7 @@ final class RecordingFlowTests: XCTestCase {
         // Earlier crash-path runs deliberately retain failed drafts.
         let earlierNotice = app.alerts["Recording status"]
         if earlierNotice.waitForExistence(timeout: 2) { earlierNotice.buttons["Close"].tap() }
+        openPersonalCapture(app)
         let mode = app.buttons["capture.mode.audio"]
         XCTAssertTrue(mode.waitForExistence(timeout: 10))
         mode.tap()
@@ -157,9 +162,11 @@ final class RecordingFlowTests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
         notice.buttons["Close"].tap()
+        openPersonalCapture(app)
         XCTAssertFalse(app.buttons["capture.shutter"].label == "Stop recording")
     }
 
+    @MainActor
     func testBackgroundReturnStopAndPlayFromAudioLibrary() {
         defer { XCUIDevice.shared.orientation = .portrait }
         continueAfterFailure = false
@@ -169,6 +176,7 @@ final class RecordingFlowTests: XCTestCase {
         app.launchArguments = ["-AWDRecordingUITest"]
         app.launch()
         dismissEarlierRecordingNotice(in: app)
+        openPersonalCapture(app)
         let mode = app.buttons["capture.mode.audio"]
         XCTAssertTrue(mode.waitForExistence(timeout: 10))
         mode.tap()

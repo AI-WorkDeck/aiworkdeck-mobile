@@ -16,6 +16,7 @@ final class CaptureContinuityTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDRecordingUITest"]
         app.launch()
+        openPersonalCapture(app)
         allowPermissionPrompts()
         let audio = app.buttons["capture.mode.audio"]
         XCTAssertTrue(audio.waitForExistence(timeout: 10)); audio.tap()

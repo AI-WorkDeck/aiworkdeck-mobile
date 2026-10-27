@@ -73,6 +73,7 @@ test('gen：每个生成物都带 GENERATED 头且落在约定路径', () => {
   const c = loadContract(ROOT)
   const files = outputs(c)
   const expected = [
+    ...c.locales.map(({ code }: { code: string }) => `ios/Resources/${code}.lproj/Localizable.strings`),
     'miniprogram/styles/tokens.wxss',
     'miniprogram/utils/contract/states.ts', 'miniprogram/utils/contract/strings.ts', 'miniprogram/utils/contract/capabilities.ts',
     'miniprogram/utils/contract/products.ts',

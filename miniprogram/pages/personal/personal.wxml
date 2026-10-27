@@ -1,0 +1,27 @@
+<!-- SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<view class="personal" style="direction:{{direction}}; padding-top:{{metrics.navTotalHeight}}px; padding-bottom:{{metrics.bottomInset}}px">
+  <view class="heading"><text>{{tab === 'assistant' ? labels.assistant : labels.calendar}}</text><button size="mini" bindtap="onSettings">{{labels.settings}}</button></view>
+  <view class="tabs"><button class="{{tab === 'assistant' ? 'active' : ''}}" data-tab="assistant" bindtap="onTab">{{labels.assistant}}</button><button class="{{tab === 'calendar' ? 'active' : ''}}" data-tab="calendar" bindtap="onTab">{{labels.calendar}}</button><button bindtap="onProjects">{{labels.projects}}</button><button bindtap="onCapture">{{labels.capture}}</button></view>
+  <block wx:if="{{tab === 'assistant'}}">
+    <view wx:if="{{status &amp;&amp; (!status.enabled || !status.subscriptionActive)}}" class="notice"><text>{{status.subscriptionActive ? labels.assistantConsent : labels.subscription}}</text><button wx:if="{{status.subscriptionActive &amp;&amp; status.backupEnabled}}" disabled="{{loading || busy}}" data-feature="assistant" data-enabled="{{true}}" bindtap="onConsent">{{labels.on}}</button><button wx:if="{{!status.subscriptionActive || !status.backupEnabled}}" bindtap="onSettings">{{status.subscriptionActive ? labels.backup : labels.account}}</button></view>
+    <scroll-view class="content" scroll-y enhanced>
+      <view wx:if="{{!messages.length}}" class="welcome"><text>{{labels.ask}}</text><text class="muted">{{summary}}</text></view>
+      <view wx:for="{{messages}}" wx:key="index" class="message {{item.role}}"><text selectable>{{item.content}}</text></view>
+      <view wx:if="{{sources.length}}" class="muted">{{labels.sources}}</view><button wx:for="{{sources}}" wx:key="index" class="source" data-index="{{index}}" bindtap="onSource">{{item.projectName}} · {{item.sourceUpdatedAt || ''}}</button>
+      <view wx:if="{{busy}}" class="muted">{{labels.processing}}</view>
+    </scroll-view>
+    <view wx:if="{{error}}" class="error"><text>{{error}}</text><button size="mini" disabled="{{busy}}" bindtap="onRetry">{{labels.retry}}</button></view>
+    <view class="composer"><textarea value="{{draft}}" bindinput="onInput" disabled="{{busy}}" placeholder="{{labels.ask}}" maxlength="12000" auto-height/><button disabled="{{busy || !draft || !status.enabled || !status.subscriptionActive}}" bindtap="onSend">{{labels.send}}</button></view>
+    <view class="actions"><button size="mini" disabled="{{busy}}" bindtap="onNewChat">{{labels.newChat}}</button><button wx:if="{{status.enabled}}" size="mini" disabled="{{loading || busy}}" data-feature="assistant" data-enabled="{{false}}" bindtap="onConsent">{{labels.off}}</button></view>
+  </block>
+  <block wx:else>
+    <view wx:if="{{calendar &amp;&amp; (!calendar.enabled || !calendar.subscriptionActive)}}" class="notice"><text>{{calendar.subscriptionActive ? labels.calendarConsent : labels.subscription}}</text><button wx:if="{{calendar.subscriptionActive}}" data-feature="calendar" data-enabled="{{true}}" bindtap="onConsent">{{labels.on}}</button></view>
+    <view class="actions"><button size="mini" data-days="1" bindtap="onDays">{{labels.today}}</button><button size="mini" data-days="3" bindtap="onDays">{{labels.next3}}</button><button size="mini" data-days="5" bindtap="onDays">{{labels.next5}}</button><button size="mini" disabled="{{loading}}" bindtap="load">{{labels.refresh}}</button></view>
+    <picker range="{{projects}}" range-key="name" value="{{projectIndex}}" bindchange="onProject"><view class="filter">{{projects[projectIndex].name}}</view></picker>
+    <text class="muted">{{labels.remindersUnavailable}}</text>
+    <scroll-view class="content" scroll-y enhanced><view wx:if="{{!events.length}}" class="welcome">{{labels.noEvents}}</view><view wx:for="{{events}}" wx:key="id" class="event"><text class="event-title">{{item.title}}</text><text>{{item.dueDate}} {{item.dueTime || ''}} · {{item.timeZone}}</text><text class="muted">{{item.projectName}}</text><text wx:for="{{item.files}}" wx:for-item="file" wx:key="fileId">{{file.fileName}}</text><button size="mini" data-event="{{true}}" data-index="{{index}}" bindtap="onSource">{{labels.files}}</button></view></scroll-view>
+    <view wx:if="{{calendarError}}" class="error"><text>{{calendarError}}</text><button size="mini" bindtap="load">{{labels.retry}}</button></view>
+    <button wx:if="{{calendar.enabled}}" size="mini" data-feature="calendar" data-enabled="{{false}}" bindtap="onConsent">{{labels.off}}</button>
+  </block>
+</view>

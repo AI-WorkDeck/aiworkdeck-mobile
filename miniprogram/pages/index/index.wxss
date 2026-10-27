@@ -446,3 +446,5 @@ page {
 .pause-note { font-size: var(--t-micro); color: var(--dk-fg-muted); text-align: center; }
 .rec__paused { color: var(--dk-fg); font-size: var(--t-small); }
 .rec--paused { max-width: 90%; flex-wrap: wrap; justify-content: center; }
+
+.personal-return { position: absolute; left: 24rpx; bottom: 190rpx; z-index: 30; width: auto; font-size: 24rpx; }

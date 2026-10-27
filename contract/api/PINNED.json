@@ -1,6 +1,6 @@
 {
-  "serverCommit": "02f3da98df22ab5855471df0400ae4da537b9ec7",
-  "sha256": "8e3067f3bdbba13783533f676b63407323ef588806d254902d7c44a26d034dd8",
-  "pulledAt": "2026-10-15T12:45:18.231Z",
-  "note": "钉自 /Users/hans_claw_root/awd-auth-20261015/core 的干净工作区，照 serverCommit 可复现。"
+  "serverCommit": "0e296133905966a07b9495a15e5aa2fb13cd70ff",
+  "sha256": "b12044053b7501376b63ce065c646e5199eb501af67319681fb39b3e86033f0f",
+  "pulledAt": "2026-10-27T02:19:15.552Z",
+  "note": "钉自 /Users/zewei/.codex/worktrees/calendar-personal-agent/1-2 checkba_cloud 的干净工作区，照 serverCommit 可复现。"
 }

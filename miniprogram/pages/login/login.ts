@@ -88,7 +88,7 @@ Page({
       if (this.data.reviewMode) await verifyLoginCode(this.data.phone, this.data.password)
       else await accountLogin(this.data.phone, this.data.password)
       this.setData({ password: '' })
-      wx.reLaunch({ url: '/pages/index/index' })
+      wx.reLaunch({ url: '/pages/personal/personal' })
     } catch (error) {
       wx.showToast({ icon: 'none', title: (error as ApiError).message })
     } finally {

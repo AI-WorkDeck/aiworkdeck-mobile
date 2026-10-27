@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct WorkdeckApp: App {
+    @UIApplicationDelegateAdaptor(CalendarPushDelegate.self) private var pushDelegate
     @State private var model = AppModel()
 
     init() {
@@ -13,6 +14,7 @@ struct WorkdeckApp: App {
         // 存量用户没有区域键 → 缺省大陆版 → 中文，与升级前一致。
         L10n.apply(region: .current)
         WatchPhoneBridge.shared.activate()
+        _ = CalendarReminders.shared
     }
 
     var body: some Scene {
@@ -35,7 +37,6 @@ struct WorkdeckApp: App {
 private struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     private let recorder = AudioRecorderService.shared
-    @State private var showingProjects = false
     @Environment(AppModel.self) private var model
 
     var body: some View {
@@ -46,17 +47,13 @@ private struct RootView: View {
             } else if isScreenshotting {
                 // 上架截图：用启动参数直接落到第 n 屏，不靠坐标点击一层层点进去
                 screenshotStage
-            } else if recordingTest {
-                CaptureFlowView(onClose: {}).environment(model)
             } else if !model.isSignedIn {
                 // 外壳浅色。取景首页与影像浏览自己强制深色，不跟随系统——
                 // 那两处的深色是功能性的，不是主题偏好。
                 LoginView().environment(model)
                     .preferredColorScheme(.light)
-            } else if showingProjects {
-                WorkspaceView().environment(model)
             } else {
-                CaptureFlowView(onClose: { showingProjects = true }).environment(model)
+                PersonalWorkspaceView().environment(model).id(model.accountGeneration)
             }
         }
         .task(id: "\(model.accountGeneration)-\(model.didRestore)-\(model.isSignedIn)") {
@@ -64,9 +61,6 @@ private struct RootView: View {
         }
         .sheet(isPresented: Binding(get: { model.showBackupPrompt }, set: { model.showBackupPrompt = $0 })) {
             BackupConsentView().environment(model)
-        }
-        .onChange(of: model.isSignedIn) { _, signedIn in
-            showingProjects = false
         }
         .alert(tr("rec.notice.title"), isPresented: Binding(
             get: { recorder.notice != nil },
@@ -87,17 +81,6 @@ private struct RootView: View {
         .task(id: model.didRestore) {
             if model.didRestore {
                 await recorder.recoverPending()
-#if DEBUG
-                if ProcessInfo.processInfo.arguments.contains("-AWDSilenceReminderUITest") {
-                    recorder.beginFakeRecording(seconds: 300)
-                }
-                if ProcessInfo.processInfo.arguments.contains("-AWDPauseRecordingUITest") {
-                    recorder.beginFakeRecording(seconds: 35, paused: true)
-                }
-                if ProcessInfo.processInfo.arguments.contains("-AWDPausedVideoUITest") {
-                    CameraService.shared.beginFakePausedVideo()
-                }
-#endif
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -112,14 +95,6 @@ private struct RootView: View {
         .animation(T.A.base, value: model.isSignedIn)
         .animation(T.A.base, value: model.selectedProject)
         .environment(\.layoutDirection, L10n.isRTL ? .rightToLeft : .leftToRight)
-    }
-
-    private var recordingTest: Bool {
-#if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-AWDRecordingUITest")
-#else
-        false
-#endif
     }
 
     /// Release 里恒为 false，整段截图分支被优化掉。
@@ -199,6 +174,9 @@ struct CaptureFlowView: View {
             capture
         }
         .background(T.D.bg)
+#if DEBUG
+        .onAppear { PersonalUITestSeed.startCaptureFixture() }
+#endif
         .alert(tr("error.generic"), isPresented: Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })) {
             Button(tr("common.close")) { model.lastError = nil }
         } message: { Text(model.lastError ?? "") }

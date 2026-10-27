@@ -11,6 +11,8 @@ settings:
     MARKETING_VERSION: "1.8.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.9"
+    AWD_CALENDAR_REMOTE_PUSH: "NO"
+    AWD_APNS_ENVIRONMENT: "sandbox"
     DEVELOPMENT_TEAM: 8WKHZVR2W8        # 北京京微资易科技有限公司；iOS 只有这一个发布主体
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     SWIFT_STRICT_CONCURRENCY: complete
@@ -62,6 +64,8 @@ targetTemplates:
     info:
       path: Info.plist
       properties:
+        CalendarRemotePushEnabled: "$(AWD_CALENDAR_REMOTE_PUSH)"
+        CalendarPushEnvironment: "$(AWD_APNS_ENVIRONMENT)"
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDisplayName: AI WorkDeck

@@ -32,7 +32,7 @@ import java.time.Instant
 import java.util.logging.Logger
 
 /** 主界面之上盖着的整屏。None = 只有取景器。 */
-enum class Overlay { None, Library, Queue, Settings, Projects, Files, Backup }
+enum class Overlay { Personal, None, Library, Queue, Settings, Projects, Files, Backup }
 
 /**
  * 全局状态。界面只读它，写入一律经过这里，保证磁盘上的库与屏幕上的画面不会各说各话。
@@ -216,6 +216,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * 本地有项目、会话却没了的情况下 bootstrap 会把它读进来，不清的话登进另一站会直接落到它上面。
      */
     fun switchAccountRegion(): AccountRegion {
+        com.aiworkdeck.mobile.services.PersonalConversationStore.clear(getApplication())
         val next = switchAccountRegion(prefs)
         _selectedProject.value = null
         _desktopOnline.value = false
@@ -237,6 +238,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * 登出就删是灾难性的默认。
      */
     fun signOut() {
+        com.aiworkdeck.mobile.services.PersonalConversationStore.clear(getApplication())
+        com.aiworkdeck.mobile.services.CalendarReminders.clear(getApplication())
         backend.logout()
         heartbeat?.cancel()
         heartbeat = null
