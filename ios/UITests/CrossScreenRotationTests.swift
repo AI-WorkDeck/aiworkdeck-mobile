@@ -85,7 +85,7 @@ final class CrossScreenRotationTests: XCTestCase {
         let app = launchWorkspace()
         let quickCapture = app.buttons["workspace.quickCapture"]
         let quickCaptureBefore = quickCapture.frame
-        cycle("Project list", app: app, elements: [app.buttons["workspace.project.alpha"]])
+        cycle("Project list", app: app, elements: [app.buttons["workspace.project.alpha"], quickCapture, app.buttons["workspace.library"]])
         XCTAssertTrue(quickCapture.isHittable)
         XCTAssertEqual(quickCapture.frame, quickCaptureBefore)
         openFiles(app)
