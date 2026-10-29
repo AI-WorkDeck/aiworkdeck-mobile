@@ -471,5 +471,14 @@
   "queue.copyMissing": "本机原文件已不存在，无法复制。",
   "queue.unassigned": "未归类 · 选择项目后上传",
   "queue.copyCorrupt": "原文件校验失败，未创建副本。",
-  "queue.allProjects": "全部项目"
+  "queue.allProjects": "全部项目",
+  "queue.moveWaitingTarget": "移动中 · 等待目标归档",
+  "queue.moveWaitingSource": "移动中 · 等待原设备移除",
+  "queue.moveFailed": "移动未完成",
+  "queue.moveRetry": "重试移动",
+  "queue.moveHint": "目标文件校验并归档后，再移除原项目中的文件。手机原件保留。",
+  "queue.moveSameProject": "文件已在此项目",
+  "queue.moveInProgress": "此文件正在移动",
+  "queue.moveAccountChanged": "请登录发起移动的账户后继续",
+  "queue.moveUnavailable": "云端或桌面端需要更新后才能移动已归档文件"
 }

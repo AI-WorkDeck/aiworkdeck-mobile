@@ -471,5 +471,14 @@
   "queue.copyMissing": "L’original n’est plus sur cet appareil et ne peut pas être copié.",
   "queue.unassigned": "Non classé · Choisir un projet pour téléverser",
   "queue.copyCorrupt": "Impossible de vérifier l’original. Aucune copie créée.",
-  "queue.allProjects": "Tous les projets"
+  "queue.allProjects": "Tous les projets",
+  "queue.moveWaitingTarget": "Déplacement · En attente de la destination",
+  "queue.moveWaitingSource": "Déplacement · En attente de l’appareil d’origine",
+  "queue.moveFailed": "Déplacement non terminé",
+  "queue.moveRetry": "Réessayer le déplacement",
+  "queue.moveHint": "Le fichier du projet d’origine est supprimé une fois le fichier de destination vérifié et enregistré. La copie sur le téléphone est conservée.",
+  "queue.moveSameProject": "Le fichier est déjà dans ce projet",
+  "queue.moveInProgress": "Un déplacement est déjà en cours",
+  "queue.moveAccountChanged": "Connectez-vous au compte qui a lancé le déplacement pour continuer",
+  "queue.moveUnavailable": "Mettez à jour le serveur ou l’application de bureau pour déplacer les fichiers archivés"
 }

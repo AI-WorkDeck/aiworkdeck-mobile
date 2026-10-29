@@ -471,5 +471,14 @@
   "queue.copyMissing": "元のファイルがこの端末にないため、コピーできません。",
   "queue.unassigned": "未分類 · プロジェクトを選択してアップロード",
   "queue.copyCorrupt": "元のファイルを検証できませんでした。コピーは作成されていません。",
-  "queue.allProjects": "すべての案件"
+  "queue.allProjects": "すべての案件",
+  "queue.moveWaitingTarget": "移動中 · 移動先への保存を待機中",
+  "queue.moveWaitingSource": "移動中 · 元の端末での削除を待機中",
+  "queue.moveFailed": "移動は完了していません",
+  "queue.moveRetry": "移動を再試行",
+  "queue.moveHint": "移動先のファイルを検証して保存した後、元のプロジェクトからファイルを削除します。スマートフォンの元ファイルは保持されます。",
+  "queue.moveSameProject": "ファイルはすでにこのプロジェクトにあります",
+  "queue.moveInProgress": "このファイルは移動中です",
+  "queue.moveAccountChanged": "移動を開始したアカウントにログインして続行してください",
+  "queue.moveUnavailable": "アーカイブ済みファイルを移動するには、サーバーまたはデスクトップアプリを更新してください"
 }

@@ -471,5 +471,14 @@
   "queue.copyMissing": "本機原始檔案已不存在，無法複製。",
   "queue.unassigned": "未分類 · 選擇專案後上傳",
   "queue.copyCorrupt": "原始檔案驗證失敗，未建立副本。",
-  "queue.allProjects": "全部專案"
+  "queue.allProjects": "全部專案",
+  "queue.moveWaitingTarget": "移動中 · 等待目標歸檔",
+  "queue.moveWaitingSource": "移動中 · 等待原裝置移除",
+  "queue.moveFailed": "移動未完成",
+  "queue.moveRetry": "重試移動",
+  "queue.moveHint": "目標檔案驗證並歸檔後，再移除原專案中的檔案。手機原件保留。",
+  "queue.moveSameProject": "檔案已在此專案",
+  "queue.moveInProgress": "此檔案正在移動",
+  "queue.moveAccountChanged": "請登入發起移動的帳戶後繼續",
+  "queue.moveUnavailable": "雲端或桌面端需要更新後才能移動已歸檔檔案"
 }

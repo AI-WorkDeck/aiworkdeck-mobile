@@ -471,5 +471,14 @@
   "queue.copyMissing": "L’originale non è più su questo dispositivo e non può essere copiato.",
   "queue.unassigned": "Non assegnato · Scegli un progetto per caricare",
   "queue.copyCorrupt": "Impossibile verificare l’originale. Nessuna copia creata.",
-  "queue.allProjects": "Tutti i progetti"
+  "queue.allProjects": "Tutti i progetti",
+  "queue.moveWaitingTarget": "Spostamento · In attesa della destinazione",
+  "queue.moveWaitingSource": "Spostamento · In attesa del dispositivo originale",
+  "queue.moveFailed": "Spostamento non completato",
+  "queue.moveRetry": "Riprova lo spostamento",
+  "queue.moveHint": "Il file nel progetto originale viene rimosso dopo che il file di destinazione è stato verificato e salvato. La copia sul telefono viene conservata.",
+  "queue.moveSameProject": "Il file è già in questo progetto",
+  "queue.moveInProgress": "È già in corso uno spostamento",
+  "queue.moveAccountChanged": "Accedi all’account che ha avviato lo spostamento per continuare",
+  "queue.moveUnavailable": "Aggiorna il server o l’app desktop per spostare i file archiviati"
 }

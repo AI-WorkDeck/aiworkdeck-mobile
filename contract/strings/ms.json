@@ -471,5 +471,14 @@
   "queue.copyMissing": "Fail asal tiada lagi pada peranti ini dan tidak dapat disalin.",
   "queue.unassigned": "Belum dikelaskan · Pilih projek untuk muat naik",
   "queue.copyCorrupt": "Fail asal tidak dapat disahkan. Salinan tidak dicipta.",
-  "queue.allProjects": "Semua projek"
+  "queue.allProjects": "Semua projek",
+  "queue.moveWaitingTarget": "Sedang memindahkan · Menunggu destinasi",
+  "queue.moveWaitingSource": "Sedang memindahkan · Menunggu peranti asal",
+  "queue.moveFailed": "Pemindahan belum selesai",
+  "queue.moveRetry": "Cuba pindahkan semula",
+  "queue.moveHint": "Fail dalam projek asal dialih keluar selepas fail destinasi disahkan dan disimpan. Salinan pada telefon dikekalkan.",
+  "queue.moveSameProject": "Fail sudah berada dalam projek ini",
+  "queue.moveInProgress": "Pemindahan sedang berlangsung",
+  "queue.moveAccountChanged": "Log masuk ke akaun yang memulakan pemindahan untuk meneruskan",
+  "queue.moveUnavailable": "Kemas kini pelayan atau aplikasi desktop untuk memindahkan fail yang diarkibkan"
 }

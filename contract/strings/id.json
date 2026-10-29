@@ -471,5 +471,14 @@
   "queue.copyMissing": "Berkas asli tidak lagi ada di perangkat ini dan tidak dapat disalin.",
   "queue.unassigned": "Belum ditetapkan · Pilih proyek untuk mengunggah",
   "queue.copyCorrupt": "Berkas asli tidak dapat diverifikasi. Salinan tidak dibuat.",
-  "queue.allProjects": "Semua proyek"
+  "queue.allProjects": "Semua proyek",
+  "queue.moveWaitingTarget": "Memindahkan · Menunggu tujuan",
+  "queue.moveWaitingSource": "Memindahkan · Menunggu perangkat asal",
+  "queue.moveFailed": "Pemindahan belum selesai",
+  "queue.moveRetry": "Coba pindahkan lagi",
+  "queue.moveHint": "Berkas dalam proyek asal dihapus setelah berkas tujuan diverifikasi dan disimpan. Salinan di ponsel tetap disimpan.",
+  "queue.moveSameProject": "Berkas sudah ada dalam proyek ini",
+  "queue.moveInProgress": "Pemindahan sedang berlangsung",
+  "queue.moveAccountChanged": "Masuk ke akun yang memulai pemindahan untuk melanjutkan",
+  "queue.moveUnavailable": "Perbarui server atau aplikasi desktop untuk memindahkan berkas yang diarsipkan"
 }

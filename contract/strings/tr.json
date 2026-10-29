@@ -471,5 +471,14 @@
   "queue.copyMissing": "Asıl dosya artık bu cihazda değil ve kopyalanamıyor.",
   "queue.unassigned": "Atanmamış · Yüklemek için proje seçin",
   "queue.copyCorrupt": "Asıl dosya doğrulanamadı. Kopya oluşturulmadı.",
-  "queue.allProjects": "Tüm projeler"
+  "queue.allProjects": "Tüm projeler",
+  "queue.moveWaitingTarget": "Taşınıyor · Hedef bekleniyor",
+  "queue.moveWaitingSource": "Taşınıyor · Kaynak cihaz bekleniyor",
+  "queue.moveFailed": "Taşıma tamamlanmadı",
+  "queue.moveRetry": "Taşımayı yeniden dene",
+  "queue.moveHint": "Hedef dosya doğrulanıp kaydedildikten sonra kaynak projedeki dosya kaldırılır. Telefondaki kopya korunur.",
+  "queue.moveSameProject": "Dosya zaten bu projede",
+  "queue.moveInProgress": "Bir taşıma işlemi zaten sürüyor",
+  "queue.moveAccountChanged": "Devam etmek için taşıma işlemini başlatan hesaba giriş yapın",
+  "queue.moveUnavailable": "Arşivlenmiş dosyaları taşımak için sunucuyu veya masaüstü uygulamasını güncelleyin"
 }

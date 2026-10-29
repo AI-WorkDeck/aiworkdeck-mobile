@@ -471,5 +471,14 @@
   "queue.copyMissing": "لم يعد الأصل موجودًا على هذا الجهاز ولا يمكن نسخه.",
   "queue.unassigned": "غير مصنف · اختر مشروعًا للرفع",
   "queue.copyCorrupt": "تعذر التحقق من الأصل. لم يتم إنشاء نسخة.",
-  "queue.allProjects": "جميع المشاريع"
+  "queue.allProjects": "جميع المشاريع",
+  "queue.moveWaitingTarget": "جارٍ النقل · بانتظار الوجهة",
+  "queue.moveWaitingSource": "جارٍ النقل · بانتظار الجهاز الأصلي",
+  "queue.moveFailed": "لم يكتمل النقل",
+  "queue.moveRetry": "إعادة محاولة النقل",
+  "queue.moveHint": "يُزال الملف من المشروع الأصلي بعد التحقق من ملف الوجهة وحفظه. تُحفظ النسخة الموجودة على الهاتف.",
+  "queue.moveSameProject": "الملف موجود بالفعل في هذا المشروع",
+  "queue.moveInProgress": "هناك عملية نقل قيد التنفيذ بالفعل",
+  "queue.moveAccountChanged": "سجّل الدخول إلى الحساب الذي بدأ عملية النقل للمتابعة",
+  "queue.moveUnavailable": "حدّث الخادم أو تطبيق سطح المكتب لنقل الملفات المؤرشفة"
 }

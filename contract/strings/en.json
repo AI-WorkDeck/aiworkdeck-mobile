@@ -471,5 +471,14 @@
   "queue.copyMissing": "The original is no longer on this device and cannot be copied.",
   "queue.unassigned": "Unassigned · Choose a project to upload",
   "queue.copyCorrupt": "The original could not be verified. No copy was created.",
-  "queue.allProjects": "All projects"
+  "queue.allProjects": "All projects",
+  "queue.moveWaitingTarget": "Moving · Waiting for destination",
+  "queue.moveWaitingSource": "Moving · Waiting for original device",
+  "queue.moveFailed": "Move not completed",
+  "queue.moveRetry": "Retry move",
+  "queue.moveHint": "The original archive is removed after the destination file is verified and saved. The phone copy is kept.",
+  "queue.moveSameProject": "The file is already in this project",
+  "queue.moveInProgress": "A move is already in progress",
+  "queue.moveAccountChanged": "Sign in to the account that started the move to continue",
+  "queue.moveUnavailable": "Update the server or desktop app to move archived files"
 }
