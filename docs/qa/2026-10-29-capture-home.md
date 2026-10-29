@@ -31,6 +31,7 @@
 - 提醒不能绕过录像/拍照的切页保护；现统一导航判断，忙时延后，完成后打开日程。请求失败保留提醒，成功同步确认事件已删除才清除；新增4项回归随个人模块10项通过。
 - 子代理只读复核后修复独立录音toggle、跨端串联、旧会话绑定、回执身份与隔离目录问题；主任务复查改动与实际报告。复核不等于第二位人员独立真机复现。
 - Duo CI和本机均复现设置滚动后系统收起导航栏、关闭入口消失；在NavigationStack内容上设置iOS27的toolbarMinimizationBehavior(.never, for: .navigationBar)，定向UI复测通过（`/tmp/awd-home-1604-duo-settings-visible.xcresult`）。旧系统保持原导航栏行为；修饰器放在NavigationStack外无效的失败记录保留。
+- bdf23eb 的CI常规iPhone采集旋转失败，附件截图明确显示系统通知授权弹窗遮挡；同提交Duo、大屏均通过，全新本地iPhone定向复测也通过。录音启动后通知授权可能延迟，旋转测试现处理首次权限弹窗并等待控件可点击，保留停止按钮、目标项目、计时连续性、暂停/恢复和保存断言，不以旧绿灯替代修订后的三组检查。
 - 未进行正式发版、生产AI调用、生产上传/桌面收件或实体相机麦克风测试；Duo真实折叠姿态与长后台/来电另列。
 
 固定的每次发布流程见 [ios-release-compatibility.md](ios-release-compatibility.md)。

@@ -26,7 +26,11 @@ final class CaptureContinuityTests: XCTestCase {
         for orientation: UIDeviceOrientation in [.landscapeLeft, .portrait, .landscapeRight, .portrait] {
             XCUIDevice.shared.orientation = orientation
             expectation(for: NSPredicate { _, _ in
-                (app.frame.height > app.frame.width) == (orientation == .portrait)
+                // Notification authorization is asynchronous and can arrive after
+                // recording starts, including in the middle of a rotation.
+                self.allowVisibleRecordingPermission()
+                return (app.frame.height > app.frame.width) == (orientation == .portrait)
+                    && shutter.isHittable
             }, evaluatedWith: app)
             waitForExpectations(timeout: 15)
             XCTAssertEqual(shutter.label, "Stop recording")
@@ -45,7 +49,10 @@ final class CaptureContinuityTests: XCTestCase {
         XCTAssertEqual(shutter.label, "Resume audio")
         let pausedElapsed = app.staticTexts["recording.elapsed"].label
         XCUIDevice.shared.orientation = .landscapeLeft
-        expectation(for: NSPredicate { _, _ in app.frame.width > app.frame.height }, evaluatedWith: app)
+        expectation(for: NSPredicate { _, _ in
+            self.allowVisibleRecordingPermission()
+            return app.frame.width > app.frame.height && shutter.isHittable
+        }, evaluatedWith: app)
         waitForExpectations(timeout: 15)
         XCTAssertTrue(shutter.isHittable)
         XCTAssertEqual(app.staticTexts["recording.elapsed"].label, pausedElapsed)
