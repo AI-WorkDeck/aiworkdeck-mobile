@@ -27,7 +27,9 @@ final class CalendarReminders: NSObject, UNUserNotificationCenterDelegate {
         events.filter { $0.status == "OPEN" && ($0.reminderDate ?? .distantPast) > now }
             .sorted { $0.reminderDate! < $1.reminderDate! }.prefix(50).map { $0 }
     }
-    func replace(_ events: [PersonalCalendarEvent]) async {
+    // Keep notification synchronization ordered without holding page loading or
+    // account settings open while the system notification service responds.
+    func replace(_ events: [PersonalCalendarEvent]) {
         let previous = queue
         let version = UUID(); generation = version
         let work = Task { @MainActor [weak self] in
@@ -36,7 +38,6 @@ final class CalendarReminders: NSObject, UNUserNotificationCenterDelegate {
             await self.apply(events, version: version)
         }
         queue = work
-        await work.value
     }
     private func apply(_ events: [PersonalCalendarEvent], version: UUID) async {
         let center = UNUserNotificationCenter.current()

@@ -78,12 +78,15 @@ extension XCTestCase {
         }, evaluatedWith: start)
         waitForExpectations(timeout: 15)
         start.tap()
-        let shutter = app.buttons["capture.shutter"]
+        let recording = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@",
+            "capture.shutter", "Stop recording")).firstMatch
         // Permission prompts may follow each other; never tap Record again to recover.
         expectation(for: NSPredicate { _, _ in
             self.allowVisibleRecordingPermission()
-            return shutter.label == "Stop recording" && app.staticTexts["recording.elapsed"].exists
-        }, evaluatedWith: shutter)
+            // Query existence while the capture controls are being rebuilt. Reading
+            // an unresolved element's label can block the next permission poll.
+            return recording.exists && app.staticTexts["recording.elapsed"].exists
+        }, evaluatedWith: recording)
         waitForExpectations(timeout: 30)
         XCTAssertFalse(app.buttons["capture.mode.audio"].exists)
     }

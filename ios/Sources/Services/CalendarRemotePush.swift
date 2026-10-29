@@ -67,7 +67,7 @@ import CryptoKit
                 let response: Registration = try await PersonalWorkspaceService().request("/api/mobile/calendar/push/device", method: "PUT", body: body)
                 guard version == self.generation, self.enabled else { return }
                 self.registered = response.available && response.registered
-                if self.registered { await CalendarReminders.shared.replace([]) }
+                if self.registered { CalendarReminders.shared.replace([]) }
             } catch { /* Retain a known channel; failed rebind is not proof it was removed. */ }
         }
         operations = work

@@ -74,7 +74,7 @@ final class PersonalWorkspaceModel {
             let allowed = calendar?.enabled == true && calendar?.subscriptionActive == true
             if allowed && CalendarReminders.shared.enabled { await CalendarRemotePush.shared.prepare() }
             if !allowed { CalendarRemotePush.shared.clear() }
-            await CalendarReminders.shared.replace(allowed ? (calendar?.events ?? []) : [])
+            CalendarReminders.shared.replace(allowed ? (calendar?.events ?? []) : [])
         } catch is CancellationError {} catch { calendarError = error.localizedDescription }
     }
     func send() async {
@@ -248,7 +248,7 @@ private struct PersonalCalendarView: View {
                         ForEach(projects) { event in Text(event.projectName).tag(event.projectIdentity) }
                     }
                     Toggle(tr("personal.reminders"), isOn: Binding(get: { reminders.enabled }, set: { value in
-                        Task { if value { notificationError = !((await reminders.allow())); await reminders.replace(model.calendar?.events ?? []) } else { reminders.clear() } }
+                        Task { if value { notificationError = !((await reminders.allow())); reminders.replace(model.calendar?.events ?? []) } else { reminders.clear() } }
                     }))
                     if !CalendarRemotePush.shared.registered { Text(tr("personal.remindersHint")).font(.caption).foregroundStyle(.secondary) }
                     if notificationError { Text(tr("personal.remindersUnavailable")).font(.caption).foregroundStyle(T.S.failed) }
