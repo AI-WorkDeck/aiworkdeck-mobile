@@ -4,6 +4,35 @@ import SwiftUI
 
 @MainActor @Observable
 final class PersonalWorkspaceModel {
+    private(set) var selectedTab = "capture"
+    private(set) var pendingCalendarEventID: String?
+
+    func selectTab(_ tab: String, cameraBusy: Bool) {
+        guard !cameraBusy else { return }
+        selectedTab = tab
+    }
+
+    func requestCalendarEvent(_ id: String?, cameraBusy: Bool) {
+        pendingCalendarEventID = id
+        resumeCalendarNavigation(cameraBusy: cameraBusy)
+    }
+
+    func resumeCalendarNavigation(cameraBusy: Bool) {
+        guard pendingCalendarEventID != nil else { return }
+        selectTab("calendar", cameraBusy: cameraBusy)
+    }
+
+    func reminderEvent(cameraBusy: Bool) -> PersonalCalendarEvent? {
+        guard !cameraBusy, selectedTab == "calendar", let id = pendingCalendarEventID else { return nil }
+        return calendar?.events.first { $0.id == id }
+    }
+
+    func consumeReminder(cameraBusy: Bool) -> PersonalCalendarEvent? {
+        guard let event = reminderEvent(cameraBusy: cameraBusy) else { return nil }
+        pendingCalendarEventID = nil
+        return event
+    }
+
     var status: AssistantStatus?
     var calendar: PersonalCalendar?
     var messages: [PersonalMessage] = []
@@ -37,6 +66,11 @@ final class PersonalWorkspaceModel {
         } catch is CancellationError { return } catch { self.error = error.localizedDescription }
         do {
             calendar = try await service.calendar(); calendarError = nil
+            // Only a successful response can prove that the requested event is gone.
+            if let id = pendingCalendarEventID, calendar?.events.contains(where: { $0.id == id }) == false {
+                pendingCalendarEventID = nil
+                if CalendarReminders.shared.selectedEventID == id { CalendarReminders.shared.selectedEventID = nil }
+            }
             let allowed = calendar?.enabled == true && calendar?.subscriptionActive == true
             if allowed && CalendarReminders.shared.enabled { await CalendarRemotePush.shared.prepare() }
             if !allowed { CalendarRemotePush.shared.clear() }
@@ -93,21 +127,24 @@ final class PersonalWorkspaceModel {
 struct PersonalWorkspaceView: View {
     @Environment(AppModel.self) private var account
     @State private var model = PersonalWorkspaceModel()
-    @State private var tab = "capture"
     @State private var reminders = CalendarReminders.shared
     @Environment(\.scenePhase) private var scenePhase
+    private var cameraBusy: Bool {
+        let camera = CameraService.shared
+        return camera.isRecording || camera.isStartingRecording || camera.isCapturingPhoto
+    }
     var body: some View {
-        TabView(selection: Binding(get: { tab }, set: { value in
-            guard !CameraService.shared.isRecording, !CameraService.shared.isStartingRecording, !CameraService.shared.isCapturingPhoto else { return }
-            tab = value
-        })) {
-            CaptureFlowView(isActive: tab == "capture").tabItem { Label(tr("workspace.capture"), systemImage: "camera") }.tag("capture")
-            PersonalCalendarView(model: model).tabItem { Label(tr("personal.calendar"), systemImage: "calendar") }.tag("calendar")
+        TabView(selection: Binding(get: { model.selectedTab }, set: { model.selectTab($0, cameraBusy: cameraBusy) })) {
+            CaptureFlowView(isActive: model.selectedTab == "capture").tabItem { Label(tr("workspace.capture"), systemImage: "camera") }.tag("capture")
+            PersonalCalendarView(model: model, cameraBusy: cameraBusy).tabItem { Label(tr("personal.calendar"), systemImage: "calendar") }.tag("calendar")
             AssistantView(model: model).tabItem { Label(tr("personal.assistant"), systemImage: "bubble.left.and.bubble.right") }.tag("assistant")
         }
         .tint(T.L.accent)
-        .task { await model.load(); if reminders.selectedEventID != nil { tab = "calendar" } }
-        .onChange(of: reminders.selectedEventID) { _, value in if value != nil { tab = "calendar" } }
+        .task { await model.load() }
+        .onChange(of: reminders.selectedEventID, initial: true) { _, value in
+            model.requestCalendarEvent(value, cameraBusy: cameraBusy)
+        }
+        .onChange(of: cameraBusy) { _, value in model.resumeCalendarNavigation(cameraBusy: value) }
         .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await model.load() } } }
     }
 }
@@ -182,6 +219,7 @@ private struct AssistantView: View {
 
 private struct PersonalCalendarView: View {
     @Bindable var model: PersonalWorkspaceModel
+    var cameraBusy: Bool
     @State private var days = 3
     @State private var project = ""
     @State private var showConsent = false
@@ -247,11 +285,17 @@ private struct PersonalCalendarView: View {
             .alert(tr("personal.calendar"), isPresented: $showConsent) {
                 Button(tr("common.ok")) { Task { await model.configure("calendar", enabled: true) } }; Button(tr("common.cancel"), role: .cancel) {}
             } message: { Text(tr("personal.calendarConsent")) }
-            .task(id: reminders.selectedEventID) {
-                if let id = reminders.selectedEventID {
-                    if let event = model.calendar?.events.first(where: { $0.id == id }) { selected = event; reminders.selectedEventID = nil }
-                    else { await model.load(); selected = model.calendar?.events.first(where: { $0.id == id }); reminders.selectedEventID = nil }
-                }
+            .task(id: model.selectedTab == "calendar" ? model.pendingCalendarEventID : nil) {
+                guard model.selectedTab == "calendar", model.pendingCalendarEventID != nil,
+                      model.reminderEvent(cameraBusy: cameraBusy) == nil else { return }
+                await model.load()
+            }
+            // Keep the ID while an existing sync is loading. A hidden calendar must
+            // neither consume the notification nor present its sheet over the camera.
+            .onChange(of: model.reminderEvent(cameraBusy: cameraBusy)?.id, initial: true) { _, id in
+                guard id != nil, let event = model.consumeReminder(cameraBusy: cameraBusy) else { return }
+                selected = event
+                if reminders.selectedEventID == event.id { reminders.selectedEventID = nil }
             }
             .sheet(item: $selected) { event in
                 NavigationStack {

@@ -18,6 +18,86 @@ final class PersonalWorkspaceTests: XCTestCase {
         {"id":"\(id)","deviceId":"desktop","projectKey":"alpha","projectName":"Synthetic","title":"Event","dueDate":"\(date)","timeZone":"Asia/Shanghai","status":"\(status)","remindAt":"\(remind)","files":[{"fileId":7,"fileName":"synthetic.pdf"}]}
         """.utf8))
     }
+    @MainActor func testManualTabsAndReminderNavigationShareCameraBusyGuard() throws {
+        let model = PersonalWorkspaceModel()
+        // Photo capture, recording startup, and video recording all feed the
+        // same cameraBusy value; audio recording is deliberately outside it.
+        for tab in ["calendar", "assistant"] {
+            model.selectTab(tab, cameraBusy: true)
+            XCTAssertEqual(model.selectedTab, "capture")
+        }
+        model.requestCalendarEvent("event", cameraBusy: true)
+        XCTAssertEqual(model.selectedTab, "capture")
+        XCTAssertEqual(model.pendingCalendarEventID, "event")
+        model.resumeCalendarNavigation(cameraBusy: true)
+        XCTAssertEqual(model.selectedTab, "capture")
+        model.resumeCalendarNavigation(cameraBusy: false)
+        XCTAssertEqual(model.selectedTab, "calendar")
+        XCTAssertEqual(model.pendingCalendarEventID, "event")
+        model.selectTab("assistant", cameraBusy: false)
+        XCTAssertEqual(model.selectedTab, "assistant", "Audio recording does not lock tabs")
+        model.requestCalendarEvent("audio-reminder", cameraBusy: false)
+        XCTAssertEqual(model.selectedTab, "calendar")
+        XCTAssertEqual(model.pendingCalendarEventID, "audio-reminder")
+    }
+
+    @MainActor func testReminderRemainsPendingUntilCaptureEndsAndCalendarSyncProvidesEvent() throws {
+        let model = PersonalWorkspaceModel()
+        model.requestCalendarEvent("event", cameraBusy: true)
+        XCTAssertNil(model.consumeReminder(cameraBusy: true))
+        model.resumeCalendarNavigation(cameraBusy: false)
+        XCTAssertEqual(model.selectedTab, "calendar")
+        XCTAssertNil(model.consumeReminder(cameraBusy: false), "An unfinished calendar sync must not discard the ID")
+        XCTAssertEqual(model.pendingCalendarEventID, "event")
+        model.calendar = PersonalCalendar(enabled: true, subscriptionActive: true, events: [try event()], syncedAt: nil)
+        XCTAssertEqual(model.reminderEvent(cameraBusy: false)?.id, "event")
+        XCTAssertEqual(model.consumeReminder(cameraBusy: false)?.id, "event")
+        XCTAssertNil(model.pendingCalendarEventID)
+        XCTAssertNil(model.consumeReminder(cameraBusy: false), "Present the notification once")
+    }
+
+    @MainActor func testSyncedReminderCannotBeConsumedByHiddenCalendarDuringCapture() throws {
+        let model = PersonalWorkspaceModel()
+        model.calendar = PersonalCalendar(enabled: true, subscriptionActive: true,
+            events: [try event("first"), try event("latest")], syncedAt: nil)
+        model.requestCalendarEvent("first", cameraBusy: true)
+        model.requestCalendarEvent("latest", cameraBusy: true)
+        XCTAssertNil(model.consumeReminder(cameraBusy: true))
+        XCTAssertNil(model.consumeReminder(cameraBusy: false), "The calendar is still hidden")
+        XCTAssertEqual(model.pendingCalendarEventID, "latest")
+        model.resumeCalendarNavigation(cameraBusy: false)
+        XCTAssertEqual(model.consumeReminder(cameraBusy: false)?.id, "latest")
+        model.selectTab("capture", cameraBusy: false)
+        model.resumeCalendarNavigation(cameraBusy: false)
+        XCTAssertEqual(model.selectedTab, "capture", "Consumed reminders must not pull the user back")
+        model.requestCalendarEvent("first", cameraBusy: true)
+        model.requestCalendarEvent(nil, cameraBusy: true)
+        model.resumeCalendarNavigation(cameraBusy: false)
+        XCTAssertEqual(model.selectedTab, "capture", "Clearing reminders cancels deferred navigation")
+    }
+
+    @MainActor func testMissingReminderClearsOnlyAfterSuccessfulCalendarSync() async throws {
+        let model = PersonalWorkspaceModel(); model.service = service()
+        model.requestCalendarEvent("deleted-event", cameraBusy: true)
+        var failCalendar = true
+        PersonalTestProtocol.handler = { request in
+            if request.url!.path.hasSuffix("status") {
+                return Data(#"{"code":0,"data":{"enabled":false,"subscriptionActive":true,"backupEnabled":false,"summaryCount":0}}"#.utf8)
+            }
+            if failCalendar { throw URLError(.networkConnectionLost) }
+            return Data(#"{"code":0,"data":{"enabled":false,"subscriptionActive":true,"events":[]}}"#.utf8)
+        }
+        await model.load()
+        XCTAssertEqual(model.pendingCalendarEventID, "deleted-event", "A failed sync cannot discard a notification")
+        XCTAssertNotNil(model.calendarError)
+        failCalendar = false
+        await model.load()
+        XCTAssertNil(model.pendingCalendarEventID)
+        XCTAssertNil(model.calendarError)
+        model.resumeCalendarNavigation(cameraBusy: false)
+        XCTAssertEqual(model.selectedTab, "capture", "A deleted event cannot pull later captures back to Calendar")
+    }
+
     @MainActor func testLocalReminderPlanFiltersStatusDateAndNext50AndCalendarUsesEventTimezone() throws {
         let now = ISO8601DateFormatter().date(from: "2026-10-27T20:00:00Z")!
         let item = try event()
