@@ -151,6 +151,7 @@ struct PersonalWorkspaceView: View {
 
 private struct AssistantView: View {
     @Bindable var model: PersonalWorkspaceModel
+    @Environment(\.colorScheme) private var colorScheme
     @State private var showConsent = false
     @State private var showSettings = false
     @State private var showBackup = false
@@ -187,9 +188,13 @@ private struct AssistantView: View {
                 }
                 if let error = model.error { Text(error).font(.caption).foregroundStyle(T.S.failed); Button(tr("project.retry")) { Task { if model.pending != nil { await model.send() } else { await model.load() } } }.disabled(model.busy) }
                 HStack(alignment: .bottom) {
-                    TextField(tr("personal.ask"), text: $model.draft, axis: .vertical).lineLimit(1...5).focused($inputFocused).disabled(model.busy).accessibilityIdentifier("personal.input")
+                    TextField(tr("personal.ask"), text: $model.draft, prompt: Text(tr("personal.ask")).foregroundStyle(colorScheme == .dark ? T.D.fgMuted : T.L.fgMuted), axis: .vertical)
+                        .foregroundStyle(colorScheme == .dark ? T.D.fg : T.L.fg)
+                        .lineLimit(1...5).focused($inputFocused).disabled(model.busy).accessibilityIdentifier("personal.input")
                     Button(tr("personal.send")) { inputFocused = false; Task { await model.send() } }.disabled(model.busy || model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.status?.enabled != true || model.status?.subscriptionActive != true).accessibilityIdentifier("personal.send")
-                }.padding(12).background(T.L.bg).clipShape(RoundedRectangle(cornerRadius: 12))
+                }.padding(12).background(colorScheme == .dark ? T.D.surface : T.L.bg)
+                    .tint(colorScheme == .dark ? T.D.fg : T.L.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding().navigationTitle(tr("personal.assistant")).navigationBarTitleDisplayMode(.inline)
             .toolbar {
