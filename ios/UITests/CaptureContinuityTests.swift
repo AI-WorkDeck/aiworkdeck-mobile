@@ -17,36 +17,8 @@ final class CaptureContinuityTests: XCTestCase {
         app.launchArguments = ["-AWDRecordingUITest"]
         app.launch()
         openPersonalCapture(app)
-        allowPermissionPrompts()
-        let audio = app.buttons["capture.mode.audio"]
-        XCTAssertTrue(audio.waitForExistence(timeout: 10)); audio.tap()
+        startAudioRecordingWithOneTap(app)
         let shutter = app.buttons["capture.shutter"]
-        var previousFrame: CGRect?
-        // Switching to audio moves the shutter; wait for its frame to settle before tapping once.
-        expectation(for: NSPredicate { _, _ in
-            guard audio.isSelected, app.staticTexts["recording.elapsed"].exists,
-                  shutter.label == "Start recording", shutter.isEnabled, shutter.isHittable else {
-                previousFrame = nil
-                return false
-            }
-            let frame = shutter.frame
-            defer { previousFrame = frame }
-            return previousFrame == frame
-        }, evaluatedWith: shutter)
-        waitForExpectations(timeout: 10)
-        shutter.tap()
-        let permissionAlert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
-        // Notification authorization can arrive well after the microphone prompt closes.
-        expectation(for: NSPredicate { _, _ in
-            if permissionAlert.exists {
-                for label in ["Allow", "允许", "OK"] where permissionAlert.buttons[label].exists {
-                    permissionAlert.buttons[label].tap()
-                    break
-                }
-            }
-            return shutter.label == "Stop recording"
-        }, evaluatedWith: shutter)
-        waitForExpectations(timeout: 30)
         let destination = app.staticTexts["capture.destination"]
         XCTAssertEqual(destination.label, "华创科技 A 轮尽调")
         var elapsed = seconds(app.staticTexts["recording.elapsed"].label)
@@ -83,19 +55,6 @@ final class CaptureContinuityTests: XCTestCase {
         let saved = app.buttons["Recording saved · Open library to play"]
         XCTAssertTrue(saved.waitForExistence(timeout: 15))
         XCTAssertEqual(destination.label, "华创科技 A 轮尽调")
-    }
-
-    @MainActor
-    private func allowPermissionPrompts() {
-        let alert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
-        // Fresh simulators ask for both microphone and silent-reminder alerts.
-        for _ in 0..<3 {
-            guard alert.waitForExistence(timeout: 3) else { break }
-            for label in ["Allow", "允许", "OK"] where alert.buttons[label].exists {
-                alert.buttons[label].tap()
-                break
-            }
-        }
     }
 
     private func seconds(_ label: String) -> Int {

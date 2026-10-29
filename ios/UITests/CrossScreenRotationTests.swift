@@ -109,7 +109,7 @@ final class CrossScreenRotationTests: XCTestCase {
         XCTAssertTrue(settings.waitForExistence(timeout: 10)); settings.tap()
         let closeSettings = app.buttons["settings.close"]
         XCTAssertTrue(closeSettings.waitForExistence(timeout: 10))
-        cycle("Settings", app: app, elements: [closeSettings, app.buttons["settings.switchProject"]])
+        cycle("Settings", app: app, elements: [closeSettings, app.descendants(matching: .any).matching(identifier: "settings.account").firstMatch])
         closeSettings.tap()
         returnToFiles(app)
     }

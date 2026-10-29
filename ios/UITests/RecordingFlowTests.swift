@@ -1,17 +1,6 @@
 import XCTest
 
 final class RecordingFlowTests: XCTestCase {
-    private func allowMicrophoneIfNeeded() {
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        let alert = springboard.alerts.firstMatch
-        if alert.waitForExistence(timeout: 3) {
-            for label in ["Allow", "允许", "OK"] where alert.buttons[label].exists {
-                alert.buttons[label].tap()
-                return
-            }
-        }
-    }
-
     private func dismissEarlierRecordingNotice(in app: XCUIApplication) {
         let notice = app.alerts["Recording status"]
         if notice.waitForExistence(timeout: 2) { notice.buttons["Close"].tap() }
@@ -85,22 +74,13 @@ final class RecordingFlowTests: XCTestCase {
         app.launch()
         dismissEarlierRecordingNotice(in: app)
         openPersonalCapture(app)
-        // Enter the same Capture tab used by signed-in users.
-        let mode = app.buttons["capture.mode.audio"]
-        XCTAssertTrue(mode.waitForExistence(timeout: 10)); mode.tap()
+        startAudioRecordingWithOneTap(app)
         let shutter = app.buttons["capture.shutter"]
-        shutter.tap()
-        allowMicrophoneIfNeeded()
-        expectation(for: NSPredicate(format: "label == %@", "Stop recording"), evaluatedWith: shutter)
-        waitForExpectations(timeout: 30)
         let before = app.staticTexts["recording.elapsed"].label
         app.buttons["capture.settings"].tap()
-        app.buttons["settings.switchProject"].tap()
-        let back = app.buttons["projectPicker.back"]
-        XCTAssertTrue(back.waitForExistence(timeout: 5))
-        XCTAssertTrue(back.isHittable)
-        XCTAssertTrue(app.buttons["projectPicker.project.alpha"].waitForExistence(timeout: 5))
-        back.tap()
+        XCTAssertFalse(app.buttons["settings.switchProject"].exists)
+        XCTAssertTrue(app.buttons["settings.close"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["settings.close"].isHittable)
         app.buttons["settings.close"].tap()
         XCTAssertTrue(shutter.waitForExistence(timeout: 5))
         XCTAssertEqual(shutter.label, "Stop recording")
@@ -142,14 +122,7 @@ final class RecordingFlowTests: XCTestCase {
         let earlierNotice = app.alerts["Recording status"]
         if earlierNotice.waitForExistence(timeout: 2) { earlierNotice.buttons["Close"].tap() }
         openPersonalCapture(app)
-        let mode = app.buttons["capture.mode.audio"]
-        XCTAssertTrue(mode.waitForExistence(timeout: 10))
-        mode.tap()
-        let shutter = app.buttons["capture.shutter"]
-        shutter.tap()
-        allowMicrophoneIfNeeded()
-        expectation(for: NSPredicate(format: "label == %@", "Stop recording"), evaluatedWith: shutter)
-        waitForExpectations(timeout: 30)
+        startAudioRecordingWithOneTap(app)
         Thread.sleep(forTimeInterval: 3)
         app.terminate()
         app.launch()
@@ -177,16 +150,9 @@ final class RecordingFlowTests: XCTestCase {
         app.launch()
         dismissEarlierRecordingNotice(in: app)
         openPersonalCapture(app)
-        let mode = app.buttons["capture.mode.audio"]
-        XCTAssertTrue(mode.waitForExistence(timeout: 10))
-        mode.tap()
+        startAudioRecordingWithOneTap(app)
         let shutter = app.buttons["capture.shutter"]
-        shutter.tap()
-        allowMicrophoneIfNeeded()
         XCTAssertTrue(app.staticTexts["recording.elapsed"].waitForExistence(timeout: 5))
-        let stopped = NSPredicate(format: "label == %@", "Stop recording")
-        expectation(for: stopped, evaluatedWith: shutter)
-        waitForExpectations(timeout: 30)
         XCUIDevice.shared.orientation = .landscapeLeft
         expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: shutter)
         waitForExpectations(timeout: 5)

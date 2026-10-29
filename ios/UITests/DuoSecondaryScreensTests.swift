@@ -72,23 +72,19 @@ final class DuoSecondaryScreensTests: XCTestCase {
     }
 
     @MainActor
-    func testSettingsShowsCategoriesOrCompleteForm() {
+    func testSettingsShowsAccountWithoutProjectNavigation() {
         let app = launch(screen: 7)
         defer { app.terminate() }
         XCTAssertTrue(app.buttons["settings.close"].waitForExistence(timeout: 15))
-        let category = app.buttons["settings.category.settings.about"]
-        if category.isHittable {
-            XCTAssertTrue(category.waitForExistence(timeout: 15))
-            category.tap()
-            XCTAssertFalse(app.buttons["settings.switchProject"].exists)
-            XCTAssertTrue(app.staticTexts["hi@aiworkdeck.com"].exists)
-            app.buttons["settings.category.settings.archiveTarget"].tap()
-            XCTAssertTrue(app.buttons["settings.switchProject"].isHittable)
-        } else {
-            XCTAssertFalse(category.isHittable)
-            XCTAssertTrue(app.buttons["settings.switchProject"].exists)
-        }
+        XCTAssertFalse(app.buttons["settings.switchProject"].exists)
+        XCTAssertFalse(app.buttons["settings.category.settings.archiveTarget"].exists)
+        let account = app.descendants(matching: .any).matching(identifier: "settings.account").firstMatch
+        XCTAssertTrue(account.waitForExistence(timeout: 10))
+        XCTAssertTrue(account.isHittable)
+        let about = app.descendants(matching: .any).matching(identifier: "settings.about").firstMatch
+        for _ in 0..<8 where !about.isHittable { app.swipeUp() }
+        XCTAssertTrue(about.isHittable)
         XCTAssertTrue(app.buttons["settings.close"].isHittable)
-        keepScreenshot("Settings current window")
+        keepScreenshot("Settings account and about in current window")
     }
 }
