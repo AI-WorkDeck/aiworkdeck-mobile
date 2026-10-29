@@ -154,6 +154,32 @@ actor EvidenceStore {
         try writeManifest(updated)
     }
 
+    /// A sent item keeps its original receipt. Copy bytes into an independent
+    /// transfer so the server's idempotency key cannot silently reroute it.
+    func copyToProject(_ id: UUID, _ project: RelayProject,
+                       currentWatchBinding: String? = WatchAccountScope.current) throws -> CaptureItem {
+        guard let item = try loadOne(id) else { throw APIError(message: tr("library.moveMissing")) }
+        guard fm.fileExists(atPath: item.localURL.path) else { throw APIError(message: tr("queue.copyMissing")) }
+        let copyID = UUID()
+        let url = mediaDir.appendingPathComponent("\(copyID.uuidString).\(Self.ext(for: item.kind))")
+        var saved = false
+        defer { if !saved { try? fm.removeItem(at: url) } }
+        try fm.copyItem(at: item.localURL, to: url)
+        guard try Self.sha256(of: url) == item.manifest.sha256 else { throw APIError(message: tr("queue.copyCorrupt")) }
+        let manifest = CaptureManifest(
+            clientMediaId: copyID, sha256: item.manifest.sha256, capturedAt: item.capturedAt,
+            serverReceivedAt: nil, latitude: item.manifest.latitude, longitude: item.manifest.longitude,
+            horizontalAccuracy: item.manifest.horizontalAccuracy, deviceModel: item.manifest.deviceModel,
+            osVersion: item.manifest.osVersion, appVersion: item.manifest.appVersion,
+            fromCamera: item.manifest.fromCamera, tsaToken: item.manifest.tsaToken)
+        let copy = CaptureItem(id: copyID, kind: item.kind, state: .waiting, manifest: manifest,
+            localURL: url, progress: 0, lastError: nil, savedToAlbum: false, project: project,
+            watchAccountBinding: item.watchAccountBinding == nil ? nil : (currentWatchBinding ?? ""))
+        try writeManifest(copy)
+        saved = true
+        return copy
+    }
+
     /// 用户主动删除：原图与记录一起删。记录留着而图没了，图集里会出现永远打不开的空格。
     func delete(ids: [UUID]) {
         for id in ids {

@@ -169,6 +169,13 @@ final class AppModel {
         kickUpload()
     }
 
+    func copy(_ item: CaptureItem, to project: RelayProject) async throws -> CaptureItem {
+        let copy = try await EvidenceStore.shared.copyToProject(item.id, project)
+        await refresh()
+        kickUpload()
+        return copy
+    }
+
     /// 登录页切账号区域（dev-board#837）。两个区域是两套账号体系：上一区域的项目目录是另一个
     /// 账号的桌面端推上来的，拿到新区域用等于把新拍的影像寻址到一台新账号不认识的电脑上。
     /// 所以切区域时把跟上一账号项目目录挂钩的状态全部清掉——已选项目（含持久化）、首页项目名、

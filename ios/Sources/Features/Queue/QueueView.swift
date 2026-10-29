@@ -3,19 +3,27 @@ import SwiftUI
 /// 上传队列。存在的理由只有一个：**出事的时候能看懂、能自救。**
 /// 只给一个红点，用户既不知道该重试还是该找人，也不知道是自己网络的问题还是我们的问题。
 ///
-/// 只列当前项目——进度跟着项目走。别的项目的未落盘件在末尾提一句，不完全藏起来。
+/// 汇总全部项目和未归类资料；切换采集目标不改变这里的范围。
 struct QueueView: View {
     @Environment(AppModel.self) private var model
     var onClose: () -> Void
     @State private var selectedID: UUID?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var compactColumn: NavigationSplitViewColumn = .sidebar
+    @State private var projectAction: ProjectAction?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    private var scoped: [CaptureItem] { model.currentItems }
+    private struct ProjectAction: Identifiable {
+        let item: CaptureItem
+        let copy: Bool
+        var id: UUID { item.id }
+    }
+
+    private var scoped: [CaptureItem] { model.items }
+    private var unassigned: [CaptureItem] { scoped.filter { $0.project == nil && $0.state == .waiting } }
     private var failed: [CaptureItem] { scoped.filter { $0.state == .failed } }
-    private var active: [CaptureItem] { scoped.filter { $0.state == .waiting || $0.state == .uploading } }
+    private var active: [CaptureItem] { scoped.filter { ($0.state == .waiting && $0.project != nil) || $0.state == .uploading } }
     private var staged: [CaptureItem] { scoped.filter { $0.state == .uploaded } }
     private var landed: [CaptureItem] { scoped.filter { $0.state == .arrived } }
 
@@ -27,11 +35,11 @@ struct QueueView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         if !failed.isEmpty { section(tr("queue.section.failed"), failed, tint: T.S.failed) }
+                        if !unassigned.isEmpty { section(tr("library.unknownProject"), unassigned, tint: T.L.fgMuted) }
                         if !active.isEmpty { section(tr("queue.section.uploading"), active, tint: T.S.waiting) }
                         if !staged.isEmpty { section(tr("queue.section.staged"), staged, tint: T.S.moving) }
                         if !landed.isEmpty { section(tr("queue.section.landed"), landed, tint: T.S.arrived) }
                         if scoped.isEmpty { empty }
-                        if model.otherPendingCount > 0 { otherProjectsNote }
                     }.padding(.horizontal, T.Sp.gutter)
                 }
                 .background(T.L.bg)
@@ -41,7 +49,8 @@ struct QueueView: View {
                     ToolbarItem(placement: .principal) {
                         VStack(spacing: 1) {
                             Text(tr("queue.title")).font(T.F.heading()).foregroundStyle(T.L.fg)
-                            Text(model.project.name).font(T.F.nano()).foregroundStyle(T.L.fgFaint).lineLimit(1)
+                            Text(tr("queue.allProjects")).font(T.F.nano()).foregroundStyle(T.L.fgFaint)
+                                .accessibilityIdentifier("queue.scope")
                         }
                     }
                     ToolbarItem(placement: .topBarLeading) {
@@ -84,9 +93,18 @@ struct QueueView: View {
                 columnVisibility = .all
             }
         }
-        .onChange(of: model.currentProjectID) { _, _ in
-            selectedID = nil
-            compactColumn = .sidebar
+        .sheet(item: $projectAction) { action in
+            ProjectPickerView(onClose: { projectAction = nil }, onSelect: { target in
+                if action.copy {
+                    let copy = try await model.copy(action.item, to: target)
+                    selectedID = copy.id
+                } else {
+                    try await model.move(action.item, to: target)
+                }
+                compactColumn = .detail
+            }, titleKey: action.copy ? "queue.copy" : "library.move",
+               hintKey: action.copy ? "queue.copyHint" : "library.moveHint")
+                .environment(model).preferredColorScheme(.light)
         }
         .task {
             while !Task.isCancelled {
@@ -104,8 +122,10 @@ struct QueueView: View {
                     .frame(height: 180)
                     .clipped()
                 Text(item.state.detail).font(T.F.heading()).accessibilityIdentifier("queue.selectedStatus")
-                Text(item.state.whereItIs).foregroundStyle(T.L.fgMuted)
+                Text(item.project == nil ? tr("queue.unassigned") : item.state.whereItIs).foregroundStyle(T.L.fgMuted)
                 Text(item.project?.name ?? tr("library.unknownProject")).font(T.F.body())
+                projectActions(item).buttonStyle(.bordered)
+                if !item.canMoveToProject { Text(tr("library.moveSynced")).font(T.F.micro()).foregroundStyle(T.L.fgMuted) }
                 Text(item.capturedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .standard).locale(L10n.formatLocale)))
                 if item.state == .uploading { ProgressView(value: max(item.progress, 0.05)) }
                 if let error = item.lastError, item.state == .failed {
@@ -154,6 +174,7 @@ struct QueueView: View {
                     }
                 }
                 .background(selectedID == item.id ? T.L.accent.opacity(0.08) : Color.clear)
+                .contextMenu { projectActions(item) }
                 Hairline()
             }
         }
@@ -174,6 +195,10 @@ struct QueueView: View {
                         .font(T.F.mono(11))
                         .foregroundStyle(T.L.fgFaint)
                 }
+
+                Text(item.project?.name ?? tr("queue.unassigned"))
+                    .font(T.F.nano()).foregroundStyle(T.L.fgMuted)
+                    .accessibilityIdentifier("queue.project." + item.id.uuidString)
 
                 if item.state == .uploading {
                     ProgressView(value: max(item.progress, 0.05))
@@ -239,12 +264,15 @@ struct QueueView: View {
         .padding(.top, T.Sp.s16)
     }
 
-    /// 队列只看当前项目，但别的项目的未落盘件不能完全藏起来——至少说一声有多少。
-    private var otherProjectsNote: some View {
-        Text(tr("library.otherPending", ["n": String(model.otherPendingCount)]))
-            .font(T.F.nano())
-            .foregroundStyle(T.L.fgFaint)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, T.Sp.s6)
+    @ViewBuilder
+    private func projectActions(_ item: CaptureItem) -> some View {
+        if item.canMoveToProject {
+            Button { projectAction = ProjectAction(item: item, copy: false) } label: {
+                Label(tr("library.move"), systemImage: "folder")
+            }.accessibilityIdentifier("queue.move")
+        }
+        Button { projectAction = ProjectAction(item: item, copy: true) } label: {
+            Label(tr("queue.copy"), systemImage: "doc.on.doc")
+        }.accessibilityIdentifier("queue.copy")
     }
 }
