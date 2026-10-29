@@ -46,6 +46,15 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
+            if #available(iOS 27.0, *) {
+                settings.toolbarMinimizationBehavior(.never, for: .navigationBar)
+            } else {
+                settings
+            }
+        }
+    }
+
+    private var settings: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     group(tr("settings.account")) {
@@ -224,7 +233,6 @@ struct SettingsView: View {
                         ProgressView(tr("settings.deleteAccount.deleting"))
                     }
                 }
-            }
             }
     }
 
