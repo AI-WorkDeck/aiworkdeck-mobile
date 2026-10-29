@@ -3,18 +3,26 @@
 import XCTest
 
 enum PersonalTab: String {
-    case assistant = "Personal assistant", calendar = "Calendar", projects = "Projects", capture = "Capture"
+    case assistant = "Personal assistant", calendar = "Calendar", capture = "Capture"
     var icon: String {
         switch self {
         case .assistant: return "bubble.left.and.bubble.right"
         case .calendar: return "calendar"
-        case .projects: return "folder"
         case .capture: return "camera"
         }
     }
 }
 
 extension XCTestCase {
+    @MainActor func dismissEarlierRecordingNotice(in app: XCUIApplication) {
+        // The crash-recovery test intentionally retains invalid drafts between runs.
+        let notice = app.alerts.matching(NSPredicate(format: "label IN %@",
+            ["Recording status", "录音状态", "錄音狀態"])).firstMatch
+        if notice.waitForExistence(timeout: 2) {
+            notice.buttons.matching(NSPredicate(format: "label IN %@", ["Close", "关闭", "關閉"])).firstMatch.tap()
+        }
+    }
+
     @MainActor func personalTab(_ app: XCUIApplication, _ tab: PersonalTab) -> XCUIElement {
         // iPhone exposes a TabBar; Duo exposes the same buttons in its side Toolbar.
         // Match the icon descendant: SwiftUI does not always forward its identifier
@@ -25,17 +33,61 @@ extension XCTestCase {
             .firstMatch
     }
     @MainActor func openPersonalCapture(_ app: XCUIApplication) {
+        dismissEarlierRecordingNotice(in: app)
+        let workspaceClose = app.buttons["workspace.close"]
+        if workspaceClose.exists && workspaceClose.isHittable { workspaceClose.tap() }
         let entry = personalTab(app, .capture)
         XCTAssertTrue(entry.waitForExistence(timeout: 15))
+        // A seeded recording alert can cover the already selected capture tab.
+        if app.buttons["capture.shutter"].exists && !app.buttons["capture.close"].exists { return }
         XCTAssertTrue(entry.isHittable)
         entry.tap()
+        XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 10))
     }
+
     @MainActor func openPersonalProjects(_ app: XCUIApplication) {
         let close = app.buttons["capture.close"]
         if close.exists && close.isHittable { close.tap(); return }
-        let entry = personalTab(app, .projects)
-        XCTAssertTrue(entry.waitForExistence(timeout: 15))
-        XCTAssertTrue(entry.isHittable)
-        entry.tap()
+        if app.buttons["workspace.close"].exists { return }
+        openPersonalCapture(app)
+        let project = app.buttons["capture.project"]
+        XCTAssertTrue(project.waitForExistence(timeout: 10))
+        XCTAssertTrue(project.isHittable)
+        project.tap()
+        let browse = app.buttons["projectPicker.browse"]
+        XCTAssertTrue(browse.waitForExistence(timeout: 10))
+        XCTAssertTrue(browse.isHittable)
+        browse.tap()
+        XCTAssertTrue(app.buttons["workspace.close"].waitForExistence(timeout: 10))
+    }
+
+    @MainActor func allowVisibleRecordingPermission() {
+        let permissionAlert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        guard permissionAlert.exists else { return }
+        for label in ["Allow", "允许", "OK"] where permissionAlert.buttons[label].exists {
+            permissionAlert.buttons[label].tap()
+            break
+        }
+    }
+
+    @MainActor func startAudioRecordingWithOneTap(_ app: XCUIApplication) {
+        let start = app.buttons["capture.recordAudio"]
+        expectation(for: NSPredicate { _, _ in
+            self.allowVisibleRecordingPermission()
+            return start.exists && start.isEnabled && start.isHittable
+        }, evaluatedWith: start)
+        waitForExpectations(timeout: 15)
+        start.tap()
+        let recording = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@",
+            "capture.shutter", "Stop recording")).firstMatch
+        // Permission prompts may follow each other; never tap Record again to recover.
+        expectation(for: NSPredicate { _, _ in
+            self.allowVisibleRecordingPermission()
+            // Query existence while the capture controls are being rebuilt. Reading
+            // an unresolved element's label can block the next permission poll.
+            return recording.exists && app.staticTexts["recording.elapsed"].exists
+        }, evaluatedWith: recording)
+        waitForExpectations(timeout: 30)
+        XCTAssertFalse(app.buttons["capture.mode.audio"].exists)
     }
 }

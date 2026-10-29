@@ -5,6 +5,7 @@ import SafariServices
 /// One navigation hierarchy survives compact/regular transitions. Browsing never
 /// changes the destination of an in-flight capture.
 struct WorkspaceView: View {
+    var onClose: (() -> Void)? = nil
     @Environment(AppModel.self) private var model
     @State private var projects: [RelayProject] = []
     @State private var selected: RelayProject?
@@ -80,9 +81,16 @@ struct WorkspaceView: View {
                 .background(.bar)
             }
             .toolbar {
+                if let onClose {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(tr("common.close"), action: onClose).accessibilityIdentifier("workspace.close")
+                            .accessibilityHidden(route != nil)
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button { route = .settings } label: { Image(systemName: "slider.horizontal.3") }
                         .accessibilityLabel(tr("home.settings"))
+                        .accessibilityHidden(route != nil)
                 }
             }
         } detail: {
@@ -100,7 +108,9 @@ struct WorkspaceView: View {
                                 Label(tr(AudioRecorderService.shared.isRecording ? "workspace.resumeRecording" : "workspace.capture"), systemImage: "camera")
                             }
                             .accessibilityIdentifier("workspace.capture")
+                            .accessibilityHidden(route != nil)
                             Button { route = .queue } label: { Label(tr("queue.title"), systemImage: "arrow.up.circle") }
+                                .accessibilityHidden(route != nil)
                             #if DEBUG
                             Menu {
                                 Button(tr("dual.prototype.title")) { route = .probe }
@@ -122,6 +132,7 @@ struct WorkspaceView: View {
             client = model.workspaceFiles()
             await load()
         }
+        .accessibilityHidden(route != nil)
         .fullScreenCover(item: $route) { route in
             switch route {
             case .capture:
@@ -346,6 +357,8 @@ struct ProjectContentsView: View {
             }
             TextField(tr("workspace.searchFiles"), text: $query)
                 .focused($searchFocused)
+                .submitLabel(.search)
+                .onSubmit { searchFocused = false }
                 .textFieldStyle(.roundedBorder).padding(.horizontal)
                 .accessibilityIdentifier("workspace.fileSearch")
             if query.isEmpty {

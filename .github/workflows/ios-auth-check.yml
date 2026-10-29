@@ -1,8 +1,11 @@
 name: ios-auth-check
 on:
   workflow_dispatch:
+  workflow_call:
+  push:
+    branches: [main]
   pull_request:
-    paths: ['ios/**', 'contract/**', 'fastlane/Fastfile', 'scripts/check-ios-release.py', 'scripts/create-ios-ci-simulator.py', 'scripts/tests/test_ios_release.py', '.github/workflows/ios-auth-check.yml', '.github/workflows/appstore-build.yml']
+    paths: ['ios/**', 'contract/**', 'fastlane/Fastfile', 'fastlane/tests/**', 'scripts/check-ios-*.py', 'scripts/create-ios-ci-simulator.py', 'scripts/tests/test_ios_*.py', '.github/workflows/ios-auth-check.yml', '.github/workflows/appstore-build.yml']
 permissions:
   contents: read
 jobs:
@@ -12,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        device: [iphone, duo]
+        device: [iphone, iphone-large, duo]
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
@@ -20,7 +23,8 @@ jobs:
       - name: Verify release toolchain and guard regressions
         run: |
           python3 scripts/check-ios-release.py environment
-          python3 -m unittest discover -s scripts/tests -p test_ios_release.py -v
+          python3 -m unittest discover -s scripts/tests -p 'test_ios_*.py' -v
+          ruby fastlane/tests/local_signing_test.rb
       - name: Install Duo runtime
         if: matrix.device == 'duo'
         run: |
@@ -49,13 +53,22 @@ jobs:
           # XCUIDevice.orientation does not change Duo's physical pose in DeviceHub.
           # Exercise those rotations on iPhone; Duo pose/split-view acceptance is
           # recorded separately with the active inner display before release.
-          if [ '${{ matrix.device }}' = iphone ]; then
+          if [ '${{ matrix.device }}' != duo ]; then
             TESTS+=(
+              -only-testing:WorkdeckUITests/RecordingFlowTests
               -only-testing:WorkdeckUITests/CrossScreenRotationTests
               -only-testing:WorkdeckUITests/CaptureContinuityTests
               -only-testing:WorkdeckUITests/WorkspaceFlowTests/testCaptureLayoutSurvivesRepeatedRotationAndProjectEntry
               -only-testing:WorkdeckUITests/WorkspaceFlowTests/testLandscapeLoginControlsRemainReachableAfterShowingKeyboard
               -only-testing:WorkdeckUITests/WorkspaceFlowTests/testProjectFilesQuotePreviewAndRotationContinuity
+            )
+          else
+            TESTS+=(
+              -only-testing:WorkdeckUITests/RecordingFlowTests/testPausedAudioIsObviousAndCanResumeAndPauseAgain
+              -only-testing:WorkdeckUITests/RecordingFlowTests/testPausedVideoIsObviousAndCanResumeAndPauseAgain
+              -only-testing:WorkdeckUITests/RecordingFlowTests/testSilenceReminderOffersSaveAndContinuesWithoutStopping
+              -only-testing:WorkdeckUITests/RecordingFlowTests/testUnassignedRecordingSettingsBackAndMove
+              -only-testing:WorkdeckUITests/RecordingFlowTests/testTerminatedRecordingReportsRecoveryWithoutRestarting
             )
           fi
           xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -collect-test-diagnostics never -test-timeouts-enabled YES -default-test-execution-time-allowance 900 -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$DEVICE_ID" "${TESTS[@]}" CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"

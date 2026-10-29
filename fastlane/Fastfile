@@ -63,6 +63,11 @@ def check_release_ipa(path)
   sh("python3", File.expand_path("../scripts/check-ios-release.py", __dir__), "ipa", path)
 end
 
+# Every upload, including local lanes, requires native checks for this exact commit.
+def check_release_compatibility
+  sh("python3", File.expand_path("../scripts/check-ios-compatibility.py", __dir__))
+end
+
 # security 的参数含口令，不能用会回显命令的 fastlane sh。
 def local_signing_security(*args)
   output, _error, status = Open3.capture3("/usr/bin/security", *args)
@@ -145,6 +150,7 @@ end
 platform :ios do
   desc "打包并上传 TestFlight（com.aiworkdeck.mobile.cn，ASC App 6803309103）"
   lane :beta do
+    check_release_compatibility
     key = asc_key
     build = next_app_build_number
     UI.message("本次 build 号 #{build}")
@@ -186,6 +192,7 @@ end
 platform :ios do
   desc "打正式版包并上传（App Store 侧用 scripts/asc-listing.py 收尾）"
   lane :release do
+    check_release_compatibility
     key = asc_key
     build = next_app_build_number
     UI.message("#{marketing_version} (#{build})")
@@ -226,6 +233,7 @@ end
 platform :ios do
   desc "CI：发行版 macOS 上打正式包并上传"
   lane :ci_appstore do
+    check_release_compatibility
     check_release_environment
     setup_ci   # 建临时 keychain 并设为默认（fastlane_tmp_keychain，空口令）
 

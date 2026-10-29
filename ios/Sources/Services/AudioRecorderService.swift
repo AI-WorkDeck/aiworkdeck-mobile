@@ -183,7 +183,7 @@ final class AudioRecorderService: NSObject {
         }
     }
 
-    private func start(project: RelayProject?, location: (lat: Double, lon: Double, accuracy: Double)?) async {
+    func start(project: RelayProject?, location: (lat: Double, lon: Double, accuracy: Double)?) async {
         guard !isBusy, recorder == nil else { return }
         isBusy = true
         defer { isBusy = false }
@@ -191,7 +191,6 @@ final class AudioRecorderService: NSObject {
         permissionDenied = false
         lastError = nil
         lastSavedID = nil
-        await reminderNotification.requestPermission()
         await CameraService.shared.prepareForAudioRecording()
         guard await configureAudioSession(active: true) else {
             lastError = tr("rec.startFailed")
@@ -226,6 +225,8 @@ final class AudioRecorderService: NSObject {
             self.timer = timer
             RunLoop.main.add(timer, forMode: .common)
             activity.start(projectName: project?.name ?? "", state: activityState)
+            // Notification settings can be slow; they must not delay the microphone.
+            Task { await reminderNotification.requestPermission() }
         } catch {
             draft.remove() // Recording never started.
             _ = await configureAudioSession(active: false)

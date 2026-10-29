@@ -33,7 +33,7 @@ actor UploadQueue {
         // 走到这里时没有任何在途上传，所以此刻所有 moving 都是尸体——复位回 waiting
         // 重传，幂等键（clientMediaId）保证服务端不产生重复件。dev-board#241。
         let stale = (try? await EvidenceStore.shared.loadAll())?
-            .filter { $0.state == .uploading } ?? []
+            .filter { !$0.moveBlocksMutation && $0.state == .uploading } ?? []
         for s in stale {
             try? await EvidenceStore.shared.updateState(s.id, to: s.state.recovered(), progress: 0)
         }
@@ -94,16 +94,16 @@ actor UploadQueue {
     @discardableResult
     func checkDelivered() async -> [String: Date] {
         let uploaded = (try? await EvidenceStore.shared.loadAll())?
-            .filter { $0.state == .uploaded } ?? []
+            .filter { !$0.moveBlocksMutation && $0.state == .uploaded } ?? []
         guard !uploaded.isEmpty else { return [:] }
-        let ids = uploaded.map { $0.manifest.clientMediaId.uuidString.lowercased() }
+        let ids = uploaded.map { $0.effectiveClientMediaId.uuidString.lowercased() }
         guard let status = try? await API.shared.mediaStatus(clientMediaIds: ids) else { return [:] }
         let byID = Dictionary(status.map { ($0.clientMediaId.lowercased(), $0) },
                               uniquingKeysWith: { _, last in last })
         var changed = false
         var expiry: [String: Date] = [:]
         for item in uploaded {
-            let key = item.manifest.clientMediaId.uuidString.lowercased()
+            let key = item.effectiveClientMediaId.uuidString.lowercased()
             guard let st = byID[key] else { continue }
             // 合并规则走契约迁移表（status_delivered / status_pending），这里不再手写 .arrived。
             let merged = item.state.applyingStatus(delivered: st.delivered,
@@ -135,7 +135,7 @@ actor UploadQueue {
     /// 把失败的重新排回待传。用户手动点「重试」时调用。
     func retryFailed() async {
         let failed = (try? await EvidenceStore.shared.loadAll())?
-            .filter { $0.state == .failed } ?? []
+            .filter { !$0.moveBlocksMutation && $0.state == .failed } ?? []
         for f in failed {
             try? await EvidenceStore.shared.updateState(f.id, to: .waiting, progress: 0)
         }
@@ -145,7 +145,7 @@ actor UploadQueue {
 
     /// 文件名带上采集时刻，桌面端按名字排序即是时间序。
     /// 不用原始 UUID 当名字——律师在文件夹里看到一串十六进制没有任何意义。
-    private static func fileName(for item: CaptureItem) -> String {
+    nonisolated static func fileName(for item: CaptureItem) -> String {
         let f = DateFormatter()
         f.dateFormat = "yyyyMMdd-HHmmss"
         let stamp = f.string(from: item.capturedAt)

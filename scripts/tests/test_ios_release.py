@@ -119,6 +119,7 @@ class SimulatorSelection(unittest.TestCase):
         return [
             {"identifier": "ios27", "version": "27.0", "platform": "iOS", "isAvailable": True,
              "buildversion": "24A428", "supportedDeviceTypes": [
+                 {"name": "iPhone 18", "identifier": "regular"},
                  {"name": "iPhone 18 Pro", "identifier": "pro"},
                  {"name": "iPhone 18 Pro Max", "identifier": "max"}]},
             {"identifier": "ios271", "version": "27.1", "platform": "iOS", "isAvailable": True,
@@ -126,9 +127,25 @@ class SimulatorSelection(unittest.TestCase):
                  {"name": "iPhone Duo", "identifier": "duo"}]}
         ]
 
-    def test_regular_phone_uses_compatible_runtime_and_keeps_pro_max_coverage(self):
+    def test_regular_phone_prefers_standard_size_over_pro_max(self):
         runtime, device = simulator.select_device(self.runtimes(), "iphone")
+        self.assertEqual((runtime["identifier"], device["identifier"]), ("ios27", "regular"))
+
+    def test_large_phone_keeps_distinct_pro_max_coverage(self):
+        runtime, device = simulator.select_device(self.runtimes(), "iphone-large")
         self.assertEqual((runtime["identifier"], device["identifier"]), ("ios27", "max"))
+
+    def test_phone_sizes_do_not_silently_substitute_each_other(self):
+        for family, device in (("iphone", {"name": "iPhone 18 Pro Max", "identifier": "max"}),
+                               ("iphone-large", {"name": "iPhone 18", "identifier": "regular"})):
+            runtimes = self.runtimes(); runtimes[0]["supportedDeviceTypes"] = [device]
+            with self.subTest(family=family), self.assertRaises(ValueError):
+                simulator.select_device(runtimes, family)
+
+    def test_generation_is_numeric_not_lexical(self):
+        runtimes = self.runtimes()
+        runtimes[0]["supportedDeviceTypes"].append({"name": "iPhone 9", "identifier": "old"})
+        self.assertEqual(simulator.select_device(runtimes, "iphone")[1]["identifier"], "regular")
 
     def test_duo_uses_27_1_runtime(self):
         runtime, device = simulator.select_device(self.runtimes(), "duo")

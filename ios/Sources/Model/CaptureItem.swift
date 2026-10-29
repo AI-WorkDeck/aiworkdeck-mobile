@@ -105,13 +105,27 @@ struct CaptureItem: Identifiable, Sendable {
     var savedToAlbum: Bool
     /// 归档去向。拍摄那一刻的选中项目，之后切项目不影响它。
     /// nil 表示未归类，等待用户显式指定。
-    let project: RelayProject?
+    var project: RelayProject?
     /// Even a failed request may have reached the server. Never silently reroute
     /// its idempotency key after the first upload attempt.
     var uploadAttempted = false
-    /// Watch-origin recordings must never follow a different login into its cloud.
+    /// Watch recordings and moved remote receipts must stay bound to their owner.
     var watchAccountBinding: String? = nil
-    var canMoveToProject: Bool { !uploadAttempted && (state == .waiting || state == .failed) }
+    var archiveMove: ArchiveMove? = nil
+    var remoteClientMediaId: UUID? = nil
+    var effectiveClientMediaId: UUID { remoteClientMediaId ?? manifest.clientMediaId }
+    var moveBlocksMutation: Bool { archiveMove?.blocksMutation == true }
+    var canMoveToProject: Bool { !moveBlocksMutation && !uploadAttempted && (state == .waiting || state == .failed) }
+    var canRequestArchiveMove: Bool { !moveBlocksMutation && project != nil && uploadAttempted && state != .uploading }
+    var queueState: TransferState {
+        guard let move = archiveMove, move.status != .done else { return state }
+        return move.status == .failed ? .failed : .uploading
+    }
+    var queueCaption: String { archiveMove.flatMap { $0.status == .done ? nil : $0.status.caption } ?? state.caption }
+    var queueError: String? {
+        if let move = archiveMove, move.status != .done { return move.lastError }
+        return lastError
+    }
 
     var capturedAt: Date { manifest.capturedAt }
 

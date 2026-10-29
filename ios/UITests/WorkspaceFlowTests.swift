@@ -30,7 +30,7 @@ final class WorkspaceFlowTests: XCTestCase {
             state.name = "Rotated hierarchy"; state.lifetime = .keepAlways; add(state)
             let rotatedShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             rotatedShot.name = "Before hit testing"; rotatedShot.lifetime = .keepAlways; add(rotatedShot)
-            for id in ["capture.close", "capture.settings", "capture.mode.photo", "capture.mode.video", "capture.mode.audio", "capture.shutter", "capture.library"] {
+            for id in ["capture.project", "capture.settings", "capture.mode.photo", "capture.mode.video", "capture.recordAudio", "capture.shutter", "capture.library", "capture.queue"] {
                 let button = app.buttons[id]
                 expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: button)
                 waitForExpectations(timeout: 5)
@@ -49,6 +49,8 @@ final class WorkspaceFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["workspace.capture"].waitForExistence(timeout: 5))
         app.buttons["workspace.capture"].tap()
         XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 5))
+        let nestedOriginal = app.buttons["capture.shutter"].frame
+        XCTAssertTrue(app.buttons["capture.close"].isHittable)
         continueAfterFailure = true
         for orientation in [UIDeviceOrientation.landscapeLeft, .portrait, .landscapeRight, .portrait] {
             XCUIDevice.shared.orientation = orientation
@@ -64,8 +66,8 @@ final class WorkspaceFlowTests: XCTestCase {
             geometry.lifetime = .keepAlways; add(geometry)
             XCTAssertTrue(app.frame.contains(shutter.frame))
             if portrait {
-                XCTAssertEqual(shutter.frame.midX, original.midX, accuracy: 2)
-                XCTAssertEqual(shutter.frame.midY, original.midY, accuracy: 2)
+                XCTAssertEqual(shutter.frame.midX, nestedOriginal.midX, accuracy: 2)
+                XCTAssertEqual(shutter.frame.midY, nestedOriginal.midY, accuracy: 2)
             }
         }
     }
@@ -180,6 +182,7 @@ final class WorkspaceFlowTests: XCTestCase {
         app.launchArguments = ["-AWDLoginUITest", "-accountRegion", "cn"]
         XCUIDevice.shared.orientation = .landscapeLeft
         app.launch()
+        dismissEarlierRecordingNotice(in: app)
         let identity = app.textFields["login.identity"]
         XCTAssertTrue(identity.waitForExistence(timeout: 10))
         XCTAssertGreaterThan(app.frame.width, app.frame.height)
@@ -285,6 +288,12 @@ final class WorkspaceFlowTests: XCTestCase {
         XCTAssertTrue(file.waitForExistence(timeout: 5))
         XCTAssertEqual(search.value as? String, "document-12")
         let wideShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); wideShot.name = "Workspace landscape"; wideShot.lifetime = .keepAlways; add(wideShot)
+        // A landscape software keyboard can cover the entire result list.
+        // Finish the query with its Search action before selecting the file.
+        search.typeText("\n")
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.keyboards.firstMatch)
+        waitForExpectations(timeout: 5)
+        XCTAssertTrue(file.isHittable)
         file.tap()
         expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.keyboards.firstMatch)
         waitForExpectations(timeout: 5)

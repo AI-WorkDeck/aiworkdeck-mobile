@@ -129,7 +129,9 @@ struct LibraryView: View {
                 let ids = Array(selected)
                 selected = []
                 selecting = false
-                Task { await model.delete(ids: ids) }
+                Task {
+                    if !(await model.delete(ids: ids)) { moveError = tr("queue.moveInProgress") }
+                }
             }
             Button(tr("common.cancel"), role: .cancel) {}
         } message: {
@@ -163,6 +165,7 @@ struct LibraryView: View {
             }
         }
         .background(T.D.bg)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("library.browser")
     }
 
@@ -395,6 +398,7 @@ struct LibraryView: View {
                             .frame(width: T.touchMin, height: T.touchMin)
                     }
                     .accessibilityLabel(tr("common.back"))
+                    .accessibilityIdentifier("library.close")
                 }
                 if let fixedProject { Text(fixedProject.name).lineLimit(1) }
                 else { projectMenu }
@@ -563,7 +567,8 @@ struct LibraryView: View {
                 .foregroundStyle(T.D.fgMuted)
             Spacer()
             Button {
-                confirmDelete = true
+                if selectedItems.contains(where: { $0.moveBlocksMutation }) { moveError = tr("queue.moveInProgress") }
+                else { confirmDelete = true }
             } label: {
                 Text(tr("delete.title", ["n": String(selected.count)]))
                     .font(T.F.small())
