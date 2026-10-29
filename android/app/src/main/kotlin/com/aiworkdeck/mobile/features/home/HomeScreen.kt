@@ -53,11 +53,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.aiworkdeck.mobile.AppModel
+import com.aiworkdeck.mobile.BuildConfig
 import com.aiworkdeck.mobile.Overlay
 import com.aiworkdeck.mobile.ScreenshotMode
 import com.aiworkdeck.mobile.design.Fonts
@@ -115,24 +117,29 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
 
     var hasCamera by remember { mutableStateOf(granted(context, Manifest.permission.CAMERA)) }
     var hasMic by remember { mutableStateOf(granted(context, Manifest.permission.RECORD_AUDIO)) }
-    var hasLocation by remember { mutableStateOf(granted(context, Manifest.permission.ACCESS_FINE_LOCATION)) }
+    var hasLocation by remember { mutableStateOf(locationGranted(context)) }
 
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         hasCamera = granted(context, Manifest.permission.CAMERA)
         hasMic = granted(context, Manifest.permission.RECORD_AUDIO)
-        hasLocation = granted(context, Manifest.permission.ACCESS_FINE_LOCATION)
+        hasLocation = locationGranted(context)
     }
 
-    // 一次问齐：相机、麦克风、定位（安卓 13+ 再加通知，上传的前台任务要举通知）。
-    // 分三次问会让人在按快门前连点三个对话框，现场最烦这个。
-    LaunchedEffect(Unit) {
-        val wanted = buildList {
-            add(Manifest.permission.CAMERA)
-            add(Manifest.permission.RECORD_AUDIO)
-            add(Manifest.permission.ACCESS_FINE_LOCATION)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
-        }.filterNot { granted(context, it) }
-        if (wanted.isNotEmpty()) ask.launch(wanted.toTypedArray())
+    // Only request the permission needed by the selected capture mode. Location is opt-in below.
+    LaunchedEffect(mode) {
+        val permission = if (mode == CapMode.audio) Manifest.permission.RECORD_AUDIO else Manifest.permission.CAMERA
+        if (!granted(context, permission)) ask.launch(arrayOf(permission))
+    }
+    LaunchedEffect(mode, hasCamera) {
+        if (mode == CapMode.video && hasCamera && !hasMic) ask.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
+    }
+    var afterNotificationPermission by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        afterNotificationPermission?.invoke()
+        afterNotificationPermission = null
+    }
+    fun requestLocation() {
+        ask.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
 
     // 水印的秒针与录制计时共用这一个心跳
@@ -147,9 +154,12 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
     // 拿不到新定位就留着上一次的，不清空——上一次的坐标仍然说明「在这栋楼」。
     LaunchedEffect(hasLocation) {
         if (ScreenshotMode.enabled) return@LaunchedEffect
-        while (hasLocation) {
-            stamper.current()?.let { loc = it }
-            delay(10_000)
+        if (!hasLocation) loc = null
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (hasLocation) {
+                stamper.current()?.let { loc = it }
+                delay(10_000)
+            }
         }
     }
 
@@ -168,7 +178,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
                 if (RecordingState.isRecording) RecordingState.backgroundAlertsUnavailable = !RecordingService.canSendReminder(context)
                 hasCamera = granted(context, Manifest.permission.CAMERA)
                 hasMic = granted(context, Manifest.permission.RECORD_AUDIO)
-                hasLocation = granted(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                hasLocation = locationGranted(context)
                 cameraRetry++
             }
         }
@@ -232,6 +242,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
         if (RecordingState.isRecording) { RecordingService.stop(context); return }
         when (mode) {
             CapMode.photo -> {
+                if (!hasCamera) { ask.launch(arrayOf(Manifest.permission.CAMERA)); return }
                 val at = Instant.now()
                 val target = project
                 flash = true
@@ -239,6 +250,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
                 scope.launch { delay(120); flash = false }
             }
             CapMode.video -> if (camera.isRecording) stopVideoAndStore() else {
+                if (!hasCamera) { ask.launch(arrayOf(Manifest.permission.CAMERA)); return }
                 val at = Instant.now(); val target = project; val location = loc
                 camera.startVideo { file ->
                     storeScope.launch { runCatching { model.store(MediaKind.video, file, at, location, target) } }
@@ -246,10 +258,21 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
             }
             CapMode.audio -> when {
                 RecordingState.isRecording -> RecordingService.stop(context)
-                !granted(context, Manifest.permission.RECORD_AUDIO) -> hasMic = false
+                !granted(context, Manifest.permission.RECORD_AUDIO) -> ask.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
                 else -> RecordingService.start(context, project, loc)
             }
         }
+    }
+
+    fun shootWithNotificationPermission() {
+        val needsNotification = !RecordingState.isRecording && !camera.isRecording &&
+            (mode == CapMode.audio || project != null)
+        if (needsNotification && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !granted(context, Manifest.permission.POST_NOTIFICATIONS) && !ServiceLocator.prefs.notificationPermissionAsked) {
+            ServiceLocator.prefs.notificationPermissionAsked = true
+            afterNotificationPermission = ::shoot
+            askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else shoot()
     }
 
     androidx.compose.runtime.LaunchedEffect(RecordingState.message) { if (RecordingState.message != null) mode = CapMode.audio }
@@ -271,7 +294,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
         Row {
             androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Projects) }, enabled = !camera.isRecording) { Text(project?.name ?: tr("library.unknownProject"), color = Tk.D.fg) }
             if (project != null) androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Files) }, enabled = !camera.isRecording) { Text(tr("workspace.files"), color = Tk.D.fg) }
-            if (ServiceLocator.prefs.accountRegion == AccountRegion.cn) androidx.compose.material3.TextButton(
+            if (BuildConfig.FLAVOR == "cn" && ServiceLocator.prefs.accountRegion == AccountRegion.cn) androidx.compose.material3.TextButton(
                 onClick = { CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, android.net.Uri.parse(ContractCapabilities.ddClientPortalUrl)) },
                 enabled = !camera.isRecording && !RecordingState.isRecording,
             ) { Text(tr("dd.title"), color = Tk.D.fg) }
@@ -280,9 +303,11 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
         if (!landscape) Header(
             projectName = project?.name.orEmpty(),
             loc = loc,
+            hasLocation = hasLocation,
             tally = tally,
             onOpenQueue = { onOpen(Overlay.Queue) },
             onOpenSettings = { onOpen(Overlay.Settings) },
+            onRequestLocation = ::requestLocation,
         )
 
         Box(
@@ -364,7 +389,7 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
             total = tally.total,
             desktopOnline = desktopOnline,
             assigned = project != null,
-            onShoot = ::shoot,
+            onShoot = ::shootWithNotificationPermission,
             onOpenLibrary = { onOpen(Overlay.Library) },
             onOpenQueue = { onOpen(Overlay.Queue) },
         )
@@ -377,9 +402,11 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
 private fun Header(
     projectName: String,
     loc: Loc?,
+    hasLocation: Boolean,
     tally: TransferTally,
     onOpenQueue: () -> Unit,
     onOpenSettings: () -> Unit,
+    onRequestLocation: () -> Unit,
 ) {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s2),
@@ -391,12 +418,12 @@ private fun Header(
                 color = Color.White.copy(alpha = 0.45f), modifier = Modifier.weight(1f),
             )
             // 位置精度：没有精度的坐标在质证时说明不了问题，所以直接显示出来
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(modifier = Modifier.heightIn(min = Tk.touchMin).clickable(onClick = onRequestLocation), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box(
                     Modifier.size(5.dp).clip(CircleShape)
                         .background(if (loc == null) Color.White.copy(alpha = 0.3f) else Tk.S.arrivedOnDark),
                 )
-                Text(WatermarkFormat.chip(loc), style = Fonts.mono(Tk.Ty.nano), color = Color.White.copy(alpha = 0.6f))
+                Text(if (hasLocation) WatermarkFormat.chip(loc) else tr("home.location.enable"), style = Fonts.mono(Tk.Ty.nano), color = Color.White.copy(alpha = 0.6f))
             }
             Text(
                 tr("home.settings").uppercase(), style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f),
@@ -608,3 +635,6 @@ private fun openAppSettings(context: Context) {
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     runCatching { context.startActivity(intent) }
 }
+
+private fun locationGranted(context: Context): Boolean =
+    granted(context, Manifest.permission.ACCESS_FINE_LOCATION) || granted(context, Manifest.permission.ACCESS_COARSE_LOCATION)

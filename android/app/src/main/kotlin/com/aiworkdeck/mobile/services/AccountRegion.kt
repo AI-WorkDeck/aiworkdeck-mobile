@@ -1,6 +1,7 @@
 package com.aiworkdeck.mobile.services
 
 import com.aiworkdeck.mobile.design.L10n
+import com.aiworkdeck.contract.ContractCapabilities
 import com.aiworkdeck.mobile.model.RelayProject
 
 /**
@@ -58,3 +59,11 @@ fun switchAccountRegion(prefs: RegionPrefs): AccountRegion {
     L10n.follow(next)
     return next
 }
+
+/** Play distribution never changes its payment policy when the account region changes. */
+fun showsExternalRecharge(flavor: String, region: AccountRegion, channel: String): Boolean =
+    (flavor != "intl" || ContractCapabilities.androidPlayRecharge) && region.showsBilling && channel != "false"
+
+fun mobilePrivacyUrl(flavor: String): String = if (flavor == "intl")
+    "https://workdeck.ai/mobile-account/en/privacy?site=intl"
+else "https://www.aiworkdeck.com/zh/legal/mobile-privacy?site=cn"

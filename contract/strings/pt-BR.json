@@ -447,5 +447,11 @@
   "diag.unhandledRejection": "Rejeição não tratada",
   "settings.language": "Language",
   "settings.languageFollowSystem": "Seguir o sistema",
-  "settings.languageSearch": "Pesquisar idiomas"
+  "settings.languageSearch": "Pesquisar idiomas",
+  "privacy.title": "Leia nossa política de privacidade antes de continuar",
+  "privacy.summary": "O AI WorkDeck captura fotos, vídeos e áudio e organiza arquivos de projetos. As capturas ficam primeiro no celular; ao arquivar ou visualizar, o conteúdo escolhido e as informações dos arquivos são transmitidos por conexões criptografadas. A localização serve apenas aos registros locais e é opcional. As permissões de câmera, microfone, localização e notificações são solicitadas conforme a função; o backup na nuvem exige consentimento separado. Consulte a política sobre contas, dados e exclusão.",
+  "privacy.policy": "Política de privacidade",
+  "privacy.accept": "Concordar e continuar",
+  "privacy.decline": "Recusar e sair",
+  "home.location.enable": "Adicionar local"
 }

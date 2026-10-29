@@ -447,5 +447,11 @@
   "diag.unhandledRejection": "İşlenmeyen reddetme",
   "settings.language": "Language",
   "settings.languageFollowSystem": "Sistemi takip et",
-  "settings.languageSearch": "Dilleri ara"
+  "settings.languageSearch": "Dilleri ara",
+  "privacy.title": "Devam etmeden önce gizlilik politikasını okuyun",
+  "privacy.summary": "AI WorkDeck fotoğraf, video ve ses kaydeder ve proje dosyalarını düzenler. Kayıtlar önce telefonunuzda saklanır; arşivleme ve önizleme sırasında seçilen içerik ve dosya bilgileri şifreli bağlantılarla aktarılır. Konum yalnızca yerel kayıtlarda kullanılır ve isteğe bağlıdır. Kamera, mikrofon, konum ve bildirim izinleri ilgili özellik için istenir; bulut yedeklemesi ayrıca onay gerektirir. Hesaplar, veriler ve silme hakkında politikayı okuyun.",
+  "privacy.policy": "Gizlilik politikası",
+  "privacy.accept": "Kabul et ve devam et",
+  "privacy.decline": "Reddet ve çık",
+  "home.location.enable": "Konum ekle"
 }

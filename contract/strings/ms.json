@@ -447,5 +447,11 @@
   "diag.unhandledRejection": "Penolakan tidak dikendalikan",
   "settings.language": "Language",
   "settings.languageFollowSystem": "Ikut sistem",
-  "settings.languageSearch": "Cari bahasa"
+  "settings.languageSearch": "Cari bahasa",
+  "privacy.title": "Baca dasar privasi sebelum meneruskan",
+  "privacy.summary": "AI WorkDeck merakam foto, video dan audio serta menyusun fail projek. Rakaman disimpan pada telefon dahulu; pengarkiban dan pratonton menghantar kandungan terpilih serta maklumat fail melalui sambungan disulitkan. Lokasi hanya digunakan untuk rekod setempat dan adalah pilihan. Kebenaran kamera, mikrofon, lokasi dan pemberitahuan diminta mengikut fungsi; sandaran awan memerlukan persetujuan berasingan. Baca dasar tentang akaun, data dan pemadaman.",
+  "privacy.policy": "Dasar privasi",
+  "privacy.accept": "Setuju dan teruskan",
+  "privacy.decline": "Tolak dan keluar",
+  "home.location.enable": "Tambah lokasi"
 }

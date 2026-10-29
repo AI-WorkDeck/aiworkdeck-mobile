@@ -47,15 +47,16 @@ class LocationStamper(private val context: Context) {
     }
 
     private fun pickProvider(lm: LocationManager): String? = when {
-        lm.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+            lm.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
         lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
         else -> null
     }
 
     private fun lastKnown(lm: LocationManager): Loc? = try {
         listOfNotNull(
-            lm.getLastKnownLocation(LocationManager.GPS_PROVIDER),
-            lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER),
+            runCatching { lm.getLastKnownLocation(LocationManager.GPS_PROVIDER) }.getOrNull(),
+            runCatching { lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) }.getOrNull(),
         ).maxByOrNull { it.time }?.toLoc()
     } catch (_: SecurityException) {
         null
