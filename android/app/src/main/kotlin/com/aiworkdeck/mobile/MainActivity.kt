@@ -36,6 +36,8 @@ import com.aiworkdeck.mobile.features.library.LibraryScreen
 import com.aiworkdeck.mobile.features.library.ViewerScreen
 import com.aiworkdeck.mobile.features.queue.QueueScreen
 import com.aiworkdeck.mobile.features.settings.SettingsScreen
+import com.aiworkdeck.mobile.features.settings.PrivacyConsentScreen
+import com.aiworkdeck.contract.ContractCapabilities
 import com.aiworkdeck.mobile.model.CaptureItem
 import com.aiworkdeck.mobile.services.AlbumSaver
 import com.aiworkdeck.mobile.services.ServiceLocator
@@ -85,9 +87,26 @@ class MainActivity : ComponentActivity() {
             screen = intent.getStringExtra(ScreenshotMode.EXTRA_SCREEN),
             filesDir = filesDir,
         )
-        model.bootstrap()
         calendarEventId = intent.getStringExtra("calendarEventId")
-        setContent { Root(model, calendarEventId) }
+        setContent {
+            var accepted by remember { mutableStateOf(ServiceLocator.prefs.hasPrivacyConsent) }
+            if (accepted) {
+                LaunchedEffect(Unit) { model.bootstrap() }
+                Root(model, calendarEventId)
+            } else {
+                CompositionLocalProvider(LocalLayoutDirection provides if (L10n.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+                    WorkdeckTheme(dark = false) {
+                        PrivacyConsentScreen(
+                            onAccept = {
+                                ServiceLocator.prefs.privacyConsentVersion = ContractCapabilities.privacyPolicyVersion
+                                accepted = true
+                            },
+                            onDecline = { finishAndRemoveTask() },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

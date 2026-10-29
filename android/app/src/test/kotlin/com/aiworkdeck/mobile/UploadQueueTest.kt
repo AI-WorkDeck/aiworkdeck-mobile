@@ -12,6 +12,11 @@ import com.aiworkdeck.mobile.services.UploadQueue
 import com.aiworkdeck.mobile.services.UploadResult
 import com.aiworkdeck.mobile.services.Uploader
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -33,11 +38,13 @@ class UploadQueueTest {
     private class FakeUploader : Uploader {
         var shouldThrow: (() -> Exception)? = null
         var statusResponses: List<MediaStatus> = emptyList()
+        var onUpload: suspend () -> Unit = {}
         val calls = mutableListOf<UploadCall>()
 
         override suspend fun upload(
             item: CaptureItem, project: RelayProject, fileName: String, onProgress: (Double) -> Unit,
         ): UploadResult {
+            onUpload()
             shouldThrow?.let { throw it() }
             calls += UploadCall(item.id, fileName, project.key)
             onProgress(1.0)
@@ -151,5 +158,43 @@ class UploadQueueTest {
         assertEquals(KickResult.done, result)
         assertEquals(TransferState.waiting, store.loadAll().first().state)
         assertTrue(uploader.calls.isEmpty())
+    }
+
+    @Test fun workerWaitsForConcurrentUploadBeforeReportingCompletion() = runTest {
+        val store = newStore()
+        store.save(MediaKind.photo, tempFile("concurrent.jpg"), Instant.now(), null, project())
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val uploader = FakeUploader().apply { onUpload = { started.complete(Unit); release.await() } }
+        val queue = UploadQueue(store, uploader)
+        val foregroundUpload = async { queue.kick() }
+        started.await()
+        assertEquals(KickResult.alreadyRunning, queue.kick())
+        val worker = async(Dispatchers.IO, start = CoroutineStart.UNDISPATCHED) { queue.kick(waitForCurrent = true) }
+        assertFalse(worker.isCompleted)
+        release.complete(Unit)
+        assertEquals(KickResult.done, foregroundUpload.await())
+        assertEquals(KickResult.done, worker.await())
+        assertEquals(1, uploader.calls.size)
+        assertEquals(TransferState.uploaded, store.loadAll().single().state)
+    }
+
+    @Test fun cancellingWaitingWorkerDoesNotCancelTheOtherUploadOrKeepTheLock() = runTest {
+        val store = newStore()
+        store.save(MediaKind.photo, tempFile("cancel-wait.jpg"), Instant.now(), null, project())
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val uploader = FakeUploader().apply { onUpload = { started.complete(Unit); release.await() } }
+        val queue = UploadQueue(store, uploader)
+        val foregroundUpload = async { queue.kick() }
+        started.await()
+        val worker = async(Dispatchers.IO, start = CoroutineStart.UNDISPATCHED) { queue.kick(waitForCurrent = true) }
+        worker.cancelAndJoin()
+        assertTrue(worker.isCancelled)
+        assertTrue(foregroundUpload.isActive)
+        release.complete(Unit)
+        assertEquals(KickResult.done, foregroundUpload.await())
+        assertEquals(KickResult.done, queue.kick(waitForCurrent = true))
+        assertEquals(1, uploader.calls.size)
     }
 }

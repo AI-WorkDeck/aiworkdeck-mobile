@@ -465,5 +465,11 @@
   "personal.allProjects": "すべての案件",
   "personal.nextDays": "今後 {days} 日間",
   "personal.today": "今日",
-  "personal.sources": "参照案件"
+  "personal.sources": "参照案件",
+  "privacy.title": "続行する前にプライバシーポリシーをご確認ください",
+  "privacy.summary": "AI WorkDeck は写真・動画・音声の記録とプロジェクトファイルの整理に使用します。記録はまず端末に保存され、アーカイブやプレビュー時に選択した内容とファイル情報を暗号化して転送します。位置情報は端末内の記録にのみ使用し、拒否できます。カメラ、マイク、位置情報、通知の権限は機能に応じて要求し、クラウドバックアップには別途同意が必要です。アカウント、データ、削除についてはポリシーをご確認ください。",
+  "privacy.policy": "プライバシーポリシー",
+  "privacy.accept": "同意して続行",
+  "privacy.decline": "同意せず終了",
+  "home.location.enable": "位置を追加"
 }

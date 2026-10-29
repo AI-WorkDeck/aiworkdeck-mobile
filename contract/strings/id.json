@@ -465,5 +465,11 @@
   "personal.allProjects": "Semua proyek",
   "personal.nextDays": "{days} hari ke depan",
   "personal.today": "Hari ini",
-  "personal.sources": "Proyek sumber"
+  "personal.sources": "Proyek sumber",
+  "privacy.title": "Baca kebijakan privasi sebelum melanjutkan",
+  "privacy.summary": "AI WorkDeck merekam foto, video dan audio serta mengatur berkas proyek. Rekaman disimpan di ponsel terlebih dahulu; pengarsipan dan pratinjau mengirim konten terpilih serta informasi berkas melalui koneksi terenkripsi. Lokasi hanya dipakai untuk catatan lokal dan bersifat opsional. Izin kamera, mikrofon, lokasi dan notifikasi diminta sesuai fitur; cadangan cloud memerlukan persetujuan terpisah. Baca kebijakan tentang akun, data dan penghapusan.",
+  "privacy.policy": "Kebijakan privasi",
+  "privacy.accept": "Setuju dan lanjutkan",
+  "privacy.decline": "Tolak dan keluar",
+  "home.location.enable": "Tambahkan lokasi"
 }

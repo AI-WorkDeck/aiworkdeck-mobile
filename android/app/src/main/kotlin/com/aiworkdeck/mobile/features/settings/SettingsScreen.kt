@@ -30,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -49,6 +50,8 @@ import com.aiworkdeck.mobile.features.auth.errorText
 import com.aiworkdeck.mobile.features.queue.TextAction
 import com.aiworkdeck.mobile.features.queue.noRipple
 import com.aiworkdeck.mobile.services.ApiError
+import com.aiworkdeck.mobile.services.mobilePrivacyUrl
+import com.aiworkdeck.mobile.services.showsExternalRecharge
 import com.aiworkdeck.mobile.services.BillingBalance
 import com.aiworkdeck.mobile.services.MediaUsage
 import com.aiworkdeck.mobile.services.ServiceLocator
@@ -70,6 +73,7 @@ private val RECHARGE_CHANNEL: String = ContractCapabilities.recharge
 @Composable
 fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck.mobile.Overlay) -> Unit = {}) {
     val prefs = ServiceLocator.prefs
+    val uriHandler = LocalUriHandler.current
     // 区域登录后固定（只在未登录的登录页能换），进页面读一次即可
     val region = remember { prefs.accountRegion }
     val project by model.selectedProject.collectAsStateWithLifecycle()
@@ -188,7 +192,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     // 「充值在哪」那起事故本身（contract/schema/billing.schema.json 的 UI 映射、
                     // docs/MOBILE_DEV_DISCIPLINE.md §1）。
                     // 国际站计费未开通（dev-board#664），入口一并不出现；大陆站照旧。
-                    if (region.showsBilling && RECHARGE_CHANNEL != "false") {
+                    if (showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL)) {
                         TextAction(tr("recharge.entry"), color = Tk.L.accent) { showRechargeNotice = true }
                     }
                     TextAction(tr("common.signOut"), color = Tk.S.failed) { model.signOut(); onClose() }
@@ -205,6 +209,14 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                 Group(tr("settings.about")) {
                     InfoRow(tr("settings.version"), BuildConfig.VERSION_NAME)
                     InfoRow(tr("settings.package"), BuildConfig.APPLICATION_ID)
+                    TextAction(tr("privacy.policy"), color = Tk.L.accent) {
+                        uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR))
+                    }
+                    if (BuildConfig.FLAVOR == "cn") {
+                        TextAction(ContractCapabilities.androidAppFiling, color = Tk.L.accent) {
+                            uriHandler.openUri("https://beian.miit.gov.cn/")
+                        }
+                    }
                 }
             }
         }

@@ -465,5 +465,11 @@
   "personal.allProjects": "모든 프로젝트",
   "personal.nextDays": "앞으로 {days}일",
   "personal.today": "오늘",
-  "personal.sources": "참조 프로젝트"
+  "personal.sources": "참조 프로젝트",
+  "privacy.title": "계속하기 전에 개인정보 처리방침을 확인하세요",
+  "privacy.summary": "AI WorkDeck은 사진·영상·음성 기록과 프로젝트 파일 정리를 지원합니다. 기록은 먼저 휴대전화에 저장되며, 보관 또는 미리보기 시 선택한 콘텐츠와 파일 정보를 암호화하여 전송합니다. 위치는 기기 내 기록에만 사용하며 거부할 수 있습니다. 카메라, 마이크, 위치, 알림 권한은 해당 기능을 사용할 때 요청하고 클라우드 백업은 별도 동의가 필요합니다. 계정, 데이터 및 삭제에 관한 내용은 처리방침을 확인하세요.",
+  "privacy.policy": "개인정보 처리방침",
+  "privacy.accept": "동의하고 계속",
+  "privacy.decline": "거부하고 종료",
+  "home.location.enable": "위치 추가"
 }

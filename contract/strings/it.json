@@ -465,5 +465,11 @@
   "personal.allProjects": "Tutti i progetti",
   "personal.nextDays": "Prossimi {days} giorni",
   "personal.today": "Oggi",
-  "personal.sources": "Progetti di riferimento"
+  "personal.sources": "Progetti di riferimento",
+  "privacy.title": "Leggi l’informativa sulla privacy prima di continuare",
+  "privacy.summary": "AI WorkDeck acquisisce foto, video e audio e organizza i file di progetto. Le acquisizioni vengono prima salvate sul telefono; l’archiviazione e l’anteprima trasferiscono i contenuti selezionati e le informazioni sui file tramite connessioni cifrate. La posizione serve solo ai registri locali ed è facoltativa. Le autorizzazioni per fotocamera, microfono, posizione e notifiche vengono richieste per le relative funzioni; il backup nel cloud richiede un consenso separato. Consulta l’informativa su account, dati ed eliminazione.",
+  "privacy.policy": "Informativa sulla privacy",
+  "privacy.accept": "Accetta e continua",
+  "privacy.decline": "Rifiuta ed esci",
+  "home.location.enable": "Aggiungi posizione"
 }

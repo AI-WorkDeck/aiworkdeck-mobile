@@ -1,6 +1,7 @@
 package com.aiworkdeck.mobile.services
 
 import android.content.Context
+import com.aiworkdeck.contract.ContractCapabilities
 import com.aiworkdeck.mobile.model.RelayProject
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -11,6 +12,17 @@ import java.util.UUID
 class Prefs(context: Context, private val defaultRegion: AccountRegion) : RegionPrefs {
     private val prefs = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
+
+    var notificationPermissionAsked: Boolean
+        get() = prefs.getBoolean("notificationPermissionAsked", false)
+        set(value) { prefs.edit().putBoolean("notificationPermissionAsked", value).apply() }
+
+    var privacyConsentVersion: String?
+        get() = prefs.getString("privacyConsentVersion", null)
+        set(value) { prefs.edit().putString("privacyConsentVersion", value).apply() }
+
+    val hasPrivacyConsent: Boolean
+        get() = privacyConsentVersion == ContractCapabilities.privacyPolicyVersion
 
     var saveToAlbum: Boolean
         get() = prefs.getBoolean(KEY_SAVE_TO_ALBUM, true)

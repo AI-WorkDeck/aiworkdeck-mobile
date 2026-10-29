@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.aiworkdeck.mobile.AppModel
+import com.aiworkdeck.mobile.BuildConfig
+import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 import com.aiworkdeck.contract.ContractCapabilities
 import com.aiworkdeck.contract.T
 import androidx.compose.animation.core.animateDpAsState
@@ -84,11 +86,13 @@ internal fun loginMethods(region: AccountRegion): List<Method> =
 internal fun defaultMethod(region: AccountRegion): Method = loginMethods(region).first()
 
 /** Fixed origins and a non-identifying marker; no entered credentials leave in browser URLs. */
-internal fun accountFlowUrl(region: AccountRegion, method: Method, flow: String): String {
-    val host = if (region == AccountRegion.intl) "https://workdeck.ai/en/account" else "https://aiworkdeck.com/zh/account"
+internal fun accountFlowUrl(region: AccountRegion, method: Method, flow: String, flavor: String): String {
+    val host = if (flavor == "intl") {
+        if (region == AccountRegion.intl) "https://workdeck.ai/mobile-account/en" else "https://www.aiworkdeck.com/mobile-account/zh"
+    } else if (region == AccountRegion.intl) "https://workdeck.ai/en/account" else "https://aiworkdeck.com/zh/account"
     val selectedFlow = if (flow == "reset") "reset" else "register"
     val migration = if (region == AccountRegion.cn && method == Method.Email) "&legacyEmail=1" else ""
-    return "$host?flow=$selectedFlow$migration"
+    return "$host?flow=$selectedFlow$migration&site=${region.raw}"
 }
 
 /** Password login; verification and password creation use the regional website. */
@@ -108,7 +112,7 @@ fun LoginScreen(model: AppModel) {
     val focus = remember { FocusRequester() }
     fun openFlow(flow: String) {
         password = ""; error = null; reviewMode = false
-        runCatching { uriHandler.openUri(accountFlowUrl(region, method, flow)) }.onFailure { error = tr("login.webError") }
+        runCatching { uriHandler.openUri(accountFlowUrl(region, method, flow, BuildConfig.FLAVOR)) }.onFailure { error = tr("login.webError") }
     }
     Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().imePadding()
         .verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter),
@@ -168,6 +172,10 @@ fun LoginScreen(model: AppModel) {
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { reviewMode = !reviewMode; password = ""; error = null })
         Text(tr("login.register"), style = Fonts.small(), color = Tk.L.accent,
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("register") })
+        Text(tr("privacy.policy"), style = Fonts.small(), color = Tk.L.accent,
+            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) {
+                uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR))
+            })
         Text(tr("login.forgotPassword"), style = Fonts.small(), color = Tk.L.accent,
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("reset") })
         Text(tr(if (region == AccountRegion.cn && method == Method.Email) "login.legacyEmailHint" else "login.webHint"),

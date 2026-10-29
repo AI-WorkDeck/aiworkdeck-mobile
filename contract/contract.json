@@ -3,9 +3,9 @@
   "files": {
     "transfer-state.json": "5e7f5ce8c5096f0cd251096db1ea3d9fc9cfb6d92845dd01b10823ca47abf5fd",
     "locales.json": "1ee25c6a540dd1bdda9a20ed0772a03d5e3d29a6fee7a4e22590f9dd18f4b48e",
-    "strings.json": "41028dd067dc9ebdccb06ada0a6bd2aa3b394c9230115d62bc1bad7eaa4840d8",
+    "strings.json": "db177976f2cb894fe7c6f6b5bfbc5cea4cd91f30aa2486e14739fc998cb480c4",
     "tokens.json": "40e405666974bcfccc40b5d69b80018af812d2a5029e319840e01a41052cd311",
-    "capabilities.json": "bd5632ded69bb826a3e7c64b31eab5946639e99390a97d0c681d5dbd24c21280",
+    "capabilities.json": "0238a9df1b06b59e04adf19b7176ecfe59a031acd25e6213c086d426bd723b84",
     "products.json": "34892377f9cc00aace5dca4e65d654deb2ad2e1521d30d0770ff063e0f7c9ac7"
   }
 }
