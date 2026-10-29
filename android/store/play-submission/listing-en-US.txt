@@ -1,0 +1,28 @@
+Title: AI WorkDeck
+
+Short description:
+Capture photos, video and audio on site and organise them by project.
+
+Full description:
+AI WorkDeck helps document professionals bring work from the field into their projects.
+
+Capture photos, video and audio in one app. Keep work captures in a separate library, group them by project and date, and see the status of each upload. Quick capture lets you start without choosing a project first.
+
+Keep a local record
+Each capture has a locally calculated SHA-256 fingerprint and capture time. If you choose to allow location access, the app can add location details to the local capture record. Location access is optional.
+
+Connect with your desktop workflow
+Use your AI WorkDeck account to see your projects and send captures to your desktop. The upload queue shows progress and errors, and lets you retry failed transfers. Delivery to a desktop requires that desktop to be available.
+
+Record while working
+Audio recording can continue in the background with a persistent notification and a stop control. When the system interrupts a recording, the app saves the recorded part; check the recording state before continuing.
+
+Choose how your files are kept
+Your local capture library is separate from your personal photo library. You can choose to save copies to the system gallery. Temporary relay storage and optional persistent cloud backup are separate features; the app shows backup choices and available quota.
+
+Designed for site visits, due diligence, audits, inspections and other document-based work. Supports multiple interface languages.
+
+An AI WorkDeck account is required. Some project and file-transfer features depend on your desktop connection, account entitlements and available quota.
+
+Release notes:
+Add clear privacy controls and policy links, request permissions when needed, and improve the Google Play release setup.
