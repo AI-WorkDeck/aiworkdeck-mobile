@@ -202,6 +202,7 @@ struct CaptureFlowView: View {
         )
         .environment(model)
         .preferredColorScheme(.dark)
+        .accessibilityHidden(!isActive || route != nil)
         .fullScreenCover(item: $route) { r in
             Group {
                 switch r {
