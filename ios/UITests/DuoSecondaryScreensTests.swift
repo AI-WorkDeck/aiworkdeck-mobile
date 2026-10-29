@@ -9,6 +9,7 @@ final class DuoSecondaryScreensTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDScreenshotMode", "-AWDScreenshotScreen", String(screen), "-libraryViewMode", "grid"]
         app.launch()
+        dismissEarlierRecordingNotice(in: app)
         return app
     }
 

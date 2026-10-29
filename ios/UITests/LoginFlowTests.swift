@@ -10,6 +10,7 @@ final class LoginFlowTests: XCTestCase {
         app.terminate()
         app.launchArguments = ["-AWDLoginUITest"]
         app.launch()
+        dismissEarlierRecordingNotice(in: app)
         let identity = app.textFields["login.identity"]
         let password = app.secureTextFields["login.password"]
         XCTAssertTrue(identity.waitForExistence(timeout: 10))

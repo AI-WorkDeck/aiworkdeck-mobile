@@ -182,6 +182,7 @@ final class WorkspaceFlowTests: XCTestCase {
         app.launchArguments = ["-AWDLoginUITest", "-accountRegion", "cn"]
         XCUIDevice.shared.orientation = .landscapeLeft
         app.launch()
+        dismissEarlierRecordingNotice(in: app)
         let identity = app.textFields["login.identity"]
         XCTAssertTrue(identity.waitForExistence(timeout: 10))
         XCTAssertGreaterThan(app.frame.width, app.frame.height)
@@ -287,6 +288,12 @@ final class WorkspaceFlowTests: XCTestCase {
         XCTAssertTrue(file.waitForExistence(timeout: 5))
         XCTAssertEqual(search.value as? String, "document-12")
         let wideShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); wideShot.name = "Workspace landscape"; wideShot.lifetime = .keepAlways; add(wideShot)
+        // A landscape software keyboard can cover the entire result list.
+        // Finish the query with its Search action before selecting the file.
+        search.typeText("\n")
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.keyboards.firstMatch)
+        waitForExpectations(timeout: 5)
+        XCTAssertTrue(file.isHittable)
         file.tap()
         expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.keyboards.firstMatch)
         waitForExpectations(timeout: 5)

@@ -357,6 +357,8 @@ struct ProjectContentsView: View {
             }
             TextField(tr("workspace.searchFiles"), text: $query)
                 .focused($searchFocused)
+                .submitLabel(.search)
+                .onSubmit { searchFocused = false }
                 .textFieldStyle(.roundedBorder).padding(.horizontal)
                 .accessibilityIdentifier("workspace.fileSearch")
             if query.isEmpty {

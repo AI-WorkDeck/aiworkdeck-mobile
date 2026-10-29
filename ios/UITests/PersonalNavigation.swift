@@ -16,8 +16,11 @@ enum PersonalTab: String {
 extension XCTestCase {
     @MainActor func dismissEarlierRecordingNotice(in app: XCUIApplication) {
         // The crash-recovery test intentionally retains invalid drafts between runs.
-        let notice = app.alerts["Recording status"]
-        if notice.waitForExistence(timeout: 2) { notice.buttons["Close"].tap() }
+        let notice = app.alerts.matching(NSPredicate(format: "label IN %@",
+            ["Recording status", "录音状态", "錄音狀態"])).firstMatch
+        if notice.waitForExistence(timeout: 2) {
+            notice.buttons.matching(NSPredicate(format: "label IN %@", ["Close", "关闭", "關閉"])).firstMatch.tap()
+        }
     }
 
     @MainActor func personalTab(_ app: XCUIApplication, _ tab: PersonalTab) -> XCUIElement {
