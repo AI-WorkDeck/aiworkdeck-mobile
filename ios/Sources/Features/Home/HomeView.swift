@@ -55,7 +55,9 @@ struct HomeView: View {
                                 name: draft.project?.name ?? tr("project.none"),
                                 archivePath: tr("archive.path", ["date": Self.archiveDate.string(from: draft.startedAt)]))
         }
-        return capturing ? (recordingDestination ?? model.project) : model.project
+        let current = FieldProject(id: model.project.id,
+            name: model.selectedProject?.name ?? tr("project.none"), archivePath: model.project.archivePath)
+        return capturing ? (recordingDestination ?? current) : current
     }
     private var destinationProject: RelayProject? {
         if let draft = recorder.activeDraft { return draft.project }
@@ -468,7 +470,7 @@ struct HomeView: View {
     private var audioEntry: some View {
         Button {
             guard !capturing, !camera.isCapturingPhoto else { return }
-            recordingDestination = model.project
+            recordingDestination = destination
             recordingProject = model.selectedProject
             let project = model.selectedProject
             mode = .audio
@@ -496,7 +498,7 @@ struct HomeView: View {
     /// CameraCaptureRequests snapshots this callback at shutter time. Returning
     /// from Settings can change the next destination without rewriting a capture.
     private func bindCaptureDestination() {
-        recordingDestination = model.project
+        recordingDestination = destination
         recordingProject = model.selectedProject
         let captureProject = model.selectedProject
         camera.onCaptured = { data, kind, at in
@@ -524,7 +526,7 @@ struct HomeView: View {
                 if !camera.isRecording { bindCaptureDestination() }
                 Task { await camera.toggleRecording() }
             case .audio:
-                recordingDestination = model.project
+                recordingDestination = destination
                 recordingProject = model.selectedProject
                 let project = model.selectedProject
                 Task { await recorder.start(project: project, location: stamper.last) }
