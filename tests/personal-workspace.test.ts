@@ -3,6 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { PersonalConversation, upcoming, type CalendarEvent } from '../miniprogram/utils/personal.ts'
 // @ts-ignore pure ArkTS module.
 import { personalEvents, upcomingEvents } from '../harmony/entry/src/main/ets/model/PersonalWorkspace.ets'
@@ -28,7 +29,7 @@ test('running, failed and foreign replies never consume a pending UUID or insert
   assert.equal(conversation.pending, undefined)
 })
 test('APNs localization is generated from the same 20-language contract without case details', () => {
-  const root = new URL('..', import.meta.url).pathname
+  const root = fileURLToPath(new URL('..', import.meta.url))
   const contract = loadContract(root)
   const files = outputs(contract)
   assert.equal(contract.locales.length, 20)
