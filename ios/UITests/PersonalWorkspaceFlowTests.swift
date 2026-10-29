@@ -155,6 +155,30 @@ final class PersonalWorkspaceFlowTests: XCTestCase {
         app.buttons["capture.queue"].tap()
         XCTAssertTrue(app.buttons[itemID].waitForExistence(timeout: 10), "Global queue must retain the record after assigning another project")
         XCTAssertEqual(app.staticTexts["queue.scope"].label, "All projects")
+        app.buttons[itemID].tap()
+        let copy = app.buttons["queue.copy"]
+        XCTAssertTrue(copy.waitForExistence(timeout: 10)); copy.tap()
+        let beta = app.buttons["projectPicker.project.beta"]
+        XCTAssertTrue(beta.waitForExistence(timeout: 10)); beta.tap()
+        let originalDetailID = itemID.replacingOccurrences(of: "queue.item.", with: "queue.detail.")
+        let copiedDetail = app.descendants(matching: .any).matching(NSPredicate(
+            format: "identifier BEGINSWITH %@ AND identifier != %@", "queue.detail.", originalDetailID)).firstMatch
+        XCTAssertTrue(copiedDetail.waitForExistence(timeout: 15), "Copy must select a new queue record")
+        let copiedDetailID = copiedDetail.identifier
+        XCTAssertNotEqual(copiedDetailID, originalDetailID)
+        let copiedItemID = copiedDetailID.replacingOccurrences(of: "queue.detail.", with: "queue.item.")
+        expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: back)
+        waitForExpectations(timeout: 10)
+        capture("Copied recording selected in Beta project", app)
+        back.tap()
+        XCTAssertTrue(app.buttons[itemID].waitForExistence(timeout: 10), "Copy must preserve the original queue record")
+        XCTAssertTrue(app.buttons[copiedItemID].waitForExistence(timeout: 10))
+        let originalProjectID = itemID.replacingOccurrences(of: "queue.item.", with: "queue.project.")
+        let copiedProjectID = copiedItemID.replacingOccurrences(of: "queue.item.", with: "queue.project.")
+        XCTAssertEqual(app.staticTexts[originalProjectID].label, "Alpha project")
+        XCTAssertEqual(app.staticTexts[copiedProjectID].label, "Beta project")
+        XCTAssertEqual(app.staticTexts["queue.scope"].label, "All projects")
+        capture("Global queue retains Alpha original and Beta copy", app)
         app.buttons["queue.close"].tap()
         XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 10))
         XCTAssertTrue(personalTab(app, .assistant).isHittable)
