@@ -196,7 +196,7 @@ struct QueueView: View {
                         .foregroundStyle(T.L.fgFaint)
                 }
 
-                Text(item.project?.name ?? tr("queue.unassigned"))
+                Text(item.project?.name ?? tr("library.unknownProject"))
                     .font(T.F.nano()).foregroundStyle(T.L.fgMuted)
                     .accessibilityIdentifier("queue.project." + item.id.uuidString)
 
