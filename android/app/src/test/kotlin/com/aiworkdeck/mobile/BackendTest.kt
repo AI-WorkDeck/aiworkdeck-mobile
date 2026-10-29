@@ -28,6 +28,24 @@ class BackendTest {
 
     @After fun tearDown() { server.shutdown() }
 
+    @Test fun consentGateBlocksNetworkUntilAccepted() = runTest {
+        var accepted = false
+        val gated = Backend(
+            baseUrlProvider = { server.url("/").toString().trimEnd('/') },
+            session = session,
+            accountActive = { accepted },
+        )
+        val result = runCatching { gated.accountLogin("synthetic@example.invalid", "synthetic") }
+        assertTrue(result.exceptionOrNull() is IllegalStateException)
+        assertEquals(0, server.requestCount)
+        accepted = true
+        server.enqueue(MockResponse().setBody(
+            """{"code":0,"data":{"sessionId":"device-token","user":{"id":71,"username":"existing-user","displayName":"Test"}}}"""
+        ))
+        assertEquals(71L, gated.accountLogin("synthetic@example.invalid", "synthetic").user.id)
+        assertEquals(1, server.requestCount)
+    }
+
     @Test fun passwordLoginPreservesIdentityAndExactPassword() = runTest {
         server.enqueue(MockResponse().setBody(
             """{"code":0,"data":{"sessionId":"device-token","user":{"id":71,"username":"existing-user","displayName":"Test"}}}"""

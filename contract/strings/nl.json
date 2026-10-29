@@ -465,5 +465,11 @@
   "personal.allProjects": "Alle projecten",
   "personal.nextDays": "Volgende {days} dagen",
   "personal.today": "Vandaag",
-  "personal.sources": "Bronprojecten"
+  "personal.sources": "Bronprojecten",
+  "privacy.title": "Lees ons privacybeleid voordat u doorgaat",
+  "privacy.summary": "AI WorkDeck maakt foto-, video- en geluidsopnamen en helpt projectbestanden te ordenen. Opnamen worden eerst op uw telefoon opgeslagen; bij archiveren en bekijken worden geselecteerde inhoud en bestandsgegevens versleuteld verzonden. Locatie wordt alleen lokaal vastgelegd en is optioneel. Toestemming voor camera, microfoon, locatie en meldingen wordt per functie gevraagd; cloudback-ups vereisen aparte toestemming. Lees het beleid over accounts, gegevens en verwijdering.",
+  "privacy.policy": "Privacybeleid",
+  "privacy.accept": "Akkoord en doorgaan",
+  "privacy.decline": "Weigeren en afsluiten",
+  "home.location.enable": "Locatie toevoegen"
 }

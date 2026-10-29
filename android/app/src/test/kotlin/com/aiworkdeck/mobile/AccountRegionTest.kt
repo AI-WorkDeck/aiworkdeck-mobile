@@ -12,6 +12,8 @@ import com.aiworkdeck.mobile.services.Backend
 import com.aiworkdeck.mobile.services.MemorySessionStore
 import com.aiworkdeck.mobile.services.RegionPrefs
 import com.aiworkdeck.mobile.services.switchAccountRegion
+import com.aiworkdeck.mobile.services.showsExternalRecharge
+import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 import com.aiworkdeck.mobile.model.RelayProject
 import org.junit.Assert.assertNull
 import kotlinx.coroutines.test.runTest
@@ -129,12 +131,12 @@ class AccountRegionTest {
 
     @Test fun websiteFlowPreservesLegacyEmailIntentWithoutIdentityInUrl() {
         for (flow in listOf("register", "reset")) {
-            assertEquals("https://aiworkdeck.com/zh/account?flow=$flow&legacyEmail=1", accountFlowUrl(AccountRegion.cn, Method.Email, flow))
-            assertEquals("https://aiworkdeck.com/zh/account?flow=$flow", accountFlowUrl(AccountRegion.cn, Method.Phone, flow))
-            assertEquals("https://workdeck.ai/en/account?flow=$flow", accountFlowUrl(AccountRegion.intl, Method.Email, flow))
+            assertEquals("https://aiworkdeck.com/zh/account?flow=$flow&legacyEmail=1&site=cn", accountFlowUrl(AccountRegion.cn, Method.Email, flow, "cn"))
+            assertEquals("https://aiworkdeck.com/zh/account?flow=$flow&site=cn", accountFlowUrl(AccountRegion.cn, Method.Phone, flow, "cn"))
+            assertEquals("https://workdeck.ai/en/account?flow=$flow&site=intl", accountFlowUrl(AccountRegion.intl, Method.Email, flow, "cn"))
         }
-        assertEquals("https://aiworkdeck.com/zh/account?flow=register&legacyEmail=1",
-            accountFlowUrl(AccountRegion.cn, Method.Email, "reset&email=private@example.invalid"))
+        assertEquals("https://aiworkdeck.com/zh/account?flow=register&legacyEmail=1&site=cn",
+            accountFlowUrl(AccountRegion.cn, Method.Email, "reset&email=private@example.invalid", "cn"))
     }
 
     @Test fun loginMethodsPerRegion() {
@@ -147,6 +149,20 @@ class AccountRegionTest {
     @Test fun billingOnlyInMainland() {
         assertTrue(AccountRegion.cn.showsBilling)
         assertFalse(AccountRegion.intl.showsBilling)
+    }
+
+    @Test fun playRechargeStaysHiddenAfterSwitchingToMainlandAccount() {
+        for (region in AccountRegion.entries) {
+            assertFalse(showsExternalRecharge("intl", region, "external"))
+        }
+        assertTrue(showsExternalRecharge("cn", AccountRegion.cn, "external"))
+        assertFalse(showsExternalRecharge("cn", AccountRegion.intl, "external"))
+        assertFalse(showsExternalRecharge("cn", AccountRegion.cn, "false"))
+    }
+
+    @Test fun privacyPolicyMatchesDistributionPublisher() {
+        assertEquals("https://workdeck.ai/mobile-account/en/privacy?site=intl", mobilePrivacyUrl("intl"))
+        assertEquals("https://www.aiworkdeck.com/zh/legal/mobile-privacy?site=cn", mobilePrivacyUrl("cn"))
     }
 
     @Test fun labelKeysExistInContract() {
@@ -171,6 +187,12 @@ class AccountRegionTest {
             assertEquals("/api/auth/mail-login/send-code", b.takeRequest().path)
         } finally {
             a.shutdown(); b.shutdown()
+        }
+    }
+    @Test fun `Play account flows stay on a page without payment promotion in either region`() {
+        for (flow in listOf("register", "reset")) {
+            assertEquals("https://workdeck.ai/mobile-account/en?flow=$flow&site=intl", accountFlowUrl(AccountRegion.intl, Method.Email, flow, "intl"))
+            assertEquals("https://www.aiworkdeck.com/mobile-account/zh?flow=$flow&legacyEmail=1&site=cn", accountFlowUrl(AccountRegion.cn, Method.Email, flow, "intl"))
         }
     }
 }

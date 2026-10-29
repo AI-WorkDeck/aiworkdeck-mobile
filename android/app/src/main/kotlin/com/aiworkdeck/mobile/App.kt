@@ -35,6 +35,7 @@ class App : Application() {
             baseUrlProvider = { prefs.accountRegion.baseUrl },
             session = SessionStores.create(this),
             languageProvider = { L10n.wireCode },
+            accountActive = { prefs.hasPrivacyConsent },
         )
         // 界面语言跟随已存偏好或区域；要在任何一屏、任何通知渠道建出来之前定好
         L10n.applyPreference(prefs.appLocale, prefs.accountRegion)

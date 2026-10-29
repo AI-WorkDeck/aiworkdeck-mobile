@@ -465,5 +465,11 @@
   "personal.allProjects": "Tất cả dự án",
   "personal.nextDays": "{days} ngày tới",
   "personal.today": "Hôm nay",
-  "personal.sources": "Dự án tham khảo"
+  "personal.sources": "Dự án tham khảo",
+  "privacy.title": "Đọc chính sách quyền riêng tư trước khi tiếp tục",
+  "privacy.summary": "AI WorkDeck chụp ảnh, quay video, ghi âm và sắp xếp tệp dự án. Bản ghi được lưu trên điện thoại trước; khi lưu trữ hoặc xem trước, nội dung đã chọn và thông tin tệp được truyền qua kết nối mã hóa. Vị trí chỉ dùng cho bản ghi cục bộ và là tùy chọn. Quyền máy ảnh, micrô, vị trí và thông báo được yêu cầu theo tính năng; sao lưu đám mây cần đồng ý riêng. Đọc chính sách về tài khoản, dữ liệu và việc xóa.",
+  "privacy.policy": "Chính sách quyền riêng tư",
+  "privacy.accept": "Đồng ý và tiếp tục",
+  "privacy.decline": "Từ chối và thoát",
+  "home.location.enable": "Thêm vị trí"
 }
