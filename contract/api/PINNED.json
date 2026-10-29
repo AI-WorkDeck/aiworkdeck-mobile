@@ -1,6 +1,6 @@
 {
-  "serverCommit": "0e296133905966a07b9495a15e5aa2fb13cd70ff",
-  "sha256": "b12044053b7501376b63ce065c646e5199eb501af67319681fb39b3e86033f0f",
-  "pulledAt": "2026-10-27T02:19:15.552Z",
-  "note": "钉自 /Users/zewei/.codex/worktrees/calendar-personal-agent/1-2 checkba_cloud 的干净工作区，照 serverCommit 可复现。"
+  "serverCommit": "d6c96fe0fc088feff7a124fa9a54bed1bd50b4ec",
+  "sha256": "dac69f3d3722ab4981693c3d53725f77f20905ebc74f7cf672542517f7ec9819",
+  "pulledAt": "2026-10-29T06:22:58.303Z",
+  "note": "钉自 /Users/zewei/.codex/manual-worktrees/mobile-archive-move-1607 的干净工作区，照 serverCommit 可复现。"
 }
