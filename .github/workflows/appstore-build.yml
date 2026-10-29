@@ -10,9 +10,14 @@ on:
     branches: ["**"]
 permissions:
   contents: read
+  actions: read
 jobs:
+  compatibility:
+    if: contains(github.event.head_commit.message, '[appstore]')
+    uses: ./.github/workflows/ios-auth-check.yml
   build-upload:
     if: contains(github.event.head_commit.message, '[appstore]')
+    needs: compatibility
     # Serialize build-number allocation and upload; never cancel an active release.
     concurrency:
       group: appstore-upload
@@ -63,6 +68,7 @@ jobs:
           LANG: en_US.UTF-8
           FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "180"
           FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "6"
+          GH_TOKEN: ${{ github.token }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           DIST_P12_PASSWORD: ${{ secrets.DIST_P12_PASSWORD }}

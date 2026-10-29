@@ -1,6 +1,7 @@
 require "minitest/autorun"
 require "fileutils"
 require "tmpdir"
+require "yaml"
 
 module UI
   def self.user_error!(message); raise RuntimeError, message; end
@@ -145,16 +146,45 @@ class LocalSigningTest < Minitest::Test
     assert_equal [:beta, :release, :ci_appstore], @h.lanes.keys
     [:beta, :release].each do |lane|
       calls = []
+      @h.define_singleton_method(:check_release_compatibility) { calls << :compatibility }
       @h.define_singleton_method(:asc_key) { :key }
       @h.define_singleton_method(:next_app_build_number) { calls << :allocate; 48 }
       @h.define_singleton_method(:build_local_ipa) { |number| calls << [:build, number]; "built.ipa" }
       @h.define_singleton_method(:upload_to_testflight) { |args| calls << [:upload, args[:ipa]] }
       @h.lanes[lane].call
-      assert_equal [:allocate, [:build, 48], [:upload, "built.ipa"]], calls
+      assert_equal [:compatibility, :allocate, [:build, 48], [:upload, "built.ipa"]], calls
       @h.define_singleton_method(:build_local_ipa) { |number| raise "archive failed" }
       calls.clear
       assert_raises(RuntimeError) { @h.lanes[lane].call }
-      assert_equal [:allocate], calls
+      assert_equal [:compatibility, :allocate], calls
     end
+  end
+
+  def test_every_upload_lane_stops_before_credentials_or_signing_when_compatibility_fails
+    [:beta, :release, :ci_appstore].each do |lane|
+      calls = []
+      @h.define_singleton_method(:sh) do |*args|
+        calls << args
+        raise "Compatibility rejected"
+      end
+      @h.define_singleton_method(:asc_key) { flunk "must not read upload credentials" }
+      @h.define_singleton_method(:setup_ci) { flunk "must not import signing credentials" }
+      error = assert_raises(RuntimeError) { @h.lanes[lane].call }
+      assert_equal "Compatibility rejected", error.message
+      assert_equal "python3", calls.first.first
+      assert calls.first[1].end_with?("/scripts/check-ios-compatibility.py")
+    end
+  end
+
+  def test_ordinary_push_cannot_upload_and_release_job_depends_on_native_matrix
+    root = File.expand_path("../..", __dir__)
+    workflow = YAML.load_file(File.join(root, ".github/workflows/appstore-build.yml"))
+    compatibility = workflow.fetch("jobs").fetch("compatibility")
+    upload = workflow.fetch("jobs").fetch("build-upload")
+    trigger = "contains(github.event.head_commit.message, '[appstore]')"
+    assert_equal trigger, compatibility.fetch("if")
+    assert_equal trigger, upload.fetch("if")
+    assert_equal "compatibility", upload.fetch("needs")
+    assert_equal "./.github/workflows/ios-auth-check.yml", compatibility.fetch("uses")
   end
 end
