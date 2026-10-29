@@ -465,5 +465,11 @@
   "personal.allProjects": "Tutti i progetti",
   "personal.nextDays": "Prossimi {days} giorni",
   "personal.today": "Oggi",
-  "personal.sources": "Progetti di riferimento"
+  "personal.sources": "Progetti di riferimento",
+  "queue.copy": "Copia in un progetto",
+  "queue.copyHint": "Conserva l’originale e carica una copia nel progetto selezionato.",
+  "queue.copyMissing": "L’originale non è più su questo dispositivo e non può essere copiato.",
+  "queue.unassigned": "Non assegnato · Scegli un progetto per caricare",
+  "queue.copyCorrupt": "Impossibile verificare l’originale. Nessuna copia creata.",
+  "queue.allProjects": "Tutti i progetti"
 }

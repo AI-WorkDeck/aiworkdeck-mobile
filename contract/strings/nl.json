@@ -465,5 +465,11 @@
   "personal.allProjects": "Alle projecten",
   "personal.nextDays": "Volgende {days} dagen",
   "personal.today": "Vandaag",
-  "personal.sources": "Bronprojecten"
+  "personal.sources": "Bronprojecten",
+  "queue.copy": "Naar project kopiëren",
+  "queue.copyHint": "Bewaar het origineel en upload een kopie naar het gekozen project.",
+  "queue.copyMissing": "Het origineel staat niet meer op dit apparaat en kan niet worden gekopieerd.",
+  "queue.unassigned": "Niet toegewezen · Kies een project om te uploaden",
+  "queue.copyCorrupt": "Het origineel kon niet worden gecontroleerd. Geen kopie gemaakt.",
+  "queue.allProjects": "Alle projecten"
 }

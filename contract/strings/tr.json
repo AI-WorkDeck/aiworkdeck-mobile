@@ -465,5 +465,11 @@
   "personal.allProjects": "Tüm projeler",
   "personal.nextDays": "Sonraki {days} gün",
   "personal.today": "Bugün",
-  "personal.sources": "Kaynak projeler"
+  "personal.sources": "Kaynak projeler",
+  "queue.copy": "Projeye kopyala",
+  "queue.copyHint": "Aslı koru ve seçilen projeye bir kopya yükle.",
+  "queue.copyMissing": "Asıl dosya artık bu cihazda değil ve kopyalanamıyor.",
+  "queue.unassigned": "Atanmamış · Yüklemek için proje seçin",
+  "queue.copyCorrupt": "Asıl dosya doğrulanamadı. Kopya oluşturulmadı.",
+  "queue.allProjects": "Tüm projeler"
 }

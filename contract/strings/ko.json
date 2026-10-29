@@ -465,5 +465,11 @@
   "personal.allProjects": "모든 프로젝트",
   "personal.nextDays": "앞으로 {days}일",
   "personal.today": "오늘",
-  "personal.sources": "참조 프로젝트"
+  "personal.sources": "참조 프로젝트",
+  "queue.copy": "프로젝트로 복사",
+  "queue.copyHint": "원본을 유지하고 선택한 프로젝트에 사본을 업로드합니다.",
+  "queue.copyMissing": "이 기기에 원본 파일이 없어 복사할 수 없습니다.",
+  "queue.unassigned": "미분류 · 업로드할 프로젝트 선택",
+  "queue.copyCorrupt": "원본을 확인할 수 없어 사본이 생성되지 않았습니다.",
+  "queue.allProjects": "모든 프로젝트"
 }

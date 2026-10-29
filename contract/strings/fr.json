@@ -465,5 +465,11 @@
   "personal.allProjects": "Tous les projets",
   "personal.nextDays": "{days} prochains jours",
   "personal.today": "Aujourd’hui",
-  "personal.sources": "Projets sources"
+  "personal.sources": "Projets sources",
+  "queue.copy": "Copier vers un projet",
+  "queue.copyHint": "Conserver l’original et téléverser une copie dans le projet choisi.",
+  "queue.copyMissing": "L’original n’est plus sur cet appareil et ne peut pas être copié.",
+  "queue.unassigned": "Non classé · Choisir un projet pour téléverser",
+  "queue.copyCorrupt": "Impossible de vérifier l’original. Aucune copie créée.",
+  "queue.allProjects": "Tous les projets"
 }

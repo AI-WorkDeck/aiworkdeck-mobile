@@ -465,5 +465,11 @@
   "personal.allProjects": "सभी परियोजनाएँ",
   "personal.nextDays": "अगले {days} दिन",
   "personal.today": "आज",
-  "personal.sources": "संदर्भ परियोजनाएँ"
+  "personal.sources": "संदर्भ परियोजनाएँ",
+  "queue.copy": "प्रोजेक्ट में कॉपी करें",
+  "queue.copyHint": "मूल फ़ाइल रखें और चुने गए प्रोजेक्ट में एक कॉपी अपलोड करें।",
+  "queue.copyMissing": "मूल फ़ाइल अब इस डिवाइस पर नहीं है, इसलिए कॉपी नहीं की जा सकती।",
+  "queue.unassigned": "अवर्गीकृत · अपलोड करने के लिए प्रोजेक्ट चुनें",
+  "queue.copyCorrupt": "मूल फ़ाइल सत्यापित नहीं हो सकी। कोई कॉपी नहीं बनाई गई।",
+  "queue.allProjects": "सभी परियोजनाएँ"
 }

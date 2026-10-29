@@ -242,7 +242,7 @@
   "workspace.records": "现场记录",
   "workspace.searchProjects": "搜索项目",
   "workspace.searchFiles": "搜索文件名称或路径",
-  "workspace.capture": "现场采集",
+  "workspace.capture": "采集",
   "workspace.resumeRecording": "返回录音",
   "workspace.closeCapture": "返回项目",
   "workspace.noFiles": "暂无项目文件",
@@ -448,7 +448,7 @@
   "settings.language": "语言",
   "settings.languageFollowSystem": "跟随系统",
   "settings.languageSearch": "搜索语言",
-  "personal.assistant": "个人助理",
+  "personal.assistant": "助理",
   "personal.calendar": "日程",
   "personal.ask": "直接问，助理会查找有权限的项目资料",
   "personal.send": "发送",
@@ -465,5 +465,11 @@
   "personal.allProjects": "全部项目",
   "personal.nextDays": "未来 {days} 天",
   "personal.today": "今天",
-  "personal.sources": "参考项目"
+  "personal.sources": "参考项目",
+  "queue.copy": "复制到项目",
+  "queue.copyHint": "保留原件，在所选项目上传一份副本。",
+  "queue.copyMissing": "本机原文件已不存在，无法复制。",
+  "queue.unassigned": "未归类 · 选择项目后上传",
+  "queue.copyCorrupt": "原文件校验失败，未创建副本。",
+  "queue.allProjects": "全部项目"
 }

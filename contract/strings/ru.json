@@ -465,5 +465,11 @@
   "personal.allProjects": "Все проекты",
   "personal.nextDays": "Следующие {days} дней",
   "personal.today": "Сегодня",
-  "personal.sources": "Проекты-источники"
+  "personal.sources": "Проекты-источники",
+  "queue.copy": "Копировать в проект",
+  "queue.copyHint": "Сохранить оригинал и загрузить копию в выбранный проект.",
+  "queue.copyMissing": "Оригинала больше нет на устройстве, копирование невозможно.",
+  "queue.unassigned": "Без проекта · Выберите проект для загрузки",
+  "queue.copyCorrupt": "Не удалось проверить оригинал. Копия не создана.",
+  "queue.allProjects": "Все проекты"
 }

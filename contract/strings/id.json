@@ -465,5 +465,11 @@
   "personal.allProjects": "Semua proyek",
   "personal.nextDays": "{days} hari ke depan",
   "personal.today": "Hari ini",
-  "personal.sources": "Proyek sumber"
+  "personal.sources": "Proyek sumber",
+  "queue.copy": "Salin ke proyek",
+  "queue.copyHint": "Simpan berkas asli dan unggah salinan ke proyek yang dipilih.",
+  "queue.copyMissing": "Berkas asli tidak lagi ada di perangkat ini dan tidak dapat disalin.",
+  "queue.unassigned": "Belum ditetapkan · Pilih proyek untuk mengunggah",
+  "queue.copyCorrupt": "Berkas asli tidak dapat diverifikasi. Salinan tidak dibuat.",
+  "queue.allProjects": "Semua proyek"
 }

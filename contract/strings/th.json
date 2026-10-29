@@ -465,5 +465,11 @@
   "personal.allProjects": "ทุกโครงการ",
   "personal.nextDays": "{days} วันถัดไป",
   "personal.today": "วันนี้",
-  "personal.sources": "โครงการอ้างอิง"
+  "personal.sources": "โครงการอ้างอิง",
+  "queue.copy": "คัดลอกไปยังโครงการ",
+  "queue.copyHint": "เก็บต้นฉบับและอัปโหลดสำเนาไปยังโครงการที่เลือก",
+  "queue.copyMissing": "ไม่มีต้นฉบับในอุปกรณ์นี้แล้ว จึงไม่สามารถคัดลอกได้",
+  "queue.unassigned": "ยังไม่จัดหมวดหมู่ · เลือกโครงการเพื่ออัปโหลด",
+  "queue.copyCorrupt": "ไม่สามารถตรวจสอบต้นฉบับได้ จึงยังไม่ได้สร้างสำเนา",
+  "queue.allProjects": "ทุกโครงการ"
 }

@@ -465,5 +465,11 @@
   "personal.allProjects": "جميع المشاريع",
   "personal.nextDays": "الأيام {days} القادمة",
   "personal.today": "اليوم",
-  "personal.sources": "المشاريع المرجعية"
+  "personal.sources": "المشاريع المرجعية",
+  "queue.copy": "نسخ إلى مشروع",
+  "queue.copyHint": "احتفظ بالأصل وارفع نسخة إلى المشروع المحدد.",
+  "queue.copyMissing": "لم يعد الأصل موجودًا على هذا الجهاز ولا يمكن نسخه.",
+  "queue.unassigned": "غير مصنف · اختر مشروعًا للرفع",
+  "queue.copyCorrupt": "تعذر التحقق من الأصل. لم يتم إنشاء نسخة.",
+  "queue.allProjects": "جميع المشاريع"
 }

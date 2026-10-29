@@ -465,5 +465,11 @@
   "personal.allProjects": "すべての案件",
   "personal.nextDays": "今後 {days} 日間",
   "personal.today": "今日",
-  "personal.sources": "参照案件"
+  "personal.sources": "参照案件",
+  "queue.copy": "プロジェクトにコピー",
+  "queue.copyHint": "元のファイルを残し、選択したプロジェクトにコピーをアップロードします。",
+  "queue.copyMissing": "元のファイルがこの端末にないため、コピーできません。",
+  "queue.unassigned": "未分類 · プロジェクトを選択してアップロード",
+  "queue.copyCorrupt": "元のファイルを検証できませんでした。コピーは作成されていません。",
+  "queue.allProjects": "すべての案件"
 }

@@ -465,5 +465,11 @@
   "personal.allProjects": "All projects",
   "personal.nextDays": "Next {days} days",
   "personal.today": "Today",
-  "personal.sources": "Source projects"
+  "personal.sources": "Source projects",
+  "queue.copy": "Copy to project",
+  "queue.copyHint": "Keep the original and upload a copy to the selected project.",
+  "queue.copyMissing": "The original is no longer on this device and cannot be copied.",
+  "queue.unassigned": "Unassigned · Choose a project to upload",
+  "queue.copyCorrupt": "The original could not be verified. No copy was created.",
+  "queue.allProjects": "All projects"
 }
