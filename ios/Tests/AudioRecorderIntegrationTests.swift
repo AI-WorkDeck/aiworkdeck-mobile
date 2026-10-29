@@ -17,6 +17,10 @@ final class AudioRecorderIntegrationTests: XCTestCase {
         await service.toggle(project: nil, location: nil)
         XCTAssertTrue(service.isRecording, service.lastError ?? "Recording did not start")
         guard service.isRecording else { return }
+        let draftID = service.activeDraft?.id
+        await service.start(project: nil, location: nil)
+        XCTAssertTrue(service.isRecording, "A repeated start must never stop the recording")
+        XCTAssertEqual(service.activeDraft?.id, draftID)
         try await Task.sleep(for: .seconds(2))
         await service.checkRecordingStatus()
         XCTAssertGreaterThanOrEqual(service.recordingSeconds, 1)

@@ -473,7 +473,7 @@ struct HomeView: View {
             let project = model.selectedProject
             mode = .audio
             camera.stop()
-            Task { await recorder.toggle(project: project, location: stamper.last) }
+            Task { await recorder.start(project: project, location: stamper.last) }
         } label: {
             VStack(spacing: T.Sp.s1) {
                 Image(systemName: "mic.fill")
@@ -527,7 +527,7 @@ struct HomeView: View {
                 recordingDestination = model.project
                 recordingProject = model.selectedProject
                 let project = model.selectedProject
-                Task { await recorder.toggle(project: project, location: stamper.last) }
+                Task { await recorder.start(project: project, location: stamper.last) }
             }
         } label: {
             ZStack {

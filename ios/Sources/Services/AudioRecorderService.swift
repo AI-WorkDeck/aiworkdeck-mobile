@@ -183,7 +183,7 @@ final class AudioRecorderService: NSObject {
         }
     }
 
-    private func start(project: RelayProject?, location: (lat: Double, lon: Double, accuracy: Double)?) async {
+    func start(project: RelayProject?, location: (lat: Double, lon: Double, accuracy: Double)?) async {
         guard !isBusy, recorder == nil else { return }
         isBusy = true
         defer { isBusy = false }
