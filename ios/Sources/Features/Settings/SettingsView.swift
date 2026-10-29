@@ -12,15 +12,7 @@ struct SettingsView: View {
     @State private var usage: API.MediaUsage?
     @State private var balanceState: BalanceState = .unknown
     @State private var showRecharge = false
-    @State private var showProjects = false
     @State private var showBackup = false
-    @State private var category: String? = "settings.archiveTarget"
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    @State private var compactColumn: NavigationSplitViewColumn = .detail
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    private let categories = ["settings.media", "settings.archiveTarget", "backup.title", "watch.title", "settings.account", "settings.about"]
-
     /// 本端走内购（契约 capabilities.recharge = "iap"）。取这个值而不是写死 true：
     /// 契约改成别的通道时这一行会跟着变，界面不会偷偷留着一个错的入口。
     private static let canRecharge = ContractCapabilities.recharge == "iap"
@@ -53,98 +45,16 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            let wide = horizontalSizeClass == .regular && geometry.size.width >= 700 &&
-                geometry.size.width > geometry.size.height && !dynamicTypeSize.isAccessibilitySize
-            NavigationSplitView(columnVisibility: $columnVisibility, preferredCompactColumn: $compactColumn) {
-                List(categories, id: \.self, selection: $category) { key in
-                    NavigationLink(value: key) { Text(tr(key)) }
-                        .accessibilityIdentifier("settings.category." + key)
-                }
-                .navigationTitle(tr("home.settings"))
-                .navigationBarTitleDisplayMode(.inline)
-                .foldAwareSidebarWidth(in: geometry, minimum: 200, ideal: 240)
-            } detail: {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    if !wide || category == "settings.media" {
-                    group(tr("settings.media")) {
-                        Toggle(isOn: $saveToAlbum) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(tr("settings.saveToAlbum"))
-                                    .font(T.F.body())
-                                    .foregroundStyle(T.L.fg)
-                                // 把权衡摆在这儿，让每次选择都是知情的。
-                                // 这不是吓唬人——尽调影像进相册，手机丢了或被查时
-                                // 它就躺在那儿。
-                                Text(tr("settings.saveToAlbum.hint"))
-                                    .font(T.F.nano())
-                                    .foregroundStyle(T.L.fgFaint)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .tint(T.L.accent)
-                        .onChange(of: saveToAlbum) { _, v in
-                            Prefs.saveToAlbum = v
-                            if v { Task { await requestAlbumPermission() } }
-                        }
-
-                        if let albumError {
-                            Text(albumError)
-                                .font(T.F.nano())
-                                .foregroundStyle(T.S.failed)
-                                .padding(.top, T.Sp.s2)
-                        }
-
-                        infoRow(tr("settings.originals"), tr("settings.originals.hint"))
-                    }
-                    }
-
-                    if !wide || category == "settings.archiveTarget" {
-                    group(tr("settings.archiveTarget")) {
-                        infoRow(tr("home.eyebrow"), model.project.name)
-                        infoRow(tr("settings.relay"), usageCaption)
-                        if let caption = persistentCaption {
-                            infoRow(tr("settings.persistent"), caption)
-                        }
-                        Button(tr("settings.switchProject")) { showProjects = true }
-                            .accessibilityIdentifier("settings.switchProject")
-                            .font(T.F.small())
-                            .foregroundStyle(T.L.accent)
-                            .frame(minHeight: T.touchMin, alignment: .leading)
-                    }
-                    }
-
-                    if !wide || category == "backup.title" {
-                    group(tr("backup.title")) {
-                        if let consent = model.backupConsent {
-                            Text(tr(consent.enabled ? "backup.enabled" : "backup.disabled"))
-                        }
-                        if let error = model.backupError { Text(error).foregroundStyle(T.S.failed) }
-                        Button(tr("backup.title")) { showBackup = true }
-                            .accessibilityIdentifier("settings.backup")
-                            .frame(minHeight: T.touchMin)
-                    }
-                    }
-
-                    if !wide || category == "watch.title" {
-                    group(tr("watch.title")) {
-                        Text(tr("watch.phoneHint"))
-                            .font(T.F.small()).foregroundStyle(T.L.fgMuted)
-                        if let error = WatchPhoneBridge.shared.lastError {
-                            Text(error).font(T.F.small()).foregroundStyle(T.S.failed)
-                        }
-                        Button(tr("watch.retry")) {
-                            WatchPhoneBridge.shared.publishContext()
-                            Task { await WatchPhoneBridge.shared.importPending() }
-                        }
-                        .frame(minHeight: T.touchMin)
-                    }
-                    }
-
-                    if !wide || category == "settings.account" {
                     group(tr("settings.account")) {
-                        infoRow(tr("settings.signedIn"), model.account?.displayName ?? "—")
+                        HStack(spacing: T.Sp.s3) {
+                            AccountAvatar()
+                            infoRow(tr("settings.signedIn"), model.account?.displayName ?? "—")
+                        }.accessibilityIdentifier("settings.account")
+                        infoRow(tr("settings.relay"), usageCaption)
+                        if let caption = persistentCaption { infoRow(tr("settings.persistent"), caption) }
                         // 还没读完时整行不渲染，见 BalanceState 上的注释。
                         if let caption = balanceCaption {
                             infoRow(tr("balance.title"), caption)
@@ -198,13 +108,64 @@ struct SettingsView: View {
                             .foregroundStyle(T.L.fgMuted)
                             .frame(minHeight: T.touchMin, alignment: .leading)
                     }
+
+                    group(tr("settings.media")) {
+                        Toggle(isOn: $saveToAlbum) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(tr("settings.saveToAlbum"))
+                                    .font(T.F.body())
+                                    .foregroundStyle(T.L.fg)
+                                // 把权衡摆在这儿，让每次选择都是知情的。
+                                // 这不是吓唬人——尽调影像进相册，手机丢了或被查时
+                                // 它就躺在那儿。
+                                Text(tr("settings.saveToAlbum.hint"))
+                                    .font(T.F.nano())
+                                    .foregroundStyle(T.L.fgFaint)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .tint(T.L.accent)
+                        .onChange(of: saveToAlbum) { _, v in
+                            Prefs.saveToAlbum = v
+                            if v { Task { await requestAlbumPermission() } }
+                        }
+
+                        if let albumError {
+                            Text(albumError)
+                                .font(T.F.nano())
+                                .foregroundStyle(T.S.failed)
+                                .padding(.top, T.Sp.s2)
+                        }
+
+                        infoRow(tr("settings.originals"), tr("settings.originals.hint"))
                     }
 
-                    if !wide || category == "settings.about" {
-                    group(tr("settings.about")) {
-                        infoRow(tr("settings.version"), Device.facts.appVersion)
-                        infoRow(tr("settings.help"), "hi@aiworkdeck.com")
+                    group(tr("backup.title")) {
+                        if let consent = model.backupConsent {
+                            Text(tr(consent.enabled ? "backup.enabled" : "backup.disabled"))
+                        }
+                        if let error = model.backupError { Text(error).foregroundStyle(T.S.failed) }
+                        Button(tr("backup.title")) { showBackup = true }
+                            .accessibilityIdentifier("settings.backup")
+                            .frame(minHeight: T.touchMin)
                     }
+
+                    group(tr("watch.title")) {
+                        Text(tr("watch.phoneHint"))
+                            .font(T.F.small()).foregroundStyle(T.L.fgMuted)
+                        if let error = WatchPhoneBridge.shared.lastError {
+                            Text(error).font(T.F.small()).foregroundStyle(T.S.failed)
+                        }
+                        Button(tr("watch.retry")) {
+                            WatchPhoneBridge.shared.publishContext()
+                            Task { await WatchPhoneBridge.shared.importPending() }
+                        }
+                        .frame(minHeight: T.touchMin)
+                    }
+
+                    group(tr("settings.about")) {
+                        infoRow(tr("settings.version"), Device.facts.appVersion).accessibilityIdentifier("settings.about")
+                        infoRow(tr("settings.help"), "hi@aiworkdeck.com")
                     }
                 }
                 .padding(.horizontal, T.Sp.gutter)
@@ -238,9 +199,6 @@ struct SettingsView: View {
                 }
             }
             .sheet(isPresented: $showBackup) { BackupConsentView().environment(model) }
-            .sheet(isPresented: $showProjects) {
-                ProjectPickerView(onClose: { showProjects = false }).environment(model)
-            }
             // 充值回来重拉一次余额：刚充的钱要在这一行上看得见，否则用户不知道到没到账
             .sheet(isPresented: $showRecharge, onDismiss: { Task { await loadBalance() } }) {
                 RechargeView(onClose: { showRecharge = false })
@@ -268,15 +226,8 @@ struct SettingsView: View {
                 }
             }
             }
-            .navigationSplitViewStyle(.automatic)
-            .environment(\.horizontalSizeClass, wide ? .regular : .compact)
-            // Keep compact navigation independent from wide-window visibility.
-            .onChange(of: wide, initial: true) { _, _ in
-                columnVisibility = .all
-            }
-            .onChange(of: category) { _, _ in compactColumn = .detail }
-        }
     }
+
 
     /// 读余额永不建号（C1）：这是一次纯读，未关联时服务端也不会替用户建号。
     /// 按 kind 分支，不匹配 message 措辞（C2）；网络错误或解码失败一并落到 `.failed(nil)`，

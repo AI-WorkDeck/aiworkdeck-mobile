@@ -6,6 +6,9 @@ struct ProjectPickerView: View {
 
     var onClose: () -> Void = {}
     var onSelect: ((RelayProject) async throws -> Void)? = nil
+    var titleKey: String? = nil
+    var hintKey: String? = nil
+    var onBrowse: (() -> Void)? = nil
     @State private var choosing = false
 
     @State private var projects: [RelayProject] = []
@@ -21,6 +24,20 @@ struct ProjectPickerView: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
                 header
+                if onSelect == nil {
+                    Button {
+                        model.captureWithoutProject()
+                        onClose()
+                    } label: { Label(tr("project.none"), systemImage: "tray") }
+                    .frame(minHeight: T.touchMin)
+                    .disabled(captureInProgress)
+                    .accessibilityIdentifier("projectPicker.none")
+                    if let onBrowse {
+                        Button(action: onBrowse) { Label(tr("workspace.title"), systemImage: "folder") }
+                            .frame(minHeight: T.touchMin)
+                            .accessibilityIdentifier("projectPicker.browse")
+                    }
+                }
                 if captureInProgress {
                     Text(tr("project.captureInProgress"))
                         .font(T.F.micro()).foregroundStyle(T.L.fgMuted)
@@ -50,22 +67,24 @@ struct ProjectPickerView: View {
                 }
             }
             .disabled(choosing)
+            .overlay { if choosing { ProgressView(tr("common.loading")).padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12)) } }
+
         }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: T.Sp.s2) {
             Eyebrow(text: tr("project.eyebrow"))
-            Text(tr(onSelect == nil ? "project.title" : "library.move"))
+            Text(tr(titleKey ?? (onSelect == nil ? "project.title" : "library.move")))
                 .font(T.F.display())
                 .foregroundStyle(T.L.fg)
-            Text(onSelect == nil ? tr("project.hint", ["date": AppModel.today]) : tr("library.moveHint"))
+            Text(hintKey.map { tr($0) } ?? (onSelect == nil ? tr("project.hint", ["date": AppModel.today]) : tr("library.moveHint")))
                 .font(T.F.micro())
                 .foregroundStyle(T.L.fgFaint)
                 .padding(.top, T.Sp.s1)
         }
-        .padding(.top, T.Sp.s10)
-        .padding(.bottom, T.Sp.s6)
+        .padding(.top, T.Sp.s3)
+        .padding(.bottom, T.Sp.s3)
     }
 
     private var list: some View {

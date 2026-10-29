@@ -5,6 +5,7 @@ import SafariServices
 /// One navigation hierarchy survives compact/regular transitions. Browsing never
 /// changes the destination of an in-flight capture.
 struct WorkspaceView: View {
+    var onClose: (() -> Void)? = nil
     @Environment(AppModel.self) private var model
     @State private var projects: [RelayProject] = []
     @State private var selected: RelayProject?
@@ -80,6 +81,11 @@ struct WorkspaceView: View {
                 .background(.bar)
             }
             .toolbar {
+                if let onClose {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(tr("common.close"), action: onClose).accessibilityIdentifier("workspace.close")
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button { route = .settings } label: { Image(systemName: "slider.horizontal.3") }
                         .accessibilityLabel(tr("home.settings"))

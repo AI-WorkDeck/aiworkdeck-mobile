@@ -152,18 +152,20 @@ private struct RootView: View {
 
 struct CaptureFlowView: View {
     @Environment(AppModel.self) private var model
-    var onClose: () -> Void
+    var onClose: (() -> Void)? = nil
+    var isActive = true
     @State private var route: Route?
     private enum Route: Hashable, Identifiable {
-        case library, queue, settings
+        case library, queue, settings, projects, workspace
         var id: Self { self }
     }
 
     var body: some View {
         VStack(spacing: 0) {
+            if let onClose {
             HStack {
                 Button(action: onClose) {
-                    Label(tr("workspace.closeCapture"), systemImage: "folder")
+                    Label(tr("common.back"), systemImage: "chevron.left")
                         .frame(minHeight: T.touchMin)
                         .contentShape(Rectangle())
                 }
@@ -171,10 +173,11 @@ struct CaptureFlowView: View {
                     .disabled(CameraService.shared.isRecording || CameraService.shared.isStartingRecording || CameraService.shared.isCapturingPhoto || AudioRecorderService.shared.isBusy)
                 Spacer()
             }.padding(.horizontal).padding(.top, 8)
+            }
             capture
         }
         .background(T.D.bg)
-        .toolbar(.hidden, for: .tabBar)
+        .toolbar(onClose == nil ? .visible : .hidden, for: .tabBar)
 #if DEBUG
         .onAppear { PersonalUITestSeed.startCaptureFixture() }
 #endif
@@ -190,10 +193,11 @@ struct CaptureFlowView: View {
 
     private var capture: some View {
         HomeView(
-            paused: route != nil || model.showBackupPrompt,
+            paused: !isActive || route != nil || model.showBackupPrompt,
             onOpenLibrary: { route = .library },
             onOpenQueue: { route = .queue },
             onOpenSettings: { route = .settings },
+            onOpenProjects: { route = .projects },
             projectContents: { AnyView(CaptureProjectContentsView(project: $0)) }
         )
         .environment(model)
@@ -206,6 +210,12 @@ struct CaptureFlowView: View {
                         .preferredColorScheme(.light)
                 case .settings:
                     SettingsView(onClose: { route = nil }).environment(model)
+                        .preferredColorScheme(.light)
+                case .projects:
+                    ProjectPickerView(onClose: { route = nil }, onBrowse: { route = .workspace }).environment(model)
+                        .preferredColorScheme(.light)
+                case .workspace:
+                    WorkspaceView(onClose: { route = nil }).environment(model)
                         .preferredColorScheme(.light)
                 case .library:
                     LibraryView(onClose: { route = nil })

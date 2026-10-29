@@ -1,14 +1,12 @@
 import SwiftUI
 
-/// 首页 = 取景器。现场是单手、光线差、要快 —— 所以进来就是镜头，
-/// 不再隔一层「按转盘进取景页」。信息各归其位：业务归属在顶部，
-/// 画面在中间（淡水印叠加），快门与模式在拇指够得到的下方。
+/// Capture opens directly to the camera. Project and account stay at the top;
+/// photo/video and one-tap audio controls share the lower capture area.
 ///
 /// 水印只叠加在取景与展示层，**不烧录进照片字节**：
 /// 照片是 JPEG 直出保 SHA-256「原始采集」，烧录会毁掉证据链（决策 D3）。
 struct HomeView: View {
-    /// 三档采集模式。photo/video 由相机会话承担，audio 走 AudioRecorderService——
-    /// 录音本来就不该经过相机。三档并排显式给出，不藏在二级界面里。
+    /// Photo/video share the shutter; the independent audio button starts recording.
     private enum CapMode: Hashable { case photo, video, audio }
 
     @Environment(AppModel.self) private var model
@@ -21,6 +19,7 @@ struct HomeView: View {
     var onOpenLibrary: () -> Void
     var onOpenQueue: () -> Void
     var onOpenSettings: () -> Void
+    var onOpenProjects: () -> Void = {}
     var projectContents: ((RelayProject) -> AnyView)? = nil
 
     /// 三个采集服务都是进程级单例。@Observable 对象不必用 @State 持有，body 里读它的
@@ -41,7 +40,6 @@ struct HomeView: View {
     @State private var recordingDestination: FieldProject?
     @State private var recordingProject: RelayProject?
     @State private var recentViewer: RecentViewer?
-    @State private var showArchiveDetails = false
 
     private struct RecentViewer: Identifiable {
         let items: [CaptureItem]
@@ -66,8 +64,6 @@ struct HomeView: View {
     private var destinationItems: [CaptureItem] {
         LibraryGrouping.items(model.items, in: destinationProject?.id ?? LibraryProject.unknownID, project: destinationProject)
     }
-
-    private var destinationTally: TransferTally { TransferTally.of(destinationItems) }
 
     private static let archiveDate: DateFormatter = {
         let formatter = DateFormatter()
@@ -95,6 +91,8 @@ struct HomeView: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+        header
         GeometryReader { geometry in
             CaptureLayout(viewport: geometry.size, audio: audioMode,
                           reservedAreas: CaptureLayout.reservedAreas(in: geometry),
@@ -106,7 +104,6 @@ struct HomeView: View {
                 .clipped()
                 ScrollView {
                     VStack(spacing: 0) {
-                        header
                         controls
                         if audioMode { audioStage.padding(.horizontal, T.Sp.gutter) }
                         if !audioMode { recentCaptures }
@@ -115,6 +112,7 @@ struct HomeView: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .accessibilityIdentifier("capture.controls")
             }
+        }
         }
         .background(T.D.bg.ignoresSafeArea())
         .fullScreenCover(item: $recentViewer) { target in
@@ -196,119 +194,32 @@ struct HomeView: View {
     // MARK: - 顶部信息
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: T.Sp.s1) {
-            HStack {
-                Eyebrow(text: tr("home.eyebrow"), color: .white.opacity(0.45))
-                Spacer()
-                locationChip
-                Button(action: onOpenSettings) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.55))
-                        .frame(width: T.touchMin, height: 28, alignment: .trailing)
+        HStack(spacing: T.Sp.s1) {
+            Button(action: onOpenProjects) {
+                HStack(spacing: T.Sp.s2) {
+                    Text(destination.name).font(T.F.body()).lineLimit(1)
+                        .accessibilityIdentifier("capture.destination")
+                    Image(systemName: "chevron.down").font(T.F.small())
                 }
-                .buttonStyle(.plain)
+                .frame(minHeight: T.touchMin).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(capturing || camera.isCapturingPhoto)
+            .accessibilityIdentifier("capture.project")
+            Spacer(minLength: T.Sp.s1)
+            Button(action: onOpenQueue) {
+                Image(systemName: "arrow.up.circle")
+                    .font(.title3).frame(width: T.touchMin, height: T.touchMin)
+            }
+            .accessibilityLabel(tr("queue.title"))
+            .accessibilityIdentifier("capture.queue")
+            Button(action: onOpenSettings) { AccountAvatar() }
                 .accessibilityLabel(tr("home.settings"))
                 .accessibilityIdentifier("capture.settings")
-            }
-
-            HStack {
-                Text(destination.name)
-                    .font(T.F.title())
-                    .accessibilityIdentifier("capture.destination")
-                    .kerning(-0.2)
-                    .foregroundStyle(T.D.fg)
-                    .lineLimit(showArchiveDetails ? nil : 1)
-                Spacer(minLength: T.Sp.s1)
-                Button {
-                    withAnimation(T.A.fast) { showArchiveDetails.toggle() }
-                } label: {
-                    Image(systemName: showArchiveDetails ? "chevron.up" : "chevron.down")
-                        .font(T.F.small())
-                        .frame(width: T.touchMin, height: T.touchMin)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white.opacity(0.55))
-                .accessibilityLabel(tr("settings.archiveTarget"))
-                .accessibilityIdentifier("capture.archiveDetails")
-            }
-            if showArchiveDetails {
-                Text(tr("home.archiveTo", ["path": destination.archivePath]))
-                    .font(T.F.nano())
-                    .tracking(0.4)
-                    .foregroundStyle(.white.opacity(0.4))
-            }
-
-            tallyLine
-                .padding(.top, T.Sp.s1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(T.D.fg)
         .padding(.horizontal, T.Sp.gutter)
-        .padding(.top, T.Sp.s2)
-        .padding(.bottom, T.Sp.s3)
-    }
-
-    /// 位置精度：没有精度的坐标在质证时说明不了问题，所以直接显示出来
-    private var locationChip: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(stamper.last == nil ? Color.white.opacity(0.3) : T.S.arrivedOnDark)
-                .frame(width: 5, height: 5)
-            Text(stamper.last.map { tr("home.gps.accuracy", ["m": String(Int($0.accuracy.rounded()))]) } ?? tr("home.gps.none"))
-                .font(T.F.mono(10))
-                .foregroundStyle(.white.opacity(0.6))
-        }
-        .padding(.trailing, T.Sp.s2)
-    }
-
-    private var tallyLine: some View {
-        HStack(spacing: 0) {
-            count(destinationTally.uploading, TransferPhase.uploading.caption, T.S.waitingOnDark, failed: destinationTally.failed)
-            divider
-            count(destinationTally.staged, TransferPhase.staged.caption, T.S.movingOnDark)
-            divider
-            count(destinationTally.landed, TransferPhase.landed.caption, T.S.arrivedOnDark)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 28)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onOpenQueue)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(tallyA11y)
-        .accessibilityHint(tr("home.queue.a11yHint"))
-        .accessibilityAddTraits(.isButton)
-    }
-
-    private var tallyA11y: String {
-        let t = destinationTally
-        let f = t.failed > 0 ? tr("tally.summary.failedPart", ["m": String(t.failed)]) : ""
-        return tr("tally.summary", ["u": String(t.uploading), "f": f, "s": String(t.staged), "l": String(t.landed)])
-    }
-
-    private func count(_ n: Int, _ label: String, _ color: Color, failed: Int = 0) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Text("\(n)")
-                .font(T.F.mono(13, .medium))
-                .monospacedDigit()
-                .foregroundStyle(color)
-            Text(label)
-                .font(T.F.nano())
-                .foregroundStyle(.white.opacity(0.45))
-            if failed > 0 {
-                // 失败不单独成桶，但不能藏：云端满、会话过期这类不重试也不会好
-                Text(tr("tally.failedSuffix", ["m": String(failed)]))
-                    .font(T.F.nano())
-                    .foregroundStyle(T.S.failed)
-            }
-        }
-    }
-
-    private var divider: some View {
-        Text("/")
-            .font(T.F.micro())
-            .foregroundStyle(.white.opacity(0.18))
-            .padding(.horizontal, T.Sp.s2)
+        .padding(.vertical, T.Sp.s1)
     }
 
     // MARK: - 取景舞台
@@ -462,7 +373,7 @@ struct HomeView: View {
                 libraryEntry
                     .frame(maxWidth: .infinity, alignment: .leading)
                 shutter
-                counter
+                audioEntry
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
@@ -488,13 +399,12 @@ struct HomeView: View {
         .padding(.bottom, T.Sp.s2)
     }
 
-    /// 三档并排、点选切换。取证的模式必须显式可预期，
+    /// 拍照与录像显式切换，录音使用独立的一键按钮。
     /// 不做横滑模式条，也不做快门手势切换——手滑录错模式是取证事故。
     private var modeRow: some View {
         HStack(spacing: T.Sp.s8) {
             modeButton(tr("home.mode.photo"), .photo)
             modeButton(tr("home.mode.video"), .video)
-            modeButton(tr("home.mode.audio"), .audio)
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: 28)
@@ -555,21 +465,32 @@ struct HomeView: View {
         .accessibilityLabel(tr("library.open"))
     }
 
-    private var counter: some View {
-        VStack(alignment: .trailing, spacing: 1) {
-            Text("\(destinationTally.total)")
-                .font(T.F.mono(17, .medium))
-                .monospacedDigit()
-                .foregroundStyle(.white)
-            Text(tr("home.counter.project"))
-                .font(T.F.nano())
-                .foregroundStyle(.white.opacity(0.5))
+    private var audioEntry: some View {
+        Button {
+            guard !capturing, !camera.isCapturingPhoto else { return }
+            recordingDestination = model.project
+            recordingProject = model.selectedProject
+            let project = model.selectedProject
+            mode = .audio
+            camera.stop()
+            Task { await recorder.toggle(project: project, location: stamper.last) }
+        } label: {
+            VStack(spacing: T.Sp.s1) {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 22))
+                    .frame(width: 48, height: 48)
+                    .background(.white.opacity(0.12), in: Circle())
+                Text(tr("home.shutter.startAudio")).font(T.F.nano())
+            }
+            .foregroundStyle(.white)
+            .frame(minWidth: T.touchMin, minHeight: T.touchMin)
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onOpenQueue)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint(tr("home.queue.a11yHint"))
+        .buttonStyle(.plain)
+        .disabled(capturing || camera.isCapturingPhoto)
+        .opacity(capturing ? 0 : 1)
+        .accessibilityHidden(capturing)
+        .accessibilityIdentifier("capture.recordAudio")
     }
 
     /// CameraCaptureRequests snapshots this callback at shutter time. Returning

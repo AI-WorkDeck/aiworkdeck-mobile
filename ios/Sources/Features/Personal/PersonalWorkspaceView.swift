@@ -93,7 +93,7 @@ final class PersonalWorkspaceModel {
 struct PersonalWorkspaceView: View {
     @Environment(AppModel.self) private var account
     @State private var model = PersonalWorkspaceModel()
-    @State private var tab = "assistant"
+    @State private var tab = "capture"
     @State private var reminders = CalendarReminders.shared
     @Environment(\.scenePhase) private var scenePhase
     var body: some View {
@@ -101,10 +101,9 @@ struct PersonalWorkspaceView: View {
             guard !CameraService.shared.isRecording, !CameraService.shared.isStartingRecording, !CameraService.shared.isCapturingPhoto else { return }
             tab = value
         })) {
-            AssistantView(model: model).tabItem { Label(tr("personal.assistant"), systemImage: "bubble.left.and.bubble.right") }.tag("assistant")
+            CaptureFlowView(isActive: tab == "capture").tabItem { Label(tr("workspace.capture"), systemImage: "camera") }.tag("capture")
             PersonalCalendarView(model: model).tabItem { Label(tr("personal.calendar"), systemImage: "calendar") }.tag("calendar")
-            WorkspaceView().tabItem { Label(tr("workspace.title"), systemImage: "folder") }.tag("projects")
-            CaptureFlowView(onClose: { tab = "projects" }).tabItem { Label(tr("workspace.capture"), systemImage: "camera") }.tag("capture")
+            AssistantView(model: model).tabItem { Label(tr("personal.assistant"), systemImage: "bubble.left.and.bubble.right") }.tag("assistant")
         }
         .tint(T.L.accent)
         .task { await model.load(); if reminders.selectedEventID != nil { tab = "calendar" } }
@@ -157,10 +156,12 @@ private struct AssistantView: View {
             }
             .padding().navigationTitle(tr("personal.assistant")).navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showSettings = true } label: { Image(systemName: "slider.horizontal.3").accessibilityLabel(tr("home.settings")) }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button { showSettings = true } label: { AccountAvatar() }
+                        .accessibilityLabel(tr("home.settings"))
+                        .accessibilityIdentifier("personal.settings")
+                }
+                ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Button(tr("personal.newChat")) { model.newConversation() }.disabled(model.busy || model.pending != nil)
                         if model.status?.enabled == true { Button(tr("common.off")) { Task { await model.configure("assistant", enabled: false) } }.disabled(model.loading || model.busy) }
@@ -186,6 +187,7 @@ private struct PersonalCalendarView: View {
     @State private var showConsent = false
     @State private var reminders = CalendarReminders.shared
     @State private var notificationError = false
+    @State private var showSettings = false
     @State private var selected: PersonalCalendarEvent?
     @Environment(AppModel.self) private var account
     private var events: [PersonalCalendarEvent] { (model.calendar?.events ?? []).filter { $0.isWithin(days: days) && (project.isEmpty || $0.projectIdentity == project) }.sorted { ($0.dueDate + ($0.dueTime ?? "")) < ($1.dueDate + ($1.dueTime ?? "")) } }
@@ -228,9 +230,19 @@ private struct PersonalCalendarView: View {
                 if let sync = PersonalDates.display(model.calendar?.syncedAt) { Text(sync).font(.caption2).foregroundStyle(.secondary) }
             }.navigationTitle(tr("personal.calendar"))
             .toolbar {
-                Button(tr("common.refresh")) { Task { await model.load() } }.disabled(model.loading)
-                if model.calendar?.enabled == true { Button(tr("common.off")) { Task { await model.configure("calendar", enabled: false); reminders.clear() } }.disabled(model.loading) }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showSettings = true } label: { AccountAvatar() }
+                        .accessibilityLabel(tr("home.settings"))
+                        .accessibilityIdentifier("personal.settings")
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Button(tr("common.refresh")) { Task { await model.load() } }.disabled(model.loading)
+                        if model.calendar?.enabled == true { Button(tr("common.off")) { Task { await model.configure("calendar", enabled: false); reminders.clear() } }.disabled(model.loading) }
+                    } label: { Image(systemName: "ellipsis.circle").accessibilityLabel(tr("personal.calendar")) }
+                }
             }
+            .sheet(isPresented: $showSettings, onDismiss: { Task { await model.load() } }) { SettingsView(onClose: { showSettings = false }).environment(account) }
             .refreshable { await model.load() }
             .alert(tr("personal.calendar"), isPresented: $showConsent) {
                 Button(tr("common.ok")) { Task { await model.configure("calendar", enabled: true) } }; Button(tr("common.cancel"), role: .cancel) {}
@@ -253,5 +265,21 @@ private struct PersonalCalendarView: View {
                 }
             }
         }
+    }
+}
+
+/// One account entry on each main screen, with the signed-in avatar when available.
+struct AccountAvatar: View {
+    @Environment(AppModel.self) private var model
+    var body: some View {
+        AsyncImage(url: URL(string: model.account?.avatarUrl ?? "")) { image in
+            image.resizable().scaledToFill()
+        } placeholder: {
+            Image(systemName: "person.crop.circle").resizable().scaledToFit()
+        }
+        .frame(width: 28, height: 28).clipShape(Circle())
+        .frame(width: T.touchMin, height: T.touchMin)
+        .contentShape(Rectangle())
+        .accessibilityHidden(true)
     }
 }
