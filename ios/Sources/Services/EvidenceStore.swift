@@ -259,7 +259,7 @@ actor EvidenceStore {
         move.registered = true
         move.registrationRejected = false
         move.status = reply.status
-        move.lastError = reply.error
+        move.lastError = reply.error.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
         move.retryRequested = false
         if reply.status == .waitingSource || reply.status == .done { move.targetUploaded = true }
         if reply.status == .done {

@@ -180,10 +180,24 @@ final class AppModel {
         if item.canMoveToProject {
             try await EvidenceStore.shared.moveToProject(item.id, project)
         } else {
+            try await verifyArchiveMoveAccount()
             try await ArchiveMoveQueue.shared.begin(item.id, target: project)
         }
         await refresh()
         kickUpload()
+    }
+
+    private func verifyArchiveMoveAccount() async throws {
+        guard ArchiveMoveAccount.current == nil else { return }
+        guard let sessionID = SessionStore.current else { throw APIError(message: tr("error.unauthorized")) }
+        let baseURL = Backend.baseURL
+        let generation = accountGeneration
+        let user = try await API.shared.verifiedAccount(sessionID: sessionID, baseURL: baseURL)
+        guard generation == accountGeneration, SessionStore.current == sessionID, Backend.baseURL == baseURL else {
+            throw APIError(message: tr("queue.moveAccountChanged"))
+        }
+        WatchAccountScope.rememberVerifiedUser(user.id, session: sessionID, baseURL: baseURL)
+        account = user
     }
 
     func copy(_ item: CaptureItem, to project: RelayProject) async throws -> CaptureItem {

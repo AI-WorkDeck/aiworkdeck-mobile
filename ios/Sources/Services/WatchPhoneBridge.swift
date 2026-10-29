@@ -6,19 +6,31 @@ enum WatchAccountScope {
     static func binding(session: String?, baseURL: URL) -> String? {
         guard let session, !session.isEmpty else { return nil }
         let fingerprint = hash("\(baseURL.absoluteString)|\(session)")
-        let saved = UserDefaults.standard.dictionary(forKey: "watchAccountScope")
-        if saved?["sessionFingerprint"] as? String == fingerprint,
-           let account = saved?["account"] as? String { return account }
+        if let account = stableBinding(session: session, baseURL: baseURL) { return account }
         // Existing sessions predate this feature. Without a verified user ID,
         // stay conservative; a changed login requires manual reassignment.
         return fingerprint
     }
     static var current: String? { binding(session: SessionStore.current, baseURL: Backend.baseURL) }
 
+    /// Long-lived transactions cannot use the legacy per-session fallback.
+    static func stableBinding(session: String?, baseURL: URL, defaults: UserDefaults = .standard) -> String? {
+        guard let session, !session.isEmpty else { return nil }
+        let saved = defaults.dictionary(forKey: "watchAccountScope")
+        guard saved?["sessionFingerprint"] as? String == hash("\(baseURL.absoluteString)|\(session)") else { return nil }
+        return saved?["account"] as? String
+    }
+
     static func didLogin(userID: Int) {
-        guard userID > 0, let session = SessionStore.current else { return }
-        let region = Backend.baseURL.absoluteString
-        UserDefaults.standard.set([
+        guard let session = SessionStore.current else { return }
+        rememberVerifiedUser(userID, session: session, baseURL: Backend.baseURL)
+    }
+
+    static func rememberVerifiedUser(_ userID: Int, session: String, baseURL: URL,
+                                     defaults: UserDefaults = .standard) {
+        guard userID > 0, !session.isEmpty else { return }
+        let region = baseURL.absoluteString
+        defaults.set([
             "sessionFingerprint": hash("\(region)|\(session)"),
             "account": hash("\(region)|user:\(userID)")
         ], forKey: "watchAccountScope")

@@ -47,7 +47,7 @@ struct ArchiveMoveAccount: Equatable, Sendable {
     static var current: ArchiveMoveAccount? {
         let baseURL = Backend.baseURL
         guard let sessionID = SessionStore.current,
-              let binding = WatchAccountScope.binding(session: sessionID, baseURL: baseURL) else { return nil }
+              let binding = WatchAccountScope.stableBinding(session: sessionID, baseURL: baseURL) else { return nil }
         return Self(binding: binding, baseURL: baseURL, sessionID: sessionID)
     }
 }

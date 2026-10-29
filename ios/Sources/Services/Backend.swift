@@ -376,6 +376,18 @@ actor API: ArchiveMoveServing {
         }
     }
 
+    func verifiedAccount(sessionID: String, baseURL: URL) async throws -> AccountUser {
+        var request = Self.request(baseURL.appendingPathComponent("/api/auth/me"))
+        request.setValue(sessionID, forHTTPHeaderField: "X-Session-Id")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode),
+              let envelope = try? JSONDecoder().decode(Envelope<AccountUser>.self, from: data),
+              envelope.code == 0, let user = envelope.data, user.id > 0 else {
+            throw APIError(message: tr("error.unauthorized"))
+        }
+        return user
+    }
+
     func registerMove(_ move: ArchiveMove, account: ArchiveMoveAccount) async throws -> ArchiveMoveReply {
         let payload: [String: Any] = [
             "requestId": move.requestID.uuidString.lowercased(),

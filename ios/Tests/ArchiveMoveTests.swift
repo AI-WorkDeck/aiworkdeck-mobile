@@ -34,8 +34,9 @@ final class ArchiveMoveTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(reloaded.archiveMove).registered)
         for state in [ArchiveMove.Status.waitingTarget, .waitingSource, .done] {
             try await store.applyArchiveMoveReply(item.id, requestID: move.requestID, reply:
-                ArchiveMoveReply(requestId: move.requestID, status: state, targetClientMediaId: move.targetClientMediaID, error: nil))
+                ArchiveMoveReply(requestId: move.requestID, status: state, targetClientMediaId: move.targetClientMediaID, error: ""))
             let current = try await loaded(EvidenceStore(root: root), item.id)
+            XCTAssertNil(current.archiveMove?.lastError)
             XCTAssertEqual(current.project, state == .done ? b : a)
             XCTAssertEqual(current.effectiveClientMediaId, state == .done ? move.targetClientMediaID : item.id)
             XCTAssertEqual(current.id, item.id)
@@ -280,6 +281,22 @@ final class ArchiveMoveTests: XCTestCase {
         let current = try await loaded(store, item.id)
         XCTAssertEqual(current.archiveMove?.status, .waitingSource)
         XCTAssertEqual(current.project, a)
+    }
+
+    func testOnlyVerifiedStableAccountBindingSurvivesSessionRefresh() throws {
+        let suite = "archive-move-test-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let base = account.baseURL
+        XCTAssertNil(WatchAccountScope.stableBinding(session: "old-session", baseURL: base, defaults: defaults))
+        WatchAccountScope.rememberVerifiedUser(7, session: "old-session", baseURL: base, defaults: defaults)
+        let stable = try XCTUnwrap(WatchAccountScope.stableBinding(session: "old-session", baseURL: base, defaults: defaults))
+        XCTAssertNil(WatchAccountScope.stableBinding(session: "new-session", baseURL: base, defaults: defaults))
+        WatchAccountScope.rememberVerifiedUser(7, session: "new-session", baseURL: base, defaults: defaults)
+        XCTAssertEqual(WatchAccountScope.stableBinding(session: "new-session", baseURL: base, defaults: defaults), stable)
+        XCTAssertNil(WatchAccountScope.stableBinding(session: "new-session", baseURL: URL(string: "https://other.invalid")!, defaults: defaults))
+        WatchAccountScope.rememberVerifiedUser(8, session: "other-user-session", baseURL: base, defaults: defaults)
+        XCTAssertNotEqual(WatchAccountScope.stableBinding(session: "other-user-session", baseURL: base, defaults: defaults), stable)
     }
 
 }

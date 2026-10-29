@@ -133,12 +133,11 @@ struct QueueView: View {
                         Text(tr("queue.moveAccountChanged")).foregroundStyle(T.S.failed)
                     }
                     if let error = move.lastError { Text(error).foregroundStyle(T.S.failed) }
-                    if move.status == .failed || move.lastError != nil {
-                        Button(tr("queue.moveRetry")) { model.retry(item) }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(move.accountBinding != ArchiveMoveAccount.current?.binding)
-                            .accessibilityIdentifier("queue.moveRetry")
-                    }
+                    // Waiting targets can outlive relay TTL; explicitly retry the same request.
+                    Button(tr("queue.moveRetry")) { model.retry(item) }
+                        .buttonStyle(.bordered)
+                        .disabled(move.accountBinding != ArchiveMoveAccount.current?.binding)
+                        .accessibilityIdentifier("queue.moveRetry")
                 }
                 Text(item.capturedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .standard).locale(L10n.formatLocale)))
                 if item.state == .uploading { ProgressView(value: max(item.progress, 0.05)) }
