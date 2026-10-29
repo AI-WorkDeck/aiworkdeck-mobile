@@ -47,6 +47,11 @@ final class LibraryPaneLayoutTests: XCTestCase {
         try await settle(host)
         let original = try XCTUnwrap(navigation(in: host))
         let originalScreen = try XCTUnwrap(original.topViewController)
+        // UIKit's navigation container extends into the hosting view's safe area.
+        // Resizing this synthetic window does not rotate the simulator's actual
+        // device geometry, so preserve the measured offset instead of assuming
+        // its bounds equal the SwiftUI harness frame or hardcoding an inset.
+        let navigationHeightOffset = original.view.bounds.height - state.size.height
         XCTAssertNil(split(in: host), "Settings must open as a complete form, without a category sidebar")
         XCTAssertEqual(original.viewControllers.count, 1)
 
@@ -72,7 +77,8 @@ final class LibraryPaneLayoutTests: XCTestCase {
             XCTAssertEqual(current.viewControllers.count, 1)
             XCTAssertNil(split(in: host), "A wide window must not introduce an empty category/detail column")
             XCTAssertEqual(current.view.bounds.width, size.width, accuracy: 1)
-            XCTAssertEqual(current.view.bounds.height, size.height, accuracy: 1)
+            XCTAssertEqual(current.view.bounds.height - size.height, navigationHeightOffset, accuracy: 1,
+                           "Resize must preserve the navigation container's safe-area extension")
         }
     }
 
