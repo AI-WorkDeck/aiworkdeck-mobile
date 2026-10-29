@@ -125,13 +125,13 @@ actor EvidenceStore {
     /// Claim and project edits run in one actor without suspension, so an upload
     /// cannot send a stale destination while the user moves the item.
     func claimNextUpload(currentWatchBinding: String? = WatchAccountScope.current) throws -> CaptureItem? {
-        for var item in try loadAll() where item.state == .waiting && item.project != nil &&
+        for var item in try loadAll() where !item.moveBlocksMutation && item.state == .waiting && item.project != nil &&
             item.watchAccountBinding != nil && item.watchAccountBinding != currentWatchBinding {
             item.state = .failed
             item.lastError = tr("watch.accountChanged")
             try writeManifest(item)
         }
-        guard var item = try loadAll().last(where: { $0.state == .waiting && $0.project != nil &&
+        guard var item = try loadAll().last(where: { !$0.moveBlocksMutation && $0.state == .waiting && $0.project != nil &&
             ($0.watchAccountBinding == nil || $0.watchAccountBinding == currentWatchBinding) }) else { return nil }
         item.state = .uploading
         item.uploadAttempted = true
@@ -159,6 +159,7 @@ actor EvidenceStore {
     func copyToProject(_ id: UUID, _ project: RelayProject,
                        currentWatchBinding: String? = WatchAccountScope.current) throws -> CaptureItem {
         guard let item = try loadOne(id) else { throw APIError(message: tr("library.moveMissing")) }
+        guard !item.moveBlocksMutation else { throw APIError(message: tr("queue.moveInProgress")) }
         guard fm.fileExists(atPath: item.localURL.path) else { throw APIError(message: tr("queue.copyMissing")) }
         let copyID = UUID()
         let url = mediaDir.appendingPathComponent("\(copyID.uuidString).\(Self.ext(for: item.kind))")
@@ -181,17 +182,20 @@ actor EvidenceStore {
     }
 
     /// 用户主动删除：原图与记录一起删。记录留着而图没了，图集里会出现永远打不开的空格。
-    func delete(ids: [UUID]) {
+    @discardableResult
+    func delete(ids: [UUID]) -> Bool {
+        guard ids.allSatisfy({ (try? loadOne($0))?.moveBlocksMutation != true }) else { return false }
         for id in ids {
             guard let item = try? loadOne(id) else { continue }
             try? fm.removeItem(at: item.localURL)
             try? fm.removeItem(at: manifestDir.appendingPathComponent("\(id.uuidString).json"))
         }
+        return true
     }
 
     func updateState(_ id: UUID, to state: TransferState, progress: Double = 0,
                      error: String? = nil) throws {
-        guard var item = try? loadOne(id) else { return }
+        guard var item = try? loadOne(id), !item.moveBlocksMutation else { return }
         item.state = state
         item.progress = progress
         // 成功时清掉旧的失败原因，否则界面会一直挂着上次那条已经不成立的错
@@ -208,7 +212,77 @@ actor EvidenceStore {
     /// 桌面端确认落盘后调用：删掉本地原图，manifest 留着做本机台账。
     func purgeMedia(_ id: UUID) throws {
         guard let item = try? loadOne(id) else { return }
+        guard !item.moveBlocksMutation else { throw APIError(message: tr("queue.moveInProgress")) }
         try? fm.removeItem(at: item.localURL)
+    }
+
+    func beginArchiveMove(_ id: UUID, target: RelayProject, accountBinding: String,
+                          accountIsCurrent: @Sendable () -> Bool = { true }) throws -> ArchiveMove {
+        guard accountIsCurrent() else { throw APIError(message: tr("queue.moveAccountChanged")) }
+        guard var item = try loadOne(id) else { throw APIError(message: tr("library.moveMissing")) }
+        guard !item.moveBlocksMutation else { throw APIError(message: tr("queue.moveInProgress")) }
+        guard item.canRequestArchiveMove, let source = item.project else {
+            throw APIError(message: tr("queue.moveUnavailable"))
+        }
+        guard !source.matches(target) else {
+            throw APIError(message: tr("queue.moveSameProject"))
+        }
+        guard item.watchAccountBinding == nil || item.watchAccountBinding == accountBinding else {
+            throw APIError(message: tr("queue.moveAccountChanged"))
+        }
+        guard fm.fileExists(atPath: item.localURL.path) else { throw APIError(message: tr("queue.copyMissing")) }
+        guard try Self.sha256(of: item.localURL) == item.manifest.sha256 else {
+            throw APIError(message: tr("queue.copyCorrupt"))
+        }
+        let size = try fm.attributesOfItem(atPath: item.localURL.path)[.size] as? NSNumber
+        let move = ArchiveMove(requestID: UUID(), sourceClientMediaID: item.effectiveClientMediaId,
+            targetClientMediaID: UUID(), source: source, target: target, sha256: item.manifest.sha256,
+            fileSize: size?.int64Value ?? 0, accountBinding: accountBinding)
+        item.archiveMove = move
+        try writeManifest(item)
+        return move
+    }
+
+    func archiveMoveItem(_ id: UUID) throws -> CaptureItem? { try loadOne(id) }
+
+    func applyArchiveMoveReply(_ id: UUID, requestID: UUID, reply: ArchiveMoveReply,
+                               accountIsCurrent: @Sendable () -> Bool = { true }) throws {
+        guard accountIsCurrent(), var item = try loadOne(id), var move = item.archiveMove,
+              move.requestID == requestID else { return }
+        guard reply.requestId == move.requestID, reply.targetClientMediaId == move.targetClientMediaID else {
+            throw APIError(message: tr("error.badResponse"))
+        }
+        // A late polling reply must never undo a completed transaction.
+        guard move.status != .done else { return }
+        // A manual retry may need the same target uploaded again after relay expiry.
+        if move.retryRequested && reply.status == .waitingTarget { move.targetUploaded = false }
+        move.registered = true
+        move.registrationRejected = false
+        move.status = reply.status
+        move.lastError = reply.error
+        move.retryRequested = false
+        if reply.status == .waitingSource || reply.status == .done { move.targetUploaded = true }
+        if reply.status == .done {
+            item.project = move.target
+            item.remoteClientMediaId = move.targetClientMediaID
+            item.state = .arrived
+            item.progress = 1
+            item.lastError = nil
+            // Bind future moves and uploads of the new remote receipt to its owner.
+            item.watchAccountBinding = move.accountBinding
+        }
+        item.archiveMove = move
+        try writeManifest(item)
+    }
+
+    func updateArchiveMove(_ id: UUID, requestID: UUID,
+                           accountIsCurrent: @Sendable () -> Bool = { true },
+                           change: @Sendable (inout ArchiveMove) -> Void) throws {
+        guard accountIsCurrent(), var item = try loadOne(id), var move = item.archiveMove,
+              move.requestID == requestID, move.status != .done else { return }
+        change(&move)
+        item.archiveMove = move
+        try writeManifest(item)
     }
 
     // MARK: - 读取
@@ -255,7 +329,8 @@ actor EvidenceStore {
             savedToAlbum: row.savedToAlbum ?? false,
             project: row.project,
             uploadAttempted: row.uploadAttempted ?? (row.project != nil),
-            watchAccountBinding: row.watchAccountBinding
+            watchAccountBinding: row.watchAccountBinding,
+            archiveMove: row.archiveMove, remoteClientMediaId: row.remoteClientMediaId
         )
     }
 
@@ -263,7 +338,8 @@ actor EvidenceStore {
         let row = StoredRow(kind: item.kind, state: item.state, progress: item.progress,
                             manifest: item.manifest, lastError: item.lastError,
                             savedToAlbum: item.savedToAlbum, project: item.project,
-                            uploadAttempted: item.uploadAttempted, watchAccountBinding: item.watchAccountBinding)
+                            uploadAttempted: item.uploadAttempted, watchAccountBinding: item.watchAccountBinding,
+                            archiveMove: item.archiveMove, remoteClientMediaId: item.remoteClientMediaId)
         let u = manifestDir.appendingPathComponent("\(item.id.uuidString).json")
         try JSONEncoder.iso.encode(row).write(to: u, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
@@ -301,6 +377,8 @@ private struct StoredRow: Codable {
     var project: RelayProject?
     var uploadAttempted: Bool?
     var watchAccountBinding: String?
+    var archiveMove: ArchiveMove?
+    var remoteClientMediaId: UUID?
 }
 
 struct DeviceFacts: Sendable, Codable {

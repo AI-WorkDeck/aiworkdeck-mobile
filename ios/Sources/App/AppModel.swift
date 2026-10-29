@@ -141,7 +141,10 @@ final class AppModel {
 #if DEBUG
         if Shot.isOn || WorkspaceUITestSeed.isOn || ProcessInfo.processInfo.arguments.contains("-AWDRecordingUITest") { return }
 #endif
-        Task { await UploadQueue.shared.kick() }
+        Task {
+            await UploadQueue.shared.kick()
+            await ArchiveMoveQueue.shared.kick()
+        }
     }
 
     func retryFailedUploads() {
@@ -150,6 +153,16 @@ final class AppModel {
 
     /// 单条重试。队列页每行都有，不用为了一条失败去点「全部重试」。
     func retry(_ item: CaptureItem) {
+        if let move = item.archiveMove, move.status != .done {
+            Task {
+                do {
+                    try await ArchiveMoveQueue.shared.retry(item.id)
+                    await refresh()
+                    await ArchiveMoveQueue.shared.kick()
+                } catch { lastError = error.localizedDescription }
+            }
+            return
+        }
         Task {
             try? await EvidenceStore.shared.updateState(item.id, to: .waiting, progress: 0)
             await refresh()
@@ -164,7 +177,11 @@ final class AppModel {
     }
 
     func move(_ item: CaptureItem, to project: RelayProject) async throws {
-        try await EvidenceStore.shared.moveToProject(item.id, project)
+        if item.canMoveToProject {
+            try await EvidenceStore.shared.moveToProject(item.id, project)
+        } else {
+            try await ArchiveMoveQueue.shared.begin(item.id, target: project)
+        }
         await refresh()
         kickUpload()
     }
@@ -194,9 +211,11 @@ final class AppModel {
     }
 
     /// 用户在图集里多选删除：原图与记录一起删。
-    func delete(ids: [UUID]) async {
-        await EvidenceStore.shared.delete(ids: ids)
+    @discardableResult
+    func delete(ids: [UUID]) async -> Bool {
+        let deleted = await EvidenceStore.shared.delete(ids: ids)
         await refresh()
+        return deleted
     }
 
     /// 未投递件的中转区到期时刻（键 clientMediaId 小写）。队列页做到期提醒用。
@@ -209,6 +228,7 @@ final class AppModel {
 #endif
         Task {
             cloudExpiry = await UploadQueue.shared.checkDelivered()
+            await ArchiveMoveQueue.shared.kick()
             await refresh()
         }
     }
@@ -316,6 +336,7 @@ final class AppModel {
                                    archivePath: tr("archive.path", ["date": AppModel.today]))
         }
         await UploadQueue.shared.configure() { [weak self] in await self?.refresh() }
+        await ArchiveMoveQueue.shared.configure() { [weak self] in await self?.refresh() }
         AudioRecorderService.shared.onStored = { [weak self] in
             await self?.refresh()
             self?.kickUpload()
@@ -331,6 +352,7 @@ final class AppModel {
         if isSignedIn {
             await UploadQueue.shared.kick()
             cloudExpiry = await UploadQueue.shared.checkDelivered()
+            await ArchiveMoveQueue.shared.kick()
             await refresh()
         }
         // 上传自愈心跳（dev-board#241）：滞留的「传输中」与失败件不能等用户来点，
@@ -340,7 +362,10 @@ final class AppModel {
                 try? await Task.sleep(for: .seconds(60))
                 await WatchPhoneBridge.shared.importPending()
                 WatchPhoneBridge.shared.publishContext()
-                if self.isSignedIn { await UploadQueue.shared.autoKick() }
+                if self.isSignedIn {
+                    await UploadQueue.shared.autoKick()
+                    await ArchiveMoveQueue.shared.kick()
+                }
             }
         }
     }

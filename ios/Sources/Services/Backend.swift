@@ -238,7 +238,7 @@ struct AccountUser: Decodable {
     let role: String
 }
 
-actor API {
+actor API: ArchiveMoveServing {
     static let shared = API()
 
     /// 所有发往后端的请求都从这里起：当前区域的主机由调用方拼好传进来，这里补会话头与
@@ -323,9 +323,9 @@ actor API {
     /// 幂等键是 clientMediaId：弱网重传、进程被杀重启都不会在中转区产生重复件，
     /// 所以这里不需要「先建记录再传字节」的两段式。
     func upload(item: CaptureItem, project: RelayProject, fileName: String,
-                progress: @Sendable @escaping (Double) -> Void) async throws {
-        let baseURL = Backend.baseURL
-        let sessionID = SessionStore.current
+                account: ArchiveMoveAccount? = nil, progress: @Sendable @escaping (Double) -> Void) async throws {
+        let baseURL = account?.baseURL ?? Backend.baseURL
+        let sessionID = account?.sessionID ?? SessionStore.current
         if let binding = item.watchAccountBinding,
            binding != WatchAccountScope.binding(session: sessionID, baseURL: baseURL) {
             throw APIError(message: tr("watch.accountChanged"))
@@ -346,7 +346,7 @@ actor API {
         let fields: [(String, String)] = [
             ("deviceId", project.deviceId),
             ("projectKey", project.key),
-            ("clientMediaId", item.manifest.clientMediaId.uuidString.lowercased()),
+            ("clientMediaId", item.effectiveClientMediaId.uuidString.lowercased()),
             ("fileName", fileName),
             ("mediaType", mediaType),
             ("capturedAt", iso.string(from: item.capturedAt)),
@@ -368,9 +368,76 @@ actor API {
             throw APIError(message: tr("error.uploadFailed", ["code": String(sc)]))
         }
         // 后端这条返回 {code,...}；code 非 0 也算失败
+        if account != nil, (try? JSONDecoder().decode(CodeOnly.self, from: data)) == nil {
+            throw APIError(message: tr("error.badResponse"))
+        }
         if let env = try? JSONDecoder().decode(CodeOnly.self, from: data), env.code != 0 {
             throw APIError(message: env.message ?? tr("error.uploadRejected"))
         }
+    }
+
+    func registerMove(_ move: ArchiveMove, account: ArchiveMoveAccount) async throws -> ArchiveMoveReply {
+        let payload: [String: Any] = [
+            "requestId": move.requestID.uuidString.lowercased(),
+            "sourceClientMediaId": move.sourceClientMediaID.uuidString.lowercased(),
+            "targetClientMediaId": move.targetClientMediaID.uuidString.lowercased(),
+            "sourceDeviceId": move.source.deviceId, "sourceProjectKey": move.source.key,
+            "targetDeviceId": move.target.deviceId, "targetProjectKey": move.target.key,
+            "sha256": move.sha256, "fileSize": move.fileSize
+        ]
+        return try await moveRequest(path: "", method: "POST", body: JSONSerialization.data(withJSONObject: payload),
+                                     account: account, registration: true)
+    }
+
+    func moveStatus(_ move: ArchiveMove, account: ArchiveMoveAccount) async throws -> ArchiveMoveReply {
+        try await moveRequest(path: "/" + move.requestID.uuidString.lowercased(), method: "GET", account: account)
+    }
+
+    func retryMove(_ move: ArchiveMove, account: ArchiveMoveAccount) async throws -> ArchiveMoveReply {
+        try await moveRequest(path: "/" + move.requestID.uuidString.lowercased() + "/retry", method: "POST", account: account)
+    }
+
+    func uploadMoveTarget(_ item: CaptureItem, move: ArchiveMove, account: ArchiveMoveAccount) async throws {
+        var target = item
+        target.remoteClientMediaId = move.targetClientMediaID
+        target.watchAccountBinding = move.accountBinding
+        try await upload(item: target, project: move.target, fileName: UploadQueue.fileName(for: target),
+                         account: account) { _ in }
+    }
+
+    private struct MoveEnvelope: Decodable {
+        let code: Int
+        let message: String?
+        let kind: String?
+        let data: ArchiveMoveReply?
+    }
+
+    private func moveRequest(path: String, method: String, body: Data? = nil,
+                             account: ArchiveMoveAccount, registration: Bool = false) async throws -> ArchiveMoveReply {
+        var request = Self.request(account.baseURL.appendingPathComponent("/api/mobile/media/moves" + path))
+        request.setValue(account.sessionID, forHTTPHeaderField: "X-Session-Id")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpMethod = method
+        request.httpBody = body
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError(message: tr("error.badResponse")) }
+        return try Self.decodeMoveResponse(data, statusCode: http.statusCode, registration: registration)
+    }
+
+    nonisolated static func decodeMoveResponse(_ data: Data, statusCode: Int,
+                                               registration: Bool) throws -> ArchiveMoveReply {
+        let envelope = try? JSONDecoder().decode(MoveEnvelope.self, from: data)
+        // Never unlock an uncertain registration after a timeout, 5xx, malformed response,
+        // or generic code=1: the transaction may already have committed on the server.
+        if registration, (200...499).contains(statusCode),
+           envelope?.code != 0, envelope?.kind == "MOVE_NOT_REGISTERED" {
+            throw ArchiveMoveRegistrationRejected(message: envelope?.message ?? tr("queue.moveUnavailable"))
+        }
+        guard (200...299).contains(statusCode), let envelope,
+              envelope.code == 0, let result = envelope.data else {
+            throw APIError(message: envelope?.message ?? tr("queue.moveUnavailable"))
+        }
+        return result
     }
 
     struct MediaStatus: Decodable, Sendable {

@@ -22,10 +22,10 @@ struct QueueView: View {
 
     private var scoped: [CaptureItem] { model.items }
     private var unassigned: [CaptureItem] { scoped.filter { $0.project == nil && $0.state == .waiting } }
-    private var failed: [CaptureItem] { scoped.filter { $0.state == .failed } }
-    private var active: [CaptureItem] { scoped.filter { ($0.state == .waiting && $0.project != nil) || $0.state == .uploading } }
-    private var staged: [CaptureItem] { scoped.filter { $0.state == .uploaded } }
-    private var landed: [CaptureItem] { scoped.filter { $0.state == .arrived } }
+    private var failed: [CaptureItem] { scoped.filter { $0.archiveMove?.status == .failed || (!$0.moveBlocksMutation && $0.state == .failed) } }
+    private var active: [CaptureItem] { scoped.filter { $0.archiveMove?.status != .failed && ($0.moveBlocksMutation || ($0.state == .waiting && $0.project != nil) || $0.state == .uploading) } }
+    private var staged: [CaptureItem] { scoped.filter { !$0.moveBlocksMutation && $0.archiveMove?.status != .failed && $0.state == .uploaded } }
+    private var landed: [CaptureItem] { scoped.filter { !$0.moveBlocksMutation && $0.archiveMove?.status != .failed && $0.state == .arrived } }
 
     var body: some View {
         GeometryReader { geometry in
@@ -57,7 +57,7 @@ struct QueueView: View {
                         Button(tr("common.close"), action: onClose).accessibilityIdentifier("queue.close")
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        if !failed.isEmpty {
+                        if failed.contains(where: { $0.archiveMove == nil }) {
                             Button(tr("queue.retryAll")) { model.retryFailedUploads() }.font(T.F.small())
                         }
                     }
@@ -103,7 +103,7 @@ struct QueueView: View {
                 }
                 compactColumn = .detail
             }, titleKey: action.copy ? "queue.copy" : "library.move",
-               hintKey: action.copy ? "queue.copyHint" : "library.moveHint")
+               hintKey: action.copy ? "queue.copyHint" : (action.item.canMoveToProject ? "library.moveHint" : "queue.moveHint"))
                 .environment(model).preferredColorScheme(.light)
         }
         .task {
@@ -121,21 +121,35 @@ struct QueueView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 180)
                     .clipped()
-                Text(item.state.detail).font(T.F.heading()).accessibilityIdentifier("queue.selectedStatus")
+                Text(item.archiveMove?.status != .done && item.archiveMove != nil ? item.queueCaption : item.state.detail).font(T.F.heading()).accessibilityIdentifier("queue.selectedStatus")
                 Text(item.project == nil ? tr("queue.unassigned") : item.state.whereItIs).foregroundStyle(T.L.fgMuted)
                 Text(item.project?.name ?? tr("library.unknownProject")).font(T.F.body())
                 projectActions(item).buttonStyle(.bordered)
-                if !item.canMoveToProject { Text(tr("library.moveSynced")).font(T.F.micro()).foregroundStyle(T.L.fgMuted) }
+                if item.moveBlocksMutation { Text(tr("queue.moveHint")).font(T.F.micro()).foregroundStyle(T.L.fgMuted) }
+                if let move = item.archiveMove, move.status != .done {
+                    Label(move.target.name, systemImage: "arrow.right")
+                        .accessibilityIdentifier("queue.moveTarget")
+                    if move.accountBinding != ArchiveMoveAccount.current?.binding {
+                        Text(tr("queue.moveAccountChanged")).foregroundStyle(T.S.failed)
+                    }
+                    if let error = move.lastError { Text(error).foregroundStyle(T.S.failed) }
+                    if move.status == .failed || move.lastError != nil {
+                        Button(tr("queue.moveRetry")) { model.retry(item) }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(move.accountBinding != ArchiveMoveAccount.current?.binding)
+                            .accessibilityIdentifier("queue.moveRetry")
+                    }
+                }
                 Text(item.capturedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .standard).locale(L10n.formatLocale)))
                 if item.state == .uploading { ProgressView(value: max(item.progress, 0.05)) }
-                if let error = item.lastError, item.state == .failed {
+                if let error = item.lastError, item.state == .failed, item.archiveMove == nil {
                     Text(error).foregroundStyle(T.S.failed)
                     Button(tr("project.retry")) { model.retry(item) }
                         .buttonStyle(.borderedProminent)
                         .accessibilityIdentifier("queue.retrySelected")
                 }
                 if item.state == .uploaded,
-                   let expiry = model.cloudExpiry[item.manifest.clientMediaId.uuidString.lowercased()] {
+                   let expiry = model.cloudExpiry[item.effectiveClientMediaId.uuidString.lowercased()] {
                     Text(tr("queue.expiresOn", ["date": Self.monthDay(expiry)]))
                 }
                 Text(item.manifest.sha256).font(T.F.mono(11)).textSelection(.enabled)
@@ -168,7 +182,7 @@ struct QueueView: View {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("queue.item." + item.id.uuidString)
                     .accessibilityAddTraits(selectedID == item.id ? .isSelected : [])
-                    if item.state == .failed {
+                    if item.state == .failed, item.archiveMove == nil {
                         Button(tr("project.retry")) { model.retry(item) }
                             .font(T.F.micro()).foregroundStyle(T.L.accent)
                     }
@@ -187,8 +201,8 @@ struct QueueView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: T.Sp.s1) {
-                    StatusDot(state: item.state, size: 5)
-                    Text(item.state.caption)
+                    StatusDot(state: item.queueState, size: 5)
+                    Text(item.queueCaption)
                         .font(T.F.small())
                         .foregroundStyle(T.L.fg)
                     Text(RelativeTime.clock(item.capturedAt))
@@ -208,7 +222,7 @@ struct QueueView: View {
 
                 // 失败原因照实显示。区分「你的网络」与「我们这边」，
                 // 用户才知道是该换个地方重试还是该找人。
-                if let err = item.lastError, item.state == .failed {
+                if let err = item.queueError {
                     Text(err)
                         .font(T.F.nano())
                         .foregroundStyle(T.S.failed)
@@ -219,7 +233,7 @@ struct QueueView: View {
                 // 中转区不是网盘：到期未被桌面端取走就会被清理。
                 // 只在还剩不到 3 天时说话，平时不打扰。
                 if item.state == .uploaded,
-                   let exp = model.cloudExpiry[item.manifest.clientMediaId.uuidString.lowercased()],
+                   let exp = model.cloudExpiry[item.effectiveClientMediaId.uuidString.lowercased()],
                    exp.timeIntervalSinceNow < 3 * 86_400 {
                     Text(tr("queue.expiresOn", ["date": Self.monthDay(exp)]))
                         .font(T.F.nano())
@@ -266,13 +280,13 @@ struct QueueView: View {
 
     @ViewBuilder
     private func projectActions(_ item: CaptureItem) -> some View {
-        if item.canMoveToProject {
+        if item.canMoveToProject || item.canRequestArchiveMove {
             Button { projectAction = ProjectAction(item: item, copy: false) } label: {
                 Label(tr("library.move"), systemImage: "folder")
             }.accessibilityIdentifier("queue.move")
         }
         Button { projectAction = ProjectAction(item: item, copy: true) } label: {
             Label(tr("queue.copy"), systemImage: "doc.on.doc")
-        }.accessibilityIdentifier("queue.copy")
+        }.disabled(item.moveBlocksMutation).accessibilityIdentifier("queue.copy")
     }
 }
