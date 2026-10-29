@@ -17,6 +17,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.aiworkdeck.mobile.ScreenshotMode
 import com.aiworkdeck.mobile.design.tr
+import kotlinx.coroutines.CancellationException
 
 /**
  * WorkManager 驱动的上传任务。约束联网才跑；唯一名 "upload" 去重排队——
@@ -26,9 +27,12 @@ import com.aiworkdeck.mobile.design.tr
 class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        if (!ServiceLocator.prefs.hasPrivacyConsent) return Result.success()
         // API 31+ 后台不许启动前台服务：拿不到通知就不举，上传照跑
         //（API<31 的 expedited 路径由 WorkManager 自己调 getForegroundInfo）
-        runCatching { setForeground(getForegroundInfo()) }
+        try { setForeground(getForegroundInfo()) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { /* WorkManager may still run without foreground promotion. */ }
         val queue = ServiceLocator.queueOrNull() ?: return Result.success()
         // 失败件按退避重排本来是 AppModel 那个 60 秒心跳的活，可应用真退到后台后进程会被冻结，
         // 心跳走不到下一轮——后台还醒着的只有这个 Worker，所以这一步得它来做。断网时拍的件
@@ -37,7 +41,7 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         while (true) {
             // 会话失效：交给前台登出，别对每件打一次 401
             if (queue.lastUnauthorized != null) return Result.success()
-            if (queue.kick() != KickResult.hasMoreWaiting) break
+            if (queue.kick(waitForCurrent = true) != KickResult.hasMoreWaiting) break
             // 失败退避已经排到了将来，这一轮别再硬冲——留给下次 enqueue 或 autoKick。
             if (System.currentTimeMillis() < queue.nextAutoKickAt) break
         }

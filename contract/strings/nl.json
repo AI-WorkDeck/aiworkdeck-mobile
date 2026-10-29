@@ -480,5 +480,11 @@
   "queue.moveSameProject": "Het bestand staat al in dit project",
   "queue.moveInProgress": "Er is al een verplaatsing bezig",
   "queue.moveAccountChanged": "Log in op het account waarmee de verplaatsing is gestart om door te gaan",
-  "queue.moveUnavailable": "Werk de server of desktop-app bij om gearchiveerde bestanden te verplaatsen"
+  "queue.moveUnavailable": "Werk de server of desktop-app bij om gearchiveerde bestanden te verplaatsen",
+  "privacy.title": "Lees ons privacybeleid voordat u doorgaat",
+  "privacy.summary": "AI WorkDeck maakt foto-, video- en geluidsopnamen en helpt projectbestanden te ordenen. Opnamen worden eerst op uw telefoon opgeslagen; bij archiveren en bekijken worden geselecteerde inhoud en bestandsgegevens versleuteld verzonden. Locatie wordt alleen lokaal vastgelegd en is optioneel. Toestemming voor camera, microfoon, locatie en meldingen wordt per functie gevraagd; cloudback-ups vereisen aparte toestemming. Lees het beleid over accounts, gegevens en verwijdering.",
+  "privacy.policy": "Privacybeleid",
+  "privacy.accept": "Akkoord en doorgaan",
+  "privacy.decline": "Weigeren en afsluiten",
+  "home.location.enable": "Locatie toevoegen"
 }

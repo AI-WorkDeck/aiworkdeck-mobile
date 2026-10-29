@@ -22,5 +22,8 @@
   "ddClientPortalUrl": "https://case.aiworkdeck.com/client/",
   "voiceReminderSeconds": 300,
   "personalConsentVersion": "2026-10-27",
-  "backupConsentVersion": "2026-10-11"
+  "backupConsentVersion": "2026-10-11",
+  "privacyPolicyVersion": "2026-10-29",
+  "androidPlayRecharge": false,
+  "androidAppFiling": "京ICP备2024096997号-13A"
 }

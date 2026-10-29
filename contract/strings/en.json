@@ -480,5 +480,11 @@
   "queue.moveSameProject": "The file is already in this project",
   "queue.moveInProgress": "A move is already in progress",
   "queue.moveAccountChanged": "Sign in to the account that started the move to continue",
-  "queue.moveUnavailable": "Update the server or desktop app to move archived files"
+  "queue.moveUnavailable": "Update the server or desktop app to move archived files",
+  "privacy.title": "Read our privacy policy before continuing",
+  "privacy.summary": "AI WorkDeck captures photos, video and audio and helps organise project files. Captures are stored on your phone first; archiving and previewing transfer selected content and file information over encrypted connections. Location is used for local capture records and is optional. Camera, microphone, location and notification permissions are requested for the relevant features; cloud backup requires separate consent. Read the policy to learn how accounts, data and deletion work.",
+  "privacy.policy": "Privacy policy",
+  "privacy.accept": "Agree and continue",
+  "privacy.decline": "Decline and exit",
+  "home.location.enable": "Add location"
 }

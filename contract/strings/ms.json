@@ -480,5 +480,11 @@
   "queue.moveSameProject": "Fail sudah berada dalam projek ini",
   "queue.moveInProgress": "Pemindahan sedang berlangsung",
   "queue.moveAccountChanged": "Log masuk ke akaun yang memulakan pemindahan untuk meneruskan",
-  "queue.moveUnavailable": "Kemas kini pelayan atau aplikasi desktop untuk memindahkan fail yang diarkibkan"
+  "queue.moveUnavailable": "Kemas kini pelayan atau aplikasi desktop untuk memindahkan fail yang diarkibkan",
+  "privacy.title": "Baca dasar privasi sebelum meneruskan",
+  "privacy.summary": "AI WorkDeck merakam foto, video dan audio serta menyusun fail projek. Rakaman disimpan pada telefon dahulu; pengarkiban dan pratonton menghantar kandungan terpilih serta maklumat fail melalui sambungan disulitkan. Lokasi hanya digunakan untuk rekod setempat dan adalah pilihan. Kebenaran kamera, mikrofon, lokasi dan pemberitahuan diminta mengikut fungsi; sandaran awan memerlukan persetujuan berasingan. Baca dasar tentang akaun, data dan pemadaman.",
+  "privacy.policy": "Dasar privasi",
+  "privacy.accept": "Setuju dan teruskan",
+  "privacy.decline": "Tolak dan keluar",
+  "home.location.enable": "Tambah lokasi"
 }

@@ -63,9 +63,10 @@ class UploadQueue(
     private val _changes = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val changes: SharedFlow<Unit> = _changes.asSharedFlow()
 
-    /** 启动一轮。已经在跑就直接返回 alreadyRunning，不排队叠加。 */
-    suspend fun kick(): KickResult = withContext(Dispatchers.IO) {
-        if (!mutex.tryLock()) return@withContext KickResult.alreadyRunning
+    /** UI calls stay single-flight; a Worker waits cancellably so its foreground service covers the active upload. */
+    suspend fun kick(waitForCurrent: Boolean = false): KickResult = withContext(Dispatchers.IO) {
+        if (waitForCurrent) mutex.lock()
+        else if (!mutex.tryLock()) return@withContext KickResult.alreadyRunning
         try {
             recoverStale()
             while (true) {

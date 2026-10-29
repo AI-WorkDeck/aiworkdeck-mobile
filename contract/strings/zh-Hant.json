@@ -480,5 +480,11 @@
   "queue.moveSameProject": "檔案已在此專案",
   "queue.moveInProgress": "此檔案正在移動",
   "queue.moveAccountChanged": "請登入發起移動的帳戶後繼續",
-  "queue.moveUnavailable": "雲端或桌面端需要更新後才能移動已歸檔檔案"
+  "queue.moveUnavailable": "雲端或桌面端需要更新後才能移動已歸檔檔案",
+  "privacy.title": "使用前請閱讀隱私政策",
+  "privacy.summary": "AI WorkDeck 用於拍攝、錄音和專案檔案歸檔。照片、影片和錄音先儲存在本機；歸檔或預覽時，所選內容及檔案資訊透過加密連線傳輸。定位用於本地採集記錄，可拒絕授權。我們按功能需要申請相機、麥克風、定位及通知權限；雲備份另行徵求同意。請閱讀隱私政策，了解帳號、資料處理和刪除方式。",
+  "privacy.policy": "隱私政策",
+  "privacy.accept": "同意並繼續",
+  "privacy.decline": "不同意並退出",
+  "home.location.enable": "加入位置"
 }

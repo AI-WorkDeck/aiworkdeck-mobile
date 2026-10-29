@@ -480,5 +480,11 @@
   "queue.moveSameProject": "Le fichier est déjà dans ce projet",
   "queue.moveInProgress": "Un déplacement est déjà en cours",
   "queue.moveAccountChanged": "Connectez-vous au compte qui a lancé le déplacement pour continuer",
-  "queue.moveUnavailable": "Mettez à jour le serveur ou l’application de bureau pour déplacer les fichiers archivés"
+  "queue.moveUnavailable": "Mettez à jour le serveur ou l’application de bureau pour déplacer les fichiers archivés",
+  "privacy.title": "Consultez notre politique de confidentialité avant de continuer",
+  "privacy.summary": "AI WorkDeck permet de prendre des photos, des vidéos et des enregistrements audio et d’organiser les fichiers de projet. Les captures restent d’abord sur votre téléphone ; l’archivage et l’aperçu transmettent le contenu sélectionné et les informations des fichiers via une connexion chiffrée. La localisation sert aux enregistrements locaux et reste facultative. Les autorisations sont demandées pour les fonctions concernées ; la sauvegarde dans le cloud nécessite un consentement distinct. Consultez la politique pour les comptes, les données et leur suppression.",
+  "privacy.policy": "Politique de confidentialité",
+  "privacy.accept": "Accepter et continuer",
+  "privacy.decline": "Refuser et quitter",
+  "home.location.enable": "Ajouter le lieu"
 }

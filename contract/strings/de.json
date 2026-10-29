@@ -480,5 +480,11 @@
   "queue.moveSameProject": "Die Datei befindet sich bereits in diesem Projekt",
   "queue.moveInProgress": "Ein Verschiebevorgang läuft bereits",
   "queue.moveAccountChanged": "Melden Sie sich mit dem Konto an, das den Verschiebevorgang gestartet hat, um fortzufahren",
-  "queue.moveUnavailable": "Aktualisieren Sie den Server oder die Desktop-App, um archivierte Dateien zu verschieben"
+  "queue.moveUnavailable": "Aktualisieren Sie den Server oder die Desktop-App, um archivierte Dateien zu verschieben",
+  "privacy.title": "Lesen Sie vor dem Fortfahren unsere Datenschutzerklärung",
+  "privacy.summary": "AI WorkDeck erfasst Fotos, Videos und Audio und organisiert Projektdateien. Aufnahmen werden zunächst auf Ihrem Telefon gespeichert; beim Archivieren und Anzeigen werden ausgewählte Inhalte und Dateiinformationen verschlüsselt übertragen. Der Standort wird nur lokal aufgezeichnet und ist optional. Berechtigungen für Kamera, Mikrofon, Standort und Benachrichtigungen werden bei Bedarf angefragt; Cloud-Backups erfordern eine gesonderte Zustimmung. Die Erklärung erläutert Konten, Daten und deren Löschung.",
+  "privacy.policy": "Datenschutzerklärung",
+  "privacy.accept": "Zustimmen und fortfahren",
+  "privacy.decline": "Ablehnen und beenden",
+  "home.location.enable": "Standort hinzufügen"
 }
