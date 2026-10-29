@@ -4,11 +4,15 @@ import UserNotifications
 final class RecordingReminderNotification {
     private let center = UNUserNotificationCenter.current()
     private let identifier = "recording-silence"
+    private var requestingPermission = false
     // These nominally fire-and-forget APIs perform synchronous XPC internally.
     // Keep their ordering without making app startup or the stop button wait.
     private let queue = DispatchQueue(label: "com.aiworkdeck.recording-reminder")
 
     func requestPermission() async {
+        guard !requestingPermission else { return }
+        requestingPermission = true
+        defer { requestingPermission = false }
         let settings = await center.notificationSettings()
         if settings.authorizationStatus == .notDetermined {
             _ = try? await center.requestAuthorization(options: [.alert])

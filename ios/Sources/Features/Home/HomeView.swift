@@ -600,7 +600,9 @@ struct HomeView: View {
                 micDenied
             } else {
                 VStack(spacing: T.Sp.s3) {
-                    if !recorder.isRecording {
+                    if recorder.isBusy && !recorder.isRecording {
+                        ProgressView(tr("common.loading")).tint(.white)
+                    } else if !recorder.isRecording {
                         Text(timeString(recorder.recordingSeconds))
                             .accessibilityIdentifier("recording.elapsed")
                             .font(T.F.title())
