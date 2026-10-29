@@ -170,6 +170,7 @@ struct CaptureFlowView: View {
                         .contentShape(Rectangle())
                 }
                     .accessibilityIdentifier("capture.close")
+                    .accessibilityHidden(obscured)
                     .disabled(CameraService.shared.isRecording || CameraService.shared.isStartingRecording || CameraService.shared.isCapturingPhoto || AudioRecorderService.shared.isBusy)
                 Spacer()
             }.padding(.horizontal).padding(.top, 8)
@@ -177,32 +178,8 @@ struct CaptureFlowView: View {
             capture
         }
         .background(T.D.bg)
-        .toolbar(onClose == nil ? .visible : .hidden, for: .tabBar)
-#if DEBUG
-        .onAppear { PersonalUITestSeed.startCaptureFixture() }
-#endif
-        .alert(tr("error.generic"), isPresented: Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })) {
-            Button(tr("common.close")) { model.lastError = nil }
-        } message: { Text(model.lastError ?? "") }
-        .preferredColorScheme(.dark)
-        .onDisappear {
-            if !CameraService.shared.isRecording { CameraService.shared.stop() }
-            LocationStamper.shared.end()
-        }
-    }
-
-    private var capture: some View {
-        HomeView(
-            paused: !isActive || route != nil || model.showBackupPrompt,
-            onOpenLibrary: { route = .library },
-            onOpenQueue: { route = .queue },
-            onOpenSettings: { route = .settings },
-            onOpenProjects: { route = .projects },
-            projectContents: { AnyView(CaptureProjectContentsView(project: $0)) }
-        )
-        .environment(model)
-        .preferredColorScheme(.dark)
-        .accessibilityHidden(!isActive || route != nil)
+        .accessibilityHidden(obscured)
+        .allowsHitTesting(!obscured)
         .fullScreenCover(item: $route) { r in
             Group {
                 switch r {
@@ -226,5 +203,32 @@ struct CaptureFlowView: View {
             }
             .environment(\.layoutDirection, L10n.isRTL ? .rightToLeft : .leftToRight)
         }
+        .toolbar(onClose == nil ? .visible : .hidden, for: .tabBar)
+#if DEBUG
+        .onAppear { PersonalUITestSeed.startCaptureFixture() }
+#endif
+        .alert(tr("error.generic"), isPresented: Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })) {
+            Button(tr("common.close")) { model.lastError = nil }
+        } message: { Text(model.lastError ?? "") }
+        .preferredColorScheme(.dark)
+        .onDisappear {
+            if !CameraService.shared.isRecording { CameraService.shared.stop() }
+            LocationStamper.shared.end()
+        }
+    }
+
+    private var obscured: Bool { !isActive || route != nil || model.showBackupPrompt }
+
+    private var capture: some View {
+        HomeView(
+            paused: !isActive || route != nil || model.showBackupPrompt,
+            onOpenLibrary: { route = .library },
+            onOpenQueue: { route = .queue },
+            onOpenSettings: { route = .settings },
+            onOpenProjects: { route = .projects },
+            projectContents: { AnyView(CaptureProjectContentsView(project: $0)) }
+        )
+        .environment(model)
+        .preferredColorScheme(.dark)
     }
 }

@@ -1,11 +1,6 @@
 import XCTest
 
 final class RecordingFlowTests: XCTestCase {
-    private func dismissEarlierRecordingNotice(in app: XCUIApplication) {
-        let notice = app.alerts["Recording status"]
-        if notice.waitForExistence(timeout: 2) { notice.buttons["Close"].tap() }
-    }
-
     @MainActor
     func testPausedAudioIsObviousAndCanResumeAndPauseAgain() {
         checkPausedCapture(argument: "-AWDPauseRecordingUITest", resume: "Resume audio", stop: "Stop recording")

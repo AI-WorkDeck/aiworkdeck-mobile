@@ -105,10 +105,15 @@ final class CrossScreenRotationTests: XCTestCase {
         let app = launchWorkspace()
         openFiles(app)
         app.buttons["workspace.capture"].tap()
-        let settings = app.buttons["capture.settings"]
-        XCTAssertTrue(settings.waitForExistence(timeout: 10)); settings.tap()
+        let settingsButtons = app.buttons.matching(identifier: "capture.settings")
+        XCTAssertTrue(settingsButtons.firstMatch.waitForExistence(timeout: 10))
+        let visibleSettings = settingsButtons.allElementsBoundByIndex.filter(\.isHittable)
+        XCTAssertEqual(visibleSettings.count, 1, "Only the active capture page can accept a Settings tap")
+        guard let settings = visibleSettings.first else { return }
+        settings.tap()
         let closeSettings = app.buttons["settings.close"]
         XCTAssertTrue(closeSettings.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["capture.close"].isHittable, "Covered capture navigation must not accept taps")
         cycle("Settings", app: app, elements: [closeSettings, app.descendants(matching: .any).matching(identifier: "settings.account").firstMatch])
         closeSettings.tap()
         returnToFiles(app)
@@ -120,8 +125,11 @@ final class CrossScreenRotationTests: XCTestCase {
         openFiles(app)
         app.buttons["workspace.capture"].tap()
         let library = app.buttons["capture.library"]
-        XCTAssertTrue(library.waitForExistence(timeout: 10)); library.tap()
-        let back = app.buttons["Back"].firstMatch
+        XCTAssertTrue(library.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons.matching(identifier: "capture.library").count, 1)
+        XCTAssertFalse(app.buttons["workspace.capture"].exists, "Covered project navigation must not remain accessible")
+        library.tap()
+        let back = app.buttons["library.close"]
         XCTAssertTrue(back.waitForExistence(timeout: 10))
         cycle("Library", app: app, elements: [back, app.segmentedControls.buttons["All"], app.segmentedControls.buttons["Audio"]])
         back.tap()

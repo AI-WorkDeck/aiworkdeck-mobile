@@ -208,6 +208,7 @@ struct HomeView: View {
             .buttonStyle(.plain)
             .disabled(capturing || camera.isCapturingPhoto)
             .accessibilityIdentifier("capture.project")
+            .accessibilityHidden(paused)
             Spacer(minLength: T.Sp.s1)
             Button(action: onOpenQueue) {
                 Image(systemName: "arrow.up.circle")
@@ -215,9 +216,11 @@ struct HomeView: View {
             }
             .accessibilityLabel(tr("queue.title"))
             .accessibilityIdentifier("capture.queue")
+            .accessibilityHidden(paused)
             Button(action: onOpenSettings) { AccountAvatar() }
                 .accessibilityLabel(tr("home.settings"))
                 .accessibilityIdentifier("capture.settings")
+                .accessibilityHidden(paused)
         }
         .foregroundStyle(T.D.fg)
         .padding(.horizontal, T.Sp.gutter)

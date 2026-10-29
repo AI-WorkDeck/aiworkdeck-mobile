@@ -14,6 +14,12 @@ enum PersonalTab: String {
 }
 
 extension XCTestCase {
+    @MainActor func dismissEarlierRecordingNotice(in app: XCUIApplication) {
+        // The crash-recovery test intentionally retains invalid drafts between runs.
+        let notice = app.alerts["Recording status"]
+        if notice.waitForExistence(timeout: 2) { notice.buttons["Close"].tap() }
+    }
+
     @MainActor func personalTab(_ app: XCUIApplication, _ tab: PersonalTab) -> XCUIElement {
         // iPhone exposes a TabBar; Duo exposes the same buttons in its side Toolbar.
         // Match the icon descendant: SwiftUI does not always forward its identifier
@@ -24,6 +30,7 @@ extension XCTestCase {
             .firstMatch
     }
     @MainActor func openPersonalCapture(_ app: XCUIApplication) {
+        dismissEarlierRecordingNotice(in: app)
         let workspaceClose = app.buttons["workspace.close"]
         if workspaceClose.exists && workspaceClose.isHittable { workspaceClose.tap() }
         let entry = personalTab(app, .capture)

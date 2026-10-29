@@ -84,11 +84,13 @@ struct WorkspaceView: View {
                 if let onClose {
                     ToolbarItem(placement: .topBarLeading) {
                         Button(tr("common.close"), action: onClose).accessibilityIdentifier("workspace.close")
+                            .accessibilityHidden(route != nil)
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button { route = .settings } label: { Image(systemName: "slider.horizontal.3") }
                         .accessibilityLabel(tr("home.settings"))
+                        .accessibilityHidden(route != nil)
                 }
             }
         } detail: {
@@ -106,7 +108,9 @@ struct WorkspaceView: View {
                                 Label(tr(AudioRecorderService.shared.isRecording ? "workspace.resumeRecording" : "workspace.capture"), systemImage: "camera")
                             }
                             .accessibilityIdentifier("workspace.capture")
+                            .accessibilityHidden(route != nil)
                             Button { route = .queue } label: { Label(tr("queue.title"), systemImage: "arrow.up.circle") }
+                                .accessibilityHidden(route != nil)
                             #if DEBUG
                             Menu {
                                 Button(tr("dual.prototype.title")) { route = .probe }
@@ -128,6 +132,7 @@ struct WorkspaceView: View {
             client = model.workspaceFiles()
             await load()
         }
+        .accessibilityHidden(route != nil)
         .fullScreenCover(item: $route) { route in
             switch route {
             case .capture:

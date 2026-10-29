@@ -17,6 +17,7 @@ final class PersonalWorkspaceFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest", "-AWDPersonalUITest"]
         app.launch()
+        dismissEarlierRecordingNotice(in: app)
         XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 15))
         return app
     }

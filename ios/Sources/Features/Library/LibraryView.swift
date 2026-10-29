@@ -163,6 +163,7 @@ struct LibraryView: View {
             }
         }
         .background(T.D.bg)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("library.browser")
     }
 
@@ -395,6 +396,7 @@ struct LibraryView: View {
                             .frame(width: T.touchMin, height: T.touchMin)
                     }
                     .accessibilityLabel(tr("common.back"))
+                    .accessibilityIdentifier("library.close")
                 }
                 if let fixedProject { Text(fixedProject.name).lineLimit(1) }
                 else { projectMenu }
