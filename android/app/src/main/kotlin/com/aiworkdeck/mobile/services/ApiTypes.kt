@@ -62,5 +62,13 @@ enum class EnvelopeKind {
 }
 
 @Serializable
+data class CaptureOrganization(val state: String, val originalName: String? = null, val fileName: String? = null, val archiveName: String? = null, val tags: List<String> = emptyList()) {
+    val caption: String get() = com.aiworkdeck.mobile.design.tr("organize." + when (state) {
+        "ready" -> "ready"; "needs_review" -> "review"; "unknown" -> "unknown"; else -> "notApplied"
+    })
+}
+
+@Serializable
 data class UploadResult(val code: Int, val id: Long, val clientMediaId: String, val delivered: Boolean,
-                        val projectUid: String? = null, val fileUid: String? = null, val fileId: Long? = null)
+                        val projectUid: String? = null, val fileUid: String? = null, val fileId: Long? = null,
+                        val organization: CaptureOrganization? = null)

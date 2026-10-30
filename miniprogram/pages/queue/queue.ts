@@ -1,6 +1,6 @@
 import { Icon } from '../../utils/icons'
 import type { Metrics } from '../../utils/layout'
-import { getSelectedProject } from '../../utils/api'
+import { getSelectedProject, captureOrganizationCaption, personalAccountScope } from '../../utils/api'
 import { listItems, otherPendingCount, subscribe, pollStatus, retry, isAssigned, type QueueItem } from '../../utils/queue'
 import { dotClass, phaseOf, projectId, stateText } from '../../utils/phase'
 import { thumbFor, markThumbBroken } from '../../utils/thumbs'
@@ -88,9 +88,9 @@ function toDisplayItem(item: QueueItem): DisplayItem {
     thumb: thumbFor(item),
     kind: kindOf(item.mediaType),
     kindIcon: kindIcon(item.mediaType),
-    fileName: item.fileName,
+    fileName: item.organization && item.organizationScope === personalAccountScope() ? [captureOrganizationCaption(item.organization), item.organization.state === 'ready' ? item.organization.archiveName ?? item.organization.fileName ?? item.fileName : item.fileName, ...(item.organization.tags ?? [])].filter(Boolean).join(' · ') : item.fileName,
     time: formatTime(item.createdAt),
-    statusText: stateText(item.state),
+    statusText: item.state === 'uploading' ? t('organize.uploading') : stateText(item.state),
     waitingText: waitingText(item),
     errorText: item.state === 'failed' ? item.errorMessage || '' : '',
     expiresText: expiresText(item),

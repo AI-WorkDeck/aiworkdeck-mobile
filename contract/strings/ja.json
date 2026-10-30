@@ -486,5 +486,12 @@
   "privacy.policy": "プライバシーポリシー",
   "privacy.accept": "同意して続行",
   "privacy.decline": "同意せず終了",
-  "home.location.enable": "位置を追加"
+  "home.location.enable": "位置を追加",
+  "organize.title": "収集後に自動命名・タグ付け",
+  "organize.hint": "今後のアップロードをアカウントの AI サービスで事前に読み取り、モデルの実使用量に応じて課金します。原本を保持し、認識に失敗した場合は元の名前を維持します。 写真・動画・録音に対応。音声と動画は一部を読み取り、全文の文字起こしは行いません。",
+  "organize.uploading": "アップロードして保存結果を待っています",
+  "organize.ready": "自動整理済み",
+  "organize.review": "認識結果の確認が必要です",
+  "organize.unknown": "整理結果を受信できませんでした。保存先のファイルを確認してください",
+  "organize.notApplied": "自動整理は未適用・元の名前を保持"
 }

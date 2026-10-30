@@ -1,3 +1,4 @@
+import { Prefs } from './services/Prefs'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { CaptureItem, MediaKind, RelayProject, ProjectLocation, sameProject } from './model/Capture'
 import { TransferState } from './model/TransferState'
@@ -232,7 +233,9 @@ export class AppModel {
    * 各应用商店的账号删除要求（与 App Store 5.1.1(v)）都指向这个入口。
    */
   async deleteAccount(): Promise<void> {
+    const organizationScope: string = Prefs.organizationScope(ServiceLocator.baseUrl(), await ServiceLocator.session.current())
     await ServiceLocator.backend.deleteAccount()
+    await ServiceLocator.prefs.clearOrganization(organizationScope)
     await this.signOut()
   }
 

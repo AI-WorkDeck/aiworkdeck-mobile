@@ -1,5 +1,7 @@
 package com.aiworkdeck.mobile.features.queue
 
+import com.aiworkdeck.mobile.services.ServiceLocator
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -171,7 +173,13 @@ private fun QueueRow(item: CaptureItem, progress: Double, expiresAt: String?, on
                 )
             }
 
+            ServiceLocator.prefs.organizationResult(ServiceLocator.backend.personalAccountScope(), item.manifest.clientMediaId)?.let { organization ->
+                Text(organization.caption, style = Fonts.nano(), color = Tk.L.fgFaint)
+                if (organization.state == "ready") (organization.archiveName ?: organization.fileName)?.let { Text(it, style = Fonts.small(), color = Tk.L.fg) }
+                if (organization.tags.isNotEmpty()) Text(organization.tags.joinToString(" · "), style = Fonts.nano(), color = Tk.L.fgFaint)
+            }
             if (item.state == TransferState.uploading) {
+                Text(tr("organize.uploading"), style = Fonts.nano(), color = Tk.L.fgFaint)
                 // 进度条永远给一点起始宽度：0% 的条看起来像卡死了，实际是刚开始
                 Box(Modifier.fillMaxWidth().height(2.dp).background(Tk.L.sunken)) {
                     Box(

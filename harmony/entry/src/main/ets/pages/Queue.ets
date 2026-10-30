@@ -1,4 +1,6 @@
 import { fileUri } from '@kit.CoreFileKit'
+import { Prefs } from '../services/Prefs'
+import { CaptureOrganization } from '../services/ApiTypes'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { AppModel } from '../AppModel'
 import { StatusDot } from '../design/Components'
@@ -50,6 +52,7 @@ interface QueueRowVM {
   /** 到期提醒；不该提醒时空串。 */
   expires: string
   sha: string
+  organization: string
 }
 
 /** 一段。`key` 含全部行键，段内任何一行变了整段重画——队列不长，这点代价换确定性。 */
@@ -86,9 +89,15 @@ export struct Queue {
   private pollId: number = -1
   /** 这一屏还在不在。异步回调回来时组件可能已经销毁，往里写 @State 是错误日志甚至崩溃。 */
   private alive: boolean = false
+  private organizationScope: string = ''
 
   aboutToAppear(): void {
     this.alive = true
+    ServiceLocator.session.current().then((sid: string | null): void => {
+      if (!this.alive) return
+      this.organizationScope = Prefs.organizationScope(ServiceLocator.baseUrl(), sid)
+      this.syncModel()
+    }).catch((): void => {})
     this.token = AppModel.shared.subscribe((): void => this.syncModel())
     this.syncModel()
     // 进页面先问一次，再按 20 秒续问：用户是带着「到底传没传到」的疑问推开这一页的
@@ -258,6 +267,7 @@ export struct Queue {
         }
 
         // 失败原因照实显示。区分「你的网络」与「我们这边」，用户才知道是该换个地方重试还是该找人
+        if (r.organization.length > 0) { Text(r.organization).fontSize(Tk.Ty.nano).fontColor(Tk.L.fgFaint) }
         if (r.error.length > 0) {
           Text(r.error)
             .fontSize(Tk.Ty.nano)
@@ -386,12 +396,21 @@ export struct Queue {
     const error: string = item.state === TransferState.failed && item.lastError !== null
       ? item.lastError : EMPTY
     const expires: string = this.expiryNotice(item, now)
+    const result: CaptureOrganization | undefined = ServiceLocator.prefs.organizationResult(this.organizationScope, item.manifest.clientMediaId)
+    let organization: string = ''
+    if (result !== undefined) {
+      const key: string = result.state === 'ready' ? 'ready' : result.state === 'needs_review' ? 'review' : result.state === 'unknown' ? 'unknown' : 'notApplied'
+      organization = tr('organize.' + key)
+      if (result.state === 'ready') organization += ' · ' + (result.archiveName ?? result.fileName ?? '')
+      if (result.tags.length > 0) organization += ' · ' + result.tags.join(' · ')
+    }
     const row: QueueRowVM = {
-      key: `${item.id}|${item.state}|${progress}|${error}|${expires}`,
+      key: `${item.id}|${item.state}|${progress}|${error}|${expires}|${organization}`,
       isAudio: item.kind === MediaKind.audio,
       localPath: item.localPath,
       dotColor: Tk.color(TransferStateOps.dotToken(item.state), false),
-      detail: TransferStateOps.detail(item.state),
+      detail: uploading ? tr('organize.uploading') : TransferStateOps.detail(item.state),
+      organization: organization,
       time: formatHm(item.capturedAtMs()),
       showProgress: uploading,
       progress: progress,

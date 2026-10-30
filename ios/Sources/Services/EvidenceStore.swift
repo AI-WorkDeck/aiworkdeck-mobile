@@ -187,6 +187,7 @@ actor EvidenceStore {
         guard ids.allSatisfy({ (try? loadOne($0))?.moveBlocksMutation != true }) else { return false }
         for id in ids {
             guard let item = try? loadOne(id) else { continue }
+            CaptureOrganizationStore.removeResults(ids: [id, item.effectiveClientMediaId])
             try? fm.removeItem(at: item.localURL)
             try? fm.removeItem(at: manifestDir.appendingPathComponent("\(id.uuidString).json"))
         }

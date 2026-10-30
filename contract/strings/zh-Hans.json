@@ -486,5 +486,12 @@
   "privacy.policy": "隐私政策",
   "privacy.accept": "同意并继续",
   "privacy.decline": "不同意并退出",
-  "home.location.enable": "添加位置"
+  "home.location.enable": "添加位置",
+  "organize.title": "采集后自动命名和打标签",
+  "organize.hint": "对后续上传的材料使用账户 AI 通道预读，按实际模型用量计费。原件保留，识别失败保留原名。 支持照片、视频和录音；音视频仅抽样预读，不作完整转写。",
+  "organize.uploading": "正在上传并等待归档结果",
+  "organize.ready": "已自动整理",
+  "organize.review": "识别结果待核对",
+  "organize.unknown": "未收到整理结果，请在归档文件中核对",
+  "organize.notApplied": "未应用自动整理，保留原名"
 }

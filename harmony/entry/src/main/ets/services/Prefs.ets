@@ -1,3 +1,5 @@
+import { cryptoFramework } from '@kit.CryptoArchitectureKit'
+import { CaptureOrganization, decodeCaptureOrganization } from './ApiTypes'
 import { preferences } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
 import { JSON as ArkJson, util } from '@kit.ArkTS'
@@ -67,6 +69,54 @@ export class Prefs {
     if (typeof v !== 'string') return null
     const s: string = v as string
     return s.length === 0 ? null : s
+  }
+
+  static organizationScope(baseURL: string, session: string | null): string {
+    if (session === null || session.length === 0) return ''
+    const md: cryptoFramework.Md = cryptoFramework.createMd('SHA256')
+    md.updateSync({ data: new util.TextEncoder().encodeInto(baseURL + ':' + session) })
+    return Array.from(md.digestSync().data).map((v: number): string => v.toString(16).padStart(2, '0')).join('')
+  }
+
+  organizeCaptures(scope: string): boolean {
+    return scope.length > 0 && this.openSync().getSync('captureOrganize.enabled.' + scope, false) === true
+  }
+
+  async setOrganizeCaptures(scope: string, enabled: boolean): Promise<void> {
+    if (scope.length === 0) return
+    const p: preferences.Preferences = await this.open()
+    await p.put('captureOrganize.enabled.' + scope, enabled)
+    await p.flush()
+  }
+
+  organizationResult(scope: string, id: string): CaptureOrganization | undefined {
+    if (scope.length === 0) return undefined
+    const value: preferences.ValueType = this.openSync().getSync('captureOrganize.result.' + scope + '.' + id, '')
+    if (typeof value !== 'string' || value.length === 0) return undefined
+    try { return decodeCaptureOrganization(ArkJson.parse(value)) } catch (e) { return undefined }
+  }
+
+  async removeOrganizationResults(ids: string[]): Promise<void> {
+    const p: preferences.Preferences = await this.open()
+    const values: Object = await p.getAll()
+    for (const key of Object.keys(values)) {
+      if (key.startsWith('captureOrganize.result.') && ids.some((id: string): boolean => key.endsWith('.' + id))) await p.delete(key)
+    }
+    await p.flush()
+  }
+
+  async clearOrganization(scope: string): Promise<void> {
+    if (scope.length === 0) return
+    const p: preferences.Preferences = await this.open()
+    await p.delete('captureOrganize.enabled.' + scope)
+    const values: Object = await p.getAll()
+    for (const key of Object.keys(values)) { if (key.startsWith('captureOrganize.result.' + scope + '.')) await p.delete(key) }
+    await p.flush()
+  }
+
+  async saveOrganization(scope: string, id: string, result: CaptureOrganization): Promise<void> {
+    if (scope.length === 0) return
+    await this.putString('captureOrganize.result.' + scope + '.' + id, ArkJson.stringify(result))
   }
 
   async saveToAlbum(): Promise<boolean> {

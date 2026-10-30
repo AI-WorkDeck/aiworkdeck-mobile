@@ -140,7 +140,19 @@ struct QueueView: View {
                         .accessibilityIdentifier("queue.moveRetry")
                 }
                 Text(item.capturedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .standard).locale(L10n.formatLocale)))
-                if item.state == .uploading { ProgressView(value: max(item.progress, 0.05)) }
+                if item.state == .uploading {
+                    if item.progress < 1 {
+                        ProgressView(value: item.progress.isFinite ? max(0, min(item.progress, 1)) : 0)
+                    } else {
+                        ProgressView()
+                    }
+                    Text(tr("organize.uploading"))
+                }
+                if let organization = CaptureOrganizationStore.result(id: item.effectiveClientMediaId) {
+                    Text(organization.caption)
+                    if let name = organization.archiveName ?? organization.fileName, organization.state == "ready" { Text(name).textSelection(.enabled) }
+                    if !organization.tags.isEmpty { Text(organization.tags.joined(separator: " · ")) }
+                }
                 if let error = item.lastError, item.state == .failed, item.archiveMove == nil {
                     Text(error).foregroundStyle(T.S.failed)
                     Button(tr("project.retry")) { model.retry(item) }

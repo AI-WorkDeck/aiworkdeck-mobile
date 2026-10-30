@@ -7,7 +7,7 @@ import { CaptureItem, MediaKind, MediaKindOps, RelayProject } from '../model/Cap
 import { ApiError, Unauthorized, checkEnvelope } from '../model/Envelope'
 import { SessionStore } from './SessionStore'
 import { Prefs } from './Prefs'
-import { UploadResult, asRecord, decodeUploadResult } from './ApiTypes'
+import { CaptureOrganization, UploadResult, asRecord, decodeUploadResult } from './ApiTypes'
 import { AccountRegion, baseUrlOf, currentAppLanguage } from '../model/AccountRegion'
 
 const DOMAIN: number = 0x0000
@@ -78,19 +78,22 @@ export class Uploader {
     if (sid === null) throw new Unauthorized()
     const deviceId: string = await this.prefs.deviceId()
     const clientMediaId: string = item.manifest.clientMediaId
+    const region: AccountRegion = this.region()
+    const organizationScope: string = Prefs.organizationScope(baseUrlOf(region), sid)
+    const organize: boolean = this.prefs.organizeCaptures(organizationScope)
 
     let copiedPath: string | null = null
     let task: request.agent.Task
     try {
       task = await request.agent.create(this.ctx,
-        this.config(item.localPath, fileName, sid, deviceId, project, item))
+        this.config(item.localPath, fileName, sid, deviceId, project, item, organize, region))
     } catch (e) {
       hilog.warn(DOMAIN, TAG, 'sandbox path rejected, copying to cache: %{public}s', (e as Error).message)
       copiedPath = `${this.ctx.cacheDir}/upload-${clientMediaId}.${MediaKindOps.ext(item.kind)}`
       fs.copyFileSync(item.localPath, copiedPath)
       task = await request.agent.create(this.ctx,
         this.config(`internal://cache/upload-${clientMediaId}.${MediaKindOps.ext(item.kind)}`,
-          fileName, sid, deviceId, project, item))
+          fileName, sid, deviceId, project, item, organize, region))
     }
 
     const tid: string = task.tid
@@ -145,7 +148,14 @@ export class Uploader {
       await this.cleanup(tid, copiedPath)
       throw e as Error
     }
-    return await done
+    const result: UploadResult = await done
+    try {
+    if (fs.accessSync(item.localPath) && (organize || (result.organization !== undefined && result.organization.state !== 'disabled'))) {
+      const organization: CaptureOrganization = result.organization ?? { state: 'unknown', tags: [] }
+      await this.prefs.saveOrganization(organizationScope, clientMediaId, organization).catch((): void => {})
+    }
+    } catch (e) { /* A deleted original must not recreate result metadata. */ }
+    return result
   }
 
   /**
@@ -185,7 +195,7 @@ export class Uploader {
   // ---- 内部 ----
 
   private config(path: string, fileName: string, sid: string, deviceId: string,
-    project: RelayProject, item: CaptureItem): request.agent.Config {
+    project: RelayProject, item: CaptureItem, organize: boolean, region: AccountRegion): request.agent.Config {
     const file: request.agent.FileSpec = {
       path: path, filename: fileName, mimeType: mimeOf(item.kind),
     }
@@ -196,9 +206,9 @@ export class Uploader {
       { name: 'fileName', value: fileName },
       { name: 'mediaType', value: MediaKindOps.mediaType(item.kind) },
       { name: 'capturedAt', value: item.manifest.capturedAt },
+      { name: 'organize', value: organize ? 'true' : 'false' },
       { name: 'file', value: file },
     ]
-    const region: AccountRegion = this.region()
     const headers: Record<string, string> = { 'X-Session-Id': sid, 'X-App-Language': currentAppLanguage(region) }
     const conf: request.agent.Config = {
       action: request.agent.Action.UPLOAD,

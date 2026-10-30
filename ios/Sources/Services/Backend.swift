@@ -333,6 +333,7 @@ actor API: ArchiveMoveServing {
         var req = Self.request(baseURL.appendingPathComponent("/api/mobile/media"))
         req.setValue(sessionID, forHTTPHeaderField: "X-Session-Id")
         req.httpMethod = "POST"
+        req.timeoutInterval = 120
         let boundary = "awd-\(UUID().uuidString)"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
@@ -343,7 +344,10 @@ actor API: ArchiveMoveServing {
         case .video: "video"
         case .audio: "audio"
         }
+        let organizationScope = CaptureOrganizationStore.scope(baseURL: baseURL, sessionID: sessionID)
+        let organize = account == nil && CaptureOrganizationStore.enabled(scope: organizationScope)
         let fields: [(String, String)] = [
+            ("organize", organize ? "true" : "false"),
             ("deviceId", project.deviceId),
             ("projectKey", project.key),
             ("clientMediaId", item.effectiveClientMediaId.uuidString.lowercased()),
@@ -373,6 +377,13 @@ actor API: ArchiveMoveServing {
         }
         if let env = try? JSONDecoder().decode(CodeOnly.self, from: data), env.code != 0 {
             throw APIError(message: env.message ?? tr("error.uploadRejected"))
+        }
+        struct OrganizationEnvelope: Decodable { let organization: CaptureOrganization? }
+        let result = (try? JSONDecoder().decode(OrganizationEnvelope.self, from: data))?.organization
+        if let result, result.state != "disabled", FileManager.default.fileExists(atPath: item.localURL.path) {
+            CaptureOrganizationStore.save(result, id: item.effectiveClientMediaId, scope: organizationScope)
+        } else if organize, FileManager.default.fileExists(atPath: item.localURL.path) {
+            CaptureOrganizationStore.save(result ?? CaptureOrganization(state: "unknown"), id: item.effectiveClientMediaId, scope: organizationScope)
         }
     }
 

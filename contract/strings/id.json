@@ -486,5 +486,12 @@
   "privacy.policy": "Kebijakan privasi",
   "privacy.accept": "Setuju dan lanjutkan",
   "privacy.decline": "Tolak dan keluar",
-  "home.location.enable": "Tambahkan lokasi"
+  "home.location.enable": "Tambahkan lokasi",
+  "organize.title": "Beri nama dan tag rekaman otomatis",
+  "organize.hint": "Prabaca unggahan berikutnya melalui layanan AI akun Anda, ditagih sesuai penggunaan model sebenarnya. Berkas asli disimpan; jika pengenalan gagal, nama asli dipertahankan. Mendukung foto, video, dan rekaman. Audio dan video dibaca sebagian, bukan ditranskripsi penuh.",
+  "organize.uploading": "Mengunggah dan menunggu hasil pengarsipan",
+  "organize.ready": "Ditata otomatis",
+  "organize.review": "Hasil pengenalan perlu diperiksa",
+  "organize.unknown": "Hasil tidak diterima; periksa berkas arsip",
+  "organize.notApplied": "Penataan otomatis tidak diterapkan; nama asli dipertahankan"
 }

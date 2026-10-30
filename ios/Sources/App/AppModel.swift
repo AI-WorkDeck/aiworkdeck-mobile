@@ -265,7 +265,9 @@ final class AppModel {
     ///
     /// App Store 审核指南 5.1.1(v) 要求支持注册的 App 必须在 App 内提供这个入口。
     func deleteAccount() async throws {
+        let organizationScope = CaptureOrganizationStore.scope()
         try await API.shared.deleteAccount()
+        CaptureOrganizationStore.clear(scope: organizationScope)
         PersonalConversationStore.clear()
         CalendarReminders.shared.clear()
         closeWorkspaceFiles()
@@ -307,6 +309,7 @@ final class AppModel {
             return
         }
         if WorkspaceUITestSeed.isOn {
+            if ProcessInfo.processInfo.arguments.contains("-AWDOrganizeUITest") { CaptureOrganizationStore.setEnabled(false) }
             L10n.locale = "en"
             account = Shot.account
             selectedProject = nil

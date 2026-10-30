@@ -1,6 +1,6 @@
 {
-  "serverCommit": "d6c96fe0fc088feff7a124fa9a54bed1bd50b4ec",
-  "sha256": "dac69f3d3722ab4981693c3d53725f77f20905ebc74f7cf672542517f7ec9819",
-  "pulledAt": "2026-10-29T06:22:58.303Z",
-  "note": "钉自 /Users/zewei/.codex/manual-worktrees/mobile-archive-move-1607 的干净工作区，照 serverCommit 可复现。"
+  "serverCommit": "917f17aa18457afde5a82c10b1b0866c767c548e",
+  "sha256": "f1dc9a977caf02f86a312dcc02bc66610f8a1f6d2f53464b637487ea28b342d4",
+  "pulledAt": "2026-10-30T00:48:07.001Z",
+  "note": "钉自 /Users/zewei/.codex/worktrees/capture-organize-backend-1630 的干净工作区，照 serverCommit 可复现。"
 }

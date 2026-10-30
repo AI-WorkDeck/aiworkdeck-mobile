@@ -259,7 +259,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * App Store 审核指南 5.1.1(v) 与各安卓应用商店的账号删除要求都指向这个入口。
      */
     suspend fun deleteAccount() {
+        val scope = backend.personalAccountScope()
         backend.deleteAccount()
+        prefs.clearOrganization(scope)
         signOut()
     }
 
@@ -326,6 +328,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 evidence.delete(ids)
+                prefs.removeOrganizationResults(ids)
                 refresh()
             } catch (e: Exception) {
                 logger.warning("删除出错: ${e.message}")

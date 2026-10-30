@@ -486,5 +486,12 @@
   "privacy.policy": "Política de privacidad",
   "privacy.accept": "Aceptar y continuar",
   "privacy.decline": "Rechazar y salir",
-  "home.location.enable": "Añadir ubicación"
+  "home.location.enable": "Añadir ubicación",
+  "organize.title": "Nombrar y etiquetar capturas automáticamente",
+  "organize.hint": "Lectura previa de futuras cargas mediante el servicio de IA de tu cuenta, con cobro según el uso real del modelo. Se conservan los originales; si falla el reconocimiento, se mantiene el nombre original. Admite fotos, vídeos y grabaciones. El audio y vídeo se analizan por muestras, sin transcripción completa.",
+  "organize.uploading": "Cargando y esperando el resultado del archivado",
+  "organize.ready": "Organizado automáticamente",
+  "organize.review": "Reconocimiento pendiente de revisión",
+  "organize.unknown": "No se recibió el resultado; comprueba el archivo guardado",
+  "organize.notApplied": "Organización automática no aplicada; nombre original conservado"
 }

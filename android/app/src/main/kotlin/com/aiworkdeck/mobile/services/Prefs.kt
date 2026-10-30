@@ -13,6 +13,29 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
     private val prefs = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
+    fun organizeCaptures(scope: String?): Boolean = scope != null && prefs.getBoolean("captureOrganize.enabled.$scope", false)
+    fun setOrganizeCaptures(scope: String?, enabled: Boolean) {
+        if (scope != null) prefs.edit().putBoolean("captureOrganize.enabled.$scope", enabled).apply()
+    }
+    fun removeOrganizationResults(ids: Set<String>) {
+        val editor = prefs.edit()
+        for (key in prefs.all.keys) if (key.startsWith("captureOrganize.result.") && ids.any { key.endsWith(".$it") }) editor.remove(key)
+        editor.apply()
+    }
+    fun clearOrganization(scope: String?) {
+        if (scope == null) return
+        val editor = prefs.edit().remove("captureOrganize.enabled.$scope")
+        for (key in prefs.all.keys) if (key.startsWith("captureOrganize.result.$scope.")) editor.remove(key)
+        editor.apply()
+    }
+    fun organizationResult(scope: String?, id: String): CaptureOrganization? {
+        if (scope == null) return null
+        return prefs.getString("captureOrganize.result.$scope.$id", null)?.let { try { json.decodeFromString<CaptureOrganization>(it) } catch (_: Exception) { null } }
+    }
+    fun saveOrganization(scope: String?, id: String, result: CaptureOrganization) {
+        if (scope != null) prefs.edit().putString("captureOrganize.result.$scope.$id", json.encodeToString(result)).apply()
+    }
+
     var notificationPermissionAsked: Boolean
         get() = prefs.getBoolean("notificationPermissionAsked", false)
         set(value) { prefs.edit().putBoolean("notificationPermissionAsked", value).apply() }

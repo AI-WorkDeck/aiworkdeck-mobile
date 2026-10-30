@@ -61,13 +61,14 @@ class Backend(
         if (ids.isEmpty()) emptyList() else bare("/api/mobile/media/status?clientMediaIds=" + ids.joinToString(","))
 
     suspend fun upload(file: File, deviceId: String, projectKey: String, clientMediaId: String, fileName: String,
-                       mediaType: String, capturedAt: String, onProgress: (Double) -> Unit): UploadResult = withContext(Dispatchers.IO) {
+                       mediaType: String, capturedAt: String, organize: Boolean = false, onProgress: (Double) -> Unit): UploadResult = withContext(Dispatchers.IO) {
         val body = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("deviceId", deviceId).addFormDataPart("projectKey", projectKey)
             .addFormDataPart("clientMediaId", clientMediaId).addFormDataPart("fileName", fileName)
             .addFormDataPart("mediaType", mediaType).addFormDataPart("capturedAt", capturedAt)
+            .addFormDataPart("organize", organize.toString())
             .addFormDataPart("file", fileName, ProgressBody(file, onProgress)).build()
-        val text = execute(Request.Builder().url(baseUrl + "/api/mobile/media").post(body))
+        val text = execute(Request.Builder().url(baseUrl + "/api/mobile/media").post(body), upload = true)
         val el = json.parseToJsonElement(text).jsonObject
         checkEnvelopeCode(el)
         json.decodeFromJsonElement<UploadResult>(el)
@@ -163,12 +164,13 @@ class Backend(
             el["outTradeNo"]?.jsonPrimitive?.contentOrNull,
         )
     }
-    private suspend fun execute(b: Request.Builder): String = withContext(Dispatchers.IO) {
+    private suspend fun execute(b: Request.Builder, upload: Boolean = false): String = withContext(Dispatchers.IO) {
         check(accountActive()) { tr("files.error.closed") }
         kotlinx.coroutines.currentCoroutineContext().ensureActive()
         session.current()?.let { b.header("X-Session-Id", it) }
         b.header("X-App-Language", languageProvider())
-        client.newCall(b.build()).execute().use { resp ->
+        val transport = if (upload) client.newBuilder().readTimeout(120, java.util.concurrent.TimeUnit.SECONDS).build() else client
+        transport.newCall(b.build()).execute().use { resp ->
             val text = resp.body?.string() ?: ""
             check(accountActive()) { tr("files.error.closed") }
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
