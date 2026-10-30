@@ -21,7 +21,7 @@ final class CrossScreenRotationTests: XCTestCase {
     }
 
     @MainActor
-    private func cycle(_ name: String, app: XCUIApplication, elements: [XCUIElement]) {
+    private func cycle(_ name: String, app: XCUIApplication, elements: [XCUIElement], afterRotation: (() -> Void)? = nil) {
         Thread.sleep(forTimeInterval: 1)
         let before = elements.map(\.frame)
         record(name + " portrait before", app: app, elements: elements)
@@ -35,17 +35,17 @@ final class CrossScreenRotationTests: XCTestCase {
             let portrait = orientation == .portrait
             let frame = app.frame
             XCTAssertEqual(frame.width < frame.height, portrait, name + " application orientation")
-            // Each attribute read can resolve a new accessibility snapshot. Read
-            // geometry once per element; hittability still needs its own query.
-            expectation(for: NSPredicate { _, _ in
-                let window = app.frame.insetBy(dx: -1, dy: -1)
-                return elements.allSatisfy { element in
+            // Wait for each control separately. Accessibility requests are
+            // synchronous and must not consume another control's wait budget.
+            for element in elements {
+                expectation(for: NSPredicate { _, _ in
+                    let window = app.frame.insetBy(dx: -1, dy: -1)
                     guard let snapshot = try? element.snapshot() else { return false }
                     let frame = snapshot.frame
                     return !frame.isEmpty && window.contains(frame) && element.isHittable
-                }
-            }, evaluatedWith: app)
-            waitForExpectations(timeout: 15)
+                }, evaluatedWith: element)
+                waitForExpectations(timeout: 15)
+            }
             record(name + " \(orientation.rawValue)", app: app, elements: elements)
             let window = app.frame.insetBy(dx: -1, dy: -1)
             for (index, element) in elements.enumerated() {
@@ -64,6 +64,7 @@ final class CrossScreenRotationTests: XCTestCase {
                     XCTAssertEqual(old.height, new.height, accuracy: 2, name + " height after returning")
                 }
             }
+            afterRotation?()
         }
     }
 
@@ -148,7 +149,14 @@ final class CrossScreenRotationTests: XCTestCase {
         library.tap()
         let back = app.buttons["library.close"]
         XCTAssertTrue(back.waitForExistence(timeout: 10))
-        cycle("Library", app: app, elements: [back, app.segmentedControls.buttons["All"], app.segmentedControls.buttons["Audio"]])
+        let all = app.segmentedControls.buttons["All"]
+        let audio = app.segmentedControls.buttons["Audio"]
+        cycle("Library", app: app, elements: [back, all, audio]) {
+            audio.tap()
+            XCTAssertTrue(audio.isSelected, "Audio filter must respond after rotation")
+            all.tap()
+            XCTAssertTrue(all.isSelected, "All filter must respond after rotation")
+        }
         back.tap()
         returnToFiles(app)
     }
