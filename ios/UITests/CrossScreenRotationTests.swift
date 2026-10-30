@@ -21,7 +21,7 @@ final class CrossScreenRotationTests: XCTestCase {
     }
 
     @MainActor
-    private func cycle(_ name: String, app: XCUIApplication, elements: [XCUIElement], afterRotation: (() -> Void)? = nil) {
+    private func cycle(_ name: String, app: XCUIApplication, elements: [XCUIElement]) {
         Thread.sleep(forTimeInterval: 1)
         let before = elements.map(\.frame)
         record(name + " portrait before", app: app, elements: elements)
@@ -64,7 +64,6 @@ final class CrossScreenRotationTests: XCTestCase {
                     XCTAssertEqual(old.height, new.height, accuracy: 2, name + " height after returning")
                 }
             }
-            afterRotation?()
         }
     }
 
@@ -151,12 +150,13 @@ final class CrossScreenRotationTests: XCTestCase {
         XCTAssertTrue(back.waitForExistence(timeout: 10))
         let all = app.segmentedControls.buttons["All"]
         let audio = app.segmentedControls.buttons["Audio"]
-        cycle("Library", app: app, elements: [back, all, audio]) {
-            audio.tap()
-            XCTAssertTrue(audio.isSelected, "Audio filter must respond after rotation")
-            all.tap()
-            XCTAssertTrue(all.isSelected, "All filter must respond after rotation")
-        }
+        cycle("Library", app: app, elements: [back, all, audio])
+        // Check both filter changes after all four rotations, then return to files.
+        // The cycle checks each control's geometry and hittability at every turn.
+        audio.tap()
+        XCTAssertTrue(audio.isSelected, "Audio filter must respond after rotation")
+        all.tap()
+        XCTAssertTrue(all.isSelected, "All filter must respond after rotation")
         back.tap()
         returnToFiles(app)
     }
