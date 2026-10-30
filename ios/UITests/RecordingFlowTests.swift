@@ -155,31 +155,20 @@ final class RecordingFlowTests: XCTestCase {
         let shutter = app.buttons["capture.shutter"]
         XCTAssertTrue(app.staticTexts["recording.elapsed"].waitForExistence(timeout: 5))
         XCUIDevice.shared.orientation = .landscapeLeft
-        expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: shutter)
-        waitForExpectations(timeout: 5)
-        XCTAssertGreaterThan(app.frame.width, app.frame.height)
-        XCTAssertEqual(shutter.label, "Stop recording")
-        XCTAssertTrue(shutter.isHittable)
+        let recording = ReadyControl(element: shutter, identifier: "capture.shutter", label: "Stop recording")
+        guard waitForReadyControl(recording, in: app, portrait: false, timeout: 5) != nil else { return }
         XCUIDevice.shared.press(.home)
         Thread.sleep(forTimeInterval: 3)
         app.activate()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 5))
-        expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: shutter)
-        waitForExpectations(timeout: 5)
-        XCTAssertEqual(shutter.label, "Stop recording")
-        XCTAssertTrue(shutter.isEnabled)
-        XCTAssertTrue(shutter.isHittable)
+        guard waitForReadyControl(recording, in: app, portrait: false, timeout: 5) != nil else { return }
         let elapsed = app.staticTexts["recording.elapsed"]
         XCTAssertNotEqual(elapsed.label, "00:00")
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.lifetime = .keepAlways
         add(screenshot)
         XCUIDevice.shared.orientation = .portrait
-        expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: shutter)
-        waitForExpectations(timeout: 5)
-        XCTAssertLessThan(app.frame.width, app.frame.height)
-        XCTAssertEqual(shutter.label, "Stop recording")
-        XCTAssertTrue(shutter.isHittable)
+        guard waitForReadyControl(recording, in: app, portrait: true, timeout: 5) != nil else { return }
         shutter.tap()
         let saved = app.buttons["Recording saved · Open library to play"]
         XCTAssertTrue(saved.waitForExistence(timeout: 10))
