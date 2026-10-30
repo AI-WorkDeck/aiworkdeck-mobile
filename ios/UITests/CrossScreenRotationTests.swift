@@ -11,7 +11,10 @@ final class CrossScreenRotationTests: XCTestCase {
 
     @MainActor
     private func record(_ name: String, app: XCUIApplication, elements: [XCUIElement]) {
-        let geometry = XCTAttachment(string: (["app=\(app.frame)"] + elements.map { "\($0.identifier) \($0.label): frame=\($0.frame), hittable=\($0.isHittable)" }).joined(separator: "\n"))
+        let geometry = XCTAttachment(string: (["app=\(app.frame)"] + elements.map { element in
+            guard let snapshot = try? element.snapshot() else { return "Element snapshot unavailable" }
+            return "\(snapshot.identifier) \(snapshot.label): frame=\(snapshot.frame), hittable=\(element.isHittable)"
+        }).joined(separator: "\n"))
         geometry.name = name + " geometry"; geometry.lifetime = .keepAlways; add(geometry)
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = name; screenshot.lifetime = .keepAlways; add(screenshot)
@@ -25,28 +28,36 @@ final class CrossScreenRotationTests: XCTestCase {
         for orientation: UIDeviceOrientation in [.landscapeLeft, .portrait, .landscapeRight, .portrait] {
             XCUIDevice.shared.orientation = orientation
             expectation(for: NSPredicate { _, _ in
-                (app.frame.height > app.frame.width) == (orientation == .portrait)
+                let frame = app.frame
+                return (frame.height > frame.width) == (orientation == .portrait)
             }, evaluatedWith: app)
             waitForExpectations(timeout: 15)
             let portrait = orientation == .portrait
-            XCTAssertEqual(app.frame.width < app.frame.height, portrait, name + " application orientation")
-            // One predicate keeps accessibility queries sequential during rotation.
+            let frame = app.frame
+            XCTAssertEqual(frame.width < frame.height, portrait, name + " application orientation")
+            // Each attribute read can resolve a new accessibility snapshot. Read
+            // geometry once per element; hittability still needs its own query.
             expectation(for: NSPredicate { _, _ in
                 let window = app.frame.insetBy(dx: -1, dy: -1)
                 return elements.allSatisfy { element in
-                    guard element.exists else { return false }
-                    let frame = element.frame
+                    guard let snapshot = try? element.snapshot() else { return false }
+                    let frame = snapshot.frame
                     return !frame.isEmpty && window.contains(frame) && element.isHittable
                 }
             }, evaluatedWith: app)
             waitForExpectations(timeout: 15)
             record(name + " \(orientation.rawValue)", app: app, elements: elements)
+            let window = app.frame.insetBy(dx: -1, dy: -1)
             for (index, element) in elements.enumerated() {
-                XCTAssertTrue(element.exists, name + " missing " + element.identifier)
-                XCTAssertTrue(element.isHittable, name + " unreachable " + element.identifier)
-                XCTAssertTrue(app.frame.insetBy(dx: -1, dy: -1).contains(element.frame), name + " outside window " + element.identifier)
+                guard let snapshot = try? element.snapshot() else {
+                    XCTFail(name + " missing element snapshot")
+                    return
+                }
+                XCTAssertTrue(element.exists, name + " missing " + snapshot.identifier)
+                XCTAssertTrue(element.isHittable, name + " unreachable " + snapshot.identifier)
+                XCTAssertTrue(window.contains(snapshot.frame), name + " outside window " + snapshot.identifier)
                 if portrait {
-                    let old = before[index], new = element.frame
+                    let old = before[index], new = snapshot.frame
                     XCTAssertEqual(old.minX, new.minX, accuracy: 2, name + " x after returning")
                     XCTAssertEqual(old.minY, new.minY, accuracy: 2, name + " y after returning")
                     XCTAssertEqual(old.width, new.width, accuracy: 2, name + " width after returning")
