@@ -30,9 +30,15 @@ final class CrossScreenRotationTests: XCTestCase {
             waitForExpectations(timeout: 15)
             let portrait = orientation == .portrait
             XCTAssertEqual(app.frame.width < app.frame.height, portrait, name + " application orientation")
-            for element in elements {
-                expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: element)
-            }
+            // One predicate keeps accessibility queries sequential during rotation.
+            expectation(for: NSPredicate { _, _ in
+                let window = app.frame.insetBy(dx: -1, dy: -1)
+                return elements.allSatisfy { element in
+                    guard element.exists else { return false }
+                    let frame = element.frame
+                    return !frame.isEmpty && window.contains(frame) && element.isHittable
+                }
+            }, evaluatedWith: app)
             waitForExpectations(timeout: 15)
             record(name + " \(orientation.rawValue)", app: app, elements: elements)
             for (index, element) in elements.enumerated() {

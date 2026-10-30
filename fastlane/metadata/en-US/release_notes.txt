@@ -1,3 +1,4 @@
-1. Choose from more interface languages in Settings.
-2. Improve Traditional Chinese and other translations, with right-to-left layouts for supported languages.
-3. Refresh screen text more consistently after switching languages across projects, capture, and settings.
+1. Start from the new Capture home, with Calendar and Assistant tabs and account settings under your avatar.
+2. Start recording with one tap beside the shutter. Capture without choosing a project and keep audio recording across screens.
+3. Manage captures in one upload queue, assign or copy them to projects, and move archived originals when supported by the companion service and desktop app.
+4. Improve iPhone rotation and fix closing and returning from settings on Duo.

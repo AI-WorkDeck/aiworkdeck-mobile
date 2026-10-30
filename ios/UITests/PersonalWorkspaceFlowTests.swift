@@ -82,7 +82,9 @@ final class PersonalWorkspaceFlowTests: XCTestCase {
         personalTab(app, .assistant).tap()
         let input = app.textFields["personal.input"]
         XCTAssertTrue(input.waitForExistence(timeout: 12))
+        capture("Personal assistant empty input", app)
         input.tap(); input.typeText("What needs attention today?")
+        capture("Personal assistant composed input", app)
         app.buttons["personal.send"].tap()
         XCTAssertTrue(app.staticTexts["Review the evidence checklist today. The source is Alpha project."].waitForExistence(timeout: 8))
         capture("Personal assistant", app)
