@@ -213,9 +213,11 @@ export class AppModel {
    * 登出就删是灾难性的默认。
    */
   async signOut(): Promise<void> {
+    const organizationScope: string = Prefs.organizationScope(ServiceLocator.baseUrl(), await ServiceLocator.session.current())
+    await ServiceLocator.backend.logout()
+    await ServiceLocator.prefs.clearOrganization(organizationScope)
     await PersonalConversationStore.clear()
     await CalendarReminders.clear()
-    await ServiceLocator.backend.logout()
     await ServiceLocator.prefs.setSelectedProject(null)
     this.stopHeartbeat()
     this.signedIn = false
@@ -235,8 +237,8 @@ export class AppModel {
   async deleteAccount(): Promise<void> {
     const organizationScope: string = Prefs.organizationScope(ServiceLocator.baseUrl(), await ServiceLocator.session.current())
     await ServiceLocator.backend.deleteAccount()
-    await ServiceLocator.prefs.clearOrganization(organizationScope)
     await this.signOut()
+    await ServiceLocator.prefs.clearOrganization(organizationScope)
   }
 
   /** 云端中转区用量。设置页进页面拉一次；失败让调用方自己决定怎么显示（那里用「—」占位）。 */

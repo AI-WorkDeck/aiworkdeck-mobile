@@ -30,7 +30,12 @@ class BackendUploader(private val backend: Backend, private val organizationPref
             onProgress = onProgress,
         )
         if (item.localFile.exists() && (organize || (result.organization != null && result.organization.state != "disabled"))) {
-            organizationPrefs?.saveOrganization(scope, item.manifest.clientMediaId, result.organization ?: CaptureOrganization("unknown"))
+            organizationPrefs?.let { prefs ->
+                synchronized(prefs) {
+                    if (scope != null && scope == backend.personalAccountScope())
+                        prefs.saveOrganization(scope, item.manifest.clientMediaId, result.organization ?: CaptureOrganization("unknown"))
+                }
+            }
         }
         return result
     }

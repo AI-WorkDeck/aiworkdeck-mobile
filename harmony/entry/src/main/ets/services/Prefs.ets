@@ -114,9 +114,16 @@ export class Prefs {
     await p.flush()
   }
 
-  async saveOrganization(scope: string, id: string, result: CaptureOrganization): Promise<void> {
+  async saveOrganization(scope: string, id: string, result: CaptureOrganization,
+    isCurrent: () => Promise<boolean>): Promise<void> {
     if (scope.length === 0) return
-    await this.putString('captureOrganize.result.' + scope + '.' + id, ArkJson.stringify(result))
+    const p: preferences.Preferences = await this.open()
+    if (!await isCurrent()) return
+    const key: string = 'captureOrganize.result.' + scope + '.' + id
+    p.putSync(key, ArkJson.stringify(result))
+    await p.flush()
+    // Account clearing can run while the flush is pending. Never leave a late result behind.
+    if (!await isCurrent()) { p.deleteSync(key); await p.flush() }
   }
 
   async saveToAlbum(): Promise<boolean> {

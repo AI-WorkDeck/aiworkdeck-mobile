@@ -248,10 +248,12 @@ final class AppModel {
     }
 
     func signOut() {
+        let organizationScope = CaptureOrganizationStore.scope()
+        API.shared.logout()
+        CaptureOrganizationStore.clear(scope: organizationScope)
         PersonalConversationStore.clear()
         CalendarReminders.shared.clear()
         closeWorkspaceFiles()
-        API.shared.logout()
         selectedProject = nil
         project = FieldProject(id: "local", name: tr("project.none"),
                                archivePath: tr("archive.path", ["date": AppModel.today]))

@@ -152,7 +152,11 @@ export class Uploader {
     try {
     if (fs.accessSync(item.localPath) && (organize || (result.organization !== undefined && result.organization.state !== 'disabled'))) {
       const organization: CaptureOrganization = result.organization ?? { state: 'unknown', tags: [] }
-      await this.prefs.saveOrganization(organizationScope, clientMediaId, organization).catch((): void => {})
+      await this.prefs.saveOrganization(organizationScope, clientMediaId, organization, async (): Promise<boolean> => {
+        const currentSession: string | null = await this.session.current()
+        return organizationScope === Prefs.organizationScope(baseUrlOf(this.region()), currentSession)
+          && fs.accessSync(item.localPath)
+      }).catch((): void => {})
     }
     } catch (e) { /* A deleted original must not recreate result metadata. */ }
     return result

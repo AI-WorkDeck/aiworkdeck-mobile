@@ -380,10 +380,15 @@ actor API: ArchiveMoveServing {
         }
         struct OrganizationEnvelope: Decodable { let organization: CaptureOrganization? }
         let result = (try? JSONDecoder().decode(OrganizationEnvelope.self, from: data))?.organization
-        if let result, result.state != "disabled", FileManager.default.fileExists(atPath: item.localURL.path) {
-            CaptureOrganizationStore.save(result, id: item.effectiveClientMediaId, scope: organizationScope)
-        } else if organize, FileManager.default.fileExists(atPath: item.localURL.path) {
-            CaptureOrganizationStore.save(result ?? CaptureOrganization(state: "unknown"), id: item.effectiveClientMediaId, scope: organizationScope)
+        await MainActor.run {
+            // Sign-out/account deletion runs on this actor too: compare and persist without suspension.
+            guard organizationScope == CaptureOrganizationStore.scope(),
+                  FileManager.default.fileExists(atPath: item.localURL.path) else { return }
+            if let result, result.state != "disabled" {
+                CaptureOrganizationStore.save(result, id: item.effectiveClientMediaId, scope: organizationScope)
+            } else if organize {
+                CaptureOrganizationStore.save(result ?? CaptureOrganization(state: "unknown"), id: item.effectiveClientMediaId, scope: organizationScope)
+            }
         }
     }
 

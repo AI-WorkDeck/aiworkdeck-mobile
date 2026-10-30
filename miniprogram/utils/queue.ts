@@ -277,6 +277,7 @@ export function processQueue(): void {
   })
 
   const organizationScope = personalAccountScope()
+  const organizationSession = getSession()
   uploadMedia({
     filePath: next.filePath,
     deviceId: next.deviceId,
@@ -289,7 +290,7 @@ export function processQueue(): void {
     .then((organization) => {
       updateItem(next.clientMediaId, (it) => {
         it.state = 'uploaded'
-        if (organization) { it.organization = organization; it.organizationScope = organizationScope }
+        if (organization && organizationSession === getSession() && organizationScope === personalAccountScope()) { it.organization = organization; it.organizationScope = organizationScope }
       })
       uploading = false
       processQueue()

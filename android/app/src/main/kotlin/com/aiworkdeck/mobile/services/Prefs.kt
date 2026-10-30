@@ -22,7 +22,7 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
         for (key in prefs.all.keys) if (key.startsWith("captureOrganize.result.") && ids.any { key.endsWith(".$it") }) editor.remove(key)
         editor.apply()
     }
-    fun clearOrganization(scope: String?) {
+    @Synchronized fun clearOrganization(scope: String?) {
         if (scope == null) return
         val editor = prefs.edit().remove("captureOrganize.enabled.$scope")
         for (key in prefs.all.keys) if (key.startsWith("captureOrganize.result.$scope.")) editor.remove(key)
