@@ -28,7 +28,7 @@ final class CaptureContinuityTests: XCTestCase {
             expectation(for: NSPredicate { _, _ in
                 // Notification authorization is asynchronous and can arrive after
                 // recording starts, including in the middle of a rotation.
-                self.allowVisibleRecordingPermission()
+                if self.allowVisibleRecordingPermission() { return false }
                 return (app.frame.height > app.frame.width) == (orientation == .portrait)
                     && shutter.isHittable
             }, evaluatedWith: app)
@@ -50,7 +50,7 @@ final class CaptureContinuityTests: XCTestCase {
         let pausedElapsed = app.staticTexts["recording.elapsed"].label
         XCUIDevice.shared.orientation = .landscapeLeft
         expectation(for: NSPredicate { _, _ in
-            self.allowVisibleRecordingPermission()
+            if self.allowVisibleRecordingPermission() { return false }
             return app.frame.width > app.frame.height && shutter.isHittable
         }, evaluatedWith: app)
         waitForExpectations(timeout: 15)
