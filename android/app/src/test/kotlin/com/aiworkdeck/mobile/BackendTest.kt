@@ -161,4 +161,22 @@ class BackendTest {
         val request = server.takeRequest()
         assertEquals("/api/mobile/media/status?clientMediaIds=a,b", request.path)
     }
+    @Test fun audioOrganizationConsentAndResultKeepOriginalBytes() = runTest {
+        session.save("synthetic-organize-session")
+        val original = byteArrayOf(5, 8, 13)
+        val file = File.createTempFile("capture-organize", ".m4a").apply { writeBytes(original) }
+        try {
+            for (state in listOf("ready", "needs_review", "failed")) {
+                server.enqueue(MockResponse().setBody("""{"code":0,"id":9,"clientMediaId":"audio-id","delivered":false,"organization":{"state":"$state","originalName":"audio.m4a","fileName":"Interview.m4a","archiveName":"Interview-audio-id.m4a","tags":["Interview"]}}"""))
+                val result = backend.upload(file, "desktop", "project", "audio-id", "audio.m4a", "audio", "2026-10-30T10:00:00+08:00", organize = true) {}
+                assertEquals(state, result.organization?.state)
+                assertEquals("Interview-audio-id.m4a", result.organization?.archiveName)
+                assertArrayEquals(original, file.readBytes())
+                val body = server.takeRequest().body.readUtf8()
+                assertTrue(body.contains("name=\"organize\"\r\n\r\ntrue"))
+                assertTrue(body.contains("name=\"clientMediaId\"\r\n\r\naudio-id"))
+            }
+        } finally { file.delete() }
+    }
+
 }

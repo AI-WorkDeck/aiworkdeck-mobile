@@ -486,5 +486,12 @@
   "privacy.policy": "Chính sách quyền riêng tư",
   "privacy.accept": "Đồng ý và tiếp tục",
   "privacy.decline": "Từ chối và thoát",
-  "home.location.enable": "Thêm vị trí"
+  "home.location.enable": "Thêm vị trí",
+  "organize.title": "Tự động đặt tên và gắn thẻ tư liệu",
+  "organize.hint": "Đọc trước các lần tải lên tiếp theo bằng dịch vụ AI của tài khoản, tính phí theo mức sử dụng mô hình thực tế. Giữ nguyên bản gốc; nhận dạng thất bại sẽ giữ tên gốc. Hỗ trợ ảnh, video và ghi âm. Âm thanh và video chỉ được đọc theo mẫu, không phiên âm toàn bộ.",
+  "organize.uploading": "Đang tải lên và chờ kết quả lưu trữ",
+  "organize.ready": "Đã tự động sắp xếp",
+  "organize.review": "Cần kiểm tra kết quả nhận dạng",
+  "organize.unknown": "Chưa nhận được kết quả; hãy kiểm tra tệp đã lưu",
+  "organize.notApplied": "Chưa áp dụng sắp xếp tự động; giữ tên gốc"
 }

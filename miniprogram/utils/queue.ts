@@ -9,7 +9,7 @@
  * pollStatus() 单次查询。
  */
 
-import { ApiError, getSession, mediaStatus, uploadMedia, uuid, type RelayProject } from './api'
+import { ApiError, getSession, mediaStatus, uploadMedia, uuid, type RelayProject, type CaptureOrganization, personalAccountScope } from './api'
 import { projectId, tallyOf, type Tally } from './phase'
 import { recover, applyStatus } from './transition'
 import { t } from './i18n'
@@ -20,6 +20,8 @@ export type { QueueState } from './contract/states'
 const STORAGE_KEY = 'awd.queue'
 
 export interface QueueItem {
+  organization?: CaptureOrganization
+  organizationScope?: string | null
   /** uuid()，幂等键，重传不产生重复件 */
   clientMediaId: string
   /** 照片_20260820_141516.jpg / 录像_20260820_141516_段1.mp4 / 录音_20260820_141516_段1.mp3 */
@@ -274,6 +276,8 @@ export function processQueue(): void {
     it.errorMessage = undefined
   })
 
+  const organizationScope = personalAccountScope()
+  const organizationSession = getSession()
   uploadMedia({
     filePath: next.filePath,
     deviceId: next.deviceId,
@@ -283,9 +287,10 @@ export function processQueue(): void {
     mediaType: next.mediaType,
     capturedAt: next.capturedAt,
   })
-    .then(() => {
+    .then((organization) => {
       updateItem(next.clientMediaId, (it) => {
         it.state = 'uploaded'
+        if (organization && organizationSession === getSession() && organizationScope === personalAccountScope()) { it.organization = organization; it.organizationScope = organizationScope }
       })
       uploading = false
       processQueue()

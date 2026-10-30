@@ -42,6 +42,13 @@
   </view>
   <view class="rule"></view>
 
+  <view class="row">
+    <text class="row__label">{{organizeTitle}}</text>
+    <switch checked="{{organizeEnabled}}" bindchange="onOrganizeChange" />
+  </view>
+  <text class="hint">{{organizeHint}}</text>
+  <view class="rule"></view>
+
   <picker mode="selector" range="{{languageOptions}}" range-key="label" value="{{languageIndex}}" bindchange="onLanguageChange">
     <view class="row tappable">
       <text class="row__label">{{languageLabel}}</text>

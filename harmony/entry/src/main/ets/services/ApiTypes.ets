@@ -51,7 +51,26 @@ export interface SubscriptionBalance {
   weeklyUsedCents: number
 }
 
+export interface CaptureOrganization {
+  state: string
+  originalName?: string
+  fileName?: string
+  archiveName?: string
+  tags: string[]
+}
+
+export function decodeCaptureOrganization(value: Object | null | undefined): CaptureOrganization | undefined {
+  const o: Record<string, Object> | null = asRecord(value)
+  if (o === null) return undefined
+  const state: string | undefined = getString(o, 'state')
+  if (state === undefined) return undefined
+  const tags: string[] = []
+  for (const tag of asArray(o['tags']) ?? []) { if (typeof tag === 'string') tags.push(tag as string) }
+  return { state: state, originalName: getString(o, 'originalName'), fileName: getString(o, 'fileName'), archiveName: getString(o, 'archiveName'), tags: tags }
+}
+
 export interface UploadResult {
+  organization?: CaptureOrganization
   projectUid?: string
   fileUid?: string
   fileId?: number
@@ -186,6 +205,7 @@ export function decodeUploadResult(o: Record<string, Object>, clientMediaId: str
     code: getNumber(o, 'code') ?? 0,
     id: getNumber(o, 'id') ?? 0,
     clientMediaId: getString(o, 'clientMediaId') ?? clientMediaId,
+    organization: decodeCaptureOrganization(o['organization']),
     projectUid: getString(o, 'projectUid'), fileUid: getString(o, 'fileUid'), fileId: getNumber(o, 'fileId'),
     delivered: getBoolean(o, 'delivered') ?? false,
   }

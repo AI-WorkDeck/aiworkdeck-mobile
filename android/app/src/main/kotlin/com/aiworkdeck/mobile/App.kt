@@ -44,7 +44,7 @@ class App : Application() {
         ServiceLocator.backend = backend
         ServiceLocator.queue = UploadQueue(
             store = store,
-            uploader = BackendUploader(backend) { prefs.deviceId },
+            uploader = BackendUploader(backend, prefs) { prefs.deviceId },
         )
         // 通知渠道先建好：Worker 要举前台通知，渠道不存在时通知不显示，任务会被系统当作
         // 无前台的长任务掐掉。

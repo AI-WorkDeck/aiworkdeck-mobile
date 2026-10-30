@@ -486,5 +486,12 @@
   "privacy.policy": "Informativa sulla privacy",
   "privacy.accept": "Accetta e continua",
   "privacy.decline": "Rifiuta ed esci",
-  "home.location.enable": "Aggiungi posizione"
+  "home.location.enable": "Aggiungi posizione",
+  "organize.title": "Nomi e tag automatici per le acquisizioni",
+  "organize.hint": "Lettura preliminare dei prossimi caricamenti tramite il servizio IA del tuo account, con addebito in base all’uso effettivo del modello. Gli originali sono conservati; se il riconoscimento fallisce, resta il nome originale. Supporta foto, video e registrazioni. Audio e video vengono campionati, senza trascrizione completa.",
+  "organize.uploading": "Caricamento e attesa del risultato di archiviazione",
+  "organize.ready": "Organizzato automaticamente",
+  "organize.review": "Riconoscimento da verificare",
+  "organize.unknown": "Risultato non ricevuto; verifica il file archiviato",
+  "organize.notApplied": "Organizzazione automatica non applicata; nome originale conservato"
 }

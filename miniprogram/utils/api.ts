@@ -94,6 +94,20 @@ export function personalAccountScope(): string | null {
   return getSession() && user?.id != null ? BASE_URL + ':' + String(user.id) : null
 }
 
+export function captureOrganizationEnabled(): boolean {
+  const scope = personalAccountScope()
+  return !!scope && wx.getStorageSync('awd.captureOrganize') === scope
+}
+export function setCaptureOrganizationEnabled(enabled: boolean): void {
+  const scope = personalAccountScope()
+  if (enabled && scope) wx.setStorageSync('awd.captureOrganize', scope)
+  else wx.removeStorageSync('awd.captureOrganize')
+}
+export interface CaptureOrganization { state: string; originalName?: string; fileName?: string; archiveName?: string; tags?: string[] }
+export function captureOrganizationCaption(result: CaptureOrganization): string {
+  return t('organize.' + (result.state === 'ready' ? 'ready' : result.state === 'needs_review' ? 'review' : result.state === 'unknown' ? 'unknown' : 'notApplied'))
+}
+
 function clearFilePreviews(): void {
   const pulls = wx.getStorageSync('awd.filePulls') || {}
   for (const row of Object.values(pulls) as { path?: string }[]) {
@@ -106,6 +120,7 @@ export function setSession(v: string | null): void {
   if (getSession() !== v) {
     clearFilePreviews()
     wx.removeStorageSync('awd.personalConversation')
+    wx.removeStorageSync('awd.captureOrganize')
     setSelectedProject(null)
   }
   if (v) {
@@ -522,11 +537,13 @@ export function uploadMedia(opts: {
   mediaType: 'image' | 'video' | 'audio'
   capturedAt: string
   onProgress?: (percent: number) => void
-}): Promise<void> {
+}): Promise<CaptureOrganization | undefined> {
+  const organize = captureOrganizationEnabled()
   return new Promise((resolve, reject) => {
     const task = wx.uploadFile({
       url: BASE_URL + '/api/mobile/media',
       filePath: opts.filePath,
+      timeout: 180000,
       name: 'file',
       header: authHeader(),
       formData: {
@@ -536,6 +553,7 @@ export function uploadMedia(opts: {
         fileName: opts.fileName,
         mediaType: opts.mediaType,
         capturedAt: opts.capturedAt,
+        organize: organize ? 'true' : 'false',
       },
       success: (res) => {
         // uploadFile 的 res.data 是字符串，先解出来再走同一套信封判读。
@@ -547,7 +565,8 @@ export function uploadMedia(opts: {
             throw new ApiError(-1, t('error.badResponse'))
           }
           readEnvelope<void>(res.statusCode, body)
-          resolve()
+          const value = (body as { organization?: CaptureOrganization }).organization
+          resolve(value ?? (organize ? { state: 'unknown' } : undefined))
         } catch (e) {
           reject(e)
         }

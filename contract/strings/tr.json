@@ -486,5 +486,12 @@
   "privacy.policy": "Gizlilik politikası",
   "privacy.accept": "Kabul et ve devam et",
   "privacy.decline": "Reddet ve çık",
-  "home.location.enable": "Konum ekle"
+  "home.location.enable": "Konum ekle",
+  "organize.title": "Kayıtları otomatik adlandır ve etiketle",
+  "organize.hint": "Sonraki yüklemeler hesabınızın yapay zekâ hizmetiyle ön okunur ve gerçek model kullanımına göre ücretlendirilir. Asıllar korunur; tanıma başarısız olursa özgün ad kalır. Fotoğraf, video ve kayıtları destekler. Ses ve video örneklenir; tam döküm yapılmaz.",
+  "organize.uploading": "Yükleniyor ve arşivleme sonucu bekleniyor",
+  "organize.ready": "Otomatik düzenlendi",
+  "organize.review": "Tanıma sonucu incelenmeli",
+  "organize.unknown": "Sonuç alınamadı; arşivlenen dosyayı kontrol edin",
+  "organize.notApplied": "Otomatik düzenleme uygulanmadı; özgün ad korundu"
 }

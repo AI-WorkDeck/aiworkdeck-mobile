@@ -486,5 +486,12 @@
   "privacy.policy": "Privacybeleid",
   "privacy.accept": "Akkoord en doorgaan",
   "privacy.decline": "Weigeren en afsluiten",
-  "home.location.enable": "Locatie toevoegen"
+  "home.location.enable": "Locatie toevoegen",
+  "organize.title": "Opnamen automatisch benoemen en labelen",
+  "organize.hint": "Toekomstige uploads vooraf laten lezen door de AI-dienst van uw account, met kosten naar werkelijk modelgebruik. Originelen blijven bewaard; bij mislukte herkenning blijft de oorspronkelijke naam behouden. Ondersteunt foto’s, video’s en opnamen. Audio en video worden steekproefsgewijs gelezen, zonder volledige transcriptie.",
+  "organize.uploading": "Uploaden en wachten op het archiveringsresultaat",
+  "organize.ready": "Automatisch geordend",
+  "organize.review": "Herkenning controleren",
+  "organize.unknown": "Geen resultaat ontvangen; controleer het gearchiveerde bestand",
+  "organize.notApplied": "Automatisch ordenen niet toegepast; oorspronkelijke naam behouden"
 }

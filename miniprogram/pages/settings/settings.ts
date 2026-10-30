@@ -1,3 +1,4 @@
+import { captureOrganizationEnabled, setCaptureOrganizationEnabled, personalAccountScope } from '../../utils/api'
 import { chooseBackupConsent } from '../../utils/backup-consent'
 /**
  * 「我的」页（dev-board#535）。
@@ -67,7 +68,9 @@ function languageState() {
 }
 
 Page({
+  organizationScope: null as string | null,
   data: {
+    organizeEnabled: false, organizeTitle: t('organize.title'), organizeHint: t('organize.hint'),
     metrics: {} as Metrics,
     dir: 'ltr',
     navTitle: t('settings.title'),
@@ -107,11 +110,14 @@ Page({
       signOutText: t('common.signOut'),
       backupTitle: t('backup.title'),
       ...languageState(),
+      organizeTitle: t('organize.title'), organizeHint: t('organize.hint'),
     })
   },
 
   onShow() {
+    this.organizationScope = personalAccountScope()
     this.setData({
+      organizeEnabled: captureOrganizationEnabled(),
       navTitle: t('settings.title'),
       accountLabel: t('settings.account'),
       balanceTitle: t('balance.title'),
@@ -121,10 +127,17 @@ Page({
       signOutText: t('common.signOut'),
       backupTitle: t('backup.title'),
       ...languageState(),
+      organizeTitle: t('organize.title'), organizeHint: t('organize.hint'),
     })
     // 从充值页返回也走这里：付完钱回来余额要是新的
     this.loadBalance()
     this.loadBackup()
+  },
+
+  onOrganizeChange(e: { detail: { value: boolean } }) {
+    if (this.organizationScope !== personalAccountScope()) return
+    setCaptureOrganizationEnabled(e.detail.value)
+    this.setData({ organizeEnabled: captureOrganizationEnabled() })
   },
 
   onLanguageChange(e: { detail: { value: string | number } }) {
@@ -142,6 +155,7 @@ Page({
       signOutText: t('common.signOut'),
       backupTitle: t('backup.title'),
       ...languageState(),
+      organizeTitle: t('organize.title'), organizeHint: t('organize.hint'),
     })
     this.loadBalance()
     this.loadBackup()

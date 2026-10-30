@@ -486,5 +486,12 @@
   "privacy.policy": "Privacy policy",
   "privacy.accept": "Agree and continue",
   "privacy.decline": "Decline and exit",
-  "home.location.enable": "Add location"
+  "home.location.enable": "Add location",
+  "organize.title": "Automatically name and tag captures",
+  "organize.hint": "Pre-read future uploads through your account’s AI service, charged by actual model usage. Originals are retained; failed recognition keeps the original name. Supports photos, videos and recordings. Audio and video are sampled, not fully transcribed.",
+  "organize.uploading": "Uploading and waiting for filing results",
+  "organize.ready": "Automatically organized",
+  "organize.review": "Recognition needs review",
+  "organize.unknown": "No organization result received; check the archived file",
+  "organize.notApplied": "Automatic organization not applied; original name retained"
 }

@@ -8,6 +8,8 @@ struct SettingsView: View {
     var onClose: () -> Void
 
     @State private var saveToAlbum = Prefs.saveToAlbum
+    @State private var organizeCaptures = CaptureOrganizationStore.enabled()
+    private let organizationScope = CaptureOrganizationStore.scope()
     @State private var albumError: String?
     @State private var usage: API.MediaUsage?
     @State private var balanceState: BalanceState = .unknown
@@ -119,6 +121,20 @@ struct SettingsView: View {
                     }
 
                     group(tr("settings.media")) {
+                        Toggle(isOn: $organizeCaptures) {
+                            VStack(alignment: .leading, spacing: T.Sp.s1) {
+                                Text(tr("organize.title")).font(T.F.body())
+                                Text(tr("organize.hint")).font(T.F.nano()).foregroundStyle(T.L.fgFaint)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .tint(T.L.accent)
+                        .accessibilityIdentifier("settings.organizeCaptures")
+                        .onChange(of: organizeCaptures) { _, value in
+                            guard organizationScope == CaptureOrganizationStore.scope() else { organizeCaptures = false; return }
+                            CaptureOrganizationStore.setEnabled(value, scope: organizationScope)
+                        }
+
                         Toggle(isOn: $saveToAlbum) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(tr("settings.saveToAlbum"))

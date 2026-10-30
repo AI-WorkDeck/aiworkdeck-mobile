@@ -1,3 +1,4 @@
+import { Prefs } from '../services/Prefs'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { ContractCapabilities, ContractLocale } from 'contract'
 import { BackupConsentService } from '../services/BackupConsentService'
@@ -42,6 +43,8 @@ function hostOf(url: string): string {
 export struct Settings {
   stack: NavPathStack = new NavPathStack()
   @StorageProp('awdLocale') locale: string = LOCALE_ZH
+  private organizationScope: string = ''
+  @State organizeCaptures: boolean = false
   @State saveToAlbum: boolean = false
   @State showLanguagePicker: boolean = false
   @State projectName: string = DASH
@@ -58,6 +61,11 @@ export struct Settings {
 
   aboutToAppear(): void {
     this.alive = true
+    ServiceLocator.session.current().then((sid: string | null): void => {
+      if (!this.alive) return
+      this.organizationScope = Prefs.organizationScope(ServiceLocator.baseUrl(), sid)
+      this.organizeCaptures = ServiceLocator.prefs.organizeCaptures(this.organizationScope)
+    }).catch((): void => {})
     this.token = AppModel.shared.subscribe((): void => this.syncProject())
     this.syncProject()
     ServiceLocator.backend.backupConsent().then((v: BackupConsent): void => { if (this.alive) this.backup = v }).catch((): void => {})
@@ -146,6 +154,24 @@ export struct Settings {
   @Builder
   mediaGroup() {
     this.eyebrow(this.t('settings.media'))
+    Row({ space: Tk.Sp.s3 }) {
+      Column({ space: Tk.Sp.s1 }) {
+        Text(this.t('organize.title')).fontSize(Tk.Ty.body).fontColor(Tk.L.fg)
+        Text(this.t('organize.hint')).fontSize(Tk.Ty.nano).fontColor(Tk.L.fgFaint)
+      }.alignItems(HorizontalAlign.Start).layoutWeight(1)
+      Toggle({ type: ToggleType.Switch, isOn: this.organizeCaptures })
+        .enabled(this.organizationScope.length > 0)
+        .selectedColor(Tk.L.accent)
+        .onChange((value: boolean): void => {
+          const expected: string = this.organizationScope
+          ServiceLocator.session.current().then(async (sid: string | null): Promise<void> => {
+            if (!this.alive || expected !== Prefs.organizationScope(ServiceLocator.baseUrl(), sid)) return
+            await ServiceLocator.prefs.setOrganizeCaptures(expected, value)
+            if (this.alive) this.organizeCaptures = value
+          }).catch((): void => { toast(this.getUIContext(), this.t('error.network')) })
+        })
+    }.width('100%').alignItems(VerticalAlign.Center)
+    this.rule()
     Row({ space: Tk.Sp.s3 }) {
       Column({ space: Tk.Sp.s1 }) {
         Text(this.t('settings.saveToAlbum'))

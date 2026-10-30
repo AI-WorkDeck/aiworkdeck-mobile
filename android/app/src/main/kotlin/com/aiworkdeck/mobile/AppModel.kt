@@ -238,9 +238,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * 登出就删是灾难性的默认。
      */
     fun signOut() {
+        val organizationScope = backend.personalAccountScope()
+        synchronized(prefs) {
+            backend.logout()
+            prefs.clearOrganization(organizationScope)
+        }
         com.aiworkdeck.mobile.services.PersonalConversationStore.clear(getApplication())
         com.aiworkdeck.mobile.services.CalendarReminders.clear(getApplication())
-        backend.logout()
         heartbeat?.cancel()
         heartbeat = null
         // 排着的上传任务也撤掉：会话没了再被唤起只会对着每一件打一次 401
@@ -259,8 +263,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * App Store 审核指南 5.1.1(v) 与各安卓应用商店的账号删除要求都指向这个入口。
      */
     suspend fun deleteAccount() {
+        val scope = backend.personalAccountScope()
         backend.deleteAccount()
         signOut()
+        prefs.clearOrganization(scope)
     }
 
     /** 云端中转区用量。设置页进页面拉一次；失败让调用方自己决定怎么显示（那里用「—」占位）。 */
@@ -326,6 +332,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 evidence.delete(ids)
+                prefs.removeOrganizationResults(ids)
                 refresh()
             } catch (e: Exception) {
                 logger.warning("删除出错: ${e.message}")

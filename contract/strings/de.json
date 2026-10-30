@@ -486,5 +486,12 @@
   "privacy.policy": "Datenschutzerklärung",
   "privacy.accept": "Zustimmen und fortfahren",
   "privacy.decline": "Ablehnen und beenden",
-  "home.location.enable": "Standort hinzufügen"
+  "home.location.enable": "Standort hinzufügen",
+  "organize.title": "Aufnahmen automatisch benennen und markieren",
+  "organize.hint": "Künftige Uploads werden vom KI-Dienst Ihres Kontos vorgelesen und nach tatsächlicher Modellnutzung abgerechnet. Originale bleiben erhalten; bei Erkennungsfehlern bleibt der ursprüngliche Name. Unterstützt Fotos, Videos und Aufnahmen. Audio und Video werden auszugsweise geprüft, nicht vollständig transkribiert.",
+  "organize.uploading": "Upload und Warten auf das Archivierungsergebnis",
+  "organize.ready": "Automatisch geordnet",
+  "organize.review": "Erkennung prüfen",
+  "organize.unknown": "Kein Ergebnis erhalten; archivierte Datei prüfen",
+  "organize.notApplied": "Automatische Ordnung nicht angewendet; ursprünglicher Name erhalten"
 }

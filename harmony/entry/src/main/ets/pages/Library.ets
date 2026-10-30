@@ -528,7 +528,7 @@ export struct Library {
 
   /** 删本地原件 + 删记录。记录留着而原件没了，图集里会出现永远打不开的空格。 */
   private remove(ids: string[]): void {
-    ServiceLocator.store.remove(ids).then((): Promise<void> => AppModel.shared.refresh())
+    ServiceLocator.store.remove(ids).then((): Promise<void> => ServiceLocator.prefs.removeOrganizationResults(ids)).then((): Promise<void> => AppModel.shared.refresh())
       .then((): void => {
         this.selected = []
         this.selecting = false

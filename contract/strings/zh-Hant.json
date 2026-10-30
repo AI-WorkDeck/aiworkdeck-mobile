@@ -486,5 +486,12 @@
   "privacy.policy": "隱私政策",
   "privacy.accept": "同意並繼續",
   "privacy.decline": "不同意並退出",
-  "home.location.enable": "加入位置"
+  "home.location.enable": "加入位置",
+  "organize.title": "採集後自動命名和加標籤",
+  "organize.hint": "對後續上傳的材料使用帳戶 AI 通道預讀，按實際模型用量計費。原件保留，辨識失敗保留原名。 支援照片、影片和錄音；影音僅抽樣預讀，不作完整轉寫。",
+  "organize.uploading": "正在上傳並等待歸檔結果",
+  "organize.ready": "已自動整理",
+  "organize.review": "辨識結果待核對",
+  "organize.unknown": "未收到整理結果，請在歸檔檔案中核對",
+  "organize.notApplied": "未套用自動整理，保留原名"
 }

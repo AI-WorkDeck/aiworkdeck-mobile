@@ -80,6 +80,8 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
     val account by model.account.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
+    val organizationScope = remember { ServiceLocator.backend.personalAccountScope() }
+    var organizeCaptures by remember { mutableStateOf(prefs.organizeCaptures(organizationScope)) }
     var saveToAlbum by remember { mutableStateOf(prefs.saveToAlbum) }
     var usage by remember { mutableStateOf<MediaUsage?>(null) }
     var balance by remember { mutableStateOf<BillingBalance?>(null) }
@@ -127,6 +129,19 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     .padding(horizontal = Tk.Sp.gutter).padding(bottom = Tk.Sp.s16),
             ) {
                 Group(tr("settings.media")) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
+                        Column(Modifier.weight(1f)) {
+                            Text(tr("organize.title"), style = Fonts.body(), color = Tk.L.fg)
+                            Text(tr("organize.hint"), style = Fonts.nano(), color = Tk.L.fgFaint)
+                        }
+                        Switch(checked = organizeCaptures, onCheckedChange = {
+                            if (organizationScope == ServiceLocator.backend.personalAccountScope()) {
+                                prefs.setOrganizeCaptures(organizationScope, it); organizeCaptures = it
+                            }
+                        }, colors = SwitchDefaults.colors(checkedTrackColor = Tk.L.accent))
+                    }
+
                     Row(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
