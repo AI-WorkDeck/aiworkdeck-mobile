@@ -29,6 +29,7 @@ Duo 的 `XCUIDevice.orientation` 请求不能证明设备已折叠或展开。�
 - 普通合并只触发检查，不上传。只有提交信息明确带发布标记的既有 `appstore-build` 工作流才进入发布链；其 `build-upload` 必须等待同一源码的三组兼容检查成功后才能读取签名材料。
 - `fastlane ios beta`、`release`、`ci_appstore` 均先运行 `scripts/check-ios-compatibility.py`。本地要求工作目录干净，并通过已登录的 `gh` 查询当前 HEAD 最新一次 `ios-auth-check`（push 或手动 dispatch）及其当前 attempt 的三组 job；旧提交、失败、跳过、缺结果和查询失败一律停止，不回退到旧绿灯。
 - PR 的 `head_sha` 与实际测试的合并引用可能不同，因此不能直接作为本地上传凭据。main 的 push 检查会覆盖真正合并提交；需要测试分支候选时，可明确 dispatch `ios-auth-check` 到该分支，然后核对源码 SHA。
+- 本地先筛选当前源码的 push/dispatch，再选择最新运行及 attempt；后创建的 PR 运行不会遮挡精确源码结果。最新精确运行失败或未完成时仍停止，不回退旧绿灯。相同候选的 PR 与精确检查可并行，不因事件创建顺序额外重跑。
 - CI 上传入口检查当前发布 run 的三项前置 job 结果；发布 run 仍在进行是正常的，但任何前置 job 未成功都不能继续。工具链与实际 IPA 的现有发行版检查继续保留。
 - `build_local_ipa` 仍可用于纯构建验证，不会连接 ASC 或上传；不能把其成功当作发版验收。没有关闭兼容门禁的环境开关。
 
