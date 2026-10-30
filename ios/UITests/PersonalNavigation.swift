@@ -61,19 +61,20 @@ extension XCTestCase {
         XCTAssertTrue(app.buttons["workspace.close"].waitForExistence(timeout: 10))
     }
 
-    @MainActor func allowVisibleRecordingPermission() {
+    @MainActor func allowVisibleRecordingPermission() -> Bool {
         let permissionAlert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
-        guard permissionAlert.exists else { return }
+        guard permissionAlert.exists else { return false }
         for label in ["Allow", "允许", "OK"] where permissionAlert.buttons[label].exists {
             permissionAlert.buttons[label].tap()
-            break
+            return true
         }
+        return false
     }
 
     @MainActor func startAudioRecordingWithOneTap(_ app: XCUIApplication) {
         let start = app.buttons["capture.recordAudio"]
         expectation(for: NSPredicate { _, _ in
-            self.allowVisibleRecordingPermission()
+            if self.allowVisibleRecordingPermission() { return false }
             return start.exists && start.isEnabled && start.isHittable
         }, evaluatedWith: start)
         waitForExpectations(timeout: 15)
@@ -82,7 +83,9 @@ extension XCTestCase {
             "capture.shutter", "Stop recording")).firstMatch
         // Permission prompts may follow each other; never tap Record again to recover.
         expectation(for: NSPredicate { _, _ in
-            self.allowVisibleRecordingPermission()
+            // Let the next poll recheck system prompts before querying the app
+            // immediately after a permission transition.
+            if self.allowVisibleRecordingPermission() { return false }
             // Query existence while the capture controls are being rebuilt. Reading
             // an unresolved element's label can block the next permission poll.
             return recording.exists && app.staticTexts["recording.elapsed"].exists
