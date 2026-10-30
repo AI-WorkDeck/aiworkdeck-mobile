@@ -122,7 +122,13 @@ final class RecordingFlowTests: XCTestCase {
         app.terminate()
         app.launch()
         let notice = app.alerts["Recording status"]
-        XCTAssertTrue(notice.waitForExistence(timeout: 15))
+        // Notification authorization can arrive after recording starts and
+        // survive the relaunch, covering the app's recovery notice.
+        expectation(for: NSPredicate { _, _ in
+            if self.allowVisibleRecordingPermission() { return false }
+            return notice.exists
+        }, evaluatedWith: notice)
+        waitForExpectations(timeout: 15)
         let recovered = notice.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "previous recording did not end normally")).firstMatch
         let invalid = notice.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "No valid audio could be read")).firstMatch
         XCTAssertTrue(recovered.exists || invalid.exists, "Relaunch must explicitly report recovered audio or an unsuccessful recording")
