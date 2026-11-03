@@ -9,6 +9,7 @@ struct ProjectPickerView: View {
     var titleKey: String? = nil
     var hintKey: String? = nil
     var onBrowse: (() -> Void)? = nil
+    var projectFilter: ((RelayProject) -> Bool)? = nil
     @State private var choosing = false
 
     @State private var projects: [RelayProject] = []
@@ -26,17 +27,20 @@ struct ProjectPickerView: View {
                 header
                 if onSelect == nil {
                     Button {
-                        model.captureWithoutProject()
-                        onClose()
+                        Task {
+                            choosing = true
+                            do {
+                                try await model.selectDefaultProject()
+                                if let onBrowse { onBrowse() } else { onClose() }
+                            }
+                            catch { self.error = error.localizedDescription }
+                            choosing = false
+                        }
                     } label: { Label(tr("project.none"), systemImage: "tray") }
                     .frame(minHeight: T.touchMin)
                     .disabled(captureInProgress)
                     .accessibilityIdentifier("projectPicker.none")
-                    if let onBrowse {
-                        Button(action: onBrowse) { Label(tr("workspace.title"), systemImage: "folder") }
-                            .frame(minHeight: T.touchMin)
-                            .accessibilityIdentifier("projectPicker.browse")
-                    }
+
                 }
                 if captureInProgress {
                     Text(tr("project.captureInProgress"))
@@ -90,7 +94,7 @@ struct ProjectPickerView: View {
     private var list: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(projects) { p in
+                ForEach(projects.filter { onSelect != nil || $0.isDefault != true }) { p in
                     Button {
                         Task {
                             choosing = true
@@ -180,7 +184,8 @@ struct ProjectPickerView: View {
         }
 #endif
         do {
-            projects = try await model.workspaceFiles().projects()
+            let loaded = try await model.workspaceFiles().projects()
+            projects = projectFilter.map { filter in loaded.filter(filter) } ?? loaded
         } catch {
             self.error = error.localizedDescription
         }

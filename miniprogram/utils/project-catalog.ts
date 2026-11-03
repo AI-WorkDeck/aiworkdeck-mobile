@@ -11,6 +11,8 @@ export interface ProjectLocation {
   archiveOnly?: boolean
 }
 export interface CatalogProject {
+  isDefault?: boolean
+  projectType?: string
   projectUid: string
   name: string
   locations: ProjectLocation[]
@@ -21,7 +23,7 @@ export function fromCatalog(project: CatalogProject): RelayProject {
     ?? project.locations.find(p => p.kind === 'desktop') ?? project.locations[0]
   if (!location) throw new Error('Project has no location')
   return { deviceId: location.deviceId, deviceName: location.deviceName ?? null,
-    key: location.key, name: project.name, projectUid: project.projectUid, locations: project.locations }
+    key: location.key, name: project.name, projectUid: project.projectUid, locations: project.locations, isDefault: project.isDefault, projectType: project.projectType }
 }
 export function sameProject(a: RelayProject, b: RelayProject): boolean {
   if (a.projectUid && b.projectUid) return a.projectUid === b.projectUid

@@ -54,11 +54,15 @@ extension XCTestCase {
         XCTAssertTrue(project.waitForExistence(timeout: 10))
         XCTAssertTrue(project.isHittable)
         project.tap()
-        let browse = app.buttons["projectPicker.browse"]
+        let browse = app.buttons["projectPicker.none"]
         XCTAssertTrue(browse.waitForExistence(timeout: 10))
         XCTAssertTrue(browse.isHittable)
         browse.tap()
         XCTAssertTrue(app.buttons["workspace.close"].waitForExistence(timeout: 10))
+        if !app.buttons["workspace.project.alpha"].isHittable {
+            let back = app.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Projects", "Back"])).firstMatch
+            if back.exists { back.tap() }
+        }
     }
 
     @MainActor func allowVisibleRecordingPermission() -> Bool {

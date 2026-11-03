@@ -193,7 +193,7 @@ struct CaptureFlowView: View {
                     ProjectPickerView(onClose: { route = nil }, onBrowse: { route = .workspace }).environment(model)
                         .preferredColorScheme(.light)
                 case .workspace:
-                    WorkspaceView(onClose: { route = nil }).environment(model)
+                    WorkspaceView(onClose: { route = nil }, initialProject: model.selectedProject).environment(model)
                         .preferredColorScheme(.light)
                 case .library:
                     LibraryView(onClose: { route = nil })

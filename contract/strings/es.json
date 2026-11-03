@@ -185,7 +185,7 @@
   "file.prefix.audio": "Audio de campo",
   "error.server": "Error del servidor ({code}). Inténtalo de nuevo en unos minutos.",
   "queue.unknownState": "Estado de grabación no reconocido: {state}",
-  "project.none": "No hay ningún proyecto seleccionado",
+  "project.none": "Proyecto temporal",
   "project.emptyHint": "Esta cuenta todavía no tiene proyectos. Crea uno en el escritorio o en la nube y luego actualiza con la misma cuenta.",
   "error.saveFailed": "No se pudo guardar: {reason}",
   "error.loginNoData": "La respuesta de inicio de sesión estaba vacía.",
@@ -493,5 +493,15 @@
   "organize.ready": "Organizado automáticamente",
   "organize.review": "Reconocimiento pendiente de revisión",
   "organize.unknown": "No se recibió el resultado; comprueba el archivo guardado",
-  "organize.notApplied": "Organización automática no aplicada; nombre original conservado"
+  "organize.notApplied": "Organización automática no aplicada; nombre original conservado",
+  "subscription.store.title": "Suscripción en la nube",
+  "subscription.store.buy": "Suscribirse por {price} / mes",
+  "subscription.store.restore": "Restaurar suscripción",
+  "subscription.store.manage": "Gestionar suscripción",
+  "subscription.store.renewal": "Se renueva automáticamente cada mes hasta que se cancele en la cuenta de Apple. Las ventajas se comparten entre dispositivos con la misma cuenta de AI WorkDeck.",
+  "subscription.store.terms": "Condiciones de uso",
+  "subscription.store.deleteWarning": "Eliminar la cuenta no cancela las suscripciones de Apple con renovación automática. Cancélalas primero en los ajustes de suscripciones de Apple.",
+  "personal.copy.title": "Copiar conversación a un proyecto",
+  "personal.copy.hint": "Copia esta conversación a un proyecto normal en la nube. Se conserva la conversación original; no se copian los archivos referenciados. Los miembros del proyecto de destino pueden ver la copia.",
+  "personal.copy.success": "Conversación copiada. Se conserva el original."
 }

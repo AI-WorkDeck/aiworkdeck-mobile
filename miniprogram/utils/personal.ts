@@ -41,3 +41,12 @@ export class PersonalConversation {
     return true
   }
 }
+
+export interface PersonalCopyResult { mode: string; sourcePreserved: boolean; sourceConversationId: string; conversationId: string; targetProjectId: number; messageCount: number; filesCopied: boolean }
+export function personalCopyTarget(project: import('./api').RelayProject): number | undefined {
+  if (project.isDefault || project.projectType === 'SCRATCH' || project.projectType === 'LOOSE_FILES') return undefined
+  const key = project.locations?.find(location => location.kind === 'cloud' && !location.archiveOnly)?.key
+  if (!key || !/^[1-9][0-9]*$/.test(key)) return undefined
+  const id = Number(key)
+  return Number.isSafeInteger(id) ? id : undefined
+}

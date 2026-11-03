@@ -1,4 +1,4 @@
-import { myProjects, setSelectedProject } from '../../utils/api'
+import { defaultProject, myProjects, setSelectedProject } from '../../utils/api'
 import type { ApiError, RelayProject } from '../../utils/api'
 import type { Metrics } from '../../utils/layout'
 import { Icon } from '../../utils/icons'
@@ -27,6 +27,7 @@ Page({
     ddOpen: t('dd.open'),
     emptyText: t('empty.projects'),
     navTitle: t('project.title'),
+    defaultText: t('project.none'),
     loadingText: t('common.loading'),
     refreshText: t('common.refresh'),
     retryText: t('project.retry'),
@@ -83,12 +84,23 @@ Page({
     this.setData({ loading: true, errorMessage: '' })
     myProjects()
       .then((list) => {
-        this.setData({ loading: false, groups: catalogGroup(list) })
+        this.setData({ loading: false, groups: catalogGroup(this.assignmentId ? list : list.filter(p => !p.isDefault)) })
       })
       .catch((err: ApiError) => {
         this.setData({ loading: false, errorMessage: err.message })
       })
       .finally(() => done?.())
+  },
+
+  async onDefault() {
+    if (this.data.loading) return
+    this.setData({ loading: true, errorMessage: '' })
+    try {
+      const project = await defaultProject()
+      setSelectedProject(project)
+      wx.reLaunch({ url: '/pages/index/index' })
+    } catch (err) { this.setData({ errorMessage: (err as ApiError).message }) }
+    finally { this.setData({ loading: false }) }
   },
 
   onRetry() {

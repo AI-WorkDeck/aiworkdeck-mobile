@@ -85,6 +85,7 @@ struct BackupConsent: Decodable, Sendable {
 protocol ProjectFilesServing: Sendable {
     func backupConsent() async throws -> BackupConsent
     func setBackupConsent(enabled: Bool) async throws -> BackupConsent
+    func defaultProject() async throws -> RelayProject
     func projects() async throws -> [RelayProject]
     func files(in project: RelayProject) async throws -> ProjectFileListing
     func quote(for file: RemoteProjectFile, in project: RelayProject) async throws -> ProjectFileQuote
@@ -107,6 +108,12 @@ final class ProjectFilePreview: Sendable {
 }
 
 extension ProjectFilesServing {
+    func defaultProject() async throws -> RelayProject {
+        guard let project = try await projects().first(where: { $0.isDefault == true }) else {
+            throw APIError(message: tr("files.error.response"))
+        }
+        return project
+    }
     func preview(project: RelayProject, file: RemoteProjectFile) async throws -> ProjectFilePreview {
         let pull = try await preparePull(project: project, file: file)
         let url = try await download(pull)

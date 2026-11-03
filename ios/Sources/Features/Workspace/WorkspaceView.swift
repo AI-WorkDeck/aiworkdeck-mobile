@@ -6,7 +6,9 @@ import SafariServices
 /// changes the destination of an in-flight capture.
 struct WorkspaceView: View {
     var onClose: (() -> Void)? = nil
+    var initialProject: RelayProject? = nil
     @Environment(AppModel.self) private var model
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var projects: [RelayProject] = []
     @State private var selected: RelayProject?
     @State private var search = ""
@@ -103,6 +105,13 @@ struct WorkspaceView: View {
                     .environment(model)
                     .navigationTitle(selected.name)
                     .toolbar {
+                        if horizontalSizeClass == .compact, let onClose {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button(tr("common.close"), action: onClose)
+                                    .accessibilityIdentifier("workspace.close")
+                                    .accessibilityHidden(route != nil)
+                            }
+                        }
                         ToolbarItemGroup(placement: .primaryAction) {
                             Button { openCapture(selected) } label: {
                                 Label(tr(AudioRecorderService.shared.isRecording ? "workspace.resumeRecording" : "workspace.capture"), systemImage: "camera")
@@ -130,6 +139,7 @@ struct WorkspaceView: View {
         .tint(T.L.accent)
         .task {
             client = model.workspaceFiles()
+            if selected == nil, let initialProject { selected = initialProject; compactColumn = .detail }
             await load()
         }
         .accessibilityHidden(route != nil)

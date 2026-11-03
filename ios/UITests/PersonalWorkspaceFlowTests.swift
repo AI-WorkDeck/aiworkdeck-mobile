@@ -47,7 +47,11 @@ final class PersonalWorkspaceFlowTests: XCTestCase {
         app.buttons["capture.project"].tap()
         let none = app.buttons["projectPicker.none"]
         XCTAssertTrue(none.waitForExistence(timeout: 10)); none.tap()
-        XCTAssertEqual(app.staticTexts["capture.destination"].label, "No project selected")
+        XCTAssertTrue(app.buttons["workspace.close"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Temporary project"].firstMatch.exists)
+        XCTAssertFalse(app.buttons["projectPicker.browse"].exists)
+        app.buttons["workspace.close"].tap()
+        XCTAssertEqual(app.staticTexts["capture.destination"].label, "Temporary project")
         app.buttons["capture.project"].tap()
         let back = app.buttons["projectPicker.back"]
         XCTAssertTrue(back.waitForExistence(timeout: 10)); back.tap()
@@ -121,14 +125,14 @@ final class PersonalWorkspaceFlowTests: XCTestCase {
         let app = launch()
         startAudioRecordingWithOneTap(app)
         let shutter = app.buttons["capture.shutter"]
-        XCTAssertEqual(app.staticTexts["capture.destination"].label, "No project selected")
+        XCTAssertEqual(app.staticTexts["capture.destination"].label, "Temporary project")
         XCTAssertFalse(app.buttons["capture.project"].isEnabled)
         let elapsedBefore = app.staticTexts["recording.elapsed"].label
         personalTab(app, .calendar).tap()
         XCTAssertTrue(app.staticTexts["Review evidence checklist"].waitForExistence(timeout: 8))
         openPersonalCapture(app)
         XCTAssertEqual(shutter.label, "Stop recording")
-        XCTAssertEqual(app.staticTexts["capture.destination"].label, "No project selected")
+        XCTAssertEqual(app.staticTexts["capture.destination"].label, "Temporary project")
         app.buttons["capture.settings"].tap()
         let closeSettings = app.buttons["settings.close"]
         XCTAssertTrue(closeSettings.waitForExistence(timeout: 10)); closeSettings.tap()
@@ -154,7 +158,7 @@ final class PersonalWorkspaceFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons[itemID].waitForExistence(timeout: 10))
         app.buttons["queue.close"].tap()
         XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 10))
-        XCTAssertEqual(app.staticTexts["capture.destination"].label, "No project selected")
+        XCTAssertEqual(app.staticTexts["capture.destination"].label, "Temporary project")
         app.buttons["capture.queue"].tap()
         XCTAssertTrue(app.buttons[itemID].waitForExistence(timeout: 10), "Global queue must retain the record after assigning another project")
         XCTAssertEqual(app.staticTexts["queue.scope"].label, "All projects")

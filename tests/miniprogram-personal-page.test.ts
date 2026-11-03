@@ -88,3 +88,44 @@ test('restart recovers original pending result and history with GET only', async
   assert.ok(requests.every(url => url.startsWith('GET ')))
   assert.ok(requests[0].endsWith('/requests/persisted-id'))
 })
+
+test('copy uses cloud location ID, preserves source history and requires confirmation', async () => {
+  const { page } = fixture()
+  page.conversation.conversationId = 'source-id'
+  page.conversation.messages = [{ role: 'user', content: 'Keep original' }]
+  const calls: any[] = []
+  let confirmed = false
+  ;(globalThis as any).wx = {
+    getStorageSync: (key: string) => key === 'awd.session' ? 'synthetic-account' : undefined,
+    showModal: async () => ({ confirm: confirmed }),
+    request(opts: any) {
+      calls.push(opts)
+      const data = opts.url.endsWith('/catalog') ? [
+        { projectUid: 'formal-uid', name: 'Same name', projectType: 'BLANK', locations: [{ kind: 'desktop', deviceId: 'd', key: '999' }, { kind: 'cloud', deviceId: 'cloud', key: '71' }] },
+        { projectUid: 'scratch-uid', name: 'Same name', projectType: 'SCRATCH', locations: [{ kind: 'cloud', deviceId: 'cloud', key: '72' }] },
+        { projectUid: 'archive-uid', name: 'Archive', locations: [{ kind: 'cloud', deviceId: 'cloud', key: '73', archiveOnly: true }] },
+      ] : { mode: 'copy', sourcePreserved: true, filesCopied: false, sourceConversationId: 'source-id', targetProjectId: 71, conversationId: 'new-id', messageCount: 1 }
+      opts.success({ statusCode: 200, data: opts.url.endsWith('/catalog') ? data : { code: 0, data } })
+    },
+  }
+  await page.onPrepareCopy()
+  assert.equal(page.data.copyTargets.length, 1)
+  await page.onCopy({ detail: { value: '0' } })
+  assert.equal(calls.length, 1)
+  confirmed = true
+  await page.onCopy({ detail: { value: '0' } })
+  assert.equal(calls[1].data.targetProjectId, 71)
+  assert.ok(calls[1].url.endsWith('/assistant/conversations/source-id/copy-to-project'))
+  assert.equal(page.conversation.conversationId, 'source-id')
+  assert.equal(page.conversation.messages[0].content, 'Keep original')
+  assert.ok(page.data.copySuccess)
+})
+
+test('account switch during copy confirmation never sends the prior conversation', async () => {
+  const { page, changeAccount, calls } = fixture()
+  page.conversation.conversationId = 'source-id'
+  page.data.copyTargets = [{ name: 'Target', locations: [{ kind: 'cloud', key: '71' }] }]
+  ;(globalThis as any).wx.showModal = async () => { changeAccount(); return { confirm: true } }
+  await page.onCopy({ detail: { value: '0' } })
+  assert.equal(calls.length, 0)
+})

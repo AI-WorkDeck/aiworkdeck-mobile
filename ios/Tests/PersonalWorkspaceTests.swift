@@ -18,6 +18,39 @@ final class PersonalWorkspaceTests: XCTestCase {
         {"id":"\(id)","deviceId":"desktop","projectKey":"alpha","projectName":"Synthetic","title":"Event","dueDate":"\(date)","timeZone":"Asia/Shanghai","status":"\(status)","remindAt":"\(remind)","files":[{"fileId":7,"fileName":"synthetic.pdf"}]}
         """.utf8))
     }
+    func testConversationCopyOnlyUsesFormalCloudLocation() throws {
+        let desktop = RelayProject(deviceId: "desktop", deviceName: nil, key: "41", name: "Matter")
+        XCTAssertNil(ConversationCopyTarget.projectID(desktop))
+        let cloud = ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "12", online: true)
+        let project = RelayProject(deviceId: "desktop", deviceName: nil, key: "999", name: "Matter", locations: [cloud])
+        XCTAssertEqual(ConversationCopyTarget.projectID(project), 12)
+        var temporary = project; temporary.isDefault = true
+        XCTAssertNil(ConversationCopyTarget.projectID(temporary))
+        var scratch = project; scratch.projectType = "SCRATCH"
+        XCTAssertNil(ConversationCopyTarget.projectID(scratch))
+        scratch.projectType = "LOOSE_FILES"
+        XCTAssertNil(ConversationCopyTarget.projectID(scratch))
+        let archive = ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "12", online: true, archiveOnly: true)
+        XCTAssertNil(ConversationCopyTarget.projectID(RelayProject(deviceId: "desktop", deviceName: nil, key: "999", name: "Matter", locations: [archive])))
+    }
+
+    func testConversationCopyPreservesSourceAndChecksReceipt() async throws {
+        let cloud = ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "12", online: true)
+        let target = RelayProject(deviceId: "desktop", deviceName: nil, key: "999", name: "Matter", locations: [cloud])
+        PersonalTestProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/api/mobile/assistant/conversations/source/copy-to-project")
+            return Data(#"{"code":0,"data":{"mode":"copy","sourcePreserved":true,"sourceConversationId":"source","conversationId":"destination","targetProjectId":12,"messageCount":2,"filesCopied":false}}"#.utf8)
+        }
+        let copied = try await service().copyConversation("source", to: target)
+        XCTAssertEqual(copied.conversationId, "destination")
+        XCTAssertTrue(copied.sourcePreserved)
+        PersonalTestProtocol.handler = { _ in
+            Data(#"{"code":0,"data":{"mode":"copy","sourcePreserved":false,"sourceConversationId":"source","conversationId":"destination","targetProjectId":12,"messageCount":2,"filesCopied":false}}"#.utf8)
+        }
+        do { _ = try await service().copyConversation("source", to: target); XCTFail("Invalid receipt must fail") } catch {}
+    }
+
     @MainActor func testManualTabsAndReminderNavigationShareCameraBusyGuard() throws {
         let model = PersonalWorkspaceModel()
         // Photo capture, recording startup, and video recording all feed the

@@ -253,6 +253,9 @@ struct ContractProduct: Equatable, Sendable {
 }
 
 enum ContractProducts {
+    static let appstoreSubscriptions: [ContractProduct] = [
+${(c.products.appstoreSubscriptions ?? []).map(p => `        ContractProduct(productId: ${q(p.productId)}, amountCents: ${p.amountCents}),`).join('\n')}
+    ]
     static let appstore: [ContractProduct] = [
 ${rows}
     ]

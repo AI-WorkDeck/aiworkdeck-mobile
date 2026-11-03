@@ -33,3 +33,12 @@ import java.util.UUID
 
 fun reminderEvents(events: List<PersonalCalendarEvent>, now: Instant = Instant.now()): List<PersonalCalendarEvent> =
     events.filter { it.status == "OPEN" && it.reminder?.isAfter(now) == true }.sortedBy { it.reminder }.take(50)
+
+@Serializable data class PersonalCopyResult(val mode: String, val sourcePreserved: Boolean,
+    val sourceConversationId: String, val conversationId: String, val targetProjectId: Long,
+    val messageCount: Int, val filesCopied: Boolean)
+
+fun personalCopyTarget(project: com.aiworkdeck.mobile.model.RelayProject): Long? {
+    if (project.isDefault || project.projectType == "SCRATCH" || project.projectType == "LOOSE_FILES") return null
+    return project.locations?.firstOrNull { it.kind == "cloud" && it.archiveOnly != true }?.key?.toLongOrNull()?.takeIf { it > 0 }
+}

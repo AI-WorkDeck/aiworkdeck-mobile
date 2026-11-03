@@ -8,6 +8,9 @@ struct ContractProduct: Equatable, Sendable {
 }
 
 enum ContractProducts {
+    static let appstoreSubscriptions: [ContractProduct] = [
+        ContractProduct(productId: "pro.monthly.cny.149", amountCents: 14900),
+    ]
     static let appstore: [ContractProduct] = [
         ContractProduct(productId: "credits.cny.50", amountCents: 5000),
         ContractProduct(productId: "credits.cny.100", amountCents: 10000),

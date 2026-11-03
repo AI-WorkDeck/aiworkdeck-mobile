@@ -53,6 +53,13 @@ class Backend(
     /** 本机有没有会话。只判断「有没有」，是否还有效由第一次真实请求的 401 发现。 */
     fun hasSession(): Boolean = session.current() != null
 
+    suspend fun defaultProject(): RelayProject {
+        val identity = session.current()
+        val result = envelope(post("/api/mobile/catalog/default", buildJsonObject {}))
+        if (identity != session.current()) throw Unauthorized()
+        return json.decodeFromJsonElement<CatalogProject>(result["data"] ?: throw ApiError(1, tr("error.badResponse"))).toRelayProject()
+    }
+
     suspend fun myProjects(): List<RelayProject> = bare<List<CatalogProject>>("/api/mobile/catalog").map { it.toRelayProject() }
     suspend fun mediaUsage(): MediaUsage = bare("/api/mobile/media/usage")
     /** 统一账户余额。成功回裸对象、失败回信封，两者都是 JsonObject，靠 bare() 里探 code 字段区分。 */
@@ -102,6 +109,9 @@ class Backend(
     suspend fun personalCalendar(): PersonalCalendar = personal("calendar/events")
     suspend fun personalSettings(feature: String, enabled: Boolean): PersonalSettings = personal(feature + "/settings", "PUT",
         buildJsonObject { put("enabled", enabled); put("consentVersion", com.aiworkdeck.contract.ContractCapabilities.personalConsentVersion) })
+    suspend fun personalCopy(id: String, targetProjectId: Long): PersonalCopyResult = personal(
+        "assistant/conversations/" + java.util.UUID.fromString(id) + "/copy-to-project", "POST",
+        buildJsonObject { put("targetProjectId", targetProjectId) })
     suspend fun personalHistory(id: String): PersonalHistory = personal("assistant/conversations/" + java.util.UUID.fromString(id))
     suspend fun personalRequest(id: String): PersonalReply = awaitPersonalReply(personal("assistant/requests/" + java.util.UUID.fromString(id)), id)
     suspend fun personalChat(question: PersonalQuestion): PersonalReply = awaitPersonalReply(

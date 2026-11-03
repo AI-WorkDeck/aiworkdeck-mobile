@@ -185,7 +185,7 @@
   "file.prefix.audio": "現場音声",
   "error.server": "サーバーエラー（{code}）。しばらくしてからもう一度お試しください。",
   "queue.unknownState": "認識できないレコード状態です：{state}",
-  "project.none": "プロジェクトが選択されていません",
+  "project.none": "一時プロジェクト",
   "project.emptyHint": "このアカウントにはまだプロジェクトがありません。デスクトップまたはクラウドで作成した後、同じアカウントで更新してください。",
   "error.saveFailed": "保存できませんでした：{reason}",
   "error.loginNoData": "サインインの応答が空でした。",
@@ -493,5 +493,15 @@
   "organize.ready": "自動整理済み",
   "organize.review": "認識結果の確認が必要です",
   "organize.unknown": "整理結果を受信できませんでした。保存先のファイルを確認してください",
-  "organize.notApplied": "自動整理は未適用・元の名前を保持"
+  "organize.notApplied": "自動整理は未適用・元の名前を保持",
+  "subscription.store.title": "クラウドサブスクリプション",
+  "subscription.store.buy": "月額 {price} で登録",
+  "subscription.store.restore": "サブスクリプションを復元",
+  "subscription.store.manage": "サブスクリプションを管理",
+  "subscription.store.renewal": "Appleアカウントで解約するまで毎月自動更新されます。同じAI WorkDeckアカウントの端末で特典を共有できます。",
+  "subscription.store.terms": "利用規約",
+  "subscription.store.deleteWarning": "アカウントを削除してもAppleの自動更新サブスクリプションは解約されません。先にAppleのサブスクリプション設定で解約してください。",
+  "personal.copy.title": "会話をプロジェクトにコピー",
+  "personal.copy.hint": "この会話を通常のクラウドプロジェクトにコピーします。元の会話は保持され、参照されたファイルはコピーされません。コピーは転送先プロジェクトのメンバーが閲覧できます。",
+  "personal.copy.success": "会話をコピーしました。元の会話は保持されています。"
 }

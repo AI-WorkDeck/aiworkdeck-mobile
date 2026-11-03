@@ -11,6 +11,31 @@ import org.junit.Test
 import java.time.Instant
 
 class PersonalWorkspaceTest {
+    @Test fun transcriptCopyUsesCloudIdAndRetainsOriginalHistory() = runTest {
+        val server = MockWebServer(); server.start()
+        try {
+            val backend = Backend(server.url("/").toString().trimEnd('/'), MemorySessionStore().also { it.save("synthetic") }).accountSnapshot()
+            var saved: String? = null
+            val store = PersonalConversationStore(backend::personalAccountScope, { saved }, { saved = it })
+            val state = PersonalWorkspaceState(backend, store)
+            val id = "de85ec55-9f97-4a16-9d59-4e6dbab64112"
+            state.conversationId = id; state.messages.add("user" to "Keep original")
+            val target = com.aiworkdeck.mobile.model.RelayProject("desktop", null, "999", "Target", locations = listOf(
+                com.aiworkdeck.mobile.model.ProjectLocation("desktop", "desktop", "999"),
+                com.aiworkdeck.mobile.model.ProjectLocation("cloud", "cloud", "71")))
+            assertEquals(71L, personalCopyTarget(target))
+            assertNull(personalCopyTarget(target.copy(projectType = "SCRATCH")))
+            assertNull(personalCopyTarget(target.copy(locations = listOf(com.aiworkdeck.mobile.model.ProjectLocation("cloud", "cloud", "71", archiveOnly = true)))))
+            server.enqueue(MockResponse().setBody("""{"code":0,"data":{"mode":"copy","sourcePreserved":true,"filesCopied":false,"sourceConversationId":"$id","conversationId":"new-id","targetProjectId":71,"messageCount":1}}"""))
+            state.copyTo(target)
+            val request = server.takeRequest()
+            assertEquals("/api/mobile/assistant/conversations/$id/copy-to-project", request.path)
+            assertEquals("{\"targetProjectId\":71}", request.body.readUtf8())
+            assertTrue(state.copySuccess)
+            assertEquals(id, state.conversationId); assertEquals(listOf("user" to "Keep original"), state.messages.toList())
+        } finally { server.shutdown() }
+    }
+
     @Test fun restoresRunningRequestBeforeHistoryWithoutPostingAndPersistsCompletion() = runTest {
         val server = MockWebServer(); server.start()
         try {

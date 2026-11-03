@@ -185,7 +185,7 @@
   "file.prefix.audio": "Saha sesi",
   "error.server": "Sunucu hatası ({code}). Kısa süre sonra tekrar deneyin.",
   "queue.unknownState": "Tanınmayan kayıt durumu: {state}",
-  "project.none": "Proje seçilmedi",
+  "project.none": "Geçici proje",
   "project.emptyHint": "Bu hesabın henüz bir projesi yok. Masaüstünde veya bulutta bir tane oluşturun, ardından aynı hesapla yenileyin.",
   "error.saveFailed": "Kaydedilemedi: {reason}",
   "error.loginNoData": "Oturum açma yanıtı boştu.",
@@ -493,5 +493,15 @@
   "organize.ready": "Otomatik düzenlendi",
   "organize.review": "Tanıma sonucu incelenmeli",
   "organize.unknown": "Sonuç alınamadı; arşivlenen dosyayı kontrol edin",
-  "organize.notApplied": "Otomatik düzenleme uygulanmadı; özgün ad korundu"
+  "organize.notApplied": "Otomatik düzenleme uygulanmadı; özgün ad korundu",
+  "subscription.store.title": "Bulut aboneliği",
+  "subscription.store.buy": "Ayda {price} karşılığında abone ol",
+  "subscription.store.restore": "Aboneliği geri yükle",
+  "subscription.store.manage": "Aboneliği yönet",
+  "subscription.store.renewal": "Apple hesabınızdan iptal edene kadar her ay otomatik yenilenir. Avantajlar aynı AI WorkDeck hesabını kullanan cihazlar arasında paylaşılır.",
+  "subscription.store.terms": "Kullanım koşulları",
+  "subscription.store.deleteWarning": "Hesabı silmek Apple otomatik yenilenen aboneliklerini iptal etmez. Önce Apple abonelik ayarlarından iptal edin.",
+  "personal.copy.title": "Sohbeti projeye kopyala",
+  "personal.copy.hint": "Bu sohbeti normal bir bulut projesine kopyalayın. Özgün sohbet korunur; başvurulan dosyalar kopyalanmaz. Hedef projenin üyeleri kopyayı görüntüleyebilir.",
+  "personal.copy.success": "Sohbet kopyalandı. Özgün sohbet korundu."
 }

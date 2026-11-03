@@ -29,6 +29,29 @@ final class ProjectFilesTests: XCTestCase {
                             session: session, pollingInterval: 1, pollingAttempts: 3, recoveryRoot: root)
     }
 
+    func testDefaultProjectUsesAuthenticatedPostAndPreservesCloudIdentity() async throws {
+        ProjectFilesURLProtocol.handler = { request in
+            XCTAssertEqual(request.url?.path, "/api/mobile/catalog/default")
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-Session-Id"), "test-account-a")
+            return .json(#"{"code":0,"data":{"projectUid":"default-uid","name":"Temporary project","projectType":"LOCAL_DIR","isDefault":true,"locations":[{"kind":"cloud","deviceId":"cloud","key":"11","online":true}]}}"#)
+        }
+        let service = client()
+        let target = try await service.defaultProject()
+        XCTAssertEqual(target.projectUid, "default-uid")
+        XCTAssertEqual(target.deviceId, "cloud")
+        XCTAssertEqual(target.key, "11")
+        XCTAssertEqual(target.isDefault, true)
+        await service.close()
+    }
+
+    func testRejectedDefaultProjectNeverBecomesASelection() async throws {
+        ProjectFilesURLProtocol.handler = { _ in .json(#"{"code":403,"message":"Denied","data":{"projectUid":"default-uid","name":"Temporary project","locations":[]}}"#) }
+        let service = client()
+        do { _ = try await service.defaultProject(); XCTFail("Expected rejected selection") } catch {}
+        await service.close()
+    }
+
     func testUnsupportedFilesNeverQuotePrepareOrTransferIncludingRestoredPulls() async throws {
         ProjectFilesURLProtocol.handler = { _ in XCTFail("Unsupported file must not make any request"); throw URLError(.badURL) }
         let service = client()

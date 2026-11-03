@@ -170,6 +170,13 @@ final class AppModel {
         }
     }
 
+    func selectDefaultProject() async throws {
+        let generation = accountGeneration
+        let target = try await workspaceFiles().defaultProject()
+        guard generation == accountGeneration else { throw APIError(message: tr("error.unauthorized")) }
+        await selectProject(target)
+    }
+
     func captureWithoutProject() {
         selectedProject = nil
         project = FieldProject(id: "local", name: tr("project.none"),

@@ -244,7 +244,7 @@ export function decodeCatalog(v: Object | null): RelayProject[] {
       ?? locations.find((l: ProjectLocation): boolean => l.kind === 'desktop') ?? locations[0]
     if (uid === undefined || name === undefined || source === undefined) throw new ApiError(1, 'Invalid project')
     const project: RelayProject = { deviceId: source.deviceId, key: source.key, deviceName: source.deviceName,
-      name: name, projectUid: uid, locations: locations }
+      name: name, projectUid: uid, locations: locations, isDefault: getBoolean(o, 'isDefault'), projectType: getString(o, 'projectType') }
     result.push(project)
   }
   return result

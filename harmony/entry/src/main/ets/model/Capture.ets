@@ -48,6 +48,8 @@ export interface ProjectLocation {
 }
 
 export interface RelayProject {
+  isDefault?: boolean
+  projectType?: string
   projectUid?: string
   locations?: ProjectLocation[]
   deviceId: string

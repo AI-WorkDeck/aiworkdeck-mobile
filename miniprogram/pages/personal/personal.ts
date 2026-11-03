@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { getSession, personalRequest, uuid, setPersonalPreview } from '../../utils/api'
-import { PersonalConversation, upcoming, projectIdentity, type AssistantStatus, type CalendarSnapshot, type PersonalReply, type PersonalSource, type CalendarEvent, type PersonalMessage } from '../../utils/personal'
+import { getSession, myProjects, type RelayProject, personalRequest, uuid, setPersonalPreview } from '../../utils/api'
+import { PersonalConversation, personalCopyTarget, type PersonalCopyResult, upcoming, projectIdentity, type AssistantStatus, type CalendarSnapshot, type PersonalReply, type PersonalSource, type CalendarEvent, type PersonalMessage } from '../../utils/personal'
 import { PERSONAL_CONSENT_VERSION } from '../../utils/contract/capabilities'
 import { readPersonalConversation, savePersonalConversation, clearPersonalConversation } from '../../utils/personal-storage'
 import { t, getLocale, isRtl } from '../../utils/i18n'
@@ -13,6 +13,7 @@ Page({
     status: null as AssistantStatus | null, calendar: null as CalendarSnapshot | null,
     messages: [] as PersonalMessage[], sources: [] as PersonalSource[], events: [] as CalendarEvent[],
     projects: [] as { id: string; name: string }[], projectIndex: 0, days: 3,
+    copyTargets: [] as RelayProject[], copyReady: false, copySuccess: '',
     draft: '', busy: false, loading: false, error: '', calendarError: '', summary: '',
   },
   conversation: new PersonalConversation(),
@@ -28,10 +29,10 @@ Page({
   },
   onShow() {
     if (!getSession()) { wx.reLaunch({ url: '/pages/login/login' }); return }
-    if (this.session !== getSession()) { this.conversation = new PersonalConversation(); this.session = getSession(); this.setData({ draft: '', messages: [], sources: [], status: null, calendar: null, events: [], busy: false, loading: false, error: '', calendarError: '' }); this.restoreLocal() }
+    if (this.session !== getSession()) { this.conversation = new PersonalConversation(); this.session = getSession(); this.setData({ draft: '', messages: [], sources: [], status: null, calendar: null, events: [], copyTargets: [], copyReady: false, copySuccess: '', busy: false, loading: false, error: '', calendarError: '' }); this.restoreLocal() }
     const labels: Record<string, string> = {}
     for (const key of ['assistant', 'calendar', 'ask', 'send', 'processing', 'newChat', 'assistantConsent', 'calendarConsent', 'subscription', 'remindersUnavailable', 'noEvents', 'today', 'sources']) labels[key] = t('personal.' + key)
-    Object.assign(labels, { backup: t('backup.title'), account: t('settings.account'), projects: t('workspace.title'), capture: t('workspace.capture'), on: t('common.on'), off: t('common.off'), retry: t('project.retry'), refresh: t('common.refresh'), settings: t('home.settings'), next3: t('personal.nextDays', { days: 3 }), next5: t('personal.nextDays', { days: 5 }), files: t('project.files') })
+    Object.assign(labels, { copyTitle: t('personal.copy.title'), copyHint: t('personal.copy.hint'), emptyProjects: t('project.emptyTitle'), backup: t('backup.title'), account: t('settings.account'), projects: t('workspace.title'), capture: t('workspace.capture'), on: t('common.on'), off: t('common.off'), retry: t('project.retry'), refresh: t('common.refresh'), settings: t('home.settings'), next3: t('personal.nextDays', { days: 3 }), next5: t('personal.nextDays', { days: 5 }), files: t('project.files') })
     this.setData({ labels, direction: isRtl() ? 'rtl' : 'ltr', sources: this.displaySources(this.conversation.sources) }); this.load()
   },
   onUnload() { this.active = false },
@@ -102,7 +103,7 @@ Page({
   onProject(e: { detail: { value: string } }) { this.setData({ projectIndex: Number(e.detail.value) }); this.filter() },
   filter() { this.setData({ events: upcoming(this.data.calendar?.events ?? [], this.data.days, this.data.projects[this.data.projectIndex]?.id ?? '') }) },
   async onSend() {
-    if (this.data.busy || !this.data.draft.trim() || !this.data.status?.enabled) return
+    if (this.data.busy || this.data.loading || !this.data.draft.trim() || !this.data.status?.enabled) return
     const account = this.session
     const question = this.conversation.question(this.data.draft.trim(), uuid)
     this.setData({ busy: true, error: '' })
@@ -122,8 +123,36 @@ Page({
     } catch (error) { if (this.alive() && this.session === account) this.setData({ error: (error as Error).message }) }
     finally { if (this.alive() && this.session === account) this.setData({ busy: false }) }
   },
+  async onPrepareCopy() {
+    if (this.data.busy || this.data.loading || this.conversation.pending || !this.conversation.conversationId) return
+    const account = this.session
+    this.setData({ loading: true, error: '', copySuccess: '' })
+    try {
+      const projects = await myProjects()
+      if (this.alive() && this.session === account) this.setData({ copyTargets: projects.filter(p => personalCopyTarget(p) !== undefined), copyReady: true })
+    } catch (error) { if (this.alive() && this.session === account) this.setData({ error: (error as Error).message }) }
+    finally { if (this.alive() && this.session === account) this.setData({ loading: false }) }
+  },
+  async onCopy(e: { detail: { value: string } }) {
+    if (this.data.busy || this.data.loading || this.conversation.pending) return
+    const id = this.conversation.conversationId
+    const project = this.data.copyTargets[Number(e.detail.value)]
+    const target = project && personalCopyTarget(project)
+    if (!id || !target) return
+    const account = this.session
+    this.setData({ loading: true })
+    try {
+      const choice = await wx.showModal({ title: project.name, content: t('personal.copy.hint'), confirmText: t('common.ok'), cancelText: t('common.cancel') })
+      if (!choice.confirm || !this.alive() || this.session !== account || this.conversation.conversationId !== id) return
+      const result = await personalRequest<PersonalCopyResult>('assistant/conversations/' + encodeURIComponent(id) + '/copy-to-project', 'POST', { targetProjectId: target })
+      if (!this.alive() || this.session !== account || this.conversation.conversationId !== id) return
+      if (result.mode !== 'copy' || !result.sourcePreserved || result.filesCopied !== false || result.sourceConversationId !== id || result.targetProjectId !== target) throw new Error(t('error.badResponse'))
+      this.setData({ copySuccess: t('personal.copy.success'), copyReady: false, error: '' })
+    } catch (error) { if (this.alive() && this.session === account) this.setData({ error: (error as Error).message }) }
+    finally { if (this.alive() && this.session === account) this.setData({ loading: false }) }
+  },
   onRetry() { if (this.conversation.pending) this.onSend(); else this.load() },
-  onNewChat() { if (this.data.busy || this.conversation.pending) return; this.conversation = new PersonalConversation(); this.saveRecent(); this.setData({ messages: [], sources: [], error: '' }) },
+  onNewChat() { if (this.data.busy || this.data.loading || this.conversation.pending) return; this.conversation = new PersonalConversation(); this.saveRecent(); this.setData({ messages: [], sources: [], error: '', copyTargets: [], copyReady: false, copySuccess: '' }) },
   async onConsent(e: { currentTarget: { dataset: { feature: string; enabled: boolean } } }) {
     if (this.data.loading || this.data.busy) return
     const account = this.session

@@ -32,6 +32,8 @@ private final class PersonalUITestProtocol: URLProtocol {
             let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.timeZone = TimeZone(identifier: "Asia/Shanghai")
             value = ["enabled": true, "subscriptionActive": true, "events": [
                 ["id": "synthetic-event", "deviceId": "synthetic-desktop", "projectKey": "alpha", "projectName": "Alpha project", "title": "Review evidence checklist", "dueDate": formatter.string(from: Date()), "dueTime": "14:30", "timeZone": "Asia/Shanghai", "remindAt": ISO8601DateFormatter().string(from: Date().addingTimeInterval(3600)), "status": "OPEN", "files": [["fileId": 7, "fileName": "evidence.pdf"]]]]]
+        } else if path.hasSuffix("/copy-to-project") {
+            value = ["mode": "copy", "sourcePreserved": true, "sourceConversationId": "synthetic-conversation", "conversationId": "copied-conversation", "targetProjectId": 12, "messageCount": 2, "filesCopied": false]
         } else if path.hasSuffix("assistant/chat") {
             var data = request.httpBody ?? Data()
             if let stream = request.httpBodyStream { stream.open(); defer { stream.close() }; var bytes = [UInt8](repeating: 0, count: 1024); while stream.hasBytesAvailable { let n = stream.read(&bytes, maxLength: bytes.count); if n <= 0 { break }; data.append(bytes, count: n) } }

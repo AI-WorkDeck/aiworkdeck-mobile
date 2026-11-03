@@ -184,19 +184,24 @@ struct RelayProject: Codable, Identifiable, Hashable, Sendable {
     let name: String
     let projectUid: String?
     let locations: [ProjectLocation]?
+    var isDefault: Bool? = nil
+    var projectType: String? = nil
 
     init(deviceId: String, deviceName: String?, key: String, name: String,
-         projectUid: String? = nil, locations: [ProjectLocation]? = nil) {
+         projectUid: String? = nil, locations: [ProjectLocation]? = nil, isDefault: Bool? = nil, projectType: String? = nil) {
         self.deviceId = deviceId; self.deviceName = deviceName; self.key = key; self.name = name
         self.projectUid = projectUid; self.locations = locations
+        self.isDefault = isDefault; self.projectType = projectType
     }
 
-    enum CodingKeys: String, CodingKey { case deviceId, deviceName, key, name, projectUid, locations }
+    enum CodingKeys: String, CodingKey { case deviceId, deviceName, key, name, projectUid, locations, isDefault, projectType }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         name = try c.decode(String.self, forKey: .name)
         projectUid = try c.decodeIfPresent(String.self, forKey: .projectUid)
         locations = try c.decodeIfPresent([ProjectLocation].self, forKey: .locations)
+        isDefault = try c.decodeIfPresent(Bool.self, forKey: .isDefault)
+        projectType = try c.decodeIfPresent(String.self, forKey: .projectType)
         // Persisted snapshots retain the original upload route, including after a failed attempt.
         if let device = try c.decodeIfPresent(String.self, forKey: .deviceId),
            let localKey = try c.decodeIfPresent(String.self, forKey: .key) {
@@ -752,6 +757,47 @@ actor API: ArchiveMoveServing {
                                body: Self.confirmBody(outTradeNo: outTradeNo, signedTransaction: signedTransaction))
         let (data, resp) = try await send(req)
         return try Self.decodeRechargeStatus(status: (resp as? HTTPURLResponse)?.statusCode ?? -1, data: data)
+    }
+
+    struct SubscriptionCapability: Decodable, Sendable {
+        let available: Bool
+        let productId: String
+    }
+
+    func subscriptionCapability() async throws -> SubscriptionCapability {
+        let (data, response) = try await send(Self.request(Backend.baseURL.appendingPathComponent("/api/mobile/billing/subscription/appstore/capability")))
+        if let failure = Self.billingFailure(status: (response as? HTTPURLResponse)?.statusCode ?? -1, data: data) { throw failure }
+        return try JSONDecoder().decode(SubscriptionCapability.self, from: data)
+    }
+
+    struct SubscriptionPurchase: Decodable, Sendable {
+        let productId: String
+        let appAccountToken: UUID
+    }
+
+    struct SubscriptionConfirmation: Decodable, Sendable {
+        let status: String
+        var confirmed: Bool { status == "CONFIRMED" }
+    }
+
+    static func decodeSubscriptionPurchase(status: Int, data: Data) throws -> SubscriptionPurchase {
+        if let failure = billingFailure(status: status, data: data) { throw failure }
+        return try JSONDecoder().decode(SubscriptionPurchase.self, from: data)
+    }
+
+    static func decodeSubscriptionConfirmation(status: Int, data: Data) throws -> SubscriptionConfirmation {
+        if let failure = billingFailure(status: status, data: data) { throw failure }
+        return try JSONDecoder().decode(SubscriptionConfirmation.self, from: data)
+    }
+
+    func prepareSubscription() async throws -> SubscriptionPurchase {
+        let (data, response) = try await send(jsonPost("/api/mobile/billing/subscription/appstore/prepare", body: [:]))
+        return try Self.decodeSubscriptionPurchase(status: (response as? HTTPURLResponse)?.statusCode ?? -1, data: data)
+    }
+
+    func confirmSubscription(signedTransaction: String) async throws -> SubscriptionConfirmation {
+        let (data, response) = try await send(jsonPost("/api/mobile/billing/subscription/appstore/confirm", body: ["signedTransaction": signedTransaction]))
+        return try Self.decodeSubscriptionConfirmation(status: (response as? HTTPURLResponse)?.statusCode ?? -1, data: data)
     }
 
     /// 查单。确认链路断了（比如 confirm 超时）时还能靠它看到到账结果。

@@ -31,6 +31,25 @@ struct PersonalMessage: Codable, Identifiable {
     let createdAt: String?
     var id: String { role + ":" + (createdAt ?? "") + ":" + content }
 }
+struct ConversationProjectCopy: Decodable {
+    let mode: String
+    let sourcePreserved: Bool
+    let sourceConversationId: String
+    let conversationId: String
+    let targetProjectId: Int64
+    let messageCount: Int
+    let filesCopied: Bool
+}
+
+enum ConversationCopyTarget {
+    static func projectID(_ project: RelayProject) -> Int64? {
+        guard project.isDefault != true, project.projectType != "SCRATCH", project.projectType != "LOOSE_FILES",
+              let location = project.locations?.first(where: { $0.kind == "cloud" && $0.archiveOnly != true }),
+              let id = Int64(location.key), id > 0 else { return nil }
+        return id
+    }
+}
+
 struct PersonalConversation: Decodable {
     let conversationId: String
     let messages: [PersonalMessage]
@@ -128,6 +147,18 @@ struct PersonalWorkspaceService {
     func configure(_ feature: String, enabled: Bool) async throws {
         let body = try JSONSerialization.data(withJSONObject: ["enabled": enabled, "consentVersion": ContractCapabilities.personalConsentVersion])
         let _: PersonalSettings = try await request("/api/mobile/\(feature)/settings", method: "PUT", body: body)
+    }
+    func copyConversation(_ id: String, to project: RelayProject) async throws -> ConversationProjectCopy {
+        guard let target = ConversationCopyTarget.projectID(project), !id.isEmpty,
+              let escaped = id.addingPercentEncoding(withAllowedCharacters: .alphanumerics) else {
+            throw APIError(message: tr("error.badResponse"))
+        }
+        let body = try JSONSerialization.data(withJSONObject: ["targetProjectId": target])
+        let result: ConversationProjectCopy = try await request("/api/mobile/assistant/conversations/\(escaped)/copy-to-project", method: "POST", body: body)
+        guard result.mode == "copy", result.sourcePreserved, !result.filesCopied,
+              result.sourceConversationId == id, result.targetProjectId == target,
+              !result.conversationId.isEmpty else { throw APIError(message: tr("error.badResponse")) }
+        return result
     }
     func history(_ id: String) async throws -> PersonalConversation { try await request("/api/mobile/assistant/conversations/" + id) }
     func ask(_ question: PendingPersonalQuestion) async throws -> AssistantReply {

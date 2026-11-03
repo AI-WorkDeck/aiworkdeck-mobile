@@ -79,6 +79,15 @@ export class Backend {
     return sid !== null
   }
 
+  async defaultProject(): Promise<RelayProject> {
+    const identity = await this.session.current()
+    const env = await this.envelope('/api/mobile/catalog/default', {})
+    if (identity !== await this.session.current()) throw new Unauthorized()
+    const result = decodeCatalog([env['data']])
+    if (result.length !== 1) throw new ApiError(1, 'Invalid default project')
+    return result[0]
+  }
+
   async myProjects(): Promise<RelayProject[]> {
     return decodeCatalog(await this.bare('/api/mobile/catalog'))
   }

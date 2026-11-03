@@ -153,6 +153,9 @@ private struct AssistantView: View {
     @Bindable var model: PersonalWorkspaceModel
     @Environment(\.colorScheme) private var colorScheme
     @State private var showConsent = false
+    @State private var showCopy = false
+    @State private var copyCompleted = false
+    @State private var copied = false
     @State private var showSettings = false
     @State private var showBackup = false
     @FocusState private var inputFocused: Bool
@@ -205,14 +208,27 @@ private struct AssistantView: View {
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
+                        Button(tr("personal.copy.title")) { copied = false; showCopy = true }
+                            .disabled(model.busy || model.pending != nil || model.conversationID == nil || model.messages.isEmpty)
+                            .accessibilityIdentifier("personal.copyToProject")
                         Button(tr("personal.newChat")) { model.newConversation() }.disabled(model.busy || model.pending != nil)
                         if model.status?.enabled == true { Button(tr("common.off")) { Task { await model.configure("assistant", enabled: false) } }.disabled(model.loading || model.busy) }
                     } label: { Image(systemName: "ellipsis.circle").accessibilityLabel(tr("personal.assistant")) }
+                    .accessibilityIdentifier("personal.actions")
                 }
             }
             .alert(tr("personal.assistant"), isPresented: $showConsent) {
                 Button(tr("common.ok")) { Task { await model.configure("assistant", enabled: true) } }; Button(tr("common.cancel"), role: .cancel) {}
             } message: { Text(tr("personal.assistantConsent")) }
+            .sheet(isPresented: $showCopy, onDismiss: { if copied { copyCompleted = true } }) {
+                ProjectPickerView(onClose: { showCopy = false }, onSelect: { target in
+                    guard let id = model.conversationID, !model.busy, model.pending == nil else { throw APIError(message: tr("error.badResponse")) }
+                    _ = try await model.service.copyConversation(id, to: target)
+                    copied = true
+                }, titleKey: "personal.copy.title", hintKey: "personal.copy.hint", projectFilter: { ConversationCopyTarget.projectID($0) != nil })
+                    .environment(account)
+            }
+            .alert(tr("personal.copy.success"), isPresented: $copyCompleted) { Button(tr("common.ok"), role: .cancel) {} }
             .sheet(isPresented: $showSettings, onDismiss: { Task { await model.load() } }) { SettingsView(onClose: { showSettings = false }).environment(account) }
             .sheet(isPresented: $showBackup, onDismiss: { Task { await model.load() } }) { BackupConsentView().environment(account) }
             .sheet(isPresented: Binding(get: { source != nil }, set: { if !$0 { source = nil } })) {

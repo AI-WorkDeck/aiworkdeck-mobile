@@ -185,7 +185,7 @@
   "file.prefix.audio": "Âm thanh hiện trường",
   "error.server": "Lỗi máy chủ ({code}). Vui lòng thử lại sau.",
   "queue.unknownState": "Trạng thái bản ghi không nhận dạng được: {state}",
-  "project.none": "Chưa chọn dự án",
+  "project.none": "Dự án tạm thời",
   "project.emptyHint": "Tài khoản này chưa có dự án nào. Hãy tạo một dự án trên máy tính hoặc trên đám mây, sau đó làm mới với cùng tài khoản.",
   "error.saveFailed": "Không thể lưu: {reason}",
   "error.loginNoData": "Phản hồi đăng nhập trống.",
@@ -493,5 +493,15 @@
   "organize.ready": "Đã tự động sắp xếp",
   "organize.review": "Cần kiểm tra kết quả nhận dạng",
   "organize.unknown": "Chưa nhận được kết quả; hãy kiểm tra tệp đã lưu",
-  "organize.notApplied": "Chưa áp dụng sắp xếp tự động; giữ tên gốc"
+  "organize.notApplied": "Chưa áp dụng sắp xếp tự động; giữ tên gốc",
+  "subscription.store.title": "Đăng ký đám mây",
+  "subscription.store.buy": "Đăng ký với {price} / tháng",
+  "subscription.store.restore": "Khôi phục đăng ký",
+  "subscription.store.manage": "Quản lý đăng ký",
+  "subscription.store.renewal": "Tự động gia hạn hàng tháng cho đến khi hủy trong tài khoản Apple. Quyền lợi được chia sẻ giữa các thiết bị dùng cùng tài khoản AI WorkDeck.",
+  "subscription.store.terms": "Điều khoản sử dụng",
+  "subscription.store.deleteWarning": "Xóa tài khoản không hủy đăng ký Apple tự động gia hạn. Hãy hủy trước trong cài đặt đăng ký Apple.",
+  "personal.copy.title": "Sao chép hội thoại vào dự án",
+  "personal.copy.hint": "Sao chép hội thoại này vào dự án đám mây thông thường. Giữ lại hội thoại gốc; không sao chép các tệp được tham chiếu. Thành viên dự án đích có thể xem bản sao.",
+  "personal.copy.success": "Đã sao chép hội thoại. Bản gốc được giữ lại."
 }

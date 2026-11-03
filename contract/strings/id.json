@@ -185,7 +185,7 @@
   "file.prefix.audio": "Audio lapangan",
   "error.server": "Kesalahan server ({code}). Coba lagi nanti.",
   "queue.unknownState": "Status rekaman tidak dikenali: {state}",
-  "project.none": "Belum ada proyek yang dipilih",
+  "project.none": "Proyek sementara",
   "project.emptyHint": "Akun ini belum memiliki proyek. Buat satu di desktop atau di cloud, lalu segarkan dengan akun yang sama.",
   "error.saveFailed": "Tidak dapat menyimpan: {reason}",
   "error.loginNoData": "Respons masuk kosong.",
@@ -493,5 +493,15 @@
   "organize.ready": "Ditata otomatis",
   "organize.review": "Hasil pengenalan perlu diperiksa",
   "organize.unknown": "Hasil tidak diterima; periksa berkas arsip",
-  "organize.notApplied": "Penataan otomatis tidak diterapkan; nama asli dipertahankan"
+  "organize.notApplied": "Penataan otomatis tidak diterapkan; nama asli dipertahankan",
+  "subscription.store.title": "Langganan cloud",
+  "subscription.store.buy": "Berlangganan {price} / bulan",
+  "subscription.store.restore": "Pulihkan langganan",
+  "subscription.store.manage": "Kelola langganan",
+  "subscription.store.renewal": "Diperpanjang otomatis setiap bulan hingga dibatalkan di akun Apple. Manfaat dibagikan antarperangkat dengan akun AI WorkDeck yang sama.",
+  "subscription.store.terms": "Ketentuan penggunaan",
+  "subscription.store.deleteWarning": "Menghapus akun tidak membatalkan langganan Apple yang diperpanjang otomatis. Batalkan dahulu di pengaturan langganan Apple.",
+  "personal.copy.title": "Salin percakapan ke proyek",
+  "personal.copy.hint": "Salin percakapan ini ke proyek cloud biasa. Percakapan asli dipertahankan; berkas yang dirujuk tidak disalin. Anggota proyek tujuan dapat melihat salinan.",
+  "personal.copy.success": "Percakapan disalin. Aslinya dipertahankan."
 }

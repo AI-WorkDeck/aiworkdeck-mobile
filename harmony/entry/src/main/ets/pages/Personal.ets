@@ -8,6 +8,7 @@ import { PersonalConversationStore } from '../services/PersonalConversationStore
 import { CalendarReminders } from '../services/CalendarReminders'
 import { PersonalEvent, PersonalSource, PersonalMessage, PersonalConversation, personalMessages, personalHistorySources, personalSourceDate, personalEvents, personalSources, stringField, upcomingEvents } from '../model/PersonalWorkspace'
 import { ProjectFilesRequest } from './ProjectFilesRequest'
+import { RelayProject, ProjectLocation } from '../model/Capture'
 import { Tk } from '../design/Tokens'
 import { trIn, LOCALE_ZH, L10n } from '../design/L10n'
 import { errorText } from './Feedback'
@@ -33,6 +34,9 @@ export struct Personal {
   @State loading: boolean = false
   @State days: number = 3
   @State project: string = ''
+  @State copyTargets: RelayProject[] = []
+  @State copyReady: boolean = false
+  @State copySuccess: string = ''
   @State reminders: boolean = false
   private session: string = ''
   private host: string = ''
@@ -53,7 +57,7 @@ export struct Personal {
     if (this.conversationStore !== null) await this.conversationStore.save(value)
   }
   private resetConversation(): void {
-    this.messages = []; this.sources = []; this.conversationId = ''; this.pendingId = ''; this.pendingText = ''; this.pendingConversationId = ''; this.draft = ''
+    this.copyTargets = []; this.copyReady = false; this.copySuccess = ''; this.messages = []; this.sources = []; this.conversationId = ''; this.pendingId = ''; this.pendingText = ''; this.pendingConversationId = ''; this.draft = ''
   }
   private async poll(reply: Record<string, Object>, id: string, version: number): Promise<Record<string, Object>> {
     let result: Record<string, Object> = reply
@@ -178,6 +182,42 @@ export struct Personal {
     } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
     finally { if (version === this.version) this.busy = false }
   }
+  private copyTarget(project: RelayProject): number {
+    if (project.isDefault === true || project.projectType === 'SCRATCH' || project.projectType === 'LOOSE_FILES') return 0
+    const location: ProjectLocation | undefined = (project.locations ?? []).find((value: ProjectLocation): boolean => value.kind === 'cloud' && value.archiveOnly !== true)
+    if (location === undefined || !/^[1-9][0-9]*$/.test(location.key)) return 0
+    const id: number = Number(location.key)
+    return Number.isSafeInteger(id) ? id : 0
+  }
+  private async prepareCopy(): Promise<void> {
+    const version: number = this.version
+    if (this.busy || this.loading || this.pendingId.length > 0 || this.conversationId.length === 0 || !await this.current(version)) return
+    if (this.loading || this.busy) return
+    this.loading = true; this.error = ''; this.copySuccess = ''
+    try {
+      const projects: RelayProject[] = await ServiceLocator.backend.myProjects()
+      if (await this.current(version)) { this.copyTargets = projects.filter((project: RelayProject): boolean => this.copyTarget(project) > 0); this.copyReady = true }
+    } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
+    finally { if (version === this.version) this.loading = false }
+  }
+  private confirmCopy(project: RelayProject): void {
+    const version: number = this.version
+    const id: string = this.conversationId
+    this.getUIContext().showAlertDialog({ title: project.name, message: this.t('personal.copy.hint'), primaryButton: { value: this.t('common.cancel'), action: (): void => {} }, secondaryButton: { value: this.t('common.ok'), action: (): void => { this.copyTo(project, id, version) } } })
+  }
+  private async copyTo(project: RelayProject, id: string, version: number): Promise<void> {
+    const target: number = this.copyTarget(project)
+    if (this.busy || this.loading || this.pendingId.length > 0 || target === 0 || this.conversationId !== id || !await this.current(version)) return
+    if (this.loading || this.busy) return
+    this.loading = true; this.error = ''
+    try {
+      const result: Record<string, Object> = await this.request('assistant/conversations/' + encodeURIComponent(id) + '/copy-to-project', http.RequestMethod.POST, { 'targetProjectId': target })
+      if (!await this.current(version) || this.conversationId !== id) return
+      if (result['mode'] !== 'copy' || result['sourcePreserved'] !== true || result['filesCopied'] !== false || result['sourceConversationId'] !== id || result['targetProjectId'] !== target) throw new Error(this.t('error.badResponse'))
+      this.copySuccess = this.t('personal.copy.success'); this.copyReady = false
+    } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
+    finally { if (version === this.version) this.loading = false }
+  }
   private openNotification(): void {
     if (!this.alive || this.notificationId.length === 0) return
     this.tab = 'calendar'; this.load()
@@ -214,6 +254,13 @@ export struct Personal {
             }.width('100%').alignItems(HorizontalAlign.Start)
           }.layoutWeight(1).width('100%')
           if (this.error.length > 0) { Text(this.error).fontColor(Tk.S.failed); Button(this.t('project.retry')).enabled(!this.busy).onClick((): void => { if (this.pendingId.length > 0) { this.draft = this.pendingText; this.send() } else this.load() }) }
+          if (this.copySuccess.length > 0) Text(this.copySuccess).fontColor(Tk.L.fgMuted)
+          if (this.messages.length > 0) Button(this.t('personal.copy.title')).enabled(!this.busy && !this.loading && this.pendingId.length === 0).onClick((): void => { this.prepareCopy() })
+          if (this.copyReady) {
+            Text(this.t('personal.copy.hint')).fontColor(Tk.L.fgMuted)
+            if (this.copyTargets.length === 0) Text(this.t('project.emptyTitle')).fontColor(Tk.L.fgMuted)
+            Select(this.copyTargets.map((project: RelayProject): SelectOption => { return { value: project.name } })).value(this.t('personal.copy.title')).enabled(!this.busy && !this.loading).onSelect((index: number): void => { if (index >= 0 && index < this.copyTargets.length) this.confirmCopy(this.copyTargets[index]) })
+          }
           Row() { TextArea({ text: this.draft, placeholder: this.t('personal.ask') }).enabled(!this.busy && !this.loading).layoutWeight(1).maxLines(5).onChange((value: string): void => { this.draft = value }); Button(this.t('personal.send')).enabled(!this.busy && !this.loading && this.draft.trim().length > 0 && this.assistantEnabled && this.assistantSubscribed).onClick((): void => { this.send() }) }
           Row() { Button(this.t('personal.newChat')).enabled(!this.busy && !this.loading && this.pendingId.length === 0).onClick((): void => { this.resetConversation(); this.saveConversation() }); if (this.assistantEnabled) Button(this.t('common.off')).enabled(!this.busy).onClick((): void => { this.configure('assistant', false) }) }
         } else {

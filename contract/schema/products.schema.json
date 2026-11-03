@@ -6,7 +6,8 @@
   "additionalProperties": false,
   "properties": {
     "wxvp": { "$ref": "#/$defs/wxvpTiers" },
-    "appstore": { "$ref": "#/$defs/appstoreTiers" }
+    "appstore": { "$ref": "#/$defs/appstoreTiers" },
+    "appstoreSubscriptions": { "$ref": "#/$defs/appstoreTiers" }
   },
   "$defs": {
     "wxvpTiers": {

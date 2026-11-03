@@ -185,7 +185,7 @@
   "file.prefix.audio": "Feldaudio",
   "error.server": "Serverfehler ({code}). Bitte kurz erneut versuchen.",
   "queue.unknownState": "Unbekannter Datensatzstatus: {state}",
-  "project.none": "Kein Projekt ausgewählt",
+  "project.none": "Temporäres Projekt",
   "project.emptyHint": "Dieses Konto hat noch keine Projekte. Erstellen Sie eines am Desktop oder in der Cloud und aktualisieren Sie dann mit demselben Konto.",
   "error.saveFailed": "Speichern nicht möglich: {reason}",
   "error.loginNoData": "Die Anmeldeantwort war leer.",
@@ -493,5 +493,15 @@
   "organize.ready": "Automatisch geordnet",
   "organize.review": "Erkennung prüfen",
   "organize.unknown": "Kein Ergebnis erhalten; archivierte Datei prüfen",
-  "organize.notApplied": "Automatische Ordnung nicht angewendet; ursprünglicher Name erhalten"
+  "organize.notApplied": "Automatische Ordnung nicht angewendet; ursprünglicher Name erhalten",
+  "subscription.store.title": "Cloud-Abonnement",
+  "subscription.store.buy": "Für {price} / Monat abonnieren",
+  "subscription.store.restore": "Abonnement wiederherstellen",
+  "subscription.store.manage": "Abonnement verwalten",
+  "subscription.store.renewal": "Verlängert sich monatlich automatisch bis zur Kündigung im Apple-Account. Vorteile gelten auf Geräten mit demselben AI WorkDeck-Konto.",
+  "subscription.store.terms": "Nutzungsbedingungen",
+  "subscription.store.deleteWarning": "Das Löschen des Kontos kündigt keine automatisch verlängerten Apple-Abonnements. Kündige diese zuerst in den Apple-Abonnementeinstellungen.",
+  "personal.copy.title": "Gespräch in Projekt kopieren",
+  "personal.copy.hint": "Dieses Gespräch in ein reguläres Cloud-Projekt kopieren. Das Original bleibt erhalten; referenzierte Dateien werden nicht kopiert. Mitglieder des Zielprojekts können die Kopie sehen.",
+  "personal.copy.success": "Gespräch kopiert. Das Original bleibt erhalten."
 }

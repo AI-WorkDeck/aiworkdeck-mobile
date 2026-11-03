@@ -185,7 +185,7 @@
   "file.prefix.audio": "現場錄音",
   "error.server": "伺服器出錯（{code}），稍後再試",
   "queue.unknownState": "記錄狀態無法識別：{state}",
-  "project.none": "未選擇專案",
+  "project.none": "臨時專案",
   "project.emptyHint": "此帳號還沒有專案。可在桌面端或雲端建立專案，使用同一帳號後重新整理。",
   "error.saveFailed": "儲存失敗：{reason}",
   "error.loginNoData": "登入回應缺少資料",
@@ -493,5 +493,15 @@
   "organize.ready": "已自動整理",
   "organize.review": "辨識結果待核對",
   "organize.unknown": "未收到整理結果，請在歸檔檔案中核對",
-  "organize.notApplied": "未套用自動整理，保留原名"
+  "organize.notApplied": "未套用自動整理，保留原名",
+  "subscription.store.title": "雲端訂閱",
+  "subscription.store.buy": "按月訂閱 · {price}/月",
+  "subscription.store.restore": "恢復訂閱",
+  "subscription.store.manage": "管理訂閱",
+  "subscription.store.renewal": "按月自動續費，可在 Apple 帳戶中取消。同一 AI WorkDeck 帳戶登入的各端共享訂閱權益。",
+  "subscription.store.terms": "使用條款",
+  "subscription.store.deleteWarning": "刪除帳戶不會取消 Apple 自動續費訂閱，請先在 Apple 訂閱管理中取消。",
+  "personal.copy.title": "轉存對話至專案",
+  "personal.copy.hint": "將本次對話複製至正式雲端專案，保留原對話；不會複製對話引用的案件檔案。目標專案成員可查看副本。",
+  "personal.copy.success": "對話已複製，原對話已保留。"
 }

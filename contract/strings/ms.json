@@ -185,7 +185,7 @@
   "file.prefix.audio": "Audio lapangan",
   "error.server": "Ralat pelayan ({code}). Cuba lagi sebentar lagi.",
   "queue.unknownState": "Keadaan rekod tidak dikenali: {state}",
-  "project.none": "Tiada projek dipilih",
+  "project.none": "Projek sementara",
   "project.emptyHint": "Akaun ini belum mempunyai sebarang projek. Cipta satu di desktop atau dalam awan, kemudian muat semula dengan akaun yang sama.",
   "error.saveFailed": "Tidak dapat menyimpan: {reason}",
   "error.loginNoData": "Respons log masuk adalah kosong.",
@@ -493,5 +493,15 @@
   "organize.ready": "Disusun secara automatik",
   "organize.review": "Hasil pengecaman perlu disemak",
   "organize.unknown": "Hasil tidak diterima; semak fail arkib",
-  "organize.notApplied": "Penyusunan automatik tidak digunakan; nama asal dikekalkan"
+  "organize.notApplied": "Penyusunan automatik tidak digunakan; nama asal dikekalkan",
+  "subscription.store.title": "Langganan awan",
+  "subscription.store.buy": "Langgan pada {price} / bulan",
+  "subscription.store.restore": "Pulihkan langganan",
+  "subscription.store.manage": "Urus langganan",
+  "subscription.store.renewal": "Diperbaharui secara automatik setiap bulan sehingga dibatalkan dalam akaun Apple. Manfaat dikongsi antara peranti dengan akaun AI WorkDeck yang sama.",
+  "subscription.store.terms": "Syarat penggunaan",
+  "subscription.store.deleteWarning": "Memadam akaun tidak membatalkan langganan Apple yang diperbaharui secara automatik. Batalkan dahulu dalam tetapan langganan Apple.",
+  "personal.copy.title": "Salin perbualan ke projek",
+  "personal.copy.hint": "Salin perbualan ini ke projek awan biasa. Perbualan asal dikekalkan; fail yang dirujuk tidak disalin. Ahli projek sasaran boleh melihat salinan.",
+  "personal.copy.success": "Perbualan disalin. Asalnya dikekalkan."
 }
