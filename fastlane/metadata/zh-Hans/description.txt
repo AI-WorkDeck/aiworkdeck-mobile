@@ -26,4 +26,12 @@ Apple Watch 配套录音
 适合谁
 律师事务所的尽调与勘验、会计师事务所的审计盘点、供应链验厂、工程验收、保险查勘，以及所有以文档为工作对象、需要把现场带回项目里的人。
 
-需要 AI WorkDeck 账号，并与 AI WorkDeck 桌面端配合使用。
+需要 AI WorkDeck 账号；同步到桌面项目时，需配合 AI WorkDeck 桌面端使用。
+
+个人 Pro 月付订阅（可选）
+个人 Pro 是面向中国大陆 App Store 的可选 Apple 自动续期月订阅，价格为每月人民币149元；可购状态及实际价格以 App 内购买页面为准。包含每月745 Credits（每周上限200 Credits）及3GB云空间，同一 AI WorkDeck 账户的权益可在支持的平台使用。具备有效个人 Pro 权益并单独同意后，可使用个人助理与同步日历。
+
+费用通过 Apple 账户收取，订阅会自动续期，除非你取消续订。可在 Apple 账户的订阅设置中管理或取消；取消后可继续使用至已付费周期结束。
+
+使用条款（Apple 标准 EULA）：https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+隐私政策：https://www.aiworkdeck.com/zh/legal/mobile-privacy

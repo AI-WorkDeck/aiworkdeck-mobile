@@ -26,4 +26,12 @@ Start and stop recording on your watch. Recordings automatically transfer to you
 Who it's for
 Due diligence and site visits for law firms, audit stocktakes for accounting firms, supply-chain factory inspections, site acceptance for engineering, insurance surveys, and anyone whose work is document-driven and needs what happens on site brought back into the project.
 
-An AI WorkDeck account and the AI WorkDeck desktop app are required.
+An AI WorkDeck account is required. Syncing to desktop projects also requires the AI WorkDeck desktop app.
+
+Optional Personal Pro monthly subscription
+Personal Pro is an optional Apple auto-renewable monthly subscription for the mainland China storefront, priced at CNY149 per month. Availability and the applicable price are shown on the in-app purchase screen. It includes 745 Credits per month (up to 200 per week) and 3GB of cloud storage, shared by the same AI WorkDeck account across supported platforms. The personal assistant and synced calendar require an active Personal Pro entitlement and separate consent.
+
+Payment is charged to your Apple account. The subscription renews automatically unless you cancel. Manage or cancel it in your Apple account subscription settings; access continues until the end of the paid period.
+
+Terms of Use (Apple Standard EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy Policy: https://www.aiworkdeck.com/en/legal/mobile-privacy
