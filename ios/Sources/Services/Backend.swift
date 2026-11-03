@@ -97,8 +97,16 @@ enum SessionStore {
     private static let account = "sessionId"
 
     static var current: String? {
-        get { read() }
+        get {
+#if DEBUG
+            if SubscriptionUITestSeed.isOn { return "synthetic-subscription-test" }
+#endif
+            return read()
+        }
         set {
+#if DEBUG
+            if SubscriptionUITestSeed.isOn { return }
+#endif
             if let newValue { write(newValue) } else { clear() }
         }
     }

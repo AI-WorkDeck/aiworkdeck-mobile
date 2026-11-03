@@ -63,7 +63,7 @@ private struct RootView: View {
             BackupConsentView().environment(model)
         }
         .alert(tr("rec.notice.title"), isPresented: Binding(
-            get: { recorder.notice != nil },
+            get: { runsRecordingLifecycle && recorder.notice != nil },
             set: { if !$0 { recorder.dismissNotice() } }
         )) {
             if recorder.canRetrySave {
@@ -72,18 +72,19 @@ private struct RootView: View {
             Button(tr("common.close"), role: .cancel) { recorder.dismissNotice() }
         } message: { Text(recorder.notice ?? "") }
         .alert(tr("rec.silence.title"), isPresented: Binding(
-            get: { recorder.silence.needsConfirmation && recorder.isRecording && scenePhase == .active },
+            get: { runsRecordingLifecycle && recorder.silence.needsConfirmation && recorder.isRecording && scenePhase == .active },
             set: { if !$0 && scenePhase == .active { recorder.continueAfterSilence() } }
         )) {
             Button(tr("rec.silence.stop")) { Task { await recorder.stop() } }
             Button(tr("rec.silence.continue"), role: .cancel) { recorder.continueAfterSilence() }
         } message: { Text(tr("rec.silence.message")) }
         .task(id: model.didRestore) {
-            if model.didRestore {
+            if model.didRestore && runsRecordingLifecycle {
                 await recorder.recoverPending()
             }
         }
         .onChange(of: scenePhase) { _, phase in
+            guard runsRecordingLifecycle else { return }
             recorder.recordingSceneChanged(active: phase == .active)
             if phase == .active {
                 Task {
@@ -95,6 +96,15 @@ private struct RootView: View {
         .animation(T.A.base, value: model.isSignedIn)
         .animation(T.A.base, value: model.selectedProject)
         .environment(\.layoutDirection, L10n.isRTL ? .rightToLeft : .leftToRight)
+    }
+
+    // A dedicated StoreKit test cannot recover recordings left by another UI test.
+    private var runsRecordingLifecycle: Bool {
+#if DEBUG
+        !SubscriptionUITestSeed.isOn
+#else
+        true
+#endif
     }
 
     /// Release 里恒为 false，整段截图分支被优化掉。

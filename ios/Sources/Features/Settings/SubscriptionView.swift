@@ -65,7 +65,15 @@ struct SubscriptionView: View {
             @unknown default: hint = tr("recharge.failed")
             }
         } catch let error as API.BillingError { hint = error.message }
-        catch { hint = tr("recharge.failed") }
+        catch {
+#if DEBUG
+            if SubscriptionUITestSeed.isOn {
+                let failure = error as NSError
+                print("Subscription fixture purchase failed: \(failure.domain) / \(failure.code)")
+            }
+#endif
+            hint = tr("recharge.failed")
+        }
     }
 
     @MainActor private func restore() async {

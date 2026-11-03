@@ -21,6 +21,7 @@ final class SubscriptionFlowTests: XCTestCase {
         let buy = app.buttons["subscription.buy"]
         XCTAssertTrue(buy.waitForExistence(timeout: 20))
         XCTAssertTrue(buy.isHittable)
+        XCTAssertFalse(app.alerts.firstMatch.exists, "subscription fixture must not recover recording alerts")
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "Monthly subscription local StoreKit"
         screenshot.lifetime = .keepAlways
@@ -66,6 +67,8 @@ final class SubscriptionFlowTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.buttons["subscription.buy"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["subscription.buy"].isHittable)
+        XCTAssertFalse(app.alerts.firstMatch.exists, "subscription fixture must not recover recording alerts")
         app.buttons["subscription.buy"].tap()
         let result = app.staticTexts["subscription.result"]
         let pending = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "购买已提交，正在确认到账…"), object: result)
