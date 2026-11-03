@@ -510,5 +510,15 @@
   "personal.copy.expired": "انتهت المهلة. الأصل محفوظ ويمكن إعادة المحاولة.",
   "personal.copy.failed": "فشل التسليم. الأصل محفوظ ويمكن إعادة المحاولة.",
   "personal.copy.unknown": "لم يتأكد التسليم. إعادة المحاولة تستخدم الطلب نفسه.",
-  "personal.copy.cloud": "السحابة"
+  "personal.copy.cloud": "السحابة",
+  "subscription.sandbox.title": "اشتراك اختباري (غير مشمول في الرصيد)",
+  "subscription.sandbox.active": "نشط",
+  "subscription.sandbox.inactive": "غير نشط أو منتهي الصلاحية",
+  "subscription.sandbox.expires": "انتهاء الاشتراك الاختباري",
+  "personal.report.title": "الإبلاغ عن المحتوى",
+  "personal.report.reason": "صف المشكلة التي تبلغ عنها",
+  "personal.report.sent": "تم إرسال البلاغ",
+  "personal.report.privacy": "سيُرسل وصفك ومعرّف المحادثة لمعالجة البلاغ. لن يُرفق نص المحادثة الكامل أو الملفات تلقائيًا.",
+  "intro.title": "AI WorkDeck · نظرة عامة",
+  "intro.overview": "التقط الصور وسجّل الصوت وأرشف ملفات المشاريع. سجّل الدخول لمزامنة المشاريع. يتطلب المساعد الشخصي والتقويم اشتراكًا نشطًا وموافقة منفصلة عند التفعيل. تعرّف على الميزات قبل اختيار تسجيل الدخول أو إنشاء حساب."
 }

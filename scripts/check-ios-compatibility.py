@@ -52,7 +52,10 @@ def main():
         run = api(f"repos/{REPOSITORY}/actions/runs/{run_id}")
     else:
         response = api(f"repos/{REPOSITORY}/actions/workflows/ios-auth-check.yml/runs?head_sha={sha}&per_page=100")
-        runs = response.get("workflow_runs", [])
+        # A PR's head SHA names this branch, but its checkout tests a merge ref.
+        # Select among exact-source events before choosing the latest attempt.
+        runs = [run for run in response.get("workflow_runs", [])
+                if run.get("event") in ("push", "workflow_dispatch")]
         if not runs:
             raise ValueError("No compatibility run for this commit; run ios-auth-check before uploading")
         # Never reuse an older green result after a newer failed/incomplete run.

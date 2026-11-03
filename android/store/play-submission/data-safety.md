@@ -33,3 +33,15 @@
 ## 已公布的后续定位政策
 
 截至2026-10-29，Google已公布 Android17/API37 的一次性精确定位 Location Button 要求，2026年11月开放声明、2027-01-27起执行。当前首发没有后台定位；下一次定位适配应评估拍摄标记使用 Location Button，不能用本次前台权限改动宣称已满足未来接口要求。依据：[最小定位范围](https://support.google.com/googleplay/android-developer/answer/17033915)。
+
+## 1.4.0 / code7 更新（dev-board #1673）
+
+本轮主线加入个人助理，2026-11-03 已在 Console 保存并读回 **App activity → Other user-generated content**：收集及向第三方分享、用户可选择、用于应用功能与安全、并非仅瞬时处理。包括用户主动发送的提问，以及主动举报时填写的说明；举报请求还带会话标识，不自动附带聊天全文或文件。发送提问前沿用既有云端摘要处理授权。新日程入口读取账户服务器快照，并未新增系统日历读取权限。
+
+个人助理回答提供应用内举报对话框，调用既有鉴权 `POST /api/feedback`（multipart payload），`kind=BUG`，以 `page=mobile/personal/assistant` 和 `clientContext.type=ai-content-report` 区分。只有用户点击提交才发送说明与会话标识；不调用邮件应用，不自动上传整段聊天。失败保留填写内容供用户重试，成功反馈必须来自有效服务端回执。测试使用 MockWebServer，不向真实反馈收件箱投递。
+
+Console 已提示“Change saved. Send for review in Publishing overview”，预览同时列出 Data shared / Data collected → Other user-generated content；此状态是待送审，不是审核通过。对本轮云端 AI 处理无法独立证明所有推理商仅受托处理或不训练，因此不沿用上文旧版“不分享”的例外结论，也不作零留存或不训练承诺。政策依据：[数据类型定义](https://support.google.com/googleplay/android-developer/answer/10787469)、[AI 内容应用内举报要求](https://support.google.com/googleplay/android-developer/answer/13985936)。
+
+本轮同时按实际调用补充四种数据的“分享”：Files and docs 为个人助理读取的必要文档文字；Photos 为可选采集整理的 JPEG 缩略图；Videos 为可选整理抽出的 JPEG 帧；Voice or sound recordings 为最多前30秒的 WAV 片段，随后转写文字用于分类。均由用户选择启用，用于应用功能。助手的参考读取本身不对图片/扫描件做 OCR，也不转写原始音视频；媒体整理是另一条明确可选的链路。Console 预览已逐项读回上述共享类型并保存，尚待连同版本送审。
+
+删除账号/数据的两处链接已改为规范地址 https://www.workdeck.ai/en/legal/mobile-account-deletion ，公开返回200；本轮 Console 验证已进入下一步且未显示原链接警告。并不据此保证未来所有 Google 抓取均成功。

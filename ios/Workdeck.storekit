@@ -1,64 +1,94 @@
 {
-  "identifier" : "A1B2C3D4",
-  "nonRenewingSubscriptions" : [
-
-  ],
-  "products" : [
+  "identifier": "A1B2C3D4",
+  "nonRenewingSubscriptions": [],
+  "products": [
     {
-      "displayPrice" : "50.00",
-      "familyShareable" : false,
-      "internalID" : "6803309151",
-      "localizations" : [
+      "displayPrice": "50.00",
+      "familyShareable": false,
+      "internalID": "6803309151",
+      "localizations": [
         {
-          "description" : "为 AI WorkDeck 统一账户充值 50 元额度",
-          "displayName" : "50 元额度",
-          "locale" : "zh_CN"
+          "description": "为 AI WorkDeck 统一账户充值 50 元额度",
+          "displayName": "50 元额度",
+          "locale": "zh_CN"
         }
       ],
-      "productID" : "credits.cny.50",
-      "referenceName" : "Credits CNY 50",
-      "type" : "Consumable"
+      "productID": "credits.cny.50",
+      "referenceName": "Credits CNY 50",
+      "type": "Consumable"
     },
     {
-      "displayPrice" : "100.00",
-      "familyShareable" : false,
-      "internalID" : "6803309152",
-      "localizations" : [
+      "displayPrice": "100.00",
+      "familyShareable": false,
+      "internalID": "6803309152",
+      "localizations": [
         {
-          "description" : "为 AI WorkDeck 统一账户充值 100 元额度",
-          "displayName" : "100 元额度",
-          "locale" : "zh_CN"
+          "description": "为 AI WorkDeck 统一账户充值 100 元额度",
+          "displayName": "100 元额度",
+          "locale": "zh_CN"
         }
       ],
-      "productID" : "credits.cny.100",
-      "referenceName" : "Credits CNY 100",
-      "type" : "Consumable"
+      "productID": "credits.cny.100",
+      "referenceName": "Credits CNY 100",
+      "type": "Consumable"
     },
     {
-      "displayPrice" : "300.00",
-      "familyShareable" : false,
-      "internalID" : "6803309153",
-      "localizations" : [
+      "displayPrice": "300.00",
+      "familyShareable": false,
+      "internalID": "6803309153",
+      "localizations": [
         {
-          "description" : "为 AI WorkDeck 统一账户充值 300 元额度",
-          "displayName" : "300 元额度",
-          "locale" : "zh_CN"
+          "description": "为 AI WorkDeck 统一账户充值 300 元额度",
+          "displayName": "300 元额度",
+          "locale": "zh_CN"
         }
       ],
-      "productID" : "credits.cny.300",
-      "referenceName" : "Credits CNY 300",
-      "type" : "Consumable"
+      "productID": "credits.cny.300",
+      "referenceName": "Credits CNY 300",
+      "type": "Consumable"
     }
   ],
-  "settings" : {
-    "_locale" : "zh_CN",
-    "_storefront" : "CHN"
+  "settings": {
+    "_locale": "zh_CN",
+    "_storefront": "CHN"
   },
-  "subscriptionGroups" : [
-
+  "subscriptionGroups": [
+    {
+      "id": "22539871",
+      "localizations": [],
+      "name": "AI WorkDeck Pro",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "149.00",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "6830036439",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "每月745 Credits，每周上限200 Credits，含3GB云空间。",
+              "displayName": "个人 Pro（月付）",
+              "locale": "zh_CN"
+            },
+            {
+              "description": "745 Credits/month, 200/week and 3GB cloud storage.",
+              "displayName": "Personal Pro (Monthly)",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "pro.monthly.cny.149",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "AI WorkDeck Pro Monthly",
+          "subscriptionGroupID": "22539871",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
   ],
-  "version" : {
-    "major" : 4,
-    "minor" : 0
+  "version": {
+    "major": 4,
+    "minor": 0
   }
 }

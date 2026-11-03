@@ -76,6 +76,13 @@ struct SettingsView: View {
                             infoRow(tr("subscription.weekly"), "\(credits(sub.weeklyUsedCents)) / \(credits(sub.weeklyLimitCents))")
                             infoRow(tr("subscription.monthly"), "\(credits(sub.monthlyUsedCents)) / \(credits(sub.monthlyLimitCents))")
                         }
+                        if case .ok(let b) = balanceState, let sub = b.subscription,
+                           sub.sandbox == true, let test = sub.sandboxSubscription {
+                            infoRow(tr("subscription.sandbox.title"), tr(test.active ? "subscription.sandbox.active" : "subscription.sandbox.inactive"))
+                            if let date = test.expiryDate {
+                                infoRow(tr("subscription.sandbox.expires"), date.formatted(date: .abbreviated, time: .shortened))
+                            }
+                        }
                         // 充值入口与余额行分开算：NOT_CONNECTED 时行在、入口也要在
                         // （dev-board#535：触发 NOT_CONNECTED 的正是最该去充值把账户开出来的人）。
                         if plan.showRecharge {

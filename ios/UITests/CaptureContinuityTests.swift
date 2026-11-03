@@ -25,16 +25,8 @@ final class CaptureContinuityTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(elapsed, 0)
         for orientation: UIDeviceOrientation in [.landscapeLeft, .portrait, .landscapeRight, .portrait] {
             XCUIDevice.shared.orientation = orientation
-            expectation(for: NSPredicate { _, _ in
-                // Notification authorization is asynchronous and can arrive after
-                // recording starts, including in the middle of a rotation.
-                if self.allowVisibleRecordingPermission() { return false }
-                return (app.frame.height > app.frame.width) == (orientation == .portrait)
-                    && shutter.isHittable
-            }, evaluatedWith: app)
-            waitForExpectations(timeout: 15)
-            XCTAssertEqual(shutter.label, "Stop recording")
-            XCTAssertTrue(shutter.isHittable)
+            guard waitForReadyControl(ReadyControl(element: shutter, identifier: "capture.shutter", label: "Stop recording"),
+                                      in: app, portrait: orientation == .portrait, timeout: 15) != nil else { return }
             XCTAssertEqual(destination.label, "华创科技 A 轮尽调")
             let next = seconds(app.staticTexts["recording.elapsed"].label)
             XCTAssertGreaterThanOrEqual(next, elapsed)
@@ -49,12 +41,8 @@ final class CaptureContinuityTests: XCTestCase {
         XCTAssertEqual(shutter.label, "Resume audio")
         let pausedElapsed = app.staticTexts["recording.elapsed"].label
         XCUIDevice.shared.orientation = .landscapeLeft
-        expectation(for: NSPredicate { _, _ in
-            if self.allowVisibleRecordingPermission() { return false }
-            return app.frame.width > app.frame.height && shutter.isHittable
-        }, evaluatedWith: app)
-        waitForExpectations(timeout: 15)
-        XCTAssertTrue(shutter.isHittable)
+        guard waitForReadyControl(ReadyControl(element: shutter, identifier: "capture.shutter", label: "Resume audio"),
+                                  in: app, portrait: false, timeout: 15) != nil else { return }
         XCTAssertEqual(app.staticTexts["recording.elapsed"].label, pausedElapsed)
         shutter.tap()
         XCTAssertEqual(shutter.label, "Stop recording")

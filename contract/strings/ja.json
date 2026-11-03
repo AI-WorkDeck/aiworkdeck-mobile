@@ -510,5 +510,15 @@
   "personal.copy.expired": "期限切れ。元の会話は保持されており、再試行できます。",
   "personal.copy.failed": "転送に失敗しました。元の会話は保持されており、再試行できます。",
   "personal.copy.unknown": "受信未確認です。再試行では同じリクエストを使用します。",
-  "personal.copy.cloud": "クラウド"
+  "personal.copy.cloud": "クラウド",
+  "subscription.sandbox.title": "テスト用サブスクリプション（残高に含まれません）",
+  "subscription.sandbox.active": "有効",
+  "subscription.sandbox.inactive": "無効または期限切れ",
+  "subscription.sandbox.expires": "テスト用サブスクリプションの有効期限",
+  "personal.report.title": "コンテンツを報告",
+  "personal.report.reason": "報告する問題を説明してください",
+  "personal.report.sent": "報告を送信しました",
+  "personal.report.privacy": "報告の処理のため、入力した説明と会話IDを送信します。会話全文やファイルは自動添付されません。",
+  "intro.title": "AI WorkDeck · 機能紹介",
+  "intro.overview": "写真撮影、録音、プロジェクトファイルの保管に使えます。プロジェクトの同期にはログインが必要です。パーソナルアシスタントと予定表には有効なサブスクリプションと、有効化時の個別の同意が必要です。まず機能を確認してから、ログインまたは登録を選べます。"
 }

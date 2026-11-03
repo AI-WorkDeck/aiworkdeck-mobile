@@ -510,5 +510,15 @@
   "personal.copy.expired": "Verlopen. Het origineel blijft behouden; opnieuw proberen is mogelijk.",
   "personal.copy.failed": "Aflevering mislukt. Het origineel blijft behouden; probeer opnieuw.",
   "personal.copy.unknown": "Aflevering niet bevestigd. Opnieuw proberen gebruikt hetzelfde verzoek.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Testabonnement (niet in saldo opgenomen)",
+  "subscription.sandbox.active": "Actief",
+  "subscription.sandbox.inactive": "Inactief of verlopen",
+  "subscription.sandbox.expires": "Testabonnement verloopt",
+  "personal.report.title": "Inhoud melden",
+  "personal.report.reason": "Beschrijf het probleem",
+  "personal.report.sent": "Melding verzonden",
+  "personal.report.privacy": "Uw beschrijving en gespreks-ID worden verzonden om de melding te behandelen. De volledige chat en bestanden worden niet automatisch bijgevoegd.",
+  "intro.title": "AI WorkDeck · Overzicht",
+  "intro.overview": "Maak foto’s, neem audio op en archiveer projectbestanden. Log in om projecten te synchroniseren. De persoonlijke assistent en agenda vereisen een actief abonnement en aparte toestemming bij inschakeling. Bekijk eerst de functies en kies daarna voor inloggen of registreren."
 }

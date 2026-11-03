@@ -105,6 +105,19 @@ class Backend(
     fun personalAccountScope(): String? = session.current()?.takeIf { accountActive() }?.let { id ->
         java.security.MessageDigest.getInstance("SHA-256").digest((baseUrl + ":" + id).toByteArray()).joinToString("") { "%02x".format(it) }
     }
+    suspend fun reportAssistant(conversationId: String, description: String): Long = withContext(Dispatchers.IO) {
+        val payload = buildJsonObject {
+            put("kind", "BUG"); put("text", description.trim()); put("page", "mobile/personal/assistant")
+            put("clientContext", buildJsonObject {
+                put("type", "ai-content-report"); put("platform", "android")
+                put("conversationId", java.util.UUID.fromString(conversationId).toString())
+            })
+        }
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("payload", payload.toString()).build()
+        val result = envelope(execute(Request.Builder().url(baseUrl + "/api/feedback").post(body)))
+        result["data"]?.jsonObject?.get("id")?.jsonPrimitive?.longOrNull?.takeIf { it > 0 }
+            ?: throw ApiError(1, tr("error.badResponse"))
+    }
     suspend fun personalStatus(): PersonalStatus = personal("assistant/status")
     suspend fun personalCalendar(): PersonalCalendar = personal("calendar/events")
     suspend fun personalSettings(feature: String, enabled: Boolean): PersonalSettings = personal(feature + "/settings", "PUT",

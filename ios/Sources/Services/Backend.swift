@@ -97,8 +97,16 @@ enum SessionStore {
     private static let account = "sessionId"
 
     static var current: String? {
-        get { read() }
+        get {
+#if DEBUG
+            if SubscriptionUITestSeed.isOn { return "synthetic-subscription-test" }
+#endif
+            return read()
+        }
         set {
+#if DEBUG
+            if SubscriptionUITestSeed.isOn { return }
+#endif
             if let newValue { write(newValue) } else { clear() }
         }
     }
@@ -260,6 +268,9 @@ actor API: ArchiveMoveServing {
 
     private let session: URLSession = {
         let c = URLSessionConfiguration.default
+#if DEBUG
+        if SubscriptionUITestSeed.isOn { c.protocolClasses = [SubscriptionUITestProtocol.self] }
+#endif
         c.timeoutIntervalForRequest = 20
         c.waitsForConnectivity = true
         return URLSession(configuration: c)
@@ -519,6 +530,19 @@ actor API: ArchiveMoveServing {
 
     /// 统一账户余额（dev-board#425，GET /api/mobile/billing/balance）。整数分，币种由部署站点决定。
     /// plan 是计费档位（`paid`/`free`），不是套餐名——不要把它直接渲染给用户。
+    struct SandboxSubscription: Decodable, Sendable {
+        let active: Bool
+        let expiresAt: String?
+        var expiryDate: Date? {
+            guard let expiresAt else { return nil }
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatter.date(from: expiresAt) { return date }
+            formatter.formatOptions = [.withInternetDateTime]
+            return formatter.date(from: expiresAt)
+        }
+    }
+
     struct SubscriptionBalance: Decodable, Sendable {
         let active: Bool
         let availableCents: Int64
@@ -526,6 +550,8 @@ actor API: ArchiveMoveServing {
         let monthlyUsedCents: Int64
         let weeklyLimitCents: Int64
         let weeklyUsedCents: Int64
+        var sandbox: Bool? = nil
+        var sandboxSubscription: SandboxSubscription? = nil
     }
 
     struct BillingBalance: Decodable, Sendable {

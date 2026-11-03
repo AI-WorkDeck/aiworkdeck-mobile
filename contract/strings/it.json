@@ -510,5 +510,15 @@
   "personal.copy.expired": "Scaduto. L’originale è conservato; puoi riprovare.",
   "personal.copy.failed": "Consegna non riuscita. L’originale è conservato; puoi riprovare.",
   "personal.copy.unknown": "Consegna non confermata. Il nuovo tentativo usa la stessa richiesta.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Abbonamento di prova (escluso dal saldo)",
+  "subscription.sandbox.active": "Attivo",
+  "subscription.sandbox.inactive": "Inattivo o scaduto",
+  "subscription.sandbox.expires": "Scadenza abbonamento di prova",
+  "personal.report.title": "Segnala contenuto",
+  "personal.report.reason": "Descrivi il problema da segnalare",
+  "personal.report.sent": "Segnalazione inviata",
+  "personal.report.privacy": "La descrizione e l’ID della conversazione saranno inviati per gestire la segnalazione. La chat completa e i file non vengono allegati automaticamente.",
+  "intro.title": "AI WorkDeck · Panoramica",
+  "intro.overview": "Scatta foto, registra audio e archivia i file dei progetti. Accedi per sincronizzare i progetti. Assistente personale e calendario richiedono un abbonamento attivo e un consenso separato all’attivazione. Scopri le funzioni prima di accedere o registrarti."
 }

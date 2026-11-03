@@ -1,6 +1,4 @@
-/* 引流落地页。视觉语汇照抄 login/index：纯白底、发丝线分区、字级跨度做层级、
- * 无卡片阴影。唯一的原生 button 是 getPhoneNumber（open-type 必须用 button），
- * 样式向 login 的 .submit 看齐并抹掉 button 默认外观。 */
+/* Public product overview with explicit account actions. */
 
 .page {
   display: flex;
@@ -28,7 +26,7 @@
   line-height: 1.6;
 }
 
-/* ---- 授权按钮：原生 button，抹默认样式后与 login 的 .submit 同貌 ---------- */
+/* Account action button. */
 button.submit {
   width: 100%;
   margin-top: var(--s8);

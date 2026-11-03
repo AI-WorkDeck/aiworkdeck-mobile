@@ -313,6 +313,11 @@ final class AppModel {
 
     func bootstrap() async {
 #if DEBUG
+        if SubscriptionUITestSeed.isOn {
+            L10n.locale = "zh-Hans"
+            didRestore = true
+            return
+        }
         if ProcessInfo.processInfo.arguments.contains("-AWDLoginUITest") {
             didRestore = true
             return

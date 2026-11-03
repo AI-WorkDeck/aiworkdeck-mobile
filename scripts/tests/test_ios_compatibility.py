@@ -59,6 +59,32 @@ class CompatibilityGate(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Latest compatibility run"):
                 compatibility.main()
 
+    def test_newer_pr_does_not_hide_successful_exact_source_run(self):
+        pr = {**self.run, "id": 6, "event": "pull_request"}
+        with patch.dict(os.environ, {}, clear=True), patch.object(compatibility, "command",
+                side_effect=["", self.sha, json.dumps([{"jobs": self.jobs}])]) as command, patch.object(
+                compatibility, "api", return_value={"workflow_runs": [self.run, pr]}):
+            compatibility.main()
+            self.assertIn("/runs/5/attempts/1/jobs", command.call_args.args[-1])
+
+    def test_pr_only_results_are_not_exact_source_evidence(self):
+        pr = {**self.run, "event": "pull_request"}
+        with patch.dict(os.environ, {}, clear=True), patch.object(compatibility, "command",
+                side_effect=["", self.sha]), patch.object(
+                compatibility, "api", return_value={"workflow_runs": [pr]}):
+            with self.assertRaisesRegex(ValueError, "No compatibility run"):
+                compatibility.main()
+
+    def test_newest_exact_failure_is_not_hidden_by_successful_pr(self):
+        failed = {**self.run, "id": 6, "event": "workflow_dispatch", "conclusion": "failure"}
+        pr = {**self.run, "id": 7, "event": "pull_request"}
+        with patch.dict(os.environ, {}, clear=True), patch.object(compatibility, "command",
+                side_effect=["", self.sha, json.dumps([{"jobs": self.jobs}])]) as command, patch.object(
+                compatibility, "api", return_value={"workflow_runs": [self.run, failed, pr]}):
+            with self.assertRaisesRegex(ValueError, "Latest compatibility run"):
+                compatibility.main()
+            self.assertIn("/runs/6/attempts/1/jobs", command.call_args.args[-1])
+
     def test_uncommitted_source_stops_before_reading_remote_results(self):
         with patch.object(compatibility, "command", return_value=" M ios/Sources/App.swift"), patch.object(
                 compatibility, "api") as remote:

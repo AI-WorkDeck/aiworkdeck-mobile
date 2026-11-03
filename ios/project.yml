@@ -8,7 +8,7 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "1.9.0"
+    MARKETING_VERSION: "1.10.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.9"
     AWD_CALENDAR_REMOTE_PUSH: "NO"
@@ -209,6 +209,8 @@ targets:
     platform: iOS
     sources:
       - path: UITests
+      - path: Workdeck.storekit
+        buildPhase: resources
     dependencies:
       - target: Workdeck
     settings:

@@ -1,4 +1,3 @@
-1. Start from the new Capture home, with Calendar and Assistant tabs and account settings under your avatar.
-2. Start recording with one tap beside the shutter. Capture without choosing a project and keep audio recording across screens.
-3. Manage captures in one upload queue, assign or copy them to projects, and move archived originals when supported by the companion service and desktop app.
-4. Improve iPhone rotation and fix closing and returning from settings on Duo.
+1. Capture and chat in your personal workspace, organize materials into projects, and continue conversations on your desktop.
+2. Subscribe to Personal Pro monthly from account settings, restore purchases, and manage renewals. Subscription benefits sync across devices using the same account.
+3. Improved navigation and screen restoration during iPhone rotation and Duo split-screen use.

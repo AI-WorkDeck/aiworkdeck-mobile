@@ -510,5 +510,15 @@
   "personal.copy.expired": "Süresi doldu. Asıl konuşma korundu; yeniden deneyebilirsiniz.",
   "personal.copy.failed": "İletim başarısız. Asıl konuşma korundu; yeniden deneyebilirsiniz.",
   "personal.copy.unknown": "İletim doğrulanmadı. Yeniden deneme aynı isteği kullanır.",
-  "personal.copy.cloud": "Bulut"
+  "personal.copy.cloud": "Bulut",
+  "subscription.sandbox.title": "Test aboneliği (bakiyeye dahil değil)",
+  "subscription.sandbox.active": "Etkin",
+  "subscription.sandbox.inactive": "Etkin değil veya süresi dolmuş",
+  "subscription.sandbox.expires": "Test aboneliği sona eriyor",
+  "personal.report.title": "İçeriği bildir",
+  "personal.report.reason": "Bildirmek istediğiniz sorunu açıklayın",
+  "personal.report.sent": "Bildirim gönderildi",
+  "personal.report.privacy": "Bildirimi işlemek için açıklamanız ve konuşma kimliği gönderilir. Sohbetin tamamı ve dosyalar otomatik olarak eklenmez.",
+  "intro.title": "AI WorkDeck · Genel bakış",
+  "intro.overview": "Fotoğraf çekin, ses kaydedin ve proje dosyalarını arşivleyin. Projeleri eşitlemek için giriş yapın. Kişisel asistan ve takvim, etkin abonelik ve etkinleştirme sırasında ayrı onay gerektirir. Giriş yapmayı veya kaydolmayı seçmeden önce özellikleri inceleyin."
 }

@@ -48,6 +48,28 @@ class PersonalWorkspaceState(
     var desktopCopy by mutableStateOf<PersonalDesktopCopy?>(null)
     private var recentDesktopCopies: List<DesktopCopyReceipt> = emptyList()
     var copySuccess by mutableStateOf(false)
+    var reportConversationId by mutableStateOf<String?>(null)
+    var reportDescription by mutableStateOf("")
+    var reporting by mutableStateOf(false)
+    var reportSubmitted by mutableStateOf(false)
+    var reportError by mutableStateOf<String?>(null)
+    fun openReport() {
+        if (reporting || conversationStore?.isCurrent() != true) return
+        reportConversationId = conversationId ?: return
+        reportDescription = ""; reportSubmitted = false; reportError = null
+    }
+    suspend fun submitReport() {
+        val id = reportConversationId ?: return
+        val store = conversationStore ?: return
+        if (reporting || reportSubmitted || reportDescription.isBlank() || !store.isCurrent()) return
+        reporting = true; reportError = null
+        try {
+            backend.reportAssistant(id, reportDescription)
+            if (store.isCurrent() && reportConversationId == id) reportSubmitted = true
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { if (store.isCurrent()) reportError = e.message ?: tr("error.network") }
+        finally { reporting = false }
+    }
     suspend fun prepareCopy() {
         if (busy || loading || pending != null || conversationId == null) return
         val store = conversationStore ?: return
@@ -253,7 +275,10 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
             }
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (state.messages.isEmpty()) item { Text(tr("personal.ask"), style = MaterialTheme.typography.titleMedium, color = Tk.L.fg); Text(tr("personal.summaries", mapOf("count" to (state.status?.summaryCount ?: 0))), color = Tk.L.fgMuted) }
-                items(state.messages) { message -> SelectionContainer { Text(message.second, color = Tk.L.fg, modifier = Modifier.fillMaxWidth().padding(12.dp)) } }
+                items(state.messages) { message ->
+                    SelectionContainer { Text(message.second, color = Tk.L.fg, modifier = Modifier.fillMaxWidth().padding(12.dp)) }
+                    if (message.first == "assistant") TextButton(onClick = { state.openReport() }, enabled = !state.reporting) { Text(tr("personal.report.title")) }
+                }
                 if (state.sources.isNotEmpty()) item { Text(tr("personal.sources"), color = Tk.L.fgMuted) }
                 items(state.sources) { source -> TextButton(onClick = { onProject(RelayProject(source.deviceId, null, source.projectKey, source.projectName)) }) { Text(source.projectName + " · " + personalSourceDate(source.sourceUpdatedAt)) } }
                 if (state.busy) item { Text(tr("personal.processing"), color = Tk.L.fgMuted); LinearProgressIndicator(Modifier.fillMaxWidth()) }
@@ -310,6 +335,27 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
             state.calendarError?.let { Text(it, color = Tk.S.failed) }
             if (calendar?.enabled == true) TextButton(onClick = { scope.launch { state.configure("calendar", false, context); CalendarReminders.clear(context); reminders = false } }) { Text(tr("common.off")) }
         }
+    }
+    if (state.reportConversationId != null) {
+        AlertDialog(onDismissRequest = { if (!state.reporting) state.reportConversationId = null },
+            title = { Text(tr("personal.report.title")) },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (state.reportSubmitted) Text(tr("personal.report.sent"))
+                else {
+                    Text(tr("personal.report.privacy"))
+                    OutlinedTextField(value = state.reportDescription, onValueChange = { state.reportDescription = it.take(2000) },
+                        enabled = !state.reporting, label = { Text(tr("personal.report.reason")) }, maxLines = 5)
+                    if (state.reporting) { Text(tr("personal.processing")); LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                    state.reportError?.let { Text(it, color = Tk.S.failed) }
+                }
+            } },
+            confirmButton = {
+                if (!state.reportSubmitted) TextButton(onClick = { scope.launch { state.submitReport() } },
+                    enabled = !state.reporting && state.reportDescription.isNotBlank()) { Text(tr("personal.send")) }
+            },
+            dismissButton = { TextButton(enabled = !state.reporting, onClick = { state.reportConversationId = null }) {
+                Text(tr(if (state.reportSubmitted) "common.close" else "common.cancel"))
+            } })
     }
     state.copyTargets?.let { targets ->
         AlertDialog(onDismissRequest = { if (!state.loading) state.copyTargets = null },

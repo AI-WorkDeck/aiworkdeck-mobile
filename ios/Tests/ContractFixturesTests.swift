@@ -135,11 +135,26 @@ final class ContractFixturesTests: XCTestCase {
         XCTAssertEqual(balance.balanceCents, 0)
         XCTAssertEqual(balance.subscription?.availableCents, 2500)
         XCTAssertEqual(balance.subscription?.monthlyLimitCents, 14900)
+        XCTAssertNil(balance.subscription?.sandbox)
+        XCTAssertNil(balance.subscription?.sandboxSubscription)
         let usage = try JSONDecoder().decode(API.MediaUsage.self, from: Data(#"{"usedBytes":9,"quotaBytes":209715200,"persistentUsedBytes":42,"persistentQuotaBytes":null,"persistentQuotaAvailable":false}"#.utf8))
         XCTAssertEqual(usage.usedBytes, 9)
         XCTAssertEqual(usage.persistentUsedBytes, 42)
         XCTAssertNil(usage.persistentQuotaBytes)
         XCTAssertEqual(usage.persistentQuotaAvailable, false)
+    }
+
+    func testSandboxSubscriptionDoesNotReplaceActualAllowance() throws {
+        let data = Data(#"{"balanceCents":123,"currency":"CNY","subscription":{"active":true,"availableCents":2500,"monthlyLimitCents":14900,"monthlyUsedCents":2000,"weeklyLimitCents":4500,"weeklyUsedCents":2000,"sandbox":true,"sandboxSubscription":{"active":false,"expiresAt":"2026-11-03T12:00:00.000Z","availableCents":0}}}"#.utf8)
+        guard case .ok(let balance) = API.decodeBillingBalance(status: 200, data: data) else {
+            return XCTFail("sandbox lifecycle must decode without altering the real balance")
+        }
+        XCTAssertEqual(balance.balanceCents, 123)
+        XCTAssertEqual(balance.subscription?.availableCents, 2500)
+        XCTAssertEqual(balance.subscription?.active, true)
+        XCTAssertEqual(balance.subscription?.sandbox, true)
+        XCTAssertEqual(balance.subscription?.sandboxSubscription?.active, false)
+        XCTAssertNotNil(balance.subscription?.sandboxSubscription?.expiryDate)
     }
 
     func testBillingBalanceDecodeFixtures() throws {

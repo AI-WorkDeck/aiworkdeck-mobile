@@ -510,5 +510,15 @@
   "personal.copy.expired": "Tamat tempoh. Perbualan asal dikekalkan; boleh cuba lagi.",
   "personal.copy.failed": "Penghantaran gagal. Perbualan asal dikekalkan; boleh cuba lagi.",
   "personal.copy.unknown": "Penghantaran belum disahkan. Cuba lagi menggunakan permintaan yang sama.",
-  "personal.copy.cloud": "Awan"
+  "personal.copy.cloud": "Awan",
+  "subscription.sandbox.title": "Langganan ujian (tidak termasuk baki)",
+  "subscription.sandbox.active": "Aktif",
+  "subscription.sandbox.inactive": "Tidak aktif atau tamat tempoh",
+  "subscription.sandbox.expires": "Langganan ujian tamat",
+  "personal.report.title": "Laporkan kandungan",
+  "personal.report.reason": "Terangkan isu yang dilaporkan",
+  "personal.report.sent": "Laporan dihantar",
+  "personal.report.privacy": "Penerangan anda dan ID perbualan akan dihantar untuk mengendalikan laporan. Teks perbualan penuh dan fail tidak dilampirkan secara automatik.",
+  "intro.title": "AI WorkDeck · Gambaran keseluruhan",
+  "intro.overview": "Ambil foto, rakam audio dan arkibkan fail projek. Log masuk untuk menyegerakkan projek. Pembantu peribadi dan kalendar memerlukan langganan aktif serta persetujuan berasingan apabila diaktifkan. Kenali cirinya dahulu sebelum memilih untuk log masuk atau mendaftar."
 }

@@ -510,5 +510,15 @@
   "personal.copy.expired": "Kedaluwarsa. Percakapan asli tetap ada; dapat dicoba lagi.",
   "personal.copy.failed": "Pengiriman gagal. Percakapan asli tetap ada; dapat dicoba lagi.",
   "personal.copy.unknown": "Pengiriman belum dikonfirmasi. Coba lagi memakai permintaan yang sama.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Langganan uji (tidak termasuk saldo)",
+  "subscription.sandbox.active": "Aktif",
+  "subscription.sandbox.inactive": "Tidak aktif atau kedaluwarsa",
+  "subscription.sandbox.expires": "Langganan uji berakhir",
+  "personal.report.title": "Laporkan konten",
+  "personal.report.reason": "Jelaskan masalah yang dilaporkan",
+  "personal.report.sent": "Laporan terkirim",
+  "personal.report.privacy": "Deskripsi dan ID percakapan Anda akan dikirim untuk menangani laporan. Teks percakapan lengkap dan file tidak dilampirkan secara otomatis.",
+  "intro.title": "AI WorkDeck · Ikhtisar",
+  "intro.overview": "Ambil foto, rekam audio, dan arsipkan berkas proyek. Masuk untuk menyinkronkan proyek. Asisten pribadi dan kalender memerlukan langganan aktif serta persetujuan terpisah saat diaktifkan. Kenali fiturnya sebelum memilih masuk atau mendaftar."
 }

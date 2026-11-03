@@ -510,5 +510,15 @@
   "personal.copy.expired": "Expirado. O original foi mantido; tente novamente.",
   "personal.copy.failed": "Falha na entrega. O original foi mantido; tente novamente.",
   "personal.copy.unknown": "Entrega não confirmada. Tentar novamente usa a mesma solicitação.",
-  "personal.copy.cloud": "Nuvem"
+  "personal.copy.cloud": "Nuvem",
+  "subscription.sandbox.title": "Assinatura de teste (não incluída no saldo)",
+  "subscription.sandbox.active": "Ativa",
+  "subscription.sandbox.inactive": "Inativa ou expirada",
+  "subscription.sandbox.expires": "Validade da assinatura de teste",
+  "personal.report.title": "Denunciar conteúdo",
+  "personal.report.reason": "Descreva o problema a denunciar",
+  "personal.report.sent": "Denúncia enviada",
+  "personal.report.privacy": "Sua descrição e o ID da conversa serão enviados para tratar a denúncia. O texto completo e os arquivos não são anexados automaticamente.",
+  "intro.title": "AI WorkDeck · Visão geral",
+  "intro.overview": "Tire fotos, grave áudio e arquive arquivos de projetos. Entre para sincronizar projetos. O assistente pessoal e o calendário exigem uma assinatura ativa e consentimento separado ao serem ativados. Conheça as funções antes de entrar ou se cadastrar."
 }

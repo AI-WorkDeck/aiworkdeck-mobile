@@ -510,5 +510,15 @@
   "personal.copy.expired": "Abgelaufen. Das Original bleibt erhalten; erneut versuchen möglich.",
   "personal.copy.failed": "Zustellung fehlgeschlagen. Das Original bleibt erhalten; erneut versuchen möglich.",
   "personal.copy.unknown": "Zustellung unbestätigt. Wiederholen verwendet dieselbe Anfrage.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Testabonnement (nicht im Guthaben enthalten)",
+  "subscription.sandbox.active": "Aktiv",
+  "subscription.sandbox.inactive": "Inaktiv oder abgelaufen",
+  "subscription.sandbox.expires": "Testabonnement läuft ab",
+  "personal.report.title": "Inhalt melden",
+  "personal.report.reason": "Beschreiben Sie das gemeldete Problem",
+  "personal.report.sent": "Meldung gesendet",
+  "personal.report.privacy": "Ihre Beschreibung und die Gesprächs-ID werden zur Bearbeitung der Meldung gesendet. Der gesamte Chattext und Dateien werden nicht automatisch angehängt.",
+  "intro.title": "AI WorkDeck · Überblick",
+  "intro.overview": "Fotos aufnehmen, Audio aufzeichnen und Projektdateien archivieren. Melde dich an, um Projekte zu synchronisieren. Persönlicher Assistent und Kalender erfordern ein aktives Abonnement und eine gesonderte Zustimmung beim Aktivieren. Informiere dich zuerst und wähle dann Anmeldung oder Registrierung."
 }

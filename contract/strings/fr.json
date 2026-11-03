@@ -510,5 +510,15 @@
   "personal.copy.expired": "Expiré. L’original est conservé ; vous pouvez réessayer.",
   "personal.copy.failed": "Échec de livraison. L’original est conservé ; vous pouvez réessayer.",
   "personal.copy.unknown": "Livraison non confirmée. Réessayer utilise la même demande.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Abonnement de test (hors solde)",
+  "subscription.sandbox.active": "Actif",
+  "subscription.sandbox.inactive": "Inactif ou expiré",
+  "subscription.sandbox.expires": "Expiration de l’abonnement de test",
+  "personal.report.title": "Signaler le contenu",
+  "personal.report.reason": "Décrivez le problème à signaler",
+  "personal.report.sent": "Signalement envoyé",
+  "personal.report.privacy": "Votre description et l’identifiant de conversation seront envoyés pour traiter le signalement. Le texte intégral et les fichiers ne sont pas joints automatiquement.",
+  "intro.title": "AI WorkDeck · Présentation",
+  "intro.overview": "Prenez des photos, enregistrez du son et archivez les fichiers de vos projets. Connectez-vous pour synchroniser les projets. L’assistant personnel et le calendrier nécessitent un abonnement actif et un consentement distinct à l’activation. Découvrez les fonctions avant de vous connecter ou de vous inscrire."
 }

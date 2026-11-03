@@ -510,5 +510,15 @@
   "personal.copy.expired": "Expired. The original is kept; you can retry.",
   "personal.copy.failed": "Delivery failed. The original is kept; you can retry.",
   "personal.copy.unknown": "Delivery is unconfirmed. Retry uses the same request.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Test subscription (excluded from balance)",
+  "subscription.sandbox.active": "Active",
+  "subscription.sandbox.inactive": "Inactive or expired",
+  "subscription.sandbox.expires": "Test subscription expires",
+  "personal.report.title": "Report content",
+  "personal.report.reason": "Describe the issue you are reporting",
+  "personal.report.sent": "Report submitted",
+  "personal.report.privacy": "Your description and conversation ID will be sent to handle the report. Full chat text and files are not attached automatically.",
+  "intro.title": "AI WorkDeck · Overview",
+  "intro.overview": "Capture photos, record audio and archive project files. Sign in to sync projects. The personal assistant and calendar require an active subscription and separate consent when enabled. Explore the overview before choosing to sign in or register."
 }

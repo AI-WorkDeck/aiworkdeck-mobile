@@ -510,5 +510,15 @@
   "personal.copy.expired": "已過期，原對話已保留，可重試。",
   "personal.copy.failed": "送達失敗，原對話已保留，可重試。",
   "personal.copy.unknown": "尚未確認送達；重試會沿用同一次請求。",
-  "personal.copy.cloud": "雲端"
+  "personal.copy.cloud": "雲端",
+  "subscription.sandbox.title": "測試訂閱（不計入餘額）",
+  "subscription.sandbox.active": "有效",
+  "subscription.sandbox.inactive": "未生效或已到期",
+  "subscription.sandbox.expires": "測試訂閱有效期至",
+  "personal.report.title": "檢舉內容",
+  "personal.report.reason": "請說明需要檢舉的問題",
+  "personal.report.sent": "檢舉已提交",
+  "personal.report.privacy": "將傳送您填寫的說明及對話識別碼，用於處理檢舉；不會自動附帶聊天全文或檔案。",
+  "intro.title": "AI WorkDeck · 功能介紹",
+  "intro.overview": "拍攝、錄音與專案檔案歸檔。登入後可同步專案；個人助理和行程需有效訂閱，並在啟用時另行徵得同意。你可以先了解功能，再選擇登入或註冊。"
 }

@@ -510,5 +510,15 @@
   "personal.copy.expired": "Đã hết hạn. Bản gốc được giữ lại; có thể thử lại.",
   "personal.copy.failed": "Gửi thất bại. Bản gốc được giữ lại; có thể thử lại.",
   "personal.copy.unknown": "Chưa xác nhận gửi. Thử lại sẽ dùng cùng yêu cầu.",
-  "personal.copy.cloud": "Đám mây"
+  "personal.copy.cloud": "Đám mây",
+  "subscription.sandbox.title": "Đăng ký thử nghiệm (không tính vào số dư)",
+  "subscription.sandbox.active": "Đang hoạt động",
+  "subscription.sandbox.inactive": "Chưa kích hoạt hoặc đã hết hạn",
+  "subscription.sandbox.expires": "Đăng ký thử nghiệm hết hạn",
+  "personal.report.title": "Báo cáo nội dung",
+  "personal.report.reason": "Mô tả vấn đề bạn muốn báo cáo",
+  "personal.report.sent": "Đã gửi báo cáo",
+  "personal.report.privacy": "Mô tả và mã cuộc trò chuyện sẽ được gửi để xử lý báo cáo. Toàn bộ nội dung trò chuyện và tệp không được tự động đính kèm.",
+  "intro.title": "AI WorkDeck · Tổng quan",
+  "intro.overview": "Chụp ảnh, ghi âm và lưu trữ tệp dự án. Đăng nhập để đồng bộ dự án. Trợ lý cá nhân và lịch yêu cầu gói đăng ký còn hiệu lực cùng sự đồng ý riêng khi bật. Tìm hiểu tính năng trước khi chọn đăng nhập hoặc đăng ký."
 }
