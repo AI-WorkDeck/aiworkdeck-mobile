@@ -85,6 +85,14 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, onSelect: (Re
             )
         }
 
+        Action(tr("project.none")) { scope.launch {
+            if (loading) return@launch
+            loading = true
+            try { onSelect(backend.defaultProject()); onClose() }
+            catch (e: Exception) { error = errorText(e) }
+            finally { loading = false }
+        } }
+
         // 内容区吃掉中间所有空间，页脚（退出登录）永远贴在底下。
         Column(Modifier.weight(1f)) {
             when {
@@ -102,7 +110,7 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, onSelect: (Re
                     Action(tr("project.reload")) { scope.launch { load() } }
                 }
                 else -> LazyColumn {
-                    items(projects, key = { it.id }) { p ->
+                    items(projects.filter { !it.isDefault }, key = { it.id }) { p ->
                         Row(
                             Modifier.fillMaxWidth().heightIn(min = Tk.touchMin)
                                 .clickable { onSelect(p) },

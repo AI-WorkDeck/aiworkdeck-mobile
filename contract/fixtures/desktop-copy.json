@@ -1,0 +1,60 @@
+{
+  "receipts": [
+    {
+      "requestId": "7c85b20e-87fa-4e51-a9d1-f91ec015825b",
+      "status": "QUEUED",
+      "sourcePreserved": true,
+      "filesCopied": false,
+      "sourceConversationId": "e9fe75c4-2f32-492e-81ef-6f0cc0f5949b",
+      "conversationId": "eeaef5b5-2db9-4c45-a170-ff6a850b7847",
+      "targetProjectUid": "bd62e8ac-93fc-421c-9a42-caf54052d875",
+      "targetDeviceId": "desktop-a",
+      "targetProjectKey": "local-17",
+      "messageCount": 2,
+      "expiresAt": "2026-11-10T12:00:00Z",
+      "error": null
+    },
+    {
+      "requestId": "7c85b20e-87fa-4e51-a9d1-f91ec015825b",
+      "status": "DELIVERED",
+      "sourcePreserved": true,
+      "filesCopied": false,
+      "sourceConversationId": "e9fe75c4-2f32-492e-81ef-6f0cc0f5949b",
+      "conversationId": "eeaef5b5-2db9-4c45-a170-ff6a850b7847",
+      "targetProjectUid": "bd62e8ac-93fc-421c-9a42-caf54052d875",
+      "targetDeviceId": "desktop-a",
+      "targetProjectKey": "local-17",
+      "messageCount": 2,
+      "expiresAt": "2026-11-10T12:00:00Z",
+      "error": null
+    },
+    {
+      "requestId": "7c85b20e-87fa-4e51-a9d1-f91ec015825b",
+      "status": "EXPIRED",
+      "sourcePreserved": true,
+      "filesCopied": false,
+      "sourceConversationId": "e9fe75c4-2f32-492e-81ef-6f0cc0f5949b",
+      "conversationId": "eeaef5b5-2db9-4c45-a170-ff6a850b7847",
+      "targetProjectUid": "bd62e8ac-93fc-421c-9a42-caf54052d875",
+      "targetDeviceId": "desktop-a",
+      "targetProjectKey": "local-17",
+      "messageCount": 2,
+      "expiresAt": "2026-11-10T12:00:00Z",
+      "error": "EXPIRED"
+    },
+    {
+      "requestId": "7c85b20e-87fa-4e51-a9d1-f91ec015825b",
+      "status": "FAILED",
+      "sourcePreserved": true,
+      "filesCopied": false,
+      "sourceConversationId": "e9fe75c4-2f32-492e-81ef-6f0cc0f5949b",
+      "conversationId": "eeaef5b5-2db9-4c45-a170-ff6a850b7847",
+      "targetProjectUid": "bd62e8ac-93fc-421c-9a42-caf54052d875",
+      "targetDeviceId": "desktop-a",
+      "targetProjectKey": "local-17",
+      "messageCount": 2,
+      "expiresAt": "2026-11-10T12:00:00Z",
+      "error": "TARGET_UNAVAILABLE"
+    }
+  ]
+}

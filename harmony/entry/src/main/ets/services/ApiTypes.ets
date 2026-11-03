@@ -223,7 +223,8 @@ function decodeLocations(value: Object | null | undefined): ProjectLocation[] {
     const key: string | undefined = getString(o, 'key')
     if (kind === undefined || device === undefined || key === undefined) throw new ApiError(1, 'Invalid project location')
     const location: ProjectLocation = { kind: kind, deviceId: device, key: key,
-      deviceName: getString(o, 'deviceName'), online: getBoolean(o, 'online'), archiveOnly: getBoolean(o, 'archiveOnly') }
+      deviceName: getString(o, 'deviceName'), online: getBoolean(o, 'online'), archiveOnly: getBoolean(o, 'archiveOnly'),
+      projectUid: getString(o, 'projectUid'), projectType: getString(o, 'projectType'), owned: getBoolean(o, 'owned') }
     result.push(location)
   }
   return result
@@ -244,7 +245,7 @@ export function decodeCatalog(v: Object | null): RelayProject[] {
       ?? locations.find((l: ProjectLocation): boolean => l.kind === 'desktop') ?? locations[0]
     if (uid === undefined || name === undefined || source === undefined) throw new ApiError(1, 'Invalid project')
     const project: RelayProject = { deviceId: source.deviceId, key: source.key, deviceName: source.deviceName,
-      name: name, projectUid: uid, locations: locations }
+      name: name, projectUid: uid, locations: locations, isDefault: getBoolean(o, 'isDefault'), projectType: getString(o, 'projectType') }
     result.push(project)
   }
   return result

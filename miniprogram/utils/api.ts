@@ -65,6 +65,8 @@ export interface LoginResult {
 
 /** 统一项目身份与采集目标快照。旧 deviceId/key 保留作实际上传路由，不能按名称合并。 */
 export interface RelayProject {
+  isDefault?: boolean
+  projectType?: string
   projectUid?: string
   locations?: ProjectLocation[]
   deviceId: string
@@ -502,6 +504,10 @@ export function wxPhoneStart(code: string, ref: string): Promise<WxStartResult> 
 // ---------- 项目与上传 ----------
 
 /** 账号级云目录，裸数组。仅补旧记录的身份元数据，不修改其已锁定的上传地址。 */
+export function defaultProject(): Promise<RelayProject> {
+  return request<CatalogProject>('/api/mobile/catalog/default', 'POST', {}).then(fromCatalog)
+}
+
 export function myProjects(): Promise<RelayProject[]> {
   return request<CatalogProject[]>('/api/mobile/catalog', 'GET').then(items => {
     const projects = items.map(fromCatalog)

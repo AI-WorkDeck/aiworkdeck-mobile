@@ -6,8 +6,9 @@ import { ContractCapabilities } from 'contract'
 import { ServiceLocator } from '../services/ServiceLocator'
 import { PersonalConversationStore } from '../services/PersonalConversationStore'
 import { CalendarReminders } from '../services/CalendarReminders'
-import { PersonalEvent, PersonalSource, PersonalMessage, PersonalConversation, personalMessages, personalHistorySources, personalSourceDate, personalEvents, personalSources, stringField, upcomingEvents } from '../model/PersonalWorkspace'
+import { PersonalCopyTarget, PersonalDesktopCopy, DesktopCopyRequest, DesktopCopyReceipt, personalCopyTargets, copyNeedsUpgrade, PersonalEvent, PersonalSource, PersonalMessage, PersonalConversation, personalMessages, personalHistorySources, personalSourceDate, personalEvents, personalSources, stringField, upcomingEvents } from '../model/PersonalWorkspace'
 import { ProjectFilesRequest } from './ProjectFilesRequest'
+import { RelayProject } from '../model/Capture'
 import { Tk } from '../design/Tokens'
 import { trIn, LOCALE_ZH, L10n } from '../design/L10n'
 import { errorText } from './Feedback'
@@ -33,6 +34,11 @@ export struct Personal {
   @State loading: boolean = false
   @State days: number = 3
   @State project: string = ''
+  @State copyTargets: PersonalCopyTarget[] = []
+  @State copyUpgrade: boolean = false
+  @State desktopCopy: PersonalDesktopCopy | null = null
+  @State copyReady: boolean = false
+  @State copySuccess: string = ''
   @State reminders: boolean = false
   private session: string = ''
   private host: string = ''
@@ -46,14 +52,15 @@ export struct Personal {
   private async current(version: number): Promise<boolean> {
     return this.alive && version === this.version && this.conversationStore !== null && await this.conversationStore.isCurrent() && this.alive && version === this.version
   }
-  private async saveConversation(): Promise<void> {
+  private async saveConversation(): Promise<boolean> {
     const value: PersonalConversation = new PersonalConversation()
     value.conversationId = this.conversationId; value.pendingId = this.pendingId
     value.pendingText = this.pendingText; value.pendingConversationId = this.pendingConversationId
-    if (this.conversationStore !== null) await this.conversationStore.save(value)
+    value.desktopCopy = this.desktopCopy
+    return this.conversationStore !== null ? await this.conversationStore.save(value) : false
   }
   private resetConversation(): void {
-    this.messages = []; this.sources = []; this.conversationId = ''; this.pendingId = ''; this.pendingText = ''; this.pendingConversationId = ''; this.draft = ''
+    this.desktopCopy = null; this.copyUpgrade = false; this.copyTargets = []; this.copyReady = false; this.copySuccess = ''; this.messages = []; this.sources = []; this.conversationId = ''; this.pendingId = ''; this.pendingText = ''; this.pendingConversationId = ''; this.draft = ''
   }
   private async poll(reply: Record<string, Object>, id: string, version: number): Promise<Record<string, Object>> {
     let result: Record<string, Object> = reply
@@ -70,6 +77,7 @@ export struct Personal {
     if (this.conversationStore === null) this.conversationStore = await PersonalConversationStore.open()
     const value: PersonalConversation = await this.conversationStore.load()
     if (!await this.current(version)) return
+    this.desktopCopy = value.desktopCopy
     this.conversationId = value.conversationId; this.pendingId = value.pendingId
     this.pendingText = value.pendingText; this.pendingConversationId = value.pendingConversationId
     if (this.pendingId.length > 0) {
@@ -92,6 +100,7 @@ export struct Personal {
         if (!await this.current(version) || this.conversationId !== id || stringField(history, 'conversationId') !== id) return
         this.messages = personalMessages(history['messages']); this.sources = personalHistorySources(history['messages'])
       } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
+      if (await this.current(version)) await this.restoreDesktopCopy(version)
     }
   }
   private t(key: string, vars?: Record<string, string | number>): string { return trIn(this.locale, key, vars) }
@@ -178,6 +187,115 @@ export struct Personal {
     } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
     finally { if (version === this.version) this.busy = false }
   }
+  private async prepareCopy(): Promise<void> {
+    const version: number = this.version
+    if (this.busy || this.loading || this.pendingId.length > 0 || this.conversationId.length === 0 || !await this.current(version)) return
+    if (this.loading || this.busy) return
+    this.loading = true; this.error = ''; this.copySuccess = ''
+    try {
+      const projects: RelayProject[] = await ServiceLocator.backend.myProjects()
+      if (await this.current(version)) { this.copyTargets = personalCopyTargets(projects); this.copyUpgrade = copyNeedsUpgrade(projects); this.copyReady = true }
+    } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
+    finally { if (version === this.version) this.loading = false }
+  }
+  private confirmCopy(project: PersonalCopyTarget): void {
+    const version: number = this.version
+    const id: string = this.conversationId
+    this.getUIContext().showAlertDialog({ title: this.copyTargetLabel(project), message: this.t('personal.copy.hint'), primaryButton: { value: this.t('common.cancel'), action: (): void => {} }, secondaryButton: { value: this.t('common.ok'), action: (): void => { this.copyTo(project, id, version) } } })
+  }
+  private async copyTo(project: PersonalCopyTarget, id: string, version: number): Promise<void> {
+    const target: number = project.cloudId
+    if (this.busy || this.loading || this.pendingId.length > 0 || (target === 0 && project.desktop === null) || this.conversationId !== id || !await this.current(version)) return
+    if (this.loading || this.busy) return
+    if (project.desktop !== null) {
+      const request: DesktopCopyRequest = new DesktopCopyRequest()
+      request.requestId = util.generateRandomUUID(true); request.sourceConversationId = id
+      request.targetProjectUid = project.desktop.projectUid ?? ''; request.targetDeviceId = project.desktop.deviceId; request.targetProjectKey = project.desktop.key
+      if (this.desktopCopy !== null && this.desktopCopy.request.sameTarget(request) && (this.desktopCopy.receipt === null || !this.desktopCopy.receipt.terminal())) request.requestId = this.desktopCopy.request.requestId
+      else {
+        this.loading = true
+        try {
+          const recent: Record<string, Object>[] = await ServiceLocator.backend.personalDesktopCopies(id, this.session)
+          if (!await this.current(version) || this.conversationId !== id) return
+          let matched: DesktopCopyReceipt | null = null
+          for (const raw of recent) {
+            const receipt: DesktopCopyReceipt | null = DesktopCopyReceipt.from(raw)
+            if (receipt === null || receipt.request.sourceConversationId !== id) throw new Error(this.t('error.badResponse'))
+            if (matched === null && receipt.request.sameTarget(request)) matched = receipt
+          }
+          if (matched !== null && !matched.terminal()) request.requestId = matched.request.requestId
+        } catch (e) { if (await this.current(version)) this.error = this.t('personal.copy.unknown'); return }
+        finally { if (version === this.version) this.loading = false }
+      }
+      await this.submitDesktopCopy(request, version); return
+    }
+    this.loading = true; this.error = ''
+    try {
+      const result: Record<string, Object> = await this.request('assistant/conversations/' + encodeURIComponent(id) + '/copy-to-project', http.RequestMethod.POST, { 'targetProjectId': target })
+      if (!await this.current(version) || this.conversationId !== id) return
+      if (result['mode'] !== 'copy' || result['sourcePreserved'] !== true || result['filesCopied'] !== false || result['sourceConversationId'] !== id || result['targetProjectId'] !== target) throw new Error(this.t('error.badResponse'))
+      this.copySuccess = this.t('personal.copy.success'); this.copyReady = false
+    } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
+    finally { if (version === this.version) this.loading = false }
+  }
+  private copyTargetLabel(target: PersonalCopyTarget): string {
+    return target.project.name + ' · ' + (target.desktop === null ? this.t('personal.copy.cloud') : (target.desktop.deviceName ?? target.desktop.deviceId))
+  }
+  private async submitDesktopCopy(request: DesktopCopyRequest, version: number): Promise<void> {
+    if (this.loading || this.busy || request.sourceConversationId !== this.conversationId || !await this.current(version)) return
+    this.loading = true; this.error = ''; this.copySuccess = ''
+    try {
+      const copy: PersonalDesktopCopy = new PersonalDesktopCopy(request)
+      this.desktopCopy = copy
+      if (!await this.saveConversation() || !await this.current(version)) return
+      const raw: Record<string, Object> = await this.request('assistant/conversations/' + encodeURIComponent(request.sourceConversationId) + '/copy-to-desktop', http.RequestMethod.POST, request.body())
+      const receipt: DesktopCopyReceipt | null = DesktopCopyReceipt.from(raw, request)
+      if (!await this.current(version) || this.desktopCopy?.request.requestId !== request.requestId) return
+      if (receipt === null) throw new Error(this.t('error.badResponse'))
+      const updated: PersonalDesktopCopy = new PersonalDesktopCopy(request); updated.receipt = receipt; this.desktopCopy = updated
+      await this.saveConversation(); this.copyReady = false
+    } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
+    finally { if (version === this.version) this.loading = false }
+  }
+  private async restoreDesktopCopy(version: number): Promise<void> {
+    const id: string = this.conversationId
+    if (id.length === 0 || !await this.current(version)) return
+    try {
+      if (this.desktopCopy === null) {
+        const recent: Record<string, Object>[] = await ServiceLocator.backend.personalDesktopCopies(id, this.session)
+        if (!await this.current(version) || this.conversationId !== id || this.desktopCopy !== null) return
+        for (const raw of recent) {
+          const receipt: DesktopCopyReceipt | null = DesktopCopyReceipt.from(raw)
+          if (receipt === null || receipt.request.sourceConversationId !== id) throw new Error(this.t('error.badResponse'))
+        }
+        if (recent.length > 0) {
+          const receipt: DesktopCopyReceipt | null = DesktopCopyReceipt.from(recent[0])
+          if (receipt !== null) { const copy: PersonalDesktopCopy = new PersonalDesktopCopy(receipt.request); copy.receipt = receipt; this.desktopCopy = copy; await this.saveConversation() }
+        }
+      } else if (this.desktopCopy.request.sourceConversationId === id && (this.desktopCopy.receipt === null || !this.desktopCopy.receipt.terminal())) {
+        const copy: PersonalDesktopCopy = this.desktopCopy
+        const raw: Record<string, Object> = await this.request('assistant/desktop-copies/' + encodeURIComponent(copy.request.requestId))
+        if (!await this.current(version) || this.conversationId !== id || this.desktopCopy?.request.requestId !== copy.request.requestId) return
+        const receipt: DesktopCopyReceipt | null = DesktopCopyReceipt.from(raw, copy.request)
+        if (receipt === null) throw new Error(this.t('error.badResponse'))
+        const updated: PersonalDesktopCopy = new PersonalDesktopCopy(copy.request); updated.receipt = receipt; this.desktopCopy = updated; await this.saveConversation()
+      }
+    } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
+  }
+  private async refreshDesktopCopy(): Promise<void> {
+    if (this.loading || this.busy) return
+    const version: number = this.version; this.loading = true
+    try { await this.restoreDesktopCopy(version) } finally { if (version === this.version) this.loading = false }
+  }
+  private async retryDesktopCopy(): Promise<void> {
+    const copy: PersonalDesktopCopy | null = this.desktopCopy
+    if (copy === null || !copy.canRetry() || this.loading || this.busy) return
+    const request: DesktopCopyRequest = new DesktopCopyRequest()
+    request.sourceConversationId = copy.request.sourceConversationId; request.targetProjectUid = copy.request.targetProjectUid
+    request.targetDeviceId = copy.request.targetDeviceId; request.targetProjectKey = copy.request.targetProjectKey
+    request.requestId = copy.receipt === null ? copy.request.requestId : util.generateRandomUUID(true)
+    await this.submitDesktopCopy(request, this.version)
+  }
   private openNotification(): void {
     if (!this.alive || this.notificationId.length === 0) return
     this.tab = 'calendar'; this.load()
@@ -214,6 +332,21 @@ export struct Personal {
             }.width('100%').alignItems(HorizontalAlign.Start)
           }.layoutWeight(1).width('100%')
           if (this.error.length > 0) { Text(this.error).fontColor(Tk.S.failed); Button(this.t('project.retry')).enabled(!this.busy).onClick((): void => { if (this.pendingId.length > 0) { this.draft = this.pendingText; this.send() } else this.load() }) }
+          if (this.desktopCopy !== null) {
+            Text(this.t(this.desktopCopy.statusKey())).fontColor(Tk.L.fgMuted)
+            Row() {
+              Button(this.t('common.refresh')).enabled(!this.loading && !this.busy).onClick((): void => { this.refreshDesktopCopy() })
+              if (this.desktopCopy.canRetry()) Button(this.t('project.retry')).enabled(!this.loading && !this.busy).onClick((): void => { this.retryDesktopCopy() })
+            }
+          }
+          if (this.copySuccess.length > 0) Text(this.copySuccess).fontColor(Tk.L.fgMuted)
+          if (this.messages.length > 0) Button(this.t('personal.copy.title')).enabled(!this.busy && !this.loading && this.pendingId.length === 0).onClick((): void => { this.prepareCopy() })
+          if (this.copyReady) {
+            Text(this.t('personal.copy.hint')).fontColor(Tk.L.fgMuted)
+            if (this.copyUpgrade) Text(this.t('personal.copy.upgrade')).fontColor(Tk.L.fgMuted)
+            if (this.copyTargets.length === 0) Text(this.t('project.emptyTitle')).fontColor(Tk.L.fgMuted)
+            Select(this.copyTargets.map((project: PersonalCopyTarget): SelectOption => { return { value: this.copyTargetLabel(project) } })).value(this.t('personal.copy.title')).enabled(!this.busy && !this.loading).onSelect((index: number): void => { if (index >= 0 && index < this.copyTargets.length) this.confirmCopy(this.copyTargets[index]) })
+          }
           Row() { TextArea({ text: this.draft, placeholder: this.t('personal.ask') }).enabled(!this.busy && !this.loading).layoutWeight(1).maxLines(5).onChange((value: string): void => { this.draft = value }); Button(this.t('personal.send')).enabled(!this.busy && !this.loading && this.draft.trim().length > 0 && this.assistantEnabled && this.assistantSubscribed).onClick((): void => { this.send() }) }
           Row() { Button(this.t('personal.newChat')).enabled(!this.busy && !this.loading && this.pendingId.length === 0).onClick((): void => { this.resetConversation(); this.saveConversation() }); if (this.assistantEnabled) Button(this.t('common.off')).enabled(!this.busy).onClick((): void => { this.configure('assistant', false) }) }
         } else {

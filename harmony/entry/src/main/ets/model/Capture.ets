@@ -39,6 +39,9 @@ export interface CaptureManifest {
 }
 
 export interface ProjectLocation {
+  projectUid?: string
+  projectType?: string
+  owned?: boolean
   kind: string
   deviceId: string
   deviceName?: string
@@ -48,6 +51,8 @@ export interface ProjectLocation {
 }
 
 export interface RelayProject {
+  isDefault?: boolean
+  projectType?: string
   projectUid?: string
   locations?: ProjectLocation[]
   deviceId: string

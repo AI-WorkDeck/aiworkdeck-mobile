@@ -65,6 +65,20 @@ actor ProjectFilesService: ProjectFilesServing {
         return try decode(BackupConsent.self, data)
     }
 
+    func defaultProject() async throws -> RelayProject {
+        let data = try await response(request("/api/mobile/catalog/default", body: [:]))
+        struct DefaultProjectResponse: Decodable {
+            let code: Int
+            let message: String?
+            let data: RelayProject?
+        }
+        let envelope = try decode(DefaultProjectResponse.self, data)
+        guard envelope.code == 0, let project = envelope.data else {
+            throw APIError(message: envelope.message ?? tr("files.error.response"))
+        }
+        return project
+    }
+
     func projects() async throws -> [RelayProject] {
         let data = try await response(request("/api/mobile/catalog"))
         if let envelope = try? JSONDecoder().decode(CodeOnly.self, from: data), envelope.code != 0 {

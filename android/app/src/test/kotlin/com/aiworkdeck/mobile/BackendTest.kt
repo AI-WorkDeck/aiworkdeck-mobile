@@ -28,6 +28,26 @@ class BackendTest {
 
     @After fun tearDown() { server.shutdown() }
 
+    @Test fun defaultProjectUsesAuthenticatedPostAndPreservesIdentity() = runTest {
+        session.save("test-account")
+        server.enqueue(MockResponse().setBody(
+            """{"code":0,"data":{"projectUid":"default-uid","name":"Temporary project","isDefault":true,"locations":[{"kind":"cloud","deviceId":"cloud","key":"11","online":true}]}}"""
+        ))
+        val project = backend.defaultProject()
+        assertEquals("default-uid", project.projectUid)
+        assertEquals("cloud", project.deviceId)
+        assertEquals("11", project.key)
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/mobile/catalog/default", request.path)
+        assertEquals("test-account", request.getHeader("X-Session-Id"))
+    }
+
+    @Test fun rejectedDefaultProjectNeverBecomesASelection() = runTest {
+        server.enqueue(MockResponse().setBody("""{"code":403,"message":"Denied"}"""))
+        assertTrue(runCatching { backend.defaultProject() }.isFailure)
+    }
+
     @Test fun consentGateBlocksNetworkUntilAccepted() = runTest {
         var accepted = false
         val gated = Backend(

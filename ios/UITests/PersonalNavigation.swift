@@ -54,11 +54,21 @@ extension XCTestCase {
         XCTAssertTrue(project.waitForExistence(timeout: 10))
         XCTAssertTrue(project.isHittable)
         project.tap()
-        let browse = app.buttons["projectPicker.browse"]
+        let browse = app.buttons["projectPicker.none"]
         XCTAssertTrue(browse.waitForExistence(timeout: 10))
         XCTAssertTrue(browse.isHittable)
         browse.tap()
         XCTAssertTrue(app.buttons["workspace.close"].waitForExistence(timeout: 10))
+        if !app.buttons["workspace.project.alpha"].isHittable {
+            // Duo puts the native back control in its side toolbar, without a label.
+            let sideBack = app.buttons["BackButton"]
+            if sideBack.exists {
+                sideBack.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            } else {
+                let back = app.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Projects", "Back"])).firstMatch
+                if back.exists { back.tap() }
+            }
+        }
     }
 
     @MainActor func allowVisibleRecordingPermission() -> Bool {

@@ -18,6 +18,101 @@ final class PersonalWorkspaceTests: XCTestCase {
         {"id":"\(id)","deviceId":"desktop","projectKey":"alpha","projectName":"Synthetic","title":"Event","dueDate":"\(date)","timeZone":"Asia/Shanghai","status":"\(status)","remindAt":"\(remind)","files":[{"fileId":7,"fileName":"synthetic.pdf"}]}
         """.utf8))
     }
+    func testConversationCopyOnlyUsesFormalCloudLocation() throws {
+        let desktop = RelayProject(deviceId: "desktop", deviceName: nil, key: "41", name: "Matter")
+        XCTAssertNil(ConversationCopyTarget.projectID(desktop))
+        let cloud = ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "12", online: true)
+        let project = RelayProject(deviceId: "desktop", deviceName: nil, key: "999", name: "Matter", locations: [cloud])
+        XCTAssertEqual(ConversationCopyTarget.projectID(project), 12)
+        var temporary = project; temporary.isDefault = true
+        XCTAssertNil(ConversationCopyTarget.projectID(temporary))
+        var scratch = project; scratch.projectType = "SCRATCH"
+        XCTAssertNil(ConversationCopyTarget.projectID(scratch))
+        scratch.projectType = "LOOSE_FILES"
+        XCTAssertNil(ConversationCopyTarget.projectID(scratch))
+        let archive = ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "12", online: true, archiveOnly: true)
+        XCTAssertNil(ConversationCopyTarget.projectID(RelayProject(deviceId: "desktop", deviceName: nil, key: "999", name: "Matter", locations: [archive])))
+    }
+
+    func testConversationCopyPreservesSourceAndChecksReceipt() async throws {
+        let cloud = ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "12", online: true)
+        let target = RelayProject(deviceId: "desktop", deviceName: nil, key: "999", name: "Matter", locations: [cloud])
+        PersonalTestProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/api/mobile/assistant/conversations/source/copy-to-project")
+            return Data(#"{"code":0,"data":{"mode":"copy","sourcePreserved":true,"sourceConversationId":"source","conversationId":"destination","targetProjectId":12,"messageCount":2,"filesCopied":false}}"#.utf8)
+        }
+        let copied = try await service().copyConversation("source", to: target)
+        XCTAssertEqual(copied.conversationId, "destination")
+        XCTAssertTrue(copied.sourcePreserved)
+        PersonalTestProtocol.handler = { _ in
+            Data(#"{"code":0,"data":{"mode":"copy","sourcePreserved":false,"sourceConversationId":"source","conversationId":"destination","targetProjectId":12,"messageCount":2,"filesCopied":false}}"#.utf8)
+        }
+        do { _ = try await service().copyConversation("source", to: target); XCTFail("Invalid receipt must fail") } catch {}
+    }
+
+    func testDesktopCopyFixturesAndPerLocationProof() throws {
+        let root = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "fixtures", withExtension: nil))
+        struct Fixtures: Decodable { let receipts: [DesktopCopyReceipt] }
+        let fixtures = try JSONDecoder().decode(Fixtures.self, from: Data(contentsOf: root.appendingPathComponent("desktop-copy.json")))
+        XCTAssertEqual(fixtures.receipts.map(\.status), ["QUEUED", "DELIVERED", "EXPIRED", "FAILED"])
+        for receipt in fixtures.receipts { try receipt.validate(receipt.request) }
+        XCTAssertFalse(fixtures.receipts[0].terminal)
+        XCTAssertEqual(PersonalDesktopCopy(request: fixtures.receipts[0].request, receipt: fixtures.receipts[0]).statusKey, "personal.copy.queued")
+        let desktop = ProjectLocation(kind: "desktop", deviceId: "computer", deviceName: "Mac", key: "local-key", online: false, projectUid: "device-uid", projectType: "LOCAL_DIR", owned: true)
+        let cloud = ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "12", online: true)
+        let project = RelayProject(deviceId: "cloud", deviceName: nil, key: "12", name: "Matter", projectUid: "cloud-uid", locations: [cloud, desktop])
+        let targets = PersonalCopyDestination.targets([project])
+        XCTAssertEqual(targets.count, 2)
+        XCTAssertEqual(targets[1].desktop?.projectUid, "device-uid")
+        var old = desktop; old.owned = nil
+        XCTAssertFalse(PersonalCopyDestination.eligible(old))
+        XCTAssertTrue(PersonalCopyDestination.needsUpgrade([RelayProject(deviceId: "computer", deviceName: nil, key: "local-key", name: "Old", locations: [old])]))
+        var scratch = desktop; scratch.projectType = "SCRATCH"
+        XCTAssertFalse(PersonalCopyDestination.eligible(scratch))
+    }
+
+    @MainActor func testDesktopCopyRecoveryFailureDoesNotCreateAnotherRequest() async throws {
+        let model = PersonalWorkspaceModel(); model.service = service(); model.conversationID = "source"; model.desktopCopy = nil
+        let location = ProjectLocation(kind: "desktop", deviceId: "device", deviceName: nil, key: "local", online: false, projectUid: "uid", projectType: "LOCAL_DIR", owned: true)
+        let target = PersonalCopyDestination(project: RelayProject(deviceId: "device", deviceName: nil, key: "local", name: "Matter"), desktop: location)
+        PersonalTestProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            throw URLError(.networkConnectionLost)
+        }
+        do { try await model.queueDesktopCopy(target); XCTFail("Recovery must complete before creating a new request") } catch {}
+        XCTAssertNil(model.desktopCopy)
+    }
+
+    @MainActor func testDesktopCopyLostResponseRetriesSameUUIDAndDoesNotChangeConversation() async throws {
+        let model = PersonalWorkspaceModel(); model.service = service(); model.conversationID = "source"
+        model.desktopCopy = nil
+        let location = ProjectLocation(kind: "desktop", deviceId: "device", deviceName: nil, key: "local", online: false, projectUid: "device-uid", projectType: "LOCAL_DIR", owned: true)
+        let target = PersonalCopyDestination(project: RelayProject(deviceId: "cloud", deviceName: nil, key: "71", name: "Matter", projectUid: "cloud-uid", locations: [location]), desktop: location)
+        var ids: [String] = []
+        PersonalTestProtocol.handler = { request in
+            if request.httpMethod == "GET" { return Data(#"{"code":0,"data":[]}"#.utf8) }
+            var body = request.httpBody ?? Data()
+            if let stream = request.httpBodyStream { stream.open(); defer { stream.close() }; var bytes = [UInt8](repeating: 0, count: 1024); while stream.hasBytesAvailable { let n = stream.read(&bytes, maxLength: bytes.count); if n <= 0 { break }; body.append(bytes, count: n) } }
+            let value = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: String])
+            ids.append(try XCTUnwrap(value["requestId"]))
+            XCTAssertEqual(value["targetProjectUid"], "device-uid")
+            XCTAssertEqual(value["targetProjectKey"], "local")
+            XCTAssertNil(value["sourceConversationId"])
+            if ids.count == 1 { throw URLError(.networkConnectionLost) }
+            return try JSONSerialization.data(withJSONObject: ["code": 0, "data": ["requestId": ids.last!, "status": "QUEUED", "sourcePreserved": true, "filesCopied": false, "sourceConversationId": "source", "conversationId": "copy", "targetProjectUid": "device-uid", "targetDeviceId": "device", "targetProjectKey": "local", "messageCount": 2, "expiresAt": "2026-11-10T00:00:00Z"]])
+        }
+        do { try await model.queueDesktopCopy(target); XCTFail("Expected lost response") } catch {}
+        XCTAssertNotNil(model.desktopCopy)
+        let stored = try JSONDecoder().decode(PersonalDesktopCopy.self, from: JSONEncoder().encode(model.desktopCopy!))
+        model.desktopCopy = stored
+        try await model.queueDesktopCopy(target)
+        XCTAssertEqual(ids.count, 2); XCTAssertEqual(ids[0], ids[1])
+        XCTAssertEqual(model.desktopCopy?.statusKey, "personal.copy.queued")
+        XCTAssertEqual(model.conversationID, "source")
+        model.newConversation(); XCTAssertNil(model.desktopCopy)
+    }
+
     @MainActor func testManualTabsAndReminderNavigationShareCameraBusyGuard() throws {
         let model = PersonalWorkspaceModel()
         // Photo capture, recording startup, and video recording all feed the

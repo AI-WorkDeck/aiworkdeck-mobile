@@ -43,14 +43,107 @@ class PersonalWorkspaceState(
     var error by mutableStateOf<String?>(null)
     var calendarError by mutableStateOf<String?>(null)
     var selected by mutableStateOf<PersonalCalendarEvent?>(null)
+    var copyTargets by mutableStateOf<List<PersonalCopyDestination>?>(null)
+    var copyNeedsUpgrade by mutableStateOf(false)
+    var desktopCopy by mutableStateOf<PersonalDesktopCopy?>(null)
+    private var recentDesktopCopies: List<DesktopCopyReceipt> = emptyList()
+    var copySuccess by mutableStateOf(false)
+    suspend fun prepareCopy() {
+        if (busy || loading || pending != null || conversationId == null) return
+        val store = conversationStore ?: return
+        if (!store.isCurrent()) return
+        loading = true; error = null; copySuccess = false; recentDesktopCopies = emptyList()
+        try {
+            val id = conversationId ?: return
+            var desktopReady = false
+            try {
+                val recent = backend.personalDesktopCopies(id)
+                if (!store.isCurrent() || conversationId != id) return
+                recentDesktopCopies = recent
+                val current = desktopCopy
+                val restored = if (current == null) recent.firstOrNull() else recent.firstOrNull { it.requestId == current.request.requestId }
+                if (restored != null) { desktopCopy = PersonalDesktopCopy(restored.request, restored); saveConversation() }
+                desktopReady = true
+            } catch (e: CancellationException) { throw e } catch (e: Exception) {
+                if (!store.isCurrent()) return
+                error = e.message
+            }
+            val projects = backend.myProjects()
+            if (store.isCurrent() && conversationId == id) {
+                copyTargets = PersonalCopyDestination.targets(projects).filter { desktopReady || it.desktop == null }
+                copyNeedsUpgrade = PersonalCopyDestination.needsUpgrade(projects)
+            }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+        finally { loading = false }
+    }
+    suspend fun copyTo(project: RelayProject) {
+        if (busy || loading || pending != null) return
+        val id = conversationId ?: return
+        val target = personalCopyTarget(project) ?: return
+        val store = conversationStore ?: return
+        if (!store.isCurrent()) return
+        loading = true; error = null
+        try {
+            val result = backend.personalCopy(id, target)
+            if (!store.isCurrent() || conversationId != id) return
+            check(result.mode == "copy" && result.sourcePreserved && !result.filesCopied && result.sourceConversationId == id && result.targetProjectId == target) { tr("error.badResponse") }
+            copySuccess = true; copyTargets = null
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+        finally { loading = false }
+    }
+    suspend fun copyTo(destination: PersonalCopyDestination) {
+        val location = destination.desktop
+        if (location == null) { copyTo(destination.project); return }
+        if (!PersonalCopyDestination.eligible(location)) return
+        val id = conversationId ?: return
+        val existing = desktopCopy
+        val request = existing?.request?.takeIf { it.sourceConversationId == id && it.targetProjectUid == location.projectUid &&
+            it.targetDeviceId == location.deviceId && it.targetProjectKey == location.key && existing.receipt?.terminal != true }
+            ?: recentDesktopCopies.firstOrNull { it.sourceConversationId == id && it.targetProjectUid == location.projectUid &&
+                it.targetDeviceId == location.deviceId && it.targetProjectKey == location.key }?.takeUnless { it.terminal }?.request
+            ?: DesktopCopyRequest(sourceConversationId = id, targetProjectUid = location.projectUid!!, targetDeviceId = location.deviceId, targetProjectKey = location.key)
+        submitDesktopCopy(request)
+    }
+    suspend fun retryDesktopCopy() {
+        val current = desktopCopy ?: return
+        if (!current.canRetry) return
+        val request = if (current.receipt?.terminal == true) current.request.copy(requestId = java.util.UUID.randomUUID().toString()) else current.request
+        submitDesktopCopy(request)
+    }
+    private suspend fun submitDesktopCopy(request: DesktopCopyRequest) {
+        val store = conversationStore ?: return
+        if (busy || loading || pending != null || conversationId != request.sourceConversationId || !store.isCurrent()) return
+        loading = true; error = null
+        try {
+            val previous = desktopCopy?.takeIf { it.request == request }
+            desktopCopy = previous ?: PersonalDesktopCopy(request)
+            check(store.save(PersonalConversation(conversationId, pending, desktopCopy))) { tr("error.network") }
+            val receipt = backend.personalDesktopCopy(request)
+            if (!store.isCurrent() || conversationId != request.sourceConversationId || desktopCopy?.request != request) return
+            desktopCopy = PersonalDesktopCopy(request, receipt); saveConversation(); copyTargets = null
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+        finally { loading = false }
+    }
+    suspend fun refreshDesktopCopy() {
+        val current = desktopCopy ?: return
+        val store = conversationStore ?: return
+        if (busy || loading || !store.isCurrent() || conversationId != current.request.sourceConversationId) return
+        loading = true; error = null
+        try {
+            val receipt = backend.personalDesktopCopyStatus(current.request)
+            if (!store.isCurrent() || desktopCopy?.request != current.request || conversationId != current.request.sourceConversationId) return
+            desktopCopy = PersonalDesktopCopy(current.request, receipt); saveConversation()
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+        finally { loading = false }
+    }
     private val operations = Mutex()
-    private fun saveConversation() { conversationStore?.save(PersonalConversation(conversationId, pending)) }
-    fun newConversation() { messages.clear(); sources = emptyList(); conversationId = null; pending = null; draft = ""; saveConversation() }
+    private fun saveConversation() { conversationStore?.save(PersonalConversation(conversationId, pending, desktopCopy)) }
+    fun newConversation() { desktopCopy = null; copySuccess = false; copyTargets = null; messages.clear(); sources = emptyList(); conversationId = null; pending = null; draft = ""; saveConversation() }
     internal suspend fun restoreConversation(store: PersonalConversationStore) {
         conversationStore = store
         if (!store.isCurrent()) return
         val saved = store.load()
-        conversationId = saved.conversationId; pending = saved.pending
+        conversationId = saved.conversationId; pending = saved.pending; desktopCopy = saved.desktopCopy?.takeIf { it.request.sourceConversationId == conversationId }
         pending?.let { question ->
             draft = question.message; busy = true
             try {
@@ -81,7 +174,7 @@ class PersonalWorkspaceState(
                 status = backend.personalStatus(); error = null
                 if (status?.consentEnabled == false) {
                     PersonalConversationStore.clear(context); conversationStore = null
-                    messages.clear(); sources = emptyList(); conversationId = null; pending = null; draft = ""
+                    desktopCopy = null; copyTargets = null; messages.clear(); sources = emptyList(); conversationId = null; pending = null; draft = ""
                 } else if (status?.enabled == true && status?.subscriptionActive == true) restore = true
                 else { messages.clear(); sources = emptyList() }
             } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message }
@@ -96,7 +189,7 @@ class PersonalWorkspaceState(
             backend.personalSettings(feature, enabled)
             if (feature == "assistant" && !enabled) {
                 PersonalConversationStore.clear(context); conversationStore = null
-                messages.clear(); sources = emptyList(); conversationId = null; pending = null; draft = ""
+                desktopCopy = null; copyTargets = null; messages.clear(); sources = emptyList(); conversationId = null; pending = null; draft = ""
             }
             fetch(context)
         }
@@ -166,6 +259,15 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
                 if (state.busy) item { Text(tr("personal.processing"), color = Tk.L.fgMuted); LinearProgressIndicator(Modifier.fillMaxWidth()) }
             }
             state.error?.let { Text(it, color = Tk.S.failed); TextButton(onClick = { scope.launch { if (state.pending != null) { state.draft = state.pending!!.message; state.send() } else state.load(context) } }, enabled = !state.busy) { Text(tr("project.retry")) } }
+            state.desktopCopy?.let { copy ->
+                Text(tr(copy.statusKey), color = Tk.L.fgMuted)
+                Row {
+                    TextButton(enabled = !state.loading && !state.busy, onClick = { scope.launch { state.refreshDesktopCopy() } }) { Text(tr("common.refresh")) }
+                    if (copy.canRetry) TextButton(enabled = !state.loading && !state.busy, onClick = { scope.launch { state.retryDesktopCopy() } }) { Text(tr("project.retry")) }
+                }
+            }
+            if (state.copySuccess) Text(tr("personal.copy.success"), color = Tk.L.fgMuted)
+            TextButton(onClick = { scope.launch { state.prepareCopy() } }, enabled = !state.busy && !state.loading && state.pending == null && state.messages.isNotEmpty()) { Text(tr("personal.copy.title")) }
             Row {
                 OutlinedTextField(value = state.draft, onValueChange = { state.draft = it }, enabled = !state.busy && !state.loading, placeholder = { Text(tr("personal.ask")) }, modifier = Modifier.weight(1f), maxLines = 5)
                 TextButton(onClick = { scope.launch { state.send() } }, enabled = !state.busy && !state.loading && state.draft.isNotBlank() && state.status?.enabled == true && state.status?.subscriptionActive == true) { Text(tr("personal.send")) }
@@ -208,6 +310,12 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
             state.calendarError?.let { Text(it, color = Tk.S.failed) }
             if (calendar?.enabled == true) TextButton(onClick = { scope.launch { state.configure("calendar", false, context); CalendarReminders.clear(context); reminders = false } }) { Text(tr("common.off")) }
         }
+    }
+    state.copyTargets?.let { targets ->
+        AlertDialog(onDismissRequest = { if (!state.loading) state.copyTargets = null },
+            title = { Text(tr("personal.copy.title")) },
+            text = { Column { Text(tr("personal.copy.hint")); if (state.copyNeedsUpgrade) Text(tr("personal.copy.upgrade")); state.error?.let { Text(it, color = Tk.S.failed) }; if (targets.isEmpty()) Text(tr("project.emptyTitle")); LazyColumn { items(targets) { target -> TextButton(enabled = !state.loading, onClick = { scope.launch { state.copyTo(target) } }) { Text(target.label) } } } } },
+            confirmButton = {}, dismissButton = { TextButton(enabled = !state.loading, onClick = { state.copyTargets = null }) { Text(tr("common.cancel")) } })
     }
     consent?.let { feature -> AlertDialog(onDismissRequest = { consent = null }, title = { Text(tr("personal." + feature)) }, text = { Text(tr("personal." + feature + "Consent")) }, confirmButton = { TextButton(onClick = { consent = null; scope.launch { state.configure(feature, true, context) } }) { Text(tr("common.ok")) } }, dismissButton = { TextButton(onClick = { consent = null }) { Text(tr("common.cancel")) } }) }
     state.selected?.let { event -> AlertDialog(onDismissRequest = { state.selected = null }, title = { Text(event.title) }, text = { Column { Text(event.dueDate + " " + (event.dueTime ?: "") + " · " + event.timeZone); Text(event.projectName); event.files.forEach { Text(it.fileName) } } }, confirmButton = { TextButton(onClick = { state.selected = null; onProject(RelayProject(event.deviceId, null, event.projectKey, event.projectName, event.projectUid)) }) { Text(tr("project.files")) } }, dismissButton = { TextButton(onClick = { state.selected = null }) { Text(tr("common.close")) } }) }

@@ -27,6 +27,7 @@ export function upcoming(events: CalendarEvent[], days: number, project = '', no
 export class PersonalConversation {
   conversationId?: string
   pending?: PersonalQuestion
+  desktopCopy?: PersonalDesktopCopy
   messages: PersonalMessage[] = []
   sources: PersonalSource[] = []
   busy = false
@@ -40,4 +41,50 @@ export class PersonalConversation {
     this.conversationId = reply.conversationId; this.sources = reply.sources; this.pending = undefined
     return true
   }
+}
+
+export interface PersonalCopyResult { mode: string; sourcePreserved: boolean; sourceConversationId: string; conversationId: string; targetProjectId: number; messageCount: number; filesCopied: boolean }
+export function personalCopyTarget(project: import('./api').RelayProject): number | undefined {
+  if (project.isDefault || project.projectType === 'SCRATCH' || project.projectType === 'LOOSE_FILES') return undefined
+  const key = project.locations?.find(location => location.kind === 'cloud' && !location.archiveOnly)?.key
+  if (!key || !/^[1-9][0-9]*$/.test(key)) return undefined
+  const id = Number(key)
+  return Number.isSafeInteger(id) ? id : undefined
+}
+
+export interface DesktopCopyRequest {
+  requestId: string; sourceConversationId: string; targetProjectUid: string; targetDeviceId: string; targetProjectKey: string
+}
+export interface DesktopCopyReceipt extends DesktopCopyRequest {
+  status: 'QUEUED' | 'DELIVERED' | 'EXPIRED' | 'FAILED'; sourcePreserved: boolean; filesCopied: boolean;
+  conversationId: string; messageCount: number; expiresAt: string; error?: string | null
+}
+export interface PersonalDesktopCopy { request: DesktopCopyRequest; receipt?: DesktopCopyReceipt }
+export interface PersonalCopyDestination {
+  id: string; name: string; project: import('./api').RelayProject; desktop?: import('./project-catalog').ProjectLocation
+}
+export function desktopCopyEligible(location: import('./project-catalog').ProjectLocation): boolean {
+  return location.kind === 'desktop' && !location.archiveOnly && location.owned === true && !!location.projectUid && !!location.projectType && !['SCRATCH', 'LOOSE_FILES'].includes(location.projectType)
+}
+export function personalCopyDestinations(projects: import('./api').RelayProject[], cloudLabel: string): PersonalCopyDestination[] {
+  return projects.flatMap(project => {
+    const cloud = personalCopyTarget(project)
+    const values: PersonalCopyDestination[] = cloud ? [{ id: `cloud:${cloud}`, name: `${project.name} · ${cloudLabel}`, project }] : []
+    if (!project.isDefault) for (const location of project.locations ?? []) {
+      if (desktopCopyEligible(location)) values.push({ id: `desktop:${location.deviceId}:${location.key}`, name: `${project.name} · ${location.deviceName ?? location.deviceId}`, project, desktop: location })
+    }
+    return values
+  })
+}
+export function desktopCopyNeedsUpgrade(projects: import('./api').RelayProject[]): boolean {
+  return projects.some(project => project.locations?.some(location => location.kind === 'desktop' && (location.owned == null || !location.projectType || !location.projectUid)))
+}
+export function desktopCopyTerminal(receipt?: DesktopCopyReceipt): boolean { return !!receipt && ['DELIVERED', 'EXPIRED', 'FAILED'].includes(receipt.status) }
+export function desktopCopyStatusKey(value?: PersonalDesktopCopy): string {
+  if (!value?.receipt) return 'personal.copy.unknown'
+  return 'personal.copy.' + ({ QUEUED: 'queued', DELIVERED: 'delivered', EXPIRED: 'expired', FAILED: 'failed' }[value.receipt.status] ?? 'unknown')
+}
+export function desktopCopyMatches(receipt: DesktopCopyReceipt, request: DesktopCopyRequest): boolean {
+  return ['QUEUED', 'DELIVERED', 'EXPIRED', 'FAILED'].includes(receipt.status) && receipt.sourcePreserved === true && receipt.filesCopied === false && !!receipt.conversationId &&
+    ['requestId', 'sourceConversationId', 'targetProjectUid', 'targetDeviceId', 'targetProjectKey'].every(key => receipt[key as keyof DesktopCopyRequest] === request[key as keyof DesktopCopyRequest])
 }

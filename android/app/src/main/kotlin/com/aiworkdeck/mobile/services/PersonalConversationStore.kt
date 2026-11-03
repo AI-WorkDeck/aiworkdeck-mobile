@@ -35,7 +35,7 @@ class PersonalConversationStore(
         fun open(context: Context, backend: Backend): PersonalConversationStore {
             val prefs = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             return PersonalConversationStore(backend::personalAccountScope, { prefs.getString("latest", null) }, {
-                prefs.edit().apply { if (it == null) remove("latest") else putString("latest", it) }.commit()
+                check(prefs.edit().apply { if (it == null) remove("latest") else putString("latest", it) }.commit()) { com.aiworkdeck.mobile.design.tr("error.network") }
             })
         }
         fun clear(context: Context) { invalidate(); context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().clear().commit() }

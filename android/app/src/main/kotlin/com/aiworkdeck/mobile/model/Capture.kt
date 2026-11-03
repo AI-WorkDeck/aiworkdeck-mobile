@@ -23,7 +23,7 @@ data class CaptureManifest(
 
 @Serializable
 data class RelayProject(val deviceId: String, val deviceName: String? = null, val key: String, val name: String,
-                        val projectUid: String? = null, val locations: List<ProjectLocation>? = null) {
+                        val projectUid: String? = null, val locations: List<ProjectLocation>? = null, val isDefault: Boolean = false, val projectType: String? = null) {
     val id: String get() = projectUid ?: "$deviceId:$key"
     fun matches(other: RelayProject): Boolean {
         if (projectUid != null && other.projectUid != null) return projectUid == other.projectUid
@@ -34,15 +34,15 @@ data class RelayProject(val deviceId: String, val deviceName: String? = null, va
 
 @Serializable
 data class ProjectLocation(val kind: String, val deviceId: String, val key: String,
-                           val deviceName: String? = null, val online: Boolean? = null, val archiveOnly: Boolean? = null)
+                           val deviceName: String? = null, val online: Boolean? = null, val archiveOnly: Boolean? = null, val projectUid: String? = null, val projectType: String? = null, val owned: Boolean? = null)
 
 @Serializable
-data class CatalogProject(val projectUid: String, val name: String, val locations: List<ProjectLocation>) {
+data class CatalogProject(val projectUid: String, val name: String, val locations: List<ProjectLocation>, val isDefault: Boolean = false, val projectType: String? = null) {
     fun toRelayProject(): RelayProject {
         val source = locations.firstOrNull { it.kind == "cloud" && it.archiveOnly != true }
             ?: locations.firstOrNull { it.kind == "desktop" && it.online == true }
             ?: locations.firstOrNull { it.kind == "desktop" } ?: locations.first()
-        return RelayProject(source.deviceId, source.deviceName, source.key, name, projectUid, locations)
+        return RelayProject(source.deviceId, source.deviceName, source.key, name, projectUid, locations, isDefault, projectType)
     }
 }
 

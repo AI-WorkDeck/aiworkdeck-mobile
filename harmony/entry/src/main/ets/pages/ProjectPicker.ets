@@ -49,13 +49,17 @@ export struct ProjectPicker {
         .margin({ top: Tk.Sp.s10, bottom: Tk.Sp.s6 })
 
         if (!this.assigning) {
-          Text(tr('workspace.quickCapture'))
+          Text(tr('project.none'))
             .height(Tk.touchMin)
             .fontColor(Tk.L.accent)
             .onClick((): void => {
-              AppModel.shared.selectProject(null).then((): void => { if (this.switching) this.stack.pop() })
+              if (this.loading) return
+              this.loading = true
+              ServiceLocator.backend.defaultProject().then((project: RelayProject): Promise<void> => AppModel.shared.selectProject(project))
+                .then((): void => { if (this.switching) this.stack.pop() })
+                .catch((error: Error): void => { this.failure = errorText(error) })
+                .finally((): void => { this.loading = false })
             })
-          Text(tr('workspace.unassignedHint')).fontSize(Tk.Ty.micro).fontColor(Tk.L.fgMuted)
         }
 
         // 内容区吃掉中间所有空间，页脚（退出登录）永远贴在底下
@@ -205,7 +209,7 @@ export struct ProjectPicker {
       return
     }
     try {
-      this.projects = await ServiceLocator.backend.myProjects()
+      this.projects = (await ServiceLocator.backend.myProjects()).filter((p: RelayProject): boolean => this.assigning || p.isDefault !== true)
     } catch (e) {
       // 会话在别处失效了：回登录页比留在这儿干瞪眼有用
       if (e instanceof Unauthorized) {

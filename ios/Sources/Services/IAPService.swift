@@ -43,11 +43,31 @@ enum IAP {
     /// 所以 `outTradeNo` 可省，官网用 JWS 里的 appAccountToken 反查 providerRef。
     @discardableResult
     static func confirm(_ transaction: StoreKit.Transaction, jws: String, outTradeNo: String?) async -> Bool {
-        guard let status = try? await API.shared.billingRechargeConfirm(outTradeNo: outTradeNo,
-                                                                        signedTransaction: jws),
-              status.paid else { return false }
+        if isSubscription(productId: transaction.productID) {
+            guard let confirmation = try? await API.shared.confirmSubscription(signedTransaction: jws),
+                  confirmation.confirmed else { return false }
+        } else {
+            guard ContractProducts.appstore.contains(where: { $0.productId == transaction.productID }),
+                  let status = try? await API.shared.billingRechargeConfirm(outTradeNo: outTradeNo, signedTransaction: jws),
+                  status.paid else { return false }
+        }
         await transaction.finish()
         return true
+    }
+
+    static func isSubscription(productId: String) -> Bool {
+        ContractProducts.appstoreSubscriptions.contains { $0.productId == productId }
+    }
+
+    static func restoreSubscriptions() async throws -> Int {
+        try await AppStore.sync()
+        var restored = 0
+        for await result in StoreKit.Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result,
+                  isSubscription(productId: transaction.productID) else { continue }
+            if await confirm(result, outTradeNo: nil) { restored += 1 }
+        }
+        return restored
     }
 
     /// 未验签的交易一律不送去入账——`.unverified` 意味着 StoreKit 自己都不认这份签名。

@@ -14,6 +14,7 @@ struct SettingsView: View {
     @State private var usage: API.MediaUsage?
     @State private var balanceState: BalanceState = .unknown
     @State private var showRecharge = false
+    @State private var showSubscription = false
     @State private var showBackup = false
     /// 本端走内购（契约 capabilities.recharge = "iap"）。取这个值而不是写死 true：
     /// 契约改成别的通道时这一行会跟着变，界面不会偷偷留着一个错的入口。
@@ -87,6 +88,10 @@ struct SettingsView: View {
                                     .font(T.F.nano())
                                     .foregroundStyle(T.L.fgFaint)
                             }
+                        }
+                        if AccountRegion.current.billingEnabled {
+                            Button(tr("subscription.store.title")) { showSubscription = true }
+                                .accessibilityIdentifier("settings.subscription")
                         }
                         // 区域登录后固定，这里只读；换区要退出登录后在登录页重选。
                         infoRow(tr("settings.region"), tr(AccountRegion.current.labelKey))
@@ -223,6 +228,7 @@ struct SettingsView: View {
                     Button(tr("common.close"), action: onClose).accessibilityIdentifier("settings.close")
                 }
             }
+            .sheet(isPresented: $showSubscription, onDismiss: { Task { await loadBalance() } }) { SubscriptionView() }
             .sheet(isPresented: $showBackup) { BackupConsentView().environment(model) }
             // 充值回来重拉一次余额：刚充的钱要在这一行上看得见，否则用户不知道到没到账
             .sheet(isPresented: $showRecharge, onDismiss: { Task { await loadBalance() } }) {
@@ -234,7 +240,7 @@ struct SettingsView: View {
                 Button(tr("common.cancel"), role: .cancel) {}
                 Button(tr("settings.deleteAccount.action"), role: .destructive) { Task { await runDelete() } }
             } message: {
-                Text(tr("settings.deleteAccount.confirm"))
+                Text(tr("settings.deleteAccount.confirm") + "\n\n" + tr("subscription.store.deleteWarning"))
             }
             .alert(tr("settings.deleteAccount.failed"), isPresented: Binding(
                 get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {

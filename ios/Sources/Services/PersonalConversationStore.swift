@@ -6,6 +6,7 @@ import CryptoKit
 struct SavedPersonalConversation: Codable {
     let conversationId: String?
     let pending: PendingPersonalQuestion?
+    var desktopCopy: PersonalDesktopCopy? = nil
 }
 /// Only the latest conversation reference and an unacknowledged question are stored locally.
 /// Hashing the account scope avoids copying credentials into ordinary preferences.

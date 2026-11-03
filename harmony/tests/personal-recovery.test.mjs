@@ -10,8 +10,9 @@ import ts from 'typescript'
 // Native syntax, layouts, and platform imports are checked separately by assembleHap.
 function fixture() {
   let account = 'synthetic-account'; let host = 'https://synthetic.invalid'; let latest = ''
-  const calls = []; const replies = []
+  const calls = []; const replies = []; const recentCalls = []; const recentReplies = []; let uuidCounter = 99
   const locator = { ctx: {}, baseUrl: () => host, session: { current: async () => account }, backend: {
+    personalDesktopCopies: async (conversation, session) => { recentCalls.push({ conversation, session }); const response = recentReplies.shift() ?? []; return typeof response === 'function' ? response() : response },
     personalRequest: async (path, method, body) => {
       calls.push({ path, method, body }); const response = replies.shift()
       if (response instanceof Error) throw response
@@ -22,7 +23,7 @@ function fixture() {
   const mocks = {
     '@kit.ArkData': { preferences: { getPreferencesSync: () => prefs } },
     '@kit.CryptoArchitectureKit': { cryptoFramework: { createMd: () => { const hash = createHash('sha256'); return { updateSync: ({ data }) => hash.update(data), digestSync: () => ({ data: hash.digest() }) } } } },
-    '@kit.ArkTS': { JSON, util: { TextEncoder: class { encodeInto(value) { return new TextEncoder().encode(value) } }, generateRandomUUID: () => '00000000-0000-4000-8000-000000000099' } },
+    '@kit.ArkTS': { JSON, util: { TextEncoder: class { encodeInto(value) { return new TextEncoder().encode(value) } }, generateRandomUUID: () => '00000000-0000-4000-8000-' + String(uuidCounter++).padStart(12, '0') } },
     '@kit.NetworkKit': { http: { RequestMethod: { GET: 'GET', POST: 'POST', PUT: 'PUT' } } },
     contract: { ContractCapabilities: { personalConsentVersion: 'synthetic' } },
     '../services/ServiceLocator': { ServiceLocator: locator }, './ServiceLocator': { ServiceLocator: locator },
@@ -50,7 +51,7 @@ function fixture() {
   const pending = { conversationId: '', pendingId: '00000000-0000-4000-8000-000000000001', pendingText: 'Synthetic question', pendingConversationId: '' }
   const reply = (status = 'completed') => ({ status, requestId: pending.pendingId, conversationId: '00000000-0000-4000-8000-000000000002', answer: 'Answer', sources: [] })
   const history = { conversationId: reply().conversationId, messages: [{ role: 'user', content: pending.pendingText }, { role: 'assistant', content: 'Answer', sources: [{ deviceId: 'desktop', projectKey: 'alpha', projectName: 'Synthetic' }] }] }
-  return { page, Store, calls, replies, pending, reply, history, model, raw: () => latest, change: () => { host = 'https://other.invalid'; account = 'other-account' } }
+  return { page, Store, calls, replies, recentCalls, recentReplies, prefs, pending, reply, history, model, raw: () => latest, change: () => { host = 'https://other.invalid'; account = 'other-account' } }
 }
 
 test('reopening polls only GET before history and clears completed pending', async () => {
@@ -109,4 +110,114 @@ test('clearing while a scoped save awaits cannot restore deleted input', async (
   const saving = store.save(f.pending)
   await f.Store.clear(); await saving
   assert.equal(f.raw(), '')
+})
+
+
+const desktopFixture = JSON.parse(readFileSync(new URL('../../contract/fixtures/desktop-copy.json', import.meta.url), 'utf8'))
+async function copyFixture() {
+  const f = fixture(); f.page.conversationStore = await f.Store.open(); f.page.conversationId = desktopFixture.receipts[0].sourceConversationId
+  const request = f.model.DesktopCopyRequest.from(desktopFixture.receipts[0])
+  return { ...f, request, receipt: (status = 'QUEUED', id = request.requestId) => ({ ...desktopFixture.receipts[0], requestId: id, status }) }
+}
+
+test('copy targets require location ownership and stable UID/type proof, preserve cloud and distinguish devices', () => {
+  const f = fixture(); const location = { kind: 'desktop', deviceId: 'a', deviceName: 'A', key: '17', projectUid: 'location-uid', projectType: 'BLANK', owned: true }
+  const projects = [{ name: 'Same name', projectUid: 'top-uid', locations: [location, { ...location, deviceId: 'b', deviceName: 'B' }, { kind: 'cloud', deviceId: 'cloud', key: '42' }] }]
+  const targets = f.model.personalCopyTargets(projects)
+  assert.equal(targets.length, 3); assert.equal(targets[0].desktop.projectUid, 'location-uid'); assert.equal(targets[2].cloudId, 42)
+  for (const change of [{ owned: undefined }, { owned: false }, { projectUid: undefined }, { projectType: undefined }, { projectType: 'SCRATCH' }, { projectType: 'LOOSE_FILES' }, { archiveOnly: true }]) {
+    assert.equal(f.model.personalCopyTargets([{ ...projects[0], locations: [{ ...location, ...change }] }]).length, 0)
+  }
+  assert.equal(f.model.copyNeedsUpgrade([{ locations: [{ ...location, owned: undefined }] }]), true)
+})
+
+test('desktop POST is preceded by durable request; ambiguous failure retries same UUID; queued is not delivered', async () => {
+  const f = await copyFixture()
+  f.replies.push(() => { assert.ok(f.raw().includes(f.request.requestId)); throw new Error('offline') })
+  await f.page.submitDesktopCopy(f.request, 0)
+  assert.equal((await (await f.Store.open()).load()).desktopCopy.request.requestId, f.request.requestId)
+  assert.equal(f.page.desktopCopy.statusKey(), 'personal.copy.unknown'); assert.equal(f.page.copySuccess, '')
+  f.replies.push(f.receipt()); await f.page.retryDesktopCopy()
+  assert.equal(f.calls[0].body.requestId, f.calls[1].body.requestId)
+  assert.equal(f.page.desktopCopy.statusKey(), 'personal.copy.queued'); assert.equal(f.page.copySuccess, '')
+  f.replies.push(f.receipt('DELIVERED')); await f.page.refreshDesktopCopy()
+  assert.equal(f.calls.at(-1).method, 'GET'); assert.equal(f.page.desktopCopy.statusKey(), 'personal.copy.delivered')
+  assert.equal((await (await f.Store.open()).load()).desktopCopy.receipt.status, 'DELIVERED')
+})
+
+test('restoring pending copy only polls GET and server recent restores lost local receipts', async () => {
+  const f = await copyFixture(); const saved = new f.model.PersonalConversation(); saved.conversationId = f.request.sourceConversationId; saved.desktopCopy = new f.model.PersonalDesktopCopy(f.request)
+  await (await f.Store.open()).save(saved)
+  f.replies.push({ conversationId: f.request.sourceConversationId, messages: [] }, f.receipt())
+  await f.page.restoreConversation(0)
+  assert.ok(f.calls.every(call => call.method === 'GET')); assert.equal(f.page.desktopCopy.receipt.status, 'QUEUED')
+  const fresh = await copyFixture(); fresh.recentReplies.push([fresh.receipt('DELIVERED')])
+  await fresh.page.restoreDesktopCopy(0)
+  assert.equal(fresh.recentCalls.length, 1); assert.equal(fresh.page.desktopCopy.receipt.status, 'DELIVERED')
+  assert.equal((await (await fresh.Store.open()).load()).desktopCopy.request.requestId, fresh.request.requestId)
+})
+
+test('mismatched receipts never mark delivered, stale account responses do not overwrite storage', async () => {
+  const f = await copyFixture(); f.replies.push({ ...f.receipt('DELIVERED'), targetDeviceId: 'other' })
+  await f.page.submitDesktopCopy(f.request, 0); assert.equal(f.page.desktopCopy.receipt, null)
+  assert.equal((await (await f.Store.open()).load()).desktopCopy.receipt, null)
+  const saved = f.raw(); f.replies.push(() => { f.change(); return f.receipt('DELIVERED') })
+  await f.page.refreshDesktopCopy(); assert.equal(f.raw(), saved); assert.equal(f.page.desktopCopy.receipt, null)
+})
+
+test('failed or expired explicit retry gets a new UUID and revoked input cannot be restored', async () => {
+  const f = await copyFixture(); f.page.desktopCopy = new f.model.PersonalDesktopCopy(f.request)
+  f.page.desktopCopy.receipt = f.model.DesktopCopyReceipt.from(f.receipt('EXPIRED'), f.request)
+  f.replies.push(() => f.receipt('QUEUED', f.calls.at(-1).body.requestId)); await f.page.retryDesktopCopy()
+  assert.notEqual(f.calls[0].body.requestId, f.request.requestId)
+  await f.Store.clear(); f.page.resetConversation(); assert.equal(f.page.desktopCopy, null)
+  assert.equal((await (await f.Store.open()).load()).desktopCopy, null)
+})
+
+test('failed durable save never sends a desktop request', async () => {
+  const f = await copyFixture(); f.prefs.flush = async () => { throw new Error('disk unavailable') }
+  await f.page.submitDesktopCopy(f.request, 0)
+  assert.equal(f.calls.length, 0); assert.equal(f.page.desktopCopy.receipt, null)
+})
+
+test('choosing a desktop sends its location proof, not the aggregate project identity', async () => {
+  const f = await copyFixture()
+  const location = { kind: 'desktop', deviceId: f.request.targetDeviceId, key: f.request.targetProjectKey, projectUid: f.request.targetProjectUid, owned: true, projectType: 'BLANK' }
+  const target = f.model.personalCopyTargets([{ name: 'Formal', projectUid: 'different-aggregate-uid', locations: [location] }])[0]
+  f.replies.push(() => f.receipt('QUEUED', f.calls.at(-1).body.requestId))
+  await f.page.copyTo(target, f.request.sourceConversationId, 0)
+  assert.equal(f.calls.length, 1); assert.equal(f.calls[0].body.targetProjectUid, location.projectUid)
+  assert.equal(f.calls[0].body.targetDeviceId, location.deviceId); assert.equal(f.calls[0].body.targetProjectKey, location.key)
+  assert.equal(f.page.desktopCopy.receipt.status, 'QUEUED')
+})
+
+test('receipt validation rejects identity, preservation and malformed state before persistence', async () => {
+  const f = await copyFixture()
+  for (const change of [{ requestId: 'another' }, { sourceConversationId: 'another' }, { targetProjectUid: 'another' }, { targetProjectKey: 'another' }, { sourcePreserved: false }, { filesCopied: true }, { status: 'SUCCESS' }, { messageCount: -1 }, { expiresAt: 'invalid' }]) {
+    assert.equal(f.model.DesktopCopyReceipt.from({ ...f.receipt('DELIVERED'), ...change }, f.request), null)
+  }
+})
+
+test('unavailable recent receipts block new desktop request and concurrent selection', async () => {
+  const f = await copyFixture()
+  const location = { kind: 'desktop', deviceId: f.request.targetDeviceId, key: f.request.targetProjectKey, projectUid: f.request.targetProjectUid, owned: true, projectType: 'BLANK' }
+  const target = f.model.personalCopyTargets([{ name: 'Formal', locations: [location] }])[0]
+  let release
+  f.recentReplies.push(() => new Promise((_resolve, reject) => { release = reject }))
+  const first = f.page.copyTo(target, f.request.sourceConversationId, 0)
+  while (!release) await Promise.resolve()
+  await f.page.copyTo(target, f.request.sourceConversationId, 0)
+  assert.equal(f.recentCalls.length, 1)
+  release(new Error('offline')); await first
+  assert.equal(f.calls.length, 0); assert.equal(f.page.desktopCopy, null)
+  assert.equal(f.page.error, 'personal.copy.unknown')
+})
+
+test('same desktop target recovers queued UUID from recent receipts', async () => {
+  const f = await copyFixture()
+  const location = { kind: 'desktop', deviceId: f.request.targetDeviceId, key: f.request.targetProjectKey, projectUid: f.request.targetProjectUid, owned: true, projectType: 'BLANK' }
+  const target = f.model.personalCopyTargets([{ name: 'Formal', locations: [location] }])[0]
+  f.recentReplies.push([f.receipt('QUEUED')]); f.replies.push(f.receipt('QUEUED'))
+  await f.page.copyTo(target, f.request.sourceConversationId, 0)
+  assert.equal(f.calls[0].body.requestId, f.request.requestId)
 })

@@ -15,7 +15,7 @@ import java.util.UUID
 @Serializable data class PersonalReply(val conversationId: String, val requestId: String, val answer: String, val sources: List<PersonalSource> = emptyList(), val status: String = "completed")
 @Serializable data class PersonalHistoryMessage(val role: String, val content: String, val requestId: String? = null, val sources: List<PersonalSource> = emptyList())
 @Serializable data class PersonalHistory(val conversationId: String, val messages: List<PersonalHistoryMessage> = emptyList())
-@Serializable data class PersonalConversation(val conversationId: String? = null, val pending: PersonalQuestion? = null)
+@Serializable data class PersonalConversation(val conversationId: String? = null, val pending: PersonalQuestion? = null, val desktopCopy: PersonalDesktopCopy? = null)
 @Serializable data class PersonalQuestion(val conversationId: String? = null, val message: String, val requestId: String = UUID.randomUUID().toString())
 @Serializable data class PersonalCalendarFile(val fileId: JsonElement, val fileName: String)
 @Serializable data class PersonalCalendarEvent(val id: String, val deviceId: String, val projectKey: String, val projectUid: String? = null,
@@ -33,3 +33,12 @@ import java.util.UUID
 
 fun reminderEvents(events: List<PersonalCalendarEvent>, now: Instant = Instant.now()): List<PersonalCalendarEvent> =
     events.filter { it.status == "OPEN" && it.reminder?.isAfter(now) == true }.sortedBy { it.reminder }.take(50)
+
+@Serializable data class PersonalCopyResult(val mode: String, val sourcePreserved: Boolean,
+    val sourceConversationId: String, val conversationId: String, val targetProjectId: Long,
+    val messageCount: Int, val filesCopied: Boolean)
+
+fun personalCopyTarget(project: com.aiworkdeck.mobile.model.RelayProject): Long? {
+    if (project.isDefault || project.projectType == "SCRATCH" || project.projectType == "LOOSE_FILES") return null
+    return project.locations?.firstOrNull { it.kind == "cloud" && it.archiveOnly != true }?.key?.toLongOrNull()?.takeIf { it > 0 }
+}
