@@ -44,12 +44,12 @@ final class SubscriptionFlowTests: XCTestCase {
         let transaction = try XCTUnwrap(session.allTransactions().first)
         XCTAssertEqual(transaction.productIdentifier, "pro.monthly.cny.149")
         XCTAssertNotNil(transaction.expirationDate)
-        try session.disableAutoRenewForTransaction(identifier: transaction.identifier)
-        XCTAssertFalse(try XCTUnwrap(session.allTransactions().first).autoRenewingEnabled)
+        XCTAssertTrue(transaction.autoRenewingEnabled)
+        let originalIdentifier = transaction.identifier
         try session.forceRenewalOfSubscription(productIdentifier: "pro.monthly.cny.149")
         let renewed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             session.allTransactions().contains { $0.productIdentifier == transaction.productIdentifier
-                && $0.identifier != transaction.identifier && $0.autoRenewingEnabled && $0.expirationDate != nil }
+                && $0.identifier != originalIdentifier && $0.autoRenewingEnabled && $0.expirationDate != nil }
         }, object: nil)
         let renewalResult = XCTWaiter.wait(for: [renewed], timeout: 20)
         XCTAssertEqual(renewalResult, .completed, "Renewal must create a new subscription transaction")
@@ -64,6 +64,20 @@ final class SubscriptionFlowTests: XCTestCase {
             return
         }
         XCTAssertGreaterThanOrEqual(session.allTransactions().count, 2)
+        let renewal = try XCTUnwrap(session.allTransactions().filter {
+            $0.productIdentifier == transaction.productIdentifier && $0.identifier != originalIdentifier
+        }.max { $0.purchaseDate < $1.purchaseDate })
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.buttons["subscription.buy"].waitForExistence(timeout: 20))
+        app.buttons["subscription.restore"].tap()
+        let restoredRenewal = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "好"), object: result)
+        let restoredRenewalResult = XCTWaiter.wait(for: [restoredRenewal], timeout: 20)
+        XCTAssertEqual(restoredRenewalResult, .completed)
+        guard restoredRenewalResult == .completed else { return }
+        try session.disableAutoRenewForTransaction(identifier: renewal.identifier)
+        XCTAssertFalse(try XCTUnwrap(session.allTransactions().first {
+            $0.identifier == renewal.identifier
+        }).autoRenewingEnabled)
         try session.expireSubscription(productIdentifier: "pro.monthly.cny.149")
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["subscription.buy"].waitForExistence(timeout: 20))
