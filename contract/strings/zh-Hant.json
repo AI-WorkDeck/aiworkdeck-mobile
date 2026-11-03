@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "測試訂閱（不計入餘額）",
   "subscription.sandbox.active": "有效",
   "subscription.sandbox.inactive": "未生效或已到期",
-  "subscription.sandbox.expires": "測試訂閱有效期至"
+  "subscription.sandbox.expires": "測試訂閱有效期至",
+  "personal.report.title": "檢舉內容",
+  "personal.report.reason": "請說明需要檢舉的問題",
+  "personal.report.sent": "檢舉已提交",
+  "personal.report.privacy": "將傳送您填寫的說明及對話識別碼，用於處理檢舉；不會自動附帶聊天全文或檔案。"
 }

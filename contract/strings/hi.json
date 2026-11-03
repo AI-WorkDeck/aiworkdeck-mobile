@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "परीक्षण सदस्यता (शेष राशि में शामिल नहीं)",
   "subscription.sandbox.active": "सक्रिय",
   "subscription.sandbox.inactive": "निष्क्रिय या समाप्त",
-  "subscription.sandbox.expires": "परीक्षण सदस्यता समाप्ति"
+  "subscription.sandbox.expires": "परीक्षण सदस्यता समाप्ति",
+  "personal.report.title": "सामग्री की रिपोर्ट करें",
+  "personal.report.reason": "जिस समस्या की रिपोर्ट कर रहे हैं उसका वर्णन करें",
+  "personal.report.sent": "रिपोर्ट भेज दी गई",
+  "personal.report.privacy": "रिपोर्ट पर कार्रवाई के लिए आपका विवरण और बातचीत की आईडी भेजी जाएगी। पूरी चैट और फ़ाइलें अपने आप संलग्न नहीं की जाएँगी।"
 }

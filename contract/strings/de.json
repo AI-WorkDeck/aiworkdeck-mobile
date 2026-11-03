@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Testabonnement (nicht im Guthaben enthalten)",
   "subscription.sandbox.active": "Aktiv",
   "subscription.sandbox.inactive": "Inaktiv oder abgelaufen",
-  "subscription.sandbox.expires": "Testabonnement läuft ab"
+  "subscription.sandbox.expires": "Testabonnement läuft ab",
+  "personal.report.title": "Inhalt melden",
+  "personal.report.reason": "Beschreiben Sie das gemeldete Problem",
+  "personal.report.sent": "Meldung gesendet",
+  "personal.report.privacy": "Ihre Beschreibung und die Gesprächs-ID werden zur Bearbeitung der Meldung gesendet. Der gesamte Chattext und Dateien werden nicht automatisch angehängt."
 }

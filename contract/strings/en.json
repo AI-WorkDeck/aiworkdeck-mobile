@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Test subscription (excluded from balance)",
   "subscription.sandbox.active": "Active",
   "subscription.sandbox.inactive": "Inactive or expired",
-  "subscription.sandbox.expires": "Test subscription expires"
+  "subscription.sandbox.expires": "Test subscription expires",
+  "personal.report.title": "Report content",
+  "personal.report.reason": "Describe the issue you are reporting",
+  "personal.report.sent": "Report submitted",
+  "personal.report.privacy": "Your description and conversation ID will be sent to handle the report. Full chat text and files are not attached automatically."
 }

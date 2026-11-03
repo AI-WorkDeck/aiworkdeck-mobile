@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Abonnement de test (hors solde)",
   "subscription.sandbox.active": "Actif",
   "subscription.sandbox.inactive": "Inactif ou expiré",
-  "subscription.sandbox.expires": "Expiration de l’abonnement de test"
+  "subscription.sandbox.expires": "Expiration de l’abonnement de test",
+  "personal.report.title": "Signaler le contenu",
+  "personal.report.reason": "Décrivez le problème à signaler",
+  "personal.report.sent": "Signalement envoyé",
+  "personal.report.privacy": "Votre description et l’identifiant de conversation seront envoyés pour traiter le signalement. Le texte intégral et les fichiers ne sont pas joints automatiquement."
 }

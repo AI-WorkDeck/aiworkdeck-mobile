@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Testabonnement (niet in saldo opgenomen)",
   "subscription.sandbox.active": "Actief",
   "subscription.sandbox.inactive": "Inactief of verlopen",
-  "subscription.sandbox.expires": "Testabonnement verloopt"
+  "subscription.sandbox.expires": "Testabonnement verloopt",
+  "personal.report.title": "Inhoud melden",
+  "personal.report.reason": "Beschrijf het probleem",
+  "personal.report.sent": "Melding verzonden",
+  "personal.report.privacy": "Uw beschrijving en gespreks-ID worden verzonden om de melding te behandelen. De volledige chat en bestanden worden niet automatisch bijgevoegd."
 }

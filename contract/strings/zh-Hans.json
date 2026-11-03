@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "测试订阅（不计入余额）",
   "subscription.sandbox.active": "有效",
   "subscription.sandbox.inactive": "未生效或已到期",
-  "subscription.sandbox.expires": "测试订阅有效期至"
+  "subscription.sandbox.expires": "测试订阅有效期至",
+  "personal.report.title": "举报内容",
+  "personal.report.reason": "请说明需要举报的问题",
+  "personal.report.sent": "举报已提交",
+  "personal.report.privacy": "将发送您填写的说明及会话标识，用于处理举报；不会自动附带聊天全文或文件。"
 }

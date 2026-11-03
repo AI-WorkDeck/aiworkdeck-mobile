@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Abbonamento di prova (escluso dal saldo)",
   "subscription.sandbox.active": "Attivo",
   "subscription.sandbox.inactive": "Inattivo o scaduto",
-  "subscription.sandbox.expires": "Scadenza abbonamento di prova"
+  "subscription.sandbox.expires": "Scadenza abbonamento di prova",
+  "personal.report.title": "Segnala contenuto",
+  "personal.report.reason": "Descrivi il problema da segnalare",
+  "personal.report.sent": "Segnalazione inviata",
+  "personal.report.privacy": "La descrizione e l’ID della conversazione saranno inviati per gestire la segnalazione. La chat completa e i file non vengono allegati automaticamente."
 }

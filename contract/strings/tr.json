@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Test aboneliği (bakiyeye dahil değil)",
   "subscription.sandbox.active": "Etkin",
   "subscription.sandbox.inactive": "Etkin değil veya süresi dolmuş",
-  "subscription.sandbox.expires": "Test aboneliği sona eriyor"
+  "subscription.sandbox.expires": "Test aboneliği sona eriyor",
+  "personal.report.title": "İçeriği bildir",
+  "personal.report.reason": "Bildirmek istediğiniz sorunu açıklayın",
+  "personal.report.sent": "Bildirim gönderildi",
+  "personal.report.privacy": "Bildirimi işlemek için açıklamanız ve konuşma kimliği gönderilir. Sohbetin tamamı ve dosyalar otomatik olarak eklenmez."
 }

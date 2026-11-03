@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Langganan ujian (tidak termasuk baki)",
   "subscription.sandbox.active": "Aktif",
   "subscription.sandbox.inactive": "Tidak aktif atau tamat tempoh",
-  "subscription.sandbox.expires": "Langganan ujian tamat"
+  "subscription.sandbox.expires": "Langganan ujian tamat",
+  "personal.report.title": "Laporkan kandungan",
+  "personal.report.reason": "Terangkan isu yang dilaporkan",
+  "personal.report.sent": "Laporan dihantar",
+  "personal.report.privacy": "Penerangan anda dan ID perbualan akan dihantar untuk mengendalikan laporan. Teks perbualan penuh dan fail tidak dilampirkan secara automatik."
 }

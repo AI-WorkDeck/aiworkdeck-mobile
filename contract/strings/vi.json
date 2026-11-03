@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Đăng ký thử nghiệm (không tính vào số dư)",
   "subscription.sandbox.active": "Đang hoạt động",
   "subscription.sandbox.inactive": "Chưa kích hoạt hoặc đã hết hạn",
-  "subscription.sandbox.expires": "Đăng ký thử nghiệm hết hạn"
+  "subscription.sandbox.expires": "Đăng ký thử nghiệm hết hạn",
+  "personal.report.title": "Báo cáo nội dung",
+  "personal.report.reason": "Mô tả vấn đề bạn muốn báo cáo",
+  "personal.report.sent": "Đã gửi báo cáo",
+  "personal.report.privacy": "Mô tả và mã cuộc trò chuyện sẽ được gửi để xử lý báo cáo. Toàn bộ nội dung trò chuyện và tệp không được tự động đính kèm."
 }

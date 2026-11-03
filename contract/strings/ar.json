@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "اشتراك اختباري (غير مشمول في الرصيد)",
   "subscription.sandbox.active": "نشط",
   "subscription.sandbox.inactive": "غير نشط أو منتهي الصلاحية",
-  "subscription.sandbox.expires": "انتهاء الاشتراك الاختباري"
+  "subscription.sandbox.expires": "انتهاء الاشتراك الاختباري",
+  "personal.report.title": "الإبلاغ عن المحتوى",
+  "personal.report.reason": "صف المشكلة التي تبلغ عنها",
+  "personal.report.sent": "تم إرسال البلاغ",
+  "personal.report.privacy": "سيُرسل وصفك ومعرّف المحادثة لمعالجة البلاغ. لن يُرفق نص المحادثة الكامل أو الملفات تلقائيًا."
 }

@@ -33,3 +33,11 @@
 ## 已公布的后续定位政策
 
 截至2026-10-29，Google已公布 Android17/API37 的一次性精确定位 Location Button 要求，2026年11月开放声明、2027-01-27起执行。当前首发没有后台定位；下一次定位适配应评估拍摄标记使用 Location Button，不能用本次前台权限改动宣称已满足未来接口要求。依据：[最小定位范围](https://support.google.com/googleplay/android-developer/answer/17033915)。
+
+## 1.4.0 / code7 更新（dev-board #1673）
+
+本轮主线加入个人助理，提交前须在 Console 增补 **App activity → Other user-generated content**：收集、用户可选择、用于应用功能、并非仅瞬时处理。包括用户主动发送的提问，以及主动举报时填写的说明；举报请求还带会话标识，不自动附带聊天全文或文件。发送提问前沿用既有云端摘要处理授权。新日程入口读取账户服务器快照，并未新增系统日历读取权限。
+
+个人助理回答提供应用内举报对话框，调用既有鉴权 `POST /api/feedback`（multipart payload），`kind=BUG`，以 `page=mobile/personal/assistant` 和 `clientContext.type=ai-content-report` 区分。只有用户点击提交才发送说明与会话标识；不调用邮件应用，不自动上传整段聊天。失败保留填写内容供用户重试，成功反馈必须来自有效服务端回执。测试使用 MockWebServer，不向真实反馈收件箱投递。
+
+数据安全新增项尚待 Console 保存回读，不将本文当作已申报证明。政策依据：[数据类型定义](https://support.google.com/googleplay/android-developer/answer/10787469)、[AI 内容应用内举报要求](https://support.google.com/googleplay/android-developer/answer/13985936)。

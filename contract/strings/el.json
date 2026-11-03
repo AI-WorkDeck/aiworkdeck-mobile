@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Δοκιμαστική συνδρομή (εκτός υπολοίπου)",
   "subscription.sandbox.active": "Ενεργή",
   "subscription.sandbox.inactive": "Ανενεργή ή ληγμένη",
-  "subscription.sandbox.expires": "Λήξη δοκιμαστικής συνδρομής"
+  "subscription.sandbox.expires": "Λήξη δοκιμαστικής συνδρομής",
+  "personal.report.title": "Αναφορά περιεχομένου",
+  "personal.report.reason": "Περιγράψτε το πρόβλημα",
+  "personal.report.sent": "Η αναφορά υποβλήθηκε",
+  "personal.report.privacy": "Η περιγραφή σας και το αναγνωριστικό συνομιλίας θα σταλούν για την επεξεργασία της αναφοράς. Το πλήρες κείμενο και τα αρχεία δεν επισυνάπτονται αυτόματα."
 }

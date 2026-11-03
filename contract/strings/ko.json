@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "테스트 구독 (잔액에 포함되지 않음)",
   "subscription.sandbox.active": "활성",
   "subscription.sandbox.inactive": "비활성 또는 만료됨",
-  "subscription.sandbox.expires": "테스트 구독 만료일"
+  "subscription.sandbox.expires": "테스트 구독 만료일",
+  "personal.report.title": "콘텐츠 신고",
+  "personal.report.reason": "신고할 문제를 설명해 주세요",
+  "personal.report.sent": "신고가 제출되었습니다",
+  "personal.report.privacy": "신고 처리를 위해 작성한 설명과 대화 ID가 전송됩니다. 전체 대화 내용이나 파일은 자동으로 첨부되지 않습니다."
 }

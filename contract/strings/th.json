@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "การสมัครทดสอบ (ไม่รวมในยอดเงิน)",
   "subscription.sandbox.active": "ใช้งานอยู่",
   "subscription.sandbox.inactive": "ไม่ใช้งานหรือหมดอายุ",
-  "subscription.sandbox.expires": "การสมัครทดสอบหมดอายุ"
+  "subscription.sandbox.expires": "การสมัครทดสอบหมดอายุ",
+  "personal.report.title": "รายงานเนื้อหา",
+  "personal.report.reason": "อธิบายปัญหาที่ต้องการรายงาน",
+  "personal.report.sent": "ส่งรายงานแล้ว",
+  "personal.report.privacy": "จะส่งคำอธิบายและรหัสการสนทนาเพื่อดำเนินการรายงาน โดยไม่แนบข้อความสนทนาทั้งหมดหรือไฟล์โดยอัตโนมัติ"
 }

@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Suscripción de prueba (no incluida en el saldo)",
   "subscription.sandbox.active": "Activa",
   "subscription.sandbox.inactive": "Inactiva o vencida",
-  "subscription.sandbox.expires": "Vencimiento de la suscripción de prueba"
+  "subscription.sandbox.expires": "Vencimiento de la suscripción de prueba",
+  "personal.report.title": "Denunciar contenido",
+  "personal.report.reason": "Describe el problema que denuncias",
+  "personal.report.sent": "Denuncia enviada",
+  "personal.report.privacy": "Se enviarán tu descripción y el ID de conversación para gestionar la denuncia. El chat completo y los archivos no se adjuntan automáticamente."
 }

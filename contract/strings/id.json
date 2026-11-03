@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Langganan uji (tidak termasuk saldo)",
   "subscription.sandbox.active": "Aktif",
   "subscription.sandbox.inactive": "Tidak aktif atau kedaluwarsa",
-  "subscription.sandbox.expires": "Langganan uji berakhir"
+  "subscription.sandbox.expires": "Langganan uji berakhir",
+  "personal.report.title": "Laporkan konten",
+  "personal.report.reason": "Jelaskan masalah yang dilaporkan",
+  "personal.report.sent": "Laporan terkirim",
+  "personal.report.privacy": "Deskripsi dan ID percakapan Anda akan dikirim untuk menangani laporan. Teks percakapan lengkap dan file tidak dilampirkan secara otomatis."
 }

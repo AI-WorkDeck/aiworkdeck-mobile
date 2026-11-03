@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "Тестовая подписка (не входит в баланс)",
   "subscription.sandbox.active": "Активна",
   "subscription.sandbox.inactive": "Неактивна или истекла",
-  "subscription.sandbox.expires": "Тестовая подписка истекает"
+  "subscription.sandbox.expires": "Тестовая подписка истекает",
+  "personal.report.title": "Пожаловаться на контент",
+  "personal.report.reason": "Опишите проблему",
+  "personal.report.sent": "Жалоба отправлена",
+  "personal.report.privacy": "Для обработки жалобы будут отправлены ваше описание и ID беседы. Полный текст чата и файлы не прикрепляются автоматически."
 }

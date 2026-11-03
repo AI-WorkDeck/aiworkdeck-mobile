@@ -514,5 +514,9 @@
   "subscription.sandbox.title": "テスト用サブスクリプション（残高に含まれません）",
   "subscription.sandbox.active": "有効",
   "subscription.sandbox.inactive": "無効または期限切れ",
-  "subscription.sandbox.expires": "テスト用サブスクリプションの有効期限"
+  "subscription.sandbox.expires": "テスト用サブスクリプションの有効期限",
+  "personal.report.title": "コンテンツを報告",
+  "personal.report.reason": "報告する問題を説明してください",
+  "personal.report.sent": "報告を送信しました",
+  "personal.report.privacy": "報告の処理のため、入力した説明と会話IDを送信します。会話全文やファイルは自動添付されません。"
 }
