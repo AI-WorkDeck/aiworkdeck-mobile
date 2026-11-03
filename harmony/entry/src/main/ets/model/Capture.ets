@@ -39,6 +39,9 @@ export interface CaptureManifest {
 }
 
 export interface ProjectLocation {
+  projectUid?: string
+  projectType?: string
+  owned?: boolean
   kind: string
   deviceId: string
   deviceName?: string

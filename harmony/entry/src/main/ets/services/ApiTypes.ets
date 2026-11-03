@@ -223,7 +223,8 @@ function decodeLocations(value: Object | null | undefined): ProjectLocation[] {
     const key: string | undefined = getString(o, 'key')
     if (kind === undefined || device === undefined || key === undefined) throw new ApiError(1, 'Invalid project location')
     const location: ProjectLocation = { kind: kind, deviceId: device, key: key,
-      deviceName: getString(o, 'deviceName'), online: getBoolean(o, 'online'), archiveOnly: getBoolean(o, 'archiveOnly') }
+      deviceName: getString(o, 'deviceName'), online: getBoolean(o, 'online'), archiveOnly: getBoolean(o, 'archiveOnly'),
+      projectUid: getString(o, 'projectUid'), projectType: getString(o, 'projectType'), owned: getBoolean(o, 'owned') }
     result.push(location)
   }
   return result

@@ -9,6 +9,9 @@ export interface ProjectLocation {
   key: string
   online?: boolean
   archiveOnly?: boolean
+  projectUid?: string | null
+  projectType?: string | null
+  owned?: boolean | null
 }
 export interface CatalogProject {
   isDefault?: boolean

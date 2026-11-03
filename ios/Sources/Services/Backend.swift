@@ -174,6 +174,9 @@ struct ProjectLocation: Codable, Hashable, Sendable {
     let key: String
     let online: Bool?
     var archiveOnly: Bool? = nil
+    var projectUid: String? = nil
+    var projectType: String? = nil
+    var owned: Bool? = nil
     var alias: String { deviceId + ":" + key }
 }
 

@@ -502,6 +502,13 @@
   "subscription.store.terms": "Gebruiksvoorwaarden",
   "subscription.store.deleteWarning": "Het verwijderen van je account beëindigt geen automatisch verlengde Apple-abonnementen. Zeg deze eerst op in de abonnementsinstellingen van Apple.",
   "personal.copy.title": "Gesprek naar project kopiëren",
-  "personal.copy.hint": "Kopieer dit gesprek naar een regulier cloudproject. Het originele gesprek blijft behouden; genoemde bestanden worden niet gekopieerd. Leden van het doelproject kunnen de kopie bekijken.",
-  "personal.copy.success": "Gesprek gekopieerd. Het origineel blijft behouden."
+  "personal.copy.hint": "Kopieer alleen de gesprekstekst naar een normaal project. Het origineel blijft; genoemde bestanden worden niet gekopieerd. Projectleden kunnen de kopie zien. De doelcomputer moet online komen om deze te ontvangen.",
+  "personal.copy.success": "Gesprek gekopieerd. Het origineel blijft behouden.",
+  "personal.copy.upgrade": "Werk de computerapp bij, open het project en synchroniseer de map voordat u het kiest.",
+  "personal.copy.queued": "In wachtrij, wacht op de computer.",
+  "personal.copy.delivered": "Afgeleverd op de computer. Het origineel blijft behouden.",
+  "personal.copy.expired": "Verlopen. Het origineel blijft behouden; opnieuw proberen is mogelijk.",
+  "personal.copy.failed": "Aflevering mislukt. Het origineel blijft behouden; probeer opnieuw.",
+  "personal.copy.unknown": "Aflevering niet bevestigd. Opnieuw proberen gebruikt hetzelfde verzoek.",
+  "personal.copy.cloud": "Cloud"
 }

@@ -109,6 +109,13 @@ class Backend(
     suspend fun personalCalendar(): PersonalCalendar = personal("calendar/events")
     suspend fun personalSettings(feature: String, enabled: Boolean): PersonalSettings = personal(feature + "/settings", "PUT",
         buildJsonObject { put("enabled", enabled); put("consentVersion", com.aiworkdeck.contract.ContractCapabilities.personalConsentVersion) })
+    suspend fun personalDesktopCopy(request: DesktopCopyRequest): DesktopCopyReceipt = personal<DesktopCopyReceipt>(
+        "assistant/conversations/" + java.util.UUID.fromString(request.sourceConversationId) + "/copy-to-desktop", "POST",
+        buildJsonObject { put("requestId", request.requestId); put("targetProjectUid", request.targetProjectUid); put("targetDeviceId", request.targetDeviceId); put("targetProjectKey", request.targetProjectKey) }).also { it.validate(request) }
+    suspend fun personalDesktopCopyStatus(request: DesktopCopyRequest): DesktopCopyReceipt = personal<DesktopCopyReceipt>(
+        "assistant/desktop-copies/" + java.util.UUID.fromString(request.requestId)).also { it.validate(request) }
+    suspend fun personalDesktopCopies(id: String): List<DesktopCopyReceipt> = personal<List<DesktopCopyReceipt>>(
+        "assistant/conversations/" + java.util.UUID.fromString(id) + "/desktop-copies").also { list -> list.forEach { check(it.sourceConversationId == id) { tr("error.badResponse") }; it.validate(it.request) } }
     suspend fun personalCopy(id: String, targetProjectId: Long): PersonalCopyResult = personal(
         "assistant/conversations/" + java.util.UUID.fromString(id) + "/copy-to-project", "POST",
         buildJsonObject { put("targetProjectId", targetProjectId) })

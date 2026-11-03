@@ -502,6 +502,13 @@
   "subscription.store.terms": "Termos de uso",
   "subscription.store.deleteWarning": "Excluir a conta não cancela assinaturas Apple com renovação automática. Cancele-as primeiro nos ajustes de assinaturas Apple.",
   "personal.copy.title": "Copiar conversa para projeto",
-  "personal.copy.hint": "Copie esta conversa para um projeto comum na nuvem. A conversa original é mantida; os arquivos referenciados não são copiados. Os membros do projeto de destino podem ver a cópia.",
-  "personal.copy.success": "Conversa copiada. O original foi mantido."
+  "personal.copy.hint": "Copiar apenas o texto da conversa para um projeto normal. O original é mantido; arquivos citados não são copiados. Os membros do projeto podem ver a cópia. O computador de destino precisa estar online para recebê-la.",
+  "personal.copy.success": "Conversa copiada. O original foi mantido.",
+  "personal.copy.upgrade": "Atualize o aplicativo do computador, abra o projeto e sincronize o diretório antes de selecioná-lo.",
+  "personal.copy.queued": "Na fila, aguardando o computador.",
+  "personal.copy.delivered": "Entregue ao computador. O original foi mantido.",
+  "personal.copy.expired": "Expirado. O original foi mantido; tente novamente.",
+  "personal.copy.failed": "Falha na entrega. O original foi mantido; tente novamente.",
+  "personal.copy.unknown": "Entrega não confirmada. Tentar novamente usa a mesma solicitação.",
+  "personal.copy.cloud": "Nuvem"
 }

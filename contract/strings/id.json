@@ -502,6 +502,13 @@
   "subscription.store.terms": "Ketentuan penggunaan",
   "subscription.store.deleteWarning": "Menghapus akun tidak membatalkan langganan Apple yang diperpanjang otomatis. Batalkan dahulu di pengaturan langganan Apple.",
   "personal.copy.title": "Salin percakapan ke proyek",
-  "personal.copy.hint": "Salin percakapan ini ke proyek cloud biasa. Percakapan asli dipertahankan; berkas yang dirujuk tidak disalin. Anggota proyek tujuan dapat melihat salinan.",
-  "personal.copy.success": "Percakapan disalin. Aslinya dipertahankan."
+  "personal.copy.hint": "Salin hanya teks percakapan ke proyek biasa. Percakapan asli tetap ada; berkas rujukan tidak disalin. Anggota proyek tujuan dapat melihat salinan. Komputer tujuan harus online untuk menerimanya.",
+  "personal.copy.success": "Percakapan disalin. Aslinya dipertahankan.",
+  "personal.copy.upgrade": "Perbarui aplikasi komputer, buka proyek dan sinkronkan direktorinya sebelum memilih.",
+  "personal.copy.queued": "Dalam antrean, menunggu komputer menerima.",
+  "personal.copy.delivered": "Terkirim ke komputer. Percakapan asli tetap ada.",
+  "personal.copy.expired": "Kedaluwarsa. Percakapan asli tetap ada; dapat dicoba lagi.",
+  "personal.copy.failed": "Pengiriman gagal. Percakapan asli tetap ada; dapat dicoba lagi.",
+  "personal.copy.unknown": "Pengiriman belum dikonfirmasi. Coba lagi memakai permintaan yang sama.",
+  "personal.copy.cloud": "Cloud"
 }

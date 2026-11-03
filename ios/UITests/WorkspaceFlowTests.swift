@@ -303,7 +303,11 @@ final class WorkspaceFlowTests: XCTestCase {
         confirm.tap()
         XCTAssertTrue(app.otherElements["workspace.preview"].waitForExistence(timeout: 10))
         XCUIDevice.shared.orientation = .portrait
-        app.buttons["Close"].firstMatch.tap()
+        let closeReading = app.buttons["workspace.closeReading"]
+        XCTAssertTrue(closeReading.waitForExistence(timeout: 5))
+        XCTAssertTrue(closeReading.isHittable)
+        closeReading.tap()
+        XCTAssertFalse(app.otherElements["workspace.preview"].exists)
         XCTAssertTrue(file.waitForExistence(timeout: 5))
         XCTAssertEqual(search.value as? String, "document-12")
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.lifetime = .keepAlways; add(shot)

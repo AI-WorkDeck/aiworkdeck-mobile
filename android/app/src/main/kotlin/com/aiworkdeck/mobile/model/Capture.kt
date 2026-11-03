@@ -34,7 +34,7 @@ data class RelayProject(val deviceId: String, val deviceName: String? = null, va
 
 @Serializable
 data class ProjectLocation(val kind: String, val deviceId: String, val key: String,
-                           val deviceName: String? = null, val online: Boolean? = null, val archiveOnly: Boolean? = null)
+                           val deviceName: String? = null, val online: Boolean? = null, val archiveOnly: Boolean? = null, val projectUid: String? = null, val projectType: String? = null, val owned: Boolean? = null)
 
 @Serializable
 data class CatalogProject(val projectUid: String, val name: String, val locations: List<ProjectLocation>, val isDefault: Boolean = false, val projectType: String? = null) {

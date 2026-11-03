@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "receipts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "receipts": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "requestId",
+          "status",
+          "sourcePreserved",
+          "filesCopied",
+          "sourceConversationId",
+          "conversationId",
+          "targetProjectUid",
+          "targetDeviceId",
+          "targetProjectKey",
+          "messageCount",
+          "expiresAt",
+          "error"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "DELIVERED",
+              "EXPIRED",
+              "FAILED"
+            ]
+          },
+          "sourcePreserved": {
+            "const": true
+          },
+          "filesCopied": {
+            "const": false
+          },
+          "sourceConversationId": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "targetProjectUid": {
+            "type": "string"
+          },
+          "targetDeviceId": {
+            "type": "string"
+          },
+          "targetProjectKey": {
+            "type": "string"
+          },
+          "messageCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

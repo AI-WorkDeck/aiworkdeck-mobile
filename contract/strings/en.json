@@ -502,6 +502,13 @@
   "subscription.store.terms": "Terms of use",
   "subscription.store.deleteWarning": "Deleting your account does not cancel Apple auto-renewing subscriptions. Cancel them in Apple subscription settings first.",
   "personal.copy.title": "Copy conversation to project",
-  "personal.copy.hint": "Copy this conversation to a regular cloud project. The original conversation is kept; referenced project files are not copied. Members of the target project can view the copy.",
-  "personal.copy.success": "Conversation copied. The original is kept."
+  "personal.copy.hint": "Copy only the conversation text to a regular project. The original stays; referenced files are not copied. Target project members can view the copy. A computer target must come online to receive it.",
+  "personal.copy.success": "Conversation copied. The original is kept.",
+  "personal.copy.upgrade": "Update the computer app, open the project and sync its directory before selecting it.",
+  "personal.copy.queued": "Queued — waiting for the computer to receive.",
+  "personal.copy.delivered": "Delivered to the computer. The original is kept.",
+  "personal.copy.expired": "Expired. The original is kept; you can retry.",
+  "personal.copy.failed": "Delivery failed. The original is kept; you can retry.",
+  "personal.copy.unknown": "Delivery is unconfirmed. Retry uses the same request.",
+  "personal.copy.cloud": "Cloud"
 }

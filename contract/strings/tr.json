@@ -502,6 +502,13 @@
   "subscription.store.terms": "Kullanım koşulları",
   "subscription.store.deleteWarning": "Hesabı silmek Apple otomatik yenilenen aboneliklerini iptal etmez. Önce Apple abonelik ayarlarından iptal edin.",
   "personal.copy.title": "Sohbeti projeye kopyala",
-  "personal.copy.hint": "Bu sohbeti normal bir bulut projesine kopyalayın. Özgün sohbet korunur; başvurulan dosyalar kopyalanmaz. Hedef projenin üyeleri kopyayı görüntüleyebilir.",
-  "personal.copy.success": "Sohbet kopyalandı. Özgün sohbet korundu."
+  "personal.copy.hint": "Yalnızca konuşma metnini normal projeye kopyalayın. Asıl konuşma korunur; başvurulan dosyalar kopyalanmaz. Hedef proje üyeleri kopyayı görebilir. Hedef bilgisayarın alması için çevrimiçi olması gerekir.",
+  "personal.copy.success": "Sohbet kopyalandı. Özgün sohbet korundu.",
+  "personal.copy.upgrade": "Seçmeden önce bilgisayar uygulamasını güncelleyin, projeyi açın ve dizinini eşitleyin.",
+  "personal.copy.queued": "Sırada, bilgisayarın alması bekleniyor.",
+  "personal.copy.delivered": "Bilgisayara iletildi. Asıl konuşma korundu.",
+  "personal.copy.expired": "Süresi doldu. Asıl konuşma korundu; yeniden deneyebilirsiniz.",
+  "personal.copy.failed": "İletim başarısız. Asıl konuşma korundu; yeniden deneyebilirsiniz.",
+  "personal.copy.unknown": "İletim doğrulanmadı. Yeniden deneme aynı isteği kullanır.",
+  "personal.copy.cloud": "Bulut"
 }

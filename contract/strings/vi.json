@@ -502,6 +502,13 @@
   "subscription.store.terms": "Điều khoản sử dụng",
   "subscription.store.deleteWarning": "Xóa tài khoản không hủy đăng ký Apple tự động gia hạn. Hãy hủy trước trong cài đặt đăng ký Apple.",
   "personal.copy.title": "Sao chép hội thoại vào dự án",
-  "personal.copy.hint": "Sao chép hội thoại này vào dự án đám mây thông thường. Giữ lại hội thoại gốc; không sao chép các tệp được tham chiếu. Thành viên dự án đích có thể xem bản sao.",
-  "personal.copy.success": "Đã sao chép hội thoại. Bản gốc được giữ lại."
+  "personal.copy.hint": "Chỉ sao chép văn bản hội thoại vào dự án thông thường. Giữ bản gốc, không sao chép tệp tham chiếu. Thành viên dự án đích có thể xem bản sao. Máy tính đích phải trực tuyến để nhận thì mới hoàn tất.",
+  "personal.copy.success": "Đã sao chép hội thoại. Bản gốc được giữ lại.",
+  "personal.copy.upgrade": "Cập nhật ứng dụng máy tính, mở dự án và đồng bộ danh mục trước khi chọn.",
+  "personal.copy.queued": "Đang xếp hàng, chờ máy tính nhận.",
+  "personal.copy.delivered": "Đã gửi đến máy tính. Bản gốc được giữ lại.",
+  "personal.copy.expired": "Đã hết hạn. Bản gốc được giữ lại; có thể thử lại.",
+  "personal.copy.failed": "Gửi thất bại. Bản gốc được giữ lại; có thể thử lại.",
+  "personal.copy.unknown": "Chưa xác nhận gửi. Thử lại sẽ dùng cùng yêu cầu.",
+  "personal.copy.cloud": "Đám mây"
 }

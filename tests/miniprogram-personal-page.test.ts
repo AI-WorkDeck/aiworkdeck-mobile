@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { PersonalConversation } from '../miniprogram/utils/personal.ts'
+import { PersonalConversation, personalCopyDestinations, desktopCopyNeedsUpgrade } from '../miniprogram/utils/personal.ts'
 let definition: any
 ;(globalThis as any).Page = (value: any) => { definition = value }
 await import('../miniprogram/pages/personal/personal.ts')
@@ -124,8 +124,67 @@ test('copy uses cloud location ID, preserves source history and requires confirm
 test('account switch during copy confirmation never sends the prior conversation', async () => {
   const { page, changeAccount, calls } = fixture()
   page.conversation.conversationId = 'source-id'
-  page.data.copyTargets = [{ name: 'Target', locations: [{ kind: 'cloud', key: '71' }] }]
+  page.data.copyTargets = personalCopyDestinations([{ deviceId: 'cloud', deviceName: null, key: '71', name: 'Target', locations: [{ kind: 'cloud', deviceId: 'cloud', key: '71' }] }], 'Cloud')
   ;(globalThis as any).wx.showModal = async () => { changeAccount(); return { confirm: true } }
   await page.onCopy({ detail: { value: '0' } })
   assert.equal(calls.length, 0)
+})
+
+
+test('desktop copy requires location proof and keeps ambiguous delivery UUID across retry and reload', async () => {
+  const { page } = fixture()
+  page.conversation.conversationId = 'source-id'
+  page.conversation.messages = [{ role: 'user', content: 'Keep original' }]
+  const project = { deviceId: 'cloud', deviceName: null, key: '71', projectUid: 'cloud-uid', name: 'Matter', locations: [
+    { kind: 'desktop' as const, deviceId: 'mac-a', deviceName: 'Mac A', key: 'local-17', projectUid: 'device-uid', projectType: 'LOCAL_DIR', owned: true },
+    { kind: 'desktop' as const, deviceId: 'mac-old', key: 'old' },
+    { kind: 'desktop' as const, deviceId: 'mac-b', key: 'shared', projectUid: 'shared', projectType: 'LOCAL_DIR', owned: false },
+    { kind: 'cloud' as const, deviceId: 'cloud', key: '71' },
+  ] }
+  const targets = personalCopyDestinations([project], 'Cloud')
+  assert.equal(targets.length, 2)
+  assert.ok(desktopCopyNeedsUpgrade([project]))
+  page.data.copyTargets = targets
+  const calls: any[] = []; let saved: any
+  ;(globalThis as any).wx = {
+    getStorageSync: (key: string) => key === 'awd.session' ? 'synthetic-account' : key === 'awd.user' ? { id: 71 } : key === 'awd.personalConversation' ? saved : undefined,
+    setStorageSync(_key: string, value: any) { saved = structuredClone(value) },
+    showModal: async () => ({ confirm: true }),
+    request(opts: any) {
+      if (opts.url.endsWith('/desktop-copies')) return opts.success({ statusCode: 200, data: { code: 0, data: [] } })
+      calls.push(opts)
+      if (calls.length === 1) return opts.fail()
+      const request = page.conversation.desktopCopy.request
+      const data = { ...request, status: opts.method === 'GET' ? 'DELIVERED' : 'QUEUED', sourcePreserved: true, filesCopied: false, conversationId: 'copied', messageCount: 1, expiresAt: '2026-11-10T00:00:00Z' }
+      opts.success({ statusCode: 200, data: { code: 0, data } })
+    },
+  }
+  await page.onCopy({ detail: { value: '1' } })
+  assert.equal(calls[0].data.targetProjectUid, 'device-uid')
+  assert.equal(calls[0].data.targetProjectKey, 'local-17')
+  assert.equal(calls[0].data.targetProjectId, undefined)
+  assert.ok(saved.desktopCopy.request.requestId)
+  page.conversation = new PersonalConversation(); page.restoreLocal()
+  await page.onCopyRetry()
+  assert.equal(calls[0].data.requestId, calls[1].data.requestId)
+  assert.equal(page.conversation.desktopCopy.receipt.status, 'QUEUED')
+  assert.equal(page.data.copySuccess, '')
+  assert.equal(page.data.copyCanRetry, false)
+  await page.onCopyRefresh()
+  assert.equal(page.conversation.desktopCopy.receipt.status, 'DELIVERED')
+  assert.equal(page.conversation.conversationId, 'source-id')
+  page.onNewChat(); assert.equal(page.conversation.desktopCopy, undefined)
+})
+
+test('desktop copy does not create a new request when recent receipt recovery fails', async () => {
+  const { page } = fixture()
+  page.conversation.conversationId = 'source'
+  page.data.copyTargets = personalCopyDestinations([{ deviceId: 'mac', key: 'local', name: 'Matter', locations: [{ kind: 'desktop', deviceId: 'mac', key: 'local', projectUid: 'uid', projectType: 'LOCAL_DIR', owned: true }] }])
+  let posts = 0
+  ;(globalThis as any).wx.showModal = async () => ({ confirm: true })
+  ;(globalThis as any).wx.request = (opts: any) => { if (opts.method === 'POST') posts++; opts.fail() }
+  await page.onCopy({ detail: { value: '0' } })
+  assert.equal(posts, 0)
+  assert.equal(page.conversation.desktopCopy, undefined)
+  assert.ok(page.data.error)
 })

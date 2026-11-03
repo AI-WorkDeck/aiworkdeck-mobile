@@ -502,6 +502,13 @@
   "subscription.store.terms": "Nutzungsbedingungen",
   "subscription.store.deleteWarning": "Das Löschen des Kontos kündigt keine automatisch verlängerten Apple-Abonnements. Kündige diese zuerst in den Apple-Abonnementeinstellungen.",
   "personal.copy.title": "Gespräch in Projekt kopieren",
-  "personal.copy.hint": "Dieses Gespräch in ein reguläres Cloud-Projekt kopieren. Das Original bleibt erhalten; referenzierte Dateien werden nicht kopiert. Mitglieder des Zielprojekts können die Kopie sehen.",
-  "personal.copy.success": "Gespräch kopiert. Das Original bleibt erhalten."
+  "personal.copy.hint": "Nur den Gesprächstext in ein reguläres Projekt kopieren. Original und referenzierte Dateien bleiben unverändert. Projektmitglieder können die Kopie sehen. Der Zielcomputer muss zum Empfang online sein.",
+  "personal.copy.success": "Gespräch kopiert. Das Original bleibt erhalten.",
+  "personal.copy.upgrade": "Computer-App aktualisieren, Projekt öffnen und Verzeichnis synchronisieren, bevor Sie es auswählen.",
+  "personal.copy.queued": "In Warteschlange – wartet auf den Computer.",
+  "personal.copy.delivered": "An den Computer zugestellt. Das Original bleibt erhalten.",
+  "personal.copy.expired": "Abgelaufen. Das Original bleibt erhalten; erneut versuchen möglich.",
+  "personal.copy.failed": "Zustellung fehlgeschlagen. Das Original bleibt erhalten; erneut versuchen möglich.",
+  "personal.copy.unknown": "Zustellung unbestätigt. Wiederholen verwendet dieselbe Anfrage.",
+  "personal.copy.cloud": "Cloud"
 }

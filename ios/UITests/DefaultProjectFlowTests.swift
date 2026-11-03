@@ -49,4 +49,35 @@ final class DefaultProjectFlowTests: XCTestCase {
         XCTAssertTrue(answer.waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Keep this original conversation"].exists)
     }
+    @MainActor func testDesktopConversationCopyShowsQueuedThenDelivered() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-AWDWorkspaceUITest", "-AWDPersonalUITest", "-AWDDesktopCopyUITest"]
+        app.launch()
+        defer { app.terminate() }
+        dismissEarlierRecordingNotice(in: app)
+        personalTab(app, .assistant).tap()
+        let input = app.textFields["personal.input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 15)); input.tap(); input.typeText("Copy this to my computer")
+        app.buttons["personal.send"].tap()
+        XCTAssertTrue(app.staticTexts["Review the evidence checklist today. The source is Alpha project."].waitForExistence(timeout: 10))
+        app.buttons.matching(NSPredicate(format: "label == %@", "Personal assistant"))
+            .containing(NSPredicate(format: "identifier == %@", "ellipsis.circle")).firstMatch.tap()
+        app.buttons["personal.copyToProject"].tap()
+        let target = app.buttons["personal.copy.desktop.mac-a.local-17"]
+        XCTAssertTrue(target.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["projectPicker.project.12"].exists)
+        XCTAssertFalse(app.buttons["personal.copy.desktop.mac-old.old"].exists)
+        XCTAssertTrue(app.staticTexts["Update the computer app, open the project and sync its directory before selecting it."].exists)
+        target.tap()
+        let status = app.staticTexts["personal.copyStatus"]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        XCTAssertEqual(status.label, "Queued — waiting for the computer to receive.")
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+        app.buttons["personal.copyRefresh"].tap()
+        expectation(for: NSPredicate(format: "label == %@", "Delivered to the computer. The original is kept."), evaluatedWith: status)
+        waitForExpectations(timeout: 10)
+        XCTAssertTrue(app.staticTexts["Copy this to my computer"].exists)
+    }
+
 }

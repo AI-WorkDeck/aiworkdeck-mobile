@@ -12,9 +12,10 @@
       <view wx:if="{{busy}}" class="muted">{{labels.processing}}</view>
     </scroll-view>
     <view wx:if="{{error}}" class="error"><text>{{error}}</text><button size="mini" disabled="{{busy}}" bindtap="onRetry">{{labels.retry}}</button></view>
+    <view wx:if="{{copyStatus}}"><text class="muted">{{copyStatus}}</text><button disabled="{{loading || busy}}" bindtap="onCopyRefresh">{{labels.refresh}}</button><button wx:if="{{copyCanRetry}}" disabled="{{loading || busy}}" bindtap="onCopyRetry">{{labels.retry}}</button></view>
     <text wx:if="{{copySuccess}}" class="muted">{{copySuccess}}</text>
     <button wx:if="{{messages.length}}" disabled="{{loading || busy}}" bindtap="onPrepareCopy">{{labels.copyTitle}}</button>
-    <view wx:if="{{copyReady}}"><text class="muted">{{labels.copyHint}}</text><picker wx:if="{{copyTargets.length}}" disabled="{{loading || busy}}" range="{{copyTargets}}" range-key="name" bindchange="onCopy"><view class="filter">{{labels.copyTitle}}</view></picker><text wx:else>{{labels.emptyProjects}}</text></view>
+    <view wx:if="{{copyReady}}"><text class="muted">{{labels.copyHint}}</text><picker wx:if="{{copyTargets.length}}" disabled="{{loading || busy}}" range="{{copyTargets}}" range-key="name" bindchange="onCopy"><view class="filter">{{labels.copyTitle}}</view></picker><text wx:if="{{copyUpgrade}}" class="muted">{{labels.copyUpgrade}}</text><text wx:elif="{{!copyTargets.length}}">{{labels.emptyProjects}}</text></view>
     <view class="composer"><textarea value="{{draft}}" bindinput="onInput" disabled="{{busy}}" placeholder="{{labels.ask}}" maxlength="12000" auto-height/><button disabled="{{busy || !draft || !status.enabled || !status.subscriptionActive}}" bindtap="onSend">{{labels.send}}</button></view>
     <view class="actions"><button size="mini" disabled="{{busy}}" bindtap="onNewChat">{{labels.newChat}}</button><button wx:if="{{status.enabled}}" size="mini" disabled="{{loading || busy}}" data-feature="assistant" data-enabled="{{false}}" bindtap="onConsent">{{labels.off}}</button></view>
   </block>

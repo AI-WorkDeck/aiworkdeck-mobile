@@ -15,7 +15,7 @@ import java.util.UUID
 @Serializable data class PersonalReply(val conversationId: String, val requestId: String, val answer: String, val sources: List<PersonalSource> = emptyList(), val status: String = "completed")
 @Serializable data class PersonalHistoryMessage(val role: String, val content: String, val requestId: String? = null, val sources: List<PersonalSource> = emptyList())
 @Serializable data class PersonalHistory(val conversationId: String, val messages: List<PersonalHistoryMessage> = emptyList())
-@Serializable data class PersonalConversation(val conversationId: String? = null, val pending: PersonalQuestion? = null)
+@Serializable data class PersonalConversation(val conversationId: String? = null, val pending: PersonalQuestion? = null, val desktopCopy: PersonalDesktopCopy? = null)
 @Serializable data class PersonalQuestion(val conversationId: String? = null, val message: String, val requestId: String = UUID.randomUUID().toString())
 @Serializable data class PersonalCalendarFile(val fileId: JsonElement, val fileName: String)
 @Serializable data class PersonalCalendarEvent(val id: String, val deviceId: String, val projectKey: String, val projectUid: String? = null,

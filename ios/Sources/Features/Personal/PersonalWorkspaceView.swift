@@ -44,11 +44,13 @@ final class PersonalWorkspaceModel {
     var loading = false
     var error: String?
     var calendarError: String?
+    var desktopCopy: PersonalDesktopCopy?
+    var copyBusy = false
     var service = PersonalWorkspaceService()
     private let storageScope = PersonalConversationStore.scope
     private var restored = false
     init() {
-        if let saved = PersonalConversationStore.read(scope: storageScope) { conversationID = saved.conversationId; pending = saved.pending; draft = saved.pending?.message ?? "" }
+        if let saved = PersonalConversationStore.read(scope: storageScope) { conversationID = saved.conversationId; pending = saved.pending; draft = saved.pending?.message ?? ""; desktopCopy = saved.desktopCopy }
 #if DEBUG
         if PersonalUITestSeed.isOn { service = PersonalUITestSeed.service() }
 #endif
@@ -62,7 +64,7 @@ final class PersonalWorkspaceModel {
     private func fetch() async {
         do {
             status = try await service.status(); error = nil
-            if status?.consentEnabled == false { messages = []; sources = []; conversationID = nil; pending = nil; draft = ""; PersonalConversationStore.clear() }
+            if status?.consentEnabled == false { messages = []; sources = []; conversationID = nil; pending = nil; desktopCopy = nil; draft = ""; PersonalConversationStore.clear() }
         } catch is CancellationError { return } catch { self.error = error.localizedDescription }
         do {
             calendar = try await service.calendar(); calendarError = nil
@@ -93,10 +95,56 @@ final class PersonalWorkspaceModel {
             conversationID = reply.conversationId; sources = reply.sources; pending = nil; draft = ""; save()
         } catch is CancellationError {} catch { self.error = error.localizedDescription }
     }
-    private func save() { PersonalConversationStore.write(SavedPersonalConversation(conversationId: conversationID, pending: pending), scope: storageScope) }
+    private func save() { PersonalConversationStore.write(SavedPersonalConversation(conversationId: conversationID, pending: pending, desktopCopy: desktopCopy), scope: storageScope) }
     func newConversation() {
-        guard !busy, pending == nil else { return }
-        messages = []; sources = []; conversationID = nil; draft = ""; save()
+        guard !busy, !copyBusy, pending == nil else { return }
+        messages = []; sources = []; conversationID = nil; desktopCopy = nil; draft = ""; save()
+    }
+    func queueDesktopCopy(_ target: PersonalCopyDestination) async throws {
+        guard !busy, !copyBusy, pending == nil, let source = conversationID,
+              let location = target.desktop, PersonalCopyDestination.eligible(location), let uid = location.projectUid else {
+            throw APIError(message: tr("error.badResponse"))
+        }
+        copyBusy = true
+        defer { copyBusy = false }
+        let request = DesktopCopyRequest(sourceConversationId: source, targetProjectUid: uid, targetDeviceId: location.deviceId, targetProjectKey: location.key)
+        if let previous = desktopCopy, previous.request.sourceConversationId == source,
+           previous.request.targetDeviceId == request.targetDeviceId, previous.request.targetProjectKey == request.targetProjectKey,
+           previous.request.targetProjectUid == uid, previous.receipt?.terminal != true {
+            // A missing receipt may mean the server accepted a request whose response was lost.
+        } else {
+            let recent = try await service.desktopCopies(source)
+            guard conversationID == source else { throw CancellationError() }
+            if let prior = recent.first(where: { $0.targetProjectUid == uid && $0.targetDeviceId == location.deviceId && $0.targetProjectKey == location.key }), !prior.terminal {
+                desktopCopy = PersonalDesktopCopy(request: prior.request, receipt: prior)
+            } else { desktopCopy = PersonalDesktopCopy(request: request) }
+        }
+        save()
+        try await submitDesktopCopy()
+    }
+    private func submitDesktopCopy() async throws {
+        guard let value = desktopCopy else { return }
+        let receipt = try await service.copyToDesktop(value.request)
+        guard desktopCopy?.request == value.request, conversationID == value.request.sourceConversationId else { return }
+        desktopCopy?.receipt = receipt; save()
+    }
+    func refreshDesktopCopy() async {
+        guard let value = desktopCopy, !copyBusy else { return }
+        copyBusy = true
+        defer { copyBusy = false }
+        do {
+            let receipt = try await service.desktopCopyStatus(value.request)
+            guard desktopCopy?.request == value.request else { return }
+            desktopCopy?.receipt = receipt; error = nil; save()
+        } catch is CancellationError {} catch { self.error = tr("personal.copy.unknown") }
+    }
+    func retryDesktopCopy() async {
+        guard desktopCopy?.canRetry == true, !copyBusy, !busy else { return }
+        copyBusy = true
+        defer { copyBusy = false }
+        if desktopCopy?.receipt?.terminal == true { desktopCopy?.request.requestId = UUID().uuidString.lowercased(); desktopCopy?.receipt = nil; save() }
+        do { try await submitDesktopCopy(); error = nil }
+        catch is CancellationError {} catch { self.error = tr("personal.copy.unknown") }
     }
     private func restore() async {
         guard !busy else { return }; busy = true
@@ -109,6 +157,11 @@ final class PersonalWorkspaceModel {
             } else if let conversationID {
                 messages = try await service.history(conversationID).messages
             }
+            if desktopCopy == nil, let conversationID {
+                if let latest = try? await service.desktopCopies(conversationID).first {
+                    desktopCopy = PersonalDesktopCopy(request: latest.request, receipt: latest); save()
+                }
+            }
             restored = true
         } catch is CancellationError {} catch { self.error = error.localizedDescription }
     }
@@ -117,7 +170,7 @@ final class PersonalWorkspaceModel {
         defer { loading = false }
         do {
             try await service.configure(feature, enabled: enabled)
-            if feature == "assistant" && !enabled { messages = []; sources = []; conversationID = nil; pending = nil; draft = ""; PersonalConversationStore.clear() }
+            if feature == "assistant" && !enabled { messages = []; sources = []; conversationID = nil; pending = nil; desktopCopy = nil; draft = ""; PersonalConversationStore.clear() }
             await fetch()
         }
         catch { if feature == "calendar" { calendarError = error.localizedDescription } else { self.error = error.localizedDescription }; loading = false }
@@ -190,6 +243,15 @@ private struct AssistantView: View {
                     }
                 }
                 if let error = model.error { Text(error).font(.caption).foregroundStyle(T.S.failed); Button(tr("project.retry")) { Task { if model.pending != nil { await model.send() } else { await model.load() } } }.disabled(model.busy) }
+                if let copy = model.desktopCopy {
+                    VStack(alignment: .leading) {
+                        Text(tr(copy.statusKey)).font(.caption).accessibilityIdentifier("personal.copyStatus")
+                        HStack {
+                            Button(tr("common.refresh")) { Task { await model.refreshDesktopCopy() } }.accessibilityIdentifier("personal.copyRefresh")
+                            if copy.canRetry { Button(tr("project.retry")) { Task { await model.retryDesktopCopy() } }.accessibilityIdentifier("personal.copyRetry") }
+                        }.disabled(model.copyBusy)
+                    }
+                }
                 HStack(alignment: .bottom) {
                     TextField(tr("personal.ask"), text: $model.draft, prompt: Text(tr("personal.ask")).foregroundStyle(colorScheme == .dark ? T.D.fgMuted : T.L.fgMuted), axis: .vertical)
                         .foregroundStyle(colorScheme == .dark ? T.D.fg : T.L.fg)
@@ -209,9 +271,9 @@ private struct AssistantView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Button(tr("personal.copy.title")) { copied = false; showCopy = true }
-                            .disabled(model.busy || model.pending != nil || model.conversationID == nil || model.messages.isEmpty)
+                            .disabled(model.busy || model.copyBusy || model.pending != nil || model.conversationID == nil || model.messages.isEmpty)
                             .accessibilityIdentifier("personal.copyToProject")
-                        Button(tr("personal.newChat")) { model.newConversation() }.disabled(model.busy || model.pending != nil)
+                        Button(tr("personal.newChat")) { model.newConversation() }.disabled(model.busy || model.copyBusy || model.pending != nil)
                         if model.status?.enabled == true { Button(tr("common.off")) { Task { await model.configure("assistant", enabled: false) } }.disabled(model.loading || model.busy) }
                     } label: { Image(systemName: "ellipsis.circle").accessibilityLabel(tr("personal.assistant")) }
                     .accessibilityIdentifier("personal.actions")
@@ -221,12 +283,7 @@ private struct AssistantView: View {
                 Button(tr("common.ok")) { Task { await model.configure("assistant", enabled: true) } }; Button(tr("common.cancel"), role: .cancel) {}
             } message: { Text(tr("personal.assistantConsent")) }
             .sheet(isPresented: $showCopy, onDismiss: { if copied { copyCompleted = true } }) {
-                ProjectPickerView(onClose: { showCopy = false }, onSelect: { target in
-                    guard let id = model.conversationID, !model.busy, model.pending == nil else { throw APIError(message: tr("error.badResponse")) }
-                    _ = try await model.service.copyConversation(id, to: target)
-                    copied = true
-                }, titleKey: "personal.copy.title", hintKey: "personal.copy.hint", projectFilter: { ConversationCopyTarget.projectID($0) != nil })
-                    .environment(account)
+                ConversationCopyView(model: model, files: account.workspaceFiles(), onClose: { showCopy = false }, onCloudCopied: { copied = true })
             }
             .alert(tr("personal.copy.success"), isPresented: $copyCompleted) { Button(tr("common.ok"), role: .cancel) {} }
             .sheet(isPresented: $showSettings, onDismiss: { Task { await model.load() } }) { SettingsView(onClose: { showSettings = false }).environment(account) }

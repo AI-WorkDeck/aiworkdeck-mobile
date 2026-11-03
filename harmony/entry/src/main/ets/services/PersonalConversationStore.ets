@@ -42,6 +42,11 @@ export class PersonalConversationStore {
     if (!await this.isCurrent() || this.generation !== PersonalConversationStore.generation) return false
     const raw: Record<string, Object> = { 'scope': this.scope, 'conversationId': value.conversationId, 'pendingId': value.pendingId,
       'pendingText': value.pendingText, 'pendingConversationId': value.pendingConversationId }
+    if (value.desktopCopy !== null && value.desktopCopy !== undefined) {
+      const copy: Record<string, Object> = { 'request': value.desktopCopy.request }
+      if (value.desktopCopy.receipt !== null) copy['receipt'] = value.desktopCopy.receipt.wire()
+      raw['desktopCopy'] = copy
+    }
     PersonalConversationStore.store().putSync('latest', ArkJson.stringify(raw))
     await PersonalConversationStore.store().flush()
     return true

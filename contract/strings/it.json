@@ -502,6 +502,13 @@
   "subscription.store.terms": "Termini d’uso",
   "subscription.store.deleteWarning": "Eliminare l’account non annulla gli abbonamenti Apple a rinnovo automatico. Annullali prima nelle impostazioni degli abbonamenti Apple.",
   "personal.copy.title": "Copia conversazione nel progetto",
-  "personal.copy.hint": "Copia questa conversazione in un normale progetto cloud. La conversazione originale viene conservata; i file citati non vengono copiati. I membri del progetto di destinazione possono vedere la copia.",
-  "personal.copy.success": "Conversazione copiata. L’originale è conservato."
+  "personal.copy.hint": "Copia solo il testo della conversazione in un progetto normale. L’originale resta; i file citati non vengono copiati. I membri del progetto possono vedere la copia. Il computer di destinazione deve essere online per riceverla.",
+  "personal.copy.success": "Conversazione copiata. L’originale è conservato.",
+  "personal.copy.upgrade": "Aggiorna l’app sul computer, apri il progetto e sincronizza la directory prima di selezionarlo.",
+  "personal.copy.queued": "In coda, in attesa del computer.",
+  "personal.copy.delivered": "Consegnato al computer. L’originale è conservato.",
+  "personal.copy.expired": "Scaduto. L’originale è conservato; puoi riprovare.",
+  "personal.copy.failed": "Consegna non riuscita. L’originale è conservato; puoi riprovare.",
+  "personal.copy.unknown": "Consegna non confermata. Il nuovo tentativo usa la stessa richiesta.",
+  "personal.copy.cloud": "Cloud"
 }

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import Ajv2020 from 'ajv/dist/2020.js'
 import { loadContract, manifestFor, DATA_FILES, outputs, sha256 } from './lib.mjs'
 
-const FIXTURES = ['tally', 'transitions', 'status-merge', 'restore', 'delete-warning', 'billing']
+const FIXTURES = ['tally', 'transitions', 'status-merge', 'restore', 'delete-warning', 'billing', 'desktop-copy']
 
 function evalGuard(guard, attempts, state, problems) {
   if (!guard) return true

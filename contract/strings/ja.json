@@ -502,6 +502,13 @@
   "subscription.store.terms": "利用規約",
   "subscription.store.deleteWarning": "アカウントを削除してもAppleの自動更新サブスクリプションは解約されません。先にAppleのサブスクリプション設定で解約してください。",
   "personal.copy.title": "会話をプロジェクトにコピー",
-  "personal.copy.hint": "この会話を通常のクラウドプロジェクトにコピーします。元の会話は保持され、参照されたファイルはコピーされません。コピーは転送先プロジェクトのメンバーが閲覧できます。",
-  "personal.copy.success": "会話をコピーしました。元の会話は保持されています。"
+  "personal.copy.hint": "会話のテキストのみを正式プロジェクトにコピーします。元の会話は保持され、参照ファイルはコピーされません。転送先のメンバーが閲覧できます。パソコンへの転送は、そのパソコンがオンラインになり受信すると完了します。",
+  "personal.copy.success": "会話をコピーしました。元の会話は保持されています。",
+  "personal.copy.upgrade": "パソコンのアプリを更新し、プロジェクトを開いて一覧を同期してから選択してください。",
+  "personal.copy.queued": "待機中。パソコンの受信を待っています。",
+  "personal.copy.delivered": "パソコンに届きました。元の会話は保持されています。",
+  "personal.copy.expired": "期限切れ。元の会話は保持されており、再試行できます。",
+  "personal.copy.failed": "転送に失敗しました。元の会話は保持されており、再試行できます。",
+  "personal.copy.unknown": "受信未確認です。再試行では同じリクエストを使用します。",
+  "personal.copy.cloud": "クラウド"
 }

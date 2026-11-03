@@ -21,17 +21,28 @@ enum PersonalUITestSeed {
     }
 }
 private final class PersonalUITestProtocol: URLProtocol {
+    nonisolated(unsafe) private static var desktopReceipt: [String: Any] = [:]
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         let path = request.url!.path
-        var value: [String: Any] = [:]
+        var value: Any = [:]
         if path.hasSuffix("assistant/status") {
             value = ["enabled": true, "subscriptionActive": true, "backupEnabled": true, "summaryCount": 2]
         } else if path.hasSuffix("calendar/events") {
             let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.timeZone = TimeZone(identifier: "Asia/Shanghai")
             value = ["enabled": true, "subscriptionActive": true, "events": [
                 ["id": "synthetic-event", "deviceId": "synthetic-desktop", "projectKey": "alpha", "projectName": "Alpha project", "title": "Review evidence checklist", "dueDate": formatter.string(from: Date()), "dueTime": "14:30", "timeZone": "Asia/Shanghai", "remindAt": ISO8601DateFormatter().string(from: Date().addingTimeInterval(3600)), "status": "OPEN", "files": [["fileId": 7, "fileName": "evidence.pdf"]]]]]
+        } else if path.hasSuffix("/copy-to-desktop") {
+            var data = request.httpBody ?? Data()
+            if let stream = request.httpBodyStream { stream.open(); defer { stream.close() }; var bytes = [UInt8](repeating: 0, count: 1024); while stream.hasBytesAvailable { let n = stream.read(&bytes, maxLength: bytes.count); if n <= 0 { break }; data.append(bytes, count: n) } }
+            let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+            Self.desktopReceipt = body.merging(["status": "QUEUED", "sourcePreserved": true, "filesCopied": false, "sourceConversationId": "synthetic-conversation", "conversationId": "desktop-conversation", "messageCount": 2, "expiresAt": "2026-11-10T00:00:00Z"]) { _, new in new }
+            value = Self.desktopReceipt
+        } else if path.contains("/assistant/desktop-copies/") {
+            value = Self.desktopReceipt.merging(["status": "DELIVERED"]) { _, new in new }
+        } else if path.hasSuffix("/desktop-copies") {
+            value = [] as [String]
         } else if path.hasSuffix("/copy-to-project") {
             value = ["mode": "copy", "sourcePreserved": true, "sourceConversationId": "synthetic-conversation", "conversationId": "copied-conversation", "targetProjectId": 12, "messageCount": 2, "filesCopied": false]
         } else if path.hasSuffix("assistant/chat") {

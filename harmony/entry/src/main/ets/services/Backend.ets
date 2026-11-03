@@ -141,6 +141,23 @@ export class Backend {
     return data
   }
 
+  async personalDesktopCopies(conversation: string, expectedSession: string): Promise<Record<string, Object>[]> {
+    const host: string = baseUrlOf(this.region())
+    const text: string = await this.execute('/api/mobile/assistant/conversations/' + encodeURIComponent(conversation) + '/desktop-copies', http.RequestMethod.GET, null, expectedSession)
+    if (await this.session.current() !== expectedSession || baseUrlOf(this.region()) !== host) throw new Unauthorized()
+    const raw: Record<string, Object> | null = asRecord(ArkJson.parse(text))
+    if (raw === null || typeof raw['code'] !== 'number') throw new ApiError(1, 'Invalid response')
+    await this.check(raw)
+    if (!Array.isArray(raw['data'])) throw new ApiError(1, 'Invalid response')
+    const result: Record<string, Object>[] = []
+    for (const item of raw['data'] as Object[]) {
+      const row: Record<string, Object> | null = asRecord(item)
+      if (row === null) throw new ApiError(1, 'Invalid response')
+      result.push(row)
+    }
+    return result
+  }
+
   // ---- 内部 ----
 
   /** 裸响应（数组 / 对象）。是对象才查信封——未登录时这些接口同样回 4010 信封。 */

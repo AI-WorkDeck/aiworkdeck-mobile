@@ -502,6 +502,13 @@
   "subscription.store.terms": "Syarat penggunaan",
   "subscription.store.deleteWarning": "Memadam akaun tidak membatalkan langganan Apple yang diperbaharui secara automatik. Batalkan dahulu dalam tetapan langganan Apple.",
   "personal.copy.title": "Salin perbualan ke projek",
-  "personal.copy.hint": "Salin perbualan ini ke projek awan biasa. Perbualan asal dikekalkan; fail yang dirujuk tidak disalin. Ahli projek sasaran boleh melihat salinan.",
-  "personal.copy.success": "Perbualan disalin. Asalnya dikekalkan."
+  "personal.copy.hint": "Salin teks perbualan sahaja ke projek biasa. Perbualan asal kekal; fail rujukan tidak disalin. Ahli projek sasaran boleh melihat salinan. Komputer sasaran mesti dalam talian untuk menerimanya.",
+  "personal.copy.success": "Perbualan disalin. Asalnya dikekalkan.",
+  "personal.copy.upgrade": "Kemas kini aplikasi komputer, buka projek dan segerakkan direktorinya sebelum memilih.",
+  "personal.copy.queued": "Dalam baris gilir, menunggu komputer menerima.",
+  "personal.copy.delivered": "Dihantar ke komputer. Perbualan asal dikekalkan.",
+  "personal.copy.expired": "Tamat tempoh. Perbualan asal dikekalkan; boleh cuba lagi.",
+  "personal.copy.failed": "Penghantaran gagal. Perbualan asal dikekalkan; boleh cuba lagi.",
+  "personal.copy.unknown": "Penghantaran belum disahkan. Cuba lagi menggunakan permintaan yang sama.",
+  "personal.copy.cloud": "Awan"
 }

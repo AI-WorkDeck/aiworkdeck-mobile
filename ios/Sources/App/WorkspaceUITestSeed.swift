@@ -17,6 +17,13 @@ actor WorkspaceUITestSeed: ProjectFilesServing {
         RelayProject(deviceId: "cloud", deviceName: nil, key: "temporary", name: "Temporary project", projectUid: "temporary-uid", isDefault: true)
     }
     func projects() async throws -> [RelayProject] {
+        if ProcessInfo.processInfo.arguments.contains("-AWDDesktopCopyUITest") {
+            return [RelayProject(deviceId: "cloud", deviceName: nil, key: "12", name: "Multi-location project", projectUid: "cloud-authority", locations: [
+                ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "12", online: true),
+                ProjectLocation(kind: "desktop", deviceId: "mac-a", deviceName: "Mac A", key: "local-17", online: false, projectUid: "desktop-authority", projectType: "LOCAL_DIR", owned: true),
+                ProjectLocation(kind: "desktop", deviceId: "mac-old", deviceName: "Old Mac", key: "old", online: false)
+            ])]
+        }
         if ProcessInfo.processInfo.arguments.contains("-AWDCopyConversationUITest") {
             return [RelayProject(deviceId: "cloud", deviceName: nil, key: "12", name: "Formal cloud project", projectUid: "formal-uid", locations: [ProjectLocation(kind: "cloud", deviceId: "cloud", deviceName: nil, key: "12", online: true)], isDefault: false, projectType: "FORMAL"),
                     RelayProject(deviceId: "desktop", deviceName: nil, key: "999", name: "Desktop only")]

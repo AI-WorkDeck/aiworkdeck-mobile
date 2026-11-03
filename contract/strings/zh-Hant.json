@@ -502,6 +502,13 @@
   "subscription.store.terms": "使用條款",
   "subscription.store.deleteWarning": "刪除帳戶不會取消 Apple 自動續費訂閱，請先在 Apple 訂閱管理中取消。",
   "personal.copy.title": "轉存對話至專案",
-  "personal.copy.hint": "將本次對話複製至正式雲端專案，保留原對話；不會複製對話引用的案件檔案。目標專案成員可查看副本。",
-  "personal.copy.success": "對話已複製，原對話已保留。"
+  "personal.copy.hint": "僅將對話文字複製到正式專案，保留原對話，不複製引用檔案；目標專案成員可見。選擇電腦專案後，需要電腦上線接收才完成。",
+  "personal.copy.success": "對話已複製，原對話已保留。",
+  "personal.copy.upgrade": "請升級電腦端，開啟專案並同步目錄後再選擇。",
+  "personal.copy.queued": "已排隊，等待電腦上線接收。",
+  "personal.copy.delivered": "已送達電腦，原對話已保留。",
+  "personal.copy.expired": "已過期，原對話已保留，可重試。",
+  "personal.copy.failed": "送達失敗，原對話已保留，可重試。",
+  "personal.copy.unknown": "尚未確認送達；重試會沿用同一次請求。",
+  "personal.copy.cloud": "雲端"
 }

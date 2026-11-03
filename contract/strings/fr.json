@@ -502,6 +502,13 @@
   "subscription.store.terms": "Conditions d’utilisation",
   "subscription.store.deleteWarning": "La suppression du compte ne résilie pas les abonnements Apple à renouvellement automatique. Résiliez-les d’abord dans les réglages Apple.",
   "personal.copy.title": "Copier la conversation dans un projet",
-  "personal.copy.hint": "Copiez cette conversation dans un projet cloud ordinaire. La conversation originale est conservée ; les fichiers référencés ne sont pas copiés. Les membres du projet cible peuvent consulter la copie.",
-  "personal.copy.success": "Conversation copiée. L’original est conservé."
+  "personal.copy.hint": "Copier uniquement le texte de la conversation dans un projet normal. L’original est conservé, les fichiers cités ne sont pas copiés. Les membres du projet peuvent voir la copie. L’ordinateur cible doit être en ligne pour la recevoir.",
+  "personal.copy.success": "Conversation copiée. L’original est conservé.",
+  "personal.copy.upgrade": "Mettez à jour l’application ordinateur, ouvrez le projet et synchronisez son répertoire avant de le sélectionner.",
+  "personal.copy.queued": "En attente de réception par l’ordinateur.",
+  "personal.copy.delivered": "Remis à l’ordinateur. L’original est conservé.",
+  "personal.copy.expired": "Expiré. L’original est conservé ; vous pouvez réessayer.",
+  "personal.copy.failed": "Échec de livraison. L’original est conservé ; vous pouvez réessayer.",
+  "personal.copy.unknown": "Livraison non confirmée. Réessayer utilise la même demande.",
+  "personal.copy.cloud": "Cloud"
 }
