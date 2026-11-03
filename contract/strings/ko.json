@@ -510,5 +510,9 @@
   "personal.copy.expired": "만료되었습니다. 원본은 유지되며 다시 시도할 수 있습니다.",
   "personal.copy.failed": "전달 실패. 원본은 유지되며 다시 시도할 수 있습니다.",
   "personal.copy.unknown": "전달이 확인되지 않았습니다. 재시도 시 같은 요청을 사용합니다.",
-  "personal.copy.cloud": "클라우드"
+  "personal.copy.cloud": "클라우드",
+  "subscription.sandbox.title": "테스트 구독 (잔액에 포함되지 않음)",
+  "subscription.sandbox.active": "활성",
+  "subscription.sandbox.inactive": "비활성 또는 만료됨",
+  "subscription.sandbox.expires": "테스트 구독 만료일"
 }

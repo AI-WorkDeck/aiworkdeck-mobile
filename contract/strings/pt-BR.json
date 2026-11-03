@@ -510,5 +510,9 @@
   "personal.copy.expired": "Expirado. O original foi mantido; tente novamente.",
   "personal.copy.failed": "Falha na entrega. O original foi mantido; tente novamente.",
   "personal.copy.unknown": "Entrega não confirmada. Tentar novamente usa a mesma solicitação.",
-  "personal.copy.cloud": "Nuvem"
+  "personal.copy.cloud": "Nuvem",
+  "subscription.sandbox.title": "Assinatura de teste (não incluída no saldo)",
+  "subscription.sandbox.active": "Ativa",
+  "subscription.sandbox.inactive": "Inativa ou expirada",
+  "subscription.sandbox.expires": "Validade da assinatura de teste"
 }

@@ -510,5 +510,9 @@
   "personal.copy.expired": "انتهت المهلة. الأصل محفوظ ويمكن إعادة المحاولة.",
   "personal.copy.failed": "فشل التسليم. الأصل محفوظ ويمكن إعادة المحاولة.",
   "personal.copy.unknown": "لم يتأكد التسليم. إعادة المحاولة تستخدم الطلب نفسه.",
-  "personal.copy.cloud": "السحابة"
+  "personal.copy.cloud": "السحابة",
+  "subscription.sandbox.title": "اشتراك اختباري (غير مشمول في الرصيد)",
+  "subscription.sandbox.active": "نشط",
+  "subscription.sandbox.inactive": "غير نشط أو منتهي الصلاحية",
+  "subscription.sandbox.expires": "انتهاء الاشتراك الاختباري"
 }

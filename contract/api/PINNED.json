@@ -1,6 +1,6 @@
 {
-  "serverCommit": "f49a1a154e66aee5d2086af4e814e75cf983a63a",
-  "sha256": "6cab75341ff68adde5a9303d954a60e752ca9052aa0da708dde5b5b19e89905d",
-  "pulledAt": "2026-11-03T06:31:01.468Z",
-  "note": "钉自 /tmp/1656-api-pin-f49a1a 的干净工作区，照 serverCommit 可复现。"
+  "serverCommit": "c1f10397db61f1d3baa350b66b3826b053334056",
+  "sha256": "0420cbe5d6882074a34038ebf55d8ecfd89fc82521ad34a502cea4212744e35b",
+  "pulledAt": "2026-11-03T11:40:10.793Z",
+  "note": "钉自 /Users/zewei/.codex/worktrees/recording-file-actions/1-2 checkba_cloud 的干净工作区，照 serverCommit 可复现。"
 }

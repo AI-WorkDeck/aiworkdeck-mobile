@@ -510,5 +510,9 @@
   "personal.copy.expired": "Kedaluwarsa. Percakapan asli tetap ada; dapat dicoba lagi.",
   "personal.copy.failed": "Pengiriman gagal. Percakapan asli tetap ada; dapat dicoba lagi.",
   "personal.copy.unknown": "Pengiriman belum dikonfirmasi. Coba lagi memakai permintaan yang sama.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Langganan uji (tidak termasuk saldo)",
+  "subscription.sandbox.active": "Aktif",
+  "subscription.sandbox.inactive": "Tidak aktif atau kedaluwarsa",
+  "subscription.sandbox.expires": "Langganan uji berakhir"
 }

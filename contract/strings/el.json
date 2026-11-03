@@ -510,5 +510,9 @@
   "personal.copy.expired": "Έληξε. Το πρωτότυπο διατηρείται· μπορείτε να ξαναδοκιμάσετε.",
   "personal.copy.failed": "Αποτυχία παράδοσης. Το πρωτότυπο διατηρείται· μπορείτε να ξαναδοκιμάσετε.",
   "personal.copy.unknown": "Η παράδοση δεν επιβεβαιώθηκε. Η επανάληψη χρησιμοποιεί το ίδιο αίτημα.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Δοκιμαστική συνδρομή (εκτός υπολοίπου)",
+  "subscription.sandbox.active": "Ενεργή",
+  "subscription.sandbox.inactive": "Ανενεργή ή ληγμένη",
+  "subscription.sandbox.expires": "Λήξη δοκιμαστικής συνδρομής"
 }

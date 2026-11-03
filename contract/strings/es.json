@@ -510,5 +510,9 @@
   "personal.copy.expired": "Caducado. Se conserva el original; puedes reintentar.",
   "personal.copy.failed": "Error de entrega. Se conserva el original; puedes reintentar.",
   "personal.copy.unknown": "Entrega sin confirmar. Reintentar usa la misma solicitud.",
-  "personal.copy.cloud": "Nube"
+  "personal.copy.cloud": "Nube",
+  "subscription.sandbox.title": "Suscripción de prueba (no incluida en el saldo)",
+  "subscription.sandbox.active": "Activa",
+  "subscription.sandbox.inactive": "Inactiva o vencida",
+  "subscription.sandbox.expires": "Vencimiento de la suscripción de prueba"
 }

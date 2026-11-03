@@ -510,5 +510,9 @@
   "personal.copy.expired": "Expiré. L’original est conservé ; vous pouvez réessayer.",
   "personal.copy.failed": "Échec de livraison. L’original est conservé ; vous pouvez réessayer.",
   "personal.copy.unknown": "Livraison non confirmée. Réessayer utilise la même demande.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Abonnement de test (hors solde)",
+  "subscription.sandbox.active": "Actif",
+  "subscription.sandbox.inactive": "Inactif ou expiré",
+  "subscription.sandbox.expires": "Expiration de l’abonnement de test"
 }

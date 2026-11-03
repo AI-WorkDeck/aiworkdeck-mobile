@@ -510,5 +510,9 @@
   "personal.copy.expired": "已过期，原对话已保留，可重试。",
   "personal.copy.failed": "送达失败，原对话已保留，可重试。",
   "personal.copy.unknown": "尚未确认送达；重试会沿用同一次请求。",
-  "personal.copy.cloud": "云端"
+  "personal.copy.cloud": "云端",
+  "subscription.sandbox.title": "测试订阅（不计入余额）",
+  "subscription.sandbox.active": "有效",
+  "subscription.sandbox.inactive": "未生效或已到期",
+  "subscription.sandbox.expires": "测试订阅有效期至"
 }

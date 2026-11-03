@@ -510,5 +510,9 @@
   "personal.copy.expired": "Срок истёк. Оригинал сохранён; можно повторить.",
   "personal.copy.failed": "Ошибка доставки. Оригинал сохранён; можно повторить.",
   "personal.copy.unknown": "Доставка не подтверждена. Повтор использует тот же запрос.",
-  "personal.copy.cloud": "Облако"
+  "personal.copy.cloud": "Облако",
+  "subscription.sandbox.title": "Тестовая подписка (не входит в баланс)",
+  "subscription.sandbox.active": "Активна",
+  "subscription.sandbox.inactive": "Неактивна или истекла",
+  "subscription.sandbox.expires": "Тестовая подписка истекает"
 }

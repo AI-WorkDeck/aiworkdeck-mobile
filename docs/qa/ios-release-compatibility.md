@@ -49,3 +49,13 @@ ruby fastlane/tests/local_signing_test.rb
 ## 本次实现的证据边界
 
 门禁和设备选择的本地自动测试覆盖失败、取消、跳过、缺组、错误提交、错误工作流、PR 合并引用、过期绿灯、重跑 attempt、脏目录，以及三个上传 lane 在门禁失败时不得读取上传凭据或签名。三组原生界面是否通过以本次整合提交的 CI 和结果包为准；本文本身不宣称真机或商店版已经验收。
+
+## 月付订阅发布检查（dev-board #1673）
+
+三组设备共同执行 `SubscriptionFlowTests`。测试使用真实本地 StoreKit 交易和 DEBUG 专用 API 传输，验证月订阅产品、账户 token、购买、恢复、确认失败后重试、取消续订、续期和到期。测试传输拦截全部 API 请求，不向生产服务发送合成交易；Release 不编译该传输。它不证明 Apple Sandbox 验签、生产资金记账或服务器通知已通过。
+
+TestFlight 使用专用审核账户验证真实 Apple Sandbox；账户允许范围与测试账本在服务端控制，客户端不切换服务器。设置页仅在服务端明确返回 `subscription.sandbox=true` 时显示测试订阅状态与有效期；真实余额和赠予权益仍取原字段，不能取嵌套测试额度。记录购买、恢复、确认、续期、取消和到期的实际结果，不能用本地测试替代。
+
+首次订阅需与新 App 版本在 App Store Connect 网页一起提交，不能仅运行现有 `asc-listing.py submit` 而漏掉订阅。先准备签名构建、双语元数据、真实界面审核截图，再核对订阅与版本均已进入审核。Apple 文档：https://developer.apple.com/documentation/appstoreconnectapi/submitting-subscriptions-and-subscription-groups-for-app-review 。
+
+本轮 Android 不新增 Play Billing；Android、鸿蒙及小程序继续读取同账户的真实订阅额度。移动端现有录音路径是采集、上传同步及电脑端接续处理，未实现桌面文件预览中新加的纪要/待办/Word 操作栏；发布移动版本不代表这一入口自动覆盖四端。

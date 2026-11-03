@@ -510,5 +510,9 @@
   "personal.copy.expired": "Expired. The original is kept; you can retry.",
   "personal.copy.failed": "Delivery failed. The original is kept; you can retry.",
   "personal.copy.unknown": "Delivery is unconfirmed. Retry uses the same request.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Test subscription (excluded from balance)",
+  "subscription.sandbox.active": "Active",
+  "subscription.sandbox.inactive": "Inactive or expired",
+  "subscription.sandbox.expires": "Test subscription expires"
 }

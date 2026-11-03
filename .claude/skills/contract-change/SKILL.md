@@ -10,7 +10,7 @@ description: 改动界面文案、设计令牌、传输状态、能力开关或 
 ## 步骤
 
 1. 定位要改的东西属于哪个文件：
-   - 文案 → `contract/strings.json`（zh-Hans 与 en 两栏都改）
+   - 文案 → `contract/strings/<locale>.json`（全部已支持语言）；`contract/strings.json` 是聚合生成物，直接修改会被 `gen` 覆盖
    - 颜色 / 间距 / 字号 → `contract/tokens.json`
    - 状态名 / 桶 / 迁移 / 重试 → `contract/transfer-state.json`，同时改 `contract/fixtures/` 里相关期望
    - 能力 → `contract/capabilities.json`

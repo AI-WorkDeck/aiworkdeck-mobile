@@ -510,5 +510,9 @@
   "personal.copy.expired": "期限切れ。元の会話は保持されており、再試行できます。",
   "personal.copy.failed": "転送に失敗しました。元の会話は保持されており、再試行できます。",
   "personal.copy.unknown": "受信未確認です。再試行では同じリクエストを使用します。",
-  "personal.copy.cloud": "クラウド"
+  "personal.copy.cloud": "クラウド",
+  "subscription.sandbox.title": "テスト用サブスクリプション（残高に含まれません）",
+  "subscription.sandbox.active": "有効",
+  "subscription.sandbox.inactive": "無効または期限切れ",
+  "subscription.sandbox.expires": "テスト用サブスクリプションの有効期限"
 }

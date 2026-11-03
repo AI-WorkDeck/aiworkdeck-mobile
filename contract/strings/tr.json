@@ -510,5 +510,9 @@
   "personal.copy.expired": "Süresi doldu. Asıl konuşma korundu; yeniden deneyebilirsiniz.",
   "personal.copy.failed": "İletim başarısız. Asıl konuşma korundu; yeniden deneyebilirsiniz.",
   "personal.copy.unknown": "İletim doğrulanmadı. Yeniden deneme aynı isteği kullanır.",
-  "personal.copy.cloud": "Bulut"
+  "personal.copy.cloud": "Bulut",
+  "subscription.sandbox.title": "Test aboneliği (bakiyeye dahil değil)",
+  "subscription.sandbox.active": "Etkin",
+  "subscription.sandbox.inactive": "Etkin değil veya süresi dolmuş",
+  "subscription.sandbox.expires": "Test aboneliği sona eriyor"
 }

@@ -510,5 +510,9 @@
   "personal.copy.expired": "Abgelaufen. Das Original bleibt erhalten; erneut versuchen möglich.",
   "personal.copy.failed": "Zustellung fehlgeschlagen. Das Original bleibt erhalten; erneut versuchen möglich.",
   "personal.copy.unknown": "Zustellung unbestätigt. Wiederholen verwendet dieselbe Anfrage.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Testabonnement (nicht im Guthaben enthalten)",
+  "subscription.sandbox.active": "Aktiv",
+  "subscription.sandbox.inactive": "Inaktiv oder abgelaufen",
+  "subscription.sandbox.expires": "Testabonnement läuft ab"
 }

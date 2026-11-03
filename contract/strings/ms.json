@@ -510,5 +510,9 @@
   "personal.copy.expired": "Tamat tempoh. Perbualan asal dikekalkan; boleh cuba lagi.",
   "personal.copy.failed": "Penghantaran gagal. Perbualan asal dikekalkan; boleh cuba lagi.",
   "personal.copy.unknown": "Penghantaran belum disahkan. Cuba lagi menggunakan permintaan yang sama.",
-  "personal.copy.cloud": "Awan"
+  "personal.copy.cloud": "Awan",
+  "subscription.sandbox.title": "Langganan ujian (tidak termasuk baki)",
+  "subscription.sandbox.active": "Aktif",
+  "subscription.sandbox.inactive": "Tidak aktif atau tamat tempoh",
+  "subscription.sandbox.expires": "Langganan ujian tamat"
 }

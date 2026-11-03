@@ -510,5 +510,9 @@
   "personal.copy.expired": "หมดอายุ เก็บต้นฉบับไว้และลองใหม่ได้",
   "personal.copy.failed": "ส่งไม่สำเร็จ เก็บต้นฉบับไว้และลองใหม่ได้",
   "personal.copy.unknown": "ยังไม่ยืนยันการส่ง การลองใหม่จะใช้คำขอเดิม",
-  "personal.copy.cloud": "คลาวด์"
+  "personal.copy.cloud": "คลาวด์",
+  "subscription.sandbox.title": "การสมัครทดสอบ (ไม่รวมในยอดเงิน)",
+  "subscription.sandbox.active": "ใช้งานอยู่",
+  "subscription.sandbox.inactive": "ไม่ใช้งานหรือหมดอายุ",
+  "subscription.sandbox.expires": "การสมัครทดสอบหมดอายุ"
 }

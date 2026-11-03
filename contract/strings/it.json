@@ -510,5 +510,9 @@
   "personal.copy.expired": "Scaduto. L’originale è conservato; puoi riprovare.",
   "personal.copy.failed": "Consegna non riuscita. L’originale è conservato; puoi riprovare.",
   "personal.copy.unknown": "Consegna non confermata. Il nuovo tentativo usa la stessa richiesta.",
-  "personal.copy.cloud": "Cloud"
+  "personal.copy.cloud": "Cloud",
+  "subscription.sandbox.title": "Abbonamento di prova (escluso dal saldo)",
+  "subscription.sandbox.active": "Attivo",
+  "subscription.sandbox.inactive": "Inattivo o scaduto",
+  "subscription.sandbox.expires": "Scadenza abbonamento di prova"
 }

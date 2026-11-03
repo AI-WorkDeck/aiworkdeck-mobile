@@ -510,5 +510,9 @@
   "personal.copy.expired": "Đã hết hạn. Bản gốc được giữ lại; có thể thử lại.",
   "personal.copy.failed": "Gửi thất bại. Bản gốc được giữ lại; có thể thử lại.",
   "personal.copy.unknown": "Chưa xác nhận gửi. Thử lại sẽ dùng cùng yêu cầu.",
-  "personal.copy.cloud": "Đám mây"
+  "personal.copy.cloud": "Đám mây",
+  "subscription.sandbox.title": "Đăng ký thử nghiệm (không tính vào số dư)",
+  "subscription.sandbox.active": "Đang hoạt động",
+  "subscription.sandbox.inactive": "Chưa kích hoạt hoặc đã hết hạn",
+  "subscription.sandbox.expires": "Đăng ký thử nghiệm hết hạn"
 }
