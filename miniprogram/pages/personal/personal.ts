@@ -28,7 +28,7 @@ Page({
     this.setData({ metrics: getApp<{ globalData: { metrics: Metrics } }>().globalData.metrics })
   },
   onShow() {
-    if (!getSession()) { wx.reLaunch({ url: '/pages/login/login' }); return }
+    if (!getSession()) { wx.reLaunch({ url: '/pages/start/start' }); return }
     if (this.session !== getSession()) { this.conversation = new PersonalConversation(); this.session = getSession(); this.setData({ draft: '', messages: [], sources: [], status: null, calendar: null, events: [], copyTargets: [], copyReady: false, copyStatus: '', copyCanRetry: false, copySuccess: '', busy: false, loading: false, error: '', calendarError: '' }); this.restoreLocal() }
     const labels: Record<string, string> = {}
     for (const key of ['assistant', 'calendar', 'ask', 'send', 'processing', 'newChat', 'assistantConsent', 'calendarConsent', 'subscription', 'remindersUnavailable', 'noEvents', 'today', 'sources']) labels[key] = t('personal.' + key)

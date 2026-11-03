@@ -518,5 +518,7 @@
   "personal.report.title": "Inhoud melden",
   "personal.report.reason": "Beschrijf het probleem",
   "personal.report.sent": "Melding verzonden",
-  "personal.report.privacy": "Uw beschrijving en gespreks-ID worden verzonden om de melding te behandelen. De volledige chat en bestanden worden niet automatisch bijgevoegd."
+  "personal.report.privacy": "Uw beschrijving en gespreks-ID worden verzonden om de melding te behandelen. De volledige chat en bestanden worden niet automatisch bijgevoegd.",
+  "intro.title": "AI WorkDeck · Overzicht",
+  "intro.overview": "Maak foto’s, neem audio op en archiveer projectbestanden. Log in om projecten te synchroniseren. De persoonlijke assistent en agenda vereisen een actief abonnement en aparte toestemming bij inschakeling. Bekijk eerst de functies en kies daarna voor inloggen of registreren."
 }

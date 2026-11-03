@@ -518,5 +518,7 @@
   "personal.report.title": "Báo cáo nội dung",
   "personal.report.reason": "Mô tả vấn đề bạn muốn báo cáo",
   "personal.report.sent": "Đã gửi báo cáo",
-  "personal.report.privacy": "Mô tả và mã cuộc trò chuyện sẽ được gửi để xử lý báo cáo. Toàn bộ nội dung trò chuyện và tệp không được tự động đính kèm."
+  "personal.report.privacy": "Mô tả và mã cuộc trò chuyện sẽ được gửi để xử lý báo cáo. Toàn bộ nội dung trò chuyện và tệp không được tự động đính kèm.",
+  "intro.title": "AI WorkDeck · Tổng quan",
+  "intro.overview": "Chụp ảnh, ghi âm và lưu trữ tệp dự án. Đăng nhập để đồng bộ dự án. Trợ lý cá nhân và lịch yêu cầu gói đăng ký còn hiệu lực cùng sự đồng ý riêng khi bật. Tìm hiểu tính năng trước khi chọn đăng nhập hoặc đăng ký."
 }

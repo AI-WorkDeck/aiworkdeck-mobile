@@ -1,6 +1,5 @@
-<view class="page" style="padding-bottom: {{metrics.bottomInset}}px;">
+<view class="page" style="padding-bottom: {{metrics.bottomInset}}px; direction: {{direction}};">
   <view class="hero"><view class="hero__title">{{title}}</view><view class="hero__sub">{{hint}}</view></view>
-  <button class="submit tappable" bindtap="onRegister">{{title}}</button>
-  <view class="next__hint">{{webHint}}</view>
-  <button class="submit tappable" bindtap="onEnterApp">{{loginText}}</button>
+  <button class="submit tappable" bindtap="onEnterApp"><text class="submit__text">{{loginText}}</text></button>
+  <button class="enter-btn tappable" bindtap="onRegister"><text class="enter-btn__text">{{registerText}}</text></button>
 </view>
