@@ -93,11 +93,36 @@ extension XCTestCase {
 
     @MainActor func dismissEarlierRecordingNotice(in app: XCUIApplication) {
         // The crash-recovery test intentionally retains invalid drafts between runs.
-        let notice = app.alerts.matching(NSPredicate(format: "label IN %@",
-            ["Recording status", "录音状态", "錄音狀態"])).firstMatch
-        if notice.waitForExistence(timeout: 2) {
-            notice.buttons.matching(NSPredicate(format: "label IN %@", ["Close", "关闭", "關閉"])).firstMatch.tap()
+        // Inspect one current tree before querying an optional alert. A nested query
+        // for an absent alert can stall AX snapshot retries on the Duo runtime.
+        guard let tree = try? app.snapshot() else {
+            XCTFail("Could not inspect the current recording notice state"); return
         }
+        let titles = ["Recording status", "录音状态", "錄音狀態"]
+        func recordingAlert(in node: XCUIElementSnapshot) -> XCUIElementSnapshot? {
+            if node.elementType == .alert && titles.contains(node.label) { return node }
+            for child in node.children {
+                if let found = recordingAlert(in: child) { return found }
+            }
+            return nil
+        }
+        guard let alertTree = recordingAlert(in: tree) else { return }
+        let notice = app.alerts[alertTree.label]
+        guard let label = ["Close", "关闭", "關閉"].first(where: {
+            !ReadyControl(element: notice.buttons[$0], identifier: nil, label: $0).states(in: alertTree).isEmpty
+        }) else { XCTFail("Recording notice has no close control"); return }
+        let close = notice.buttons[label]
+        let target = ReadyControl(element: close, identifier: nil, label: label)
+        let condition = NSPredicate { _, _ in
+            guard let current = try? app.snapshot(), let alert = recordingAlert(in: current),
+                  alert.label == alertTree.label else { return false }
+            return ControlSnapshotState.isReady(window: current.frame, matches: target.states(in: alert),
+                portrait: nil, label: label, hitTest: { close.isHittable })
+        }
+        let ready = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: condition, object: app)], timeout: 5)
+        XCTAssertEqual(ready, .completed, "Recording notice close control did not become ready")
+        guard ready == .completed else { return }
+        close.tap()
     }
 
     @MainActor func personalTab(_ app: XCUIApplication, _ tab: PersonalTab) -> XCUIElement {

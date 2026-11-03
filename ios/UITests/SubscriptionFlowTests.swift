@@ -47,6 +47,22 @@ final class SubscriptionFlowTests: XCTestCase {
         try session.disableAutoRenewForTransaction(identifier: transaction.identifier)
         XCTAssertFalse(try XCTUnwrap(session.allTransactions().first).autoRenewingEnabled)
         try session.forceRenewalOfSubscription(productIdentifier: "pro.monthly.cny.149")
+        let renewed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            session.allTransactions().contains { $0.productIdentifier == transaction.productIdentifier
+                && $0.identifier != transaction.identifier && $0.autoRenewingEnabled && $0.expirationDate != nil }
+        }, object: nil)
+        let renewalResult = XCTWaiter.wait(for: [renewed], timeout: 20)
+        XCTAssertEqual(renewalResult, .completed, "Renewal must create a new subscription transaction")
+        guard renewalResult == .completed else {
+            let state = session.allTransactions().map {
+                "\($0.productIdentifier): id=\($0.identifier), autoRenew=\($0.autoRenewingEnabled), expires=\(String(describing: $0.expirationDate))"
+            }.joined(separator: "\n")
+            let evidence = XCTAttachment(string: state)
+            evidence.name = "Local StoreKit renewal state"
+            evidence.lifetime = .keepAlways
+            add(evidence)
+            return
+        }
         XCTAssertGreaterThanOrEqual(session.allTransactions().count, 2)
         try session.expireSubscription(productIdentifier: "pro.monthly.cny.149")
         app.terminate(); app.launch()
