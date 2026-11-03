@@ -24,10 +24,10 @@ struct SubscriptionView: View {
                         }.disabled(busy).accessibilityIdentifier("subscription.buy")
                     } else { Text(tr("recharge.ios.storeUnavailable")) }
                     Text(tr("subscription.store.renewal")).font(.footnote)
-                    if !hint.isEmpty { Text(hint).font(.footnote) }
+                    if !hint.isEmpty { Text(hint).font(.footnote).accessibilityIdentifier("subscription.result") }
                 }
                 Section {
-                    Button(tr("subscription.store.restore")) { Task { await restore() } }.disabled(busy)
+                    Button(tr("subscription.store.restore")) { Task { await restore() } }.disabled(busy).accessibilityIdentifier("subscription.restore")
                     Button(tr("subscription.store.manage")) { manage = true }.disabled(busy)
                     Link(tr("subscription.store.terms"), destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
                     Link(tr("privacy.policy"), destination: URL(string: "https://www.aiworkdeck.com/zh/legal/mobile-privacy")!)

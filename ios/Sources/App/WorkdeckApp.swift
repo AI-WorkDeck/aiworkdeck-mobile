@@ -100,7 +100,7 @@ private struct RootView: View {
     /// Release 里恒为 false，整段截图分支被优化掉。
     private var isScreenshotting: Bool {
 #if DEBUG
-        Shot.isOn
+        Shot.isOn || SubscriptionUITestSeed.isOn
 #else
         false
 #endif
@@ -111,6 +111,9 @@ private struct RootView: View {
     @ViewBuilder
     private var screenshotStage: some View {
 #if DEBUG
+        if SubscriptionUITestSeed.isOn {
+            SubscriptionView()
+        } else {
         switch Shot.screen {
         case 3:
             QueueView(onClose: {}).environment(model).preferredColorScheme(.light)
@@ -126,6 +129,7 @@ private struct RootView: View {
             HomeView(paused: false, onOpenLibrary: {}, onOpenQueue: {}, onOpenSettings: {})
                 .environment(model)
                 .preferredColorScheme(.dark)
+        }
         }
 #else
         EmptyView()

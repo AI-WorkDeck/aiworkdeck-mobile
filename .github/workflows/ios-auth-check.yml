@@ -44,6 +44,7 @@ jobs:
           xcrun simctl boot "$DEVICE_ID"
           xcrun simctl bootstatus "$DEVICE_ID" -b
           TESTS=(
+            -only-testing:WorkdeckUITests/SubscriptionFlowTests
             -only-testing:WorkdeckTests
             -only-testing:WorkdeckUITests/LoginFlowTests
             -only-testing:WorkdeckUITests/DuoSecondaryScreensTests

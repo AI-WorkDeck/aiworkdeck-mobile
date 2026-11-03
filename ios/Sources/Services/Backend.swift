@@ -260,6 +260,9 @@ actor API: ArchiveMoveServing {
 
     private let session: URLSession = {
         let c = URLSessionConfiguration.default
+#if DEBUG
+        if SubscriptionUITestSeed.isOn { c.protocolClasses = [SubscriptionUITestProtocol.self] }
+#endif
         c.timeoutIntervalForRequest = 20
         c.waitsForConnectivity = true
         return URLSession(configuration: c)

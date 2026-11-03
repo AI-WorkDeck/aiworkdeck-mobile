@@ -21,25 +21,16 @@ final class WorkspaceFlowTests: XCTestCase {
         for orientation in [UIDeviceOrientation.landscapeLeft, .portrait, .landscapeRight, .portrait] {
             XCUIDevice.shared.orientation = orientation
             let portrait = orientation == .portrait
-            let settled = NSPredicate { _, _ in
-                (app.frame.height > app.frame.width) == portrait
-            }
-            expectation(for: settled, evaluatedWith: app)
-            waitForExpectations(timeout: 5)
-            let state = XCTAttachment(string: app.debugDescription)
-            state.name = "Rotated hierarchy"; state.lifetime = .keepAlways; add(state)
+            guard waitForReadyOrientation(in: app, portrait: portrait, timeout: 5) else { return }
             let rotatedShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             rotatedShot.name = "Before hit testing"; rotatedShot.lifetime = .keepAlways; add(rotatedShot)
             for id in ["capture.project", "capture.settings", "capture.mode.photo", "capture.mode.video", "capture.recordAudio", "capture.shutter", "capture.library", "capture.queue"] {
-                let button = app.buttons[id]
-                expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: button)
-                waitForExpectations(timeout: 5)
-                XCTAssertTrue(button.isHittable, "\(id) at \(orientation)")
-                XCTAssertTrue(app.frame.contains(button.frame), "\(id) \(button.frame) outside \(app.frame)")
-            }
-            if portrait {
-                XCTAssertEqual(app.buttons["capture.shutter"].frame.midX, original.midX, accuracy: 2)
-                XCTAssertEqual(app.buttons["capture.shutter"].frame.midY, original.midY, accuracy: 2)
+                let control = ReadyControl(element: app.buttons[id], identifier: id)
+                guard let ready = waitForReadyControl(control, in: app, portrait: portrait, timeout: 5) else { return }
+                if portrait && id == "capture.shutter" {
+                    XCTAssertEqual(ready.control.frame.midX, original.midX, accuracy: 2)
+                    XCTAssertEqual(ready.control.frame.midY, original.midY, accuracy: 2)
+                }
             }
             let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             shot.name = "Capture rotation \(orientation.rawValue)"; shot.lifetime = .keepAlways; add(shot)
@@ -55,19 +46,16 @@ final class WorkspaceFlowTests: XCTestCase {
         for orientation in [UIDeviceOrientation.landscapeLeft, .portrait, .landscapeRight, .portrait] {
             XCUIDevice.shared.orientation = orientation
             let portrait = orientation == .portrait
-            expectation(for: NSPredicate { _, _ in (app.frame.height > app.frame.width) == portrait }, evaluatedWith: app)
-            waitForExpectations(timeout: 5)
-            let shutter = app.buttons["capture.shutter"]
-            expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: shutter)
-            waitForExpectations(timeout: 5)
+            guard waitForReadyOrientation(in: app, portrait: portrait, timeout: 5) else { return }
+            let shutter = ReadyControl(element: app.buttons["capture.shutter"], identifier: "capture.shutter")
+            guard let ready = waitForReadyControl(shutter, in: app, portrait: portrait, timeout: 5) else { return }
             let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             shot.name = "Project capture rotation \(orientation.rawValue)"; shot.lifetime = .keepAlways; add(shot)
-            let geometry = XCTAttachment(string: "App: \(app.frame); shutter: \(shutter.frame)")
+            let geometry = XCTAttachment(string: "App: \(ready.window); shutter: \(ready.control.frame)")
             geometry.lifetime = .keepAlways; add(geometry)
-            XCTAssertTrue(app.frame.contains(shutter.frame))
             if portrait {
-                XCTAssertEqual(shutter.frame.midX, nestedOriginal.midX, accuracy: 2)
-                XCTAssertEqual(shutter.frame.midY, nestedOriginal.midY, accuracy: 2)
+                XCTAssertEqual(ready.control.frame.midX, nestedOriginal.midX, accuracy: 2)
+                XCTAssertEqual(ready.control.frame.midY, nestedOriginal.midY, accuracy: 2)
             }
         }
     }
