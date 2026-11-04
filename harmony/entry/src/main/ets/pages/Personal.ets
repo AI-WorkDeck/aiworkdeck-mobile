@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { http } from '@kit.NetworkKit'
+import { pasteboard } from '@kit.BasicServicesKit'
 import { util } from '@kit.ArkTS'
 import { ContractCapabilities } from 'contract'
 import { ServiceLocator } from '../services/ServiceLocator'
@@ -17,6 +18,11 @@ export struct Personal {
   stack: NavPathStack = new NavPathStack()
   @StorageProp('awdLocale') locale: string = LOCALE_ZH
   @StorageLink('personalCalendarEventId') @Watch('openNotification') notificationId: string = ''
+  @State reportConversationId: string = ''
+  @State reportDescription: string = ''
+  @State reporting: boolean = false
+  @State reportSubmitted: boolean = false
+  @State reportError: string = ''
   @State tab: string = 'assistant'
   @State assistantEnabled: boolean = false
   @State assistantSubscribed: boolean = false
@@ -60,6 +66,7 @@ export struct Personal {
     return this.conversationStore !== null ? await this.conversationStore.save(value) : false
   }
   private resetConversation(): void {
+    this.reportConversationId = ''; this.reportDescription = ''; this.reportSubmitted = false; this.reportError = ''
     this.desktopCopy = null; this.copyUpgrade = false; this.copyTargets = []; this.copyReady = false; this.copySuccess = ''; this.messages = []; this.sources = []; this.conversationId = ''; this.pendingId = ''; this.pendingText = ''; this.pendingConversationId = ''; this.draft = ''
   }
   private async poll(reply: Record<string, Object>, id: string, version: number): Promise<Record<string, Object>> {
@@ -186,6 +193,30 @@ export struct Personal {
       await this.saveConversation()
     } catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
     finally { if (version === this.version) this.busy = false }
+  }
+  private async copyMessage(message: PersonalMessage): Promise<void> {
+    const version: number = this.version
+    if (!await this.current(version)) return
+    const text: string = this.t('personal.aiGenerated') + '\n' + message.content
+    try { await pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text)) }
+    catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
+  }
+  private async openReport(): Promise<void> {
+    const version: number = this.version
+    if (this.reporting || this.conversationId.length === 0 || !await this.current(version)) return
+    this.reportConversationId = this.conversationId; this.reportDescription = ''; this.reportSubmitted = false; this.reportError = ''
+  }
+  private async submitReport(): Promise<void> {
+    const version: number = this.version
+    const id: string = this.reportConversationId
+    if (this.reporting || this.reportSubmitted || id.length === 0 || this.reportDescription.trim().length === 0 || !await this.current(version)) return
+    if (this.reporting || this.reportSubmitted || this.reportConversationId !== id) return
+    this.reporting = true; this.reportError = ''
+    try {
+      await ServiceLocator.backend.reportAssistant(id, this.reportDescription, this.session)
+      if (await this.current(version) && this.reportConversationId === id) this.reportSubmitted = true
+    } catch (e) { if (await this.current(version) && this.reportConversationId === id) this.reportError = this.t('error.network') }
+    finally { this.reporting = false }
   }
   private async prepareCopy(): Promise<void> {
     const version: number = this.version
@@ -325,7 +356,13 @@ export struct Personal {
           Scroll() {
             Column({ space: Tk.Sp.s4 }) {
               if (this.messages.length === 0) { Text(this.t('personal.ask')).fontSize(20); Text(this.t('personal.summaries', { 'count': this.summaryCount })).fontColor(Tk.L.fgMuted) }
-              ForEach(this.messages, (message: PersonalMessage): void => { Text(message.content).copyOption(CopyOptions.InApp).fontColor(Tk.L.fg).width('100%').padding(Tk.Sp.s3) })
+              ForEach(this.messages, (message: PersonalMessage): void => {
+                Column({ space: Tk.Sp.s2 }) {
+                  if (message.role === 'assistant') Text(this.t('personal.aiGenerated')).fontSize(16).fontWeight(FontWeight.Medium).fontColor(Tk.L.fg)
+                  Text(message.content).fontSize(16).copyOption(message.role === 'assistant' ? CopyOptions.None : CopyOptions.InApp).fontColor(Tk.L.fg).width('100%')
+                  if (message.role === 'assistant') Button(this.t('personal.copyMessage')).onClick((): void => { this.copyMessage(message) })
+                }.width('100%').alignItems(HorizontalAlign.Start).padding(Tk.Sp.s3)
+              })
               if (this.sources.length > 0) Text(this.t('personal.sources')).fontColor(Tk.L.fgMuted)
               ForEach(this.sources, (source: PersonalSource): void => { Button(source.projectName + ' · ' + personalSourceDate(source.sourceUpdatedAt, this.locale)).onClick((): void => { this.openProject(source) }) })
               if (this.busy) Text(this.t('personal.processing')).fontColor(Tk.L.fgMuted)
@@ -341,6 +378,18 @@ export struct Personal {
           }
           if (this.copySuccess.length > 0) Text(this.copySuccess).fontColor(Tk.L.fgMuted)
           if (this.messages.length > 0) Button(this.t('personal.copy.title')).enabled(!this.busy && !this.loading && this.pendingId.length === 0).onClick((): void => { this.prepareCopy() })
+          if (this.conversationId.length > 0 && this.messages.some((message: PersonalMessage): boolean => message.role === 'assistant')) Button(this.t('personal.report.conversation')).enabled(!this.reporting).onClick((): void => { this.openReport() })
+          if (this.reportConversationId.length > 0) {
+            Text(this.t('personal.report.conversation')).fontWeight(FontWeight.Medium)
+            if (this.reportSubmitted) Text(this.t('personal.report.sent'))
+            else {
+              Text(this.t('personal.report.privacy')).fontSize(12).fontColor(Tk.L.fgMuted)
+              TextArea({ text: this.reportDescription, placeholder: this.t('personal.report.reason') }).maxLength(2000).maxLines(3).enabled(!this.reporting).onChange((value: string): void => { this.reportDescription = value })
+              if (this.reportError.length > 0) Text(this.reportError).fontColor(Tk.S.failed)
+              Button(this.t('personal.send')).enabled(!this.reporting && this.reportDescription.trim().length > 0).onClick((): void => { this.submitReport() })
+            }
+            Button(this.t(this.reportSubmitted ? 'common.close' : 'common.cancel')).enabled(!this.reporting).onClick((): void => { this.reportConversationId = '' })
+          }
           if (this.copyReady) {
             Text(this.t('personal.copy.hint')).fontColor(Tk.L.fgMuted)
             if (this.copyUpgrade) Text(this.t('personal.copy.upgrade')).fontColor(Tk.L.fgMuted)

@@ -520,5 +520,8 @@
   "personal.report.sent": "檢舉已提交",
   "personal.report.privacy": "將傳送您填寫的說明及對話識別碼，用於處理檢舉；不會自動附帶聊天全文或檔案。",
   "intro.title": "AI WorkDeck · 功能介紹",
-  "intro.overview": "拍攝、錄音與專案檔案歸檔。登入後可同步專案；個人助理和行程需有效訂閱，並在啟用時另行徵得同意。你可以先了解功能，再選擇登入或註冊。"
+  "intro.overview": "拍攝、錄音與專案檔案歸檔。登入後可同步專案；個人助理和行程需有效訂閱，並在啟用時另行徵得同意。你可以先了解功能，再選擇登入或註冊。",
+  "personal.aiGenerated": "AI生成內容",
+  "personal.copyMessage": "複製",
+  "personal.report.conversation": "檢舉此對話"
 }

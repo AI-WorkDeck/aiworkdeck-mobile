@@ -11,7 +11,9 @@ import ts from 'typescript'
 function fixture() {
   let account = 'synthetic-account'; let host = 'https://synthetic.invalid'; let latest = ''
   const calls = []; const replies = []; const recentCalls = []; const recentReplies = []; let uuidCounter = 99
+  const reportCalls = []; const reportReplies = []; const clipboard = []
   const locator = { ctx: {}, baseUrl: () => host, session: { current: async () => account }, backend: {
+    reportAssistant: async (...args) => { reportCalls.push(args); const r = reportReplies.shift(); if (r instanceof Error) throw r; return typeof r === 'function' ? r() : r },
     personalDesktopCopies: async (conversation, session) => { recentCalls.push({ conversation, session }); const response = recentReplies.shift() ?? []; return typeof response === 'function' ? response() : response },
     personalRequest: async (path, method, body) => {
       calls.push({ path, method, body }); const response = replies.shift()
@@ -21,6 +23,7 @@ function fixture() {
   } }
   const prefs = { getSync: (_key, fallback) => latest || fallback, putSync: (_key, value) => { latest = value }, deleteSync: () => { latest = '' }, flush: async () => {} }
   const mocks = {
+    '@kit.BasicServicesKit': { pasteboard: { MIMETYPE_TEXT_PLAIN: 'text/plain', createData: (_type, value) => value, getSystemPasteboard: () => ({ setData: async value => { clipboard.push(value) } }) } },
     '@kit.ArkData': { preferences: { getPreferencesSync: () => prefs } },
     '@kit.CryptoArchitectureKit': { cryptoFramework: { createMd: () => { const hash = createHash('sha256'); return { updateSync: ({ data }) => hash.update(data), digestSync: () => ({ data: hash.digest() }) } } } },
     '@kit.ArkTS': { JSON, util: { TextEncoder: class { encodeInto(value) { return new TextEncoder().encode(value) } }, generateRandomUUID: () => '00000000-0000-4000-8000-' + String(uuidCounter++).padStart(12, '0') } },
@@ -51,7 +54,7 @@ function fixture() {
   const pending = { conversationId: '', pendingId: '00000000-0000-4000-8000-000000000001', pendingText: 'Synthetic question', pendingConversationId: '' }
   const reply = (status = 'completed') => ({ status, requestId: pending.pendingId, conversationId: '00000000-0000-4000-8000-000000000002', answer: 'Answer', sources: [] })
   const history = { conversationId: reply().conversationId, messages: [{ role: 'user', content: pending.pendingText }, { role: 'assistant', content: 'Answer', sources: [{ deviceId: 'desktop', projectKey: 'alpha', projectName: 'Synthetic' }] }] }
-  return { page, Store, calls, replies, recentCalls, recentReplies, prefs, pending, reply, history, model, raw: () => latest, change: () => { host = 'https://other.invalid'; account = 'other-account' } }
+  return { page, Store, reportCalls, reportReplies, clipboard, calls, replies, recentCalls, recentReplies, prefs, pending, reply, history, model, raw: () => latest, change: () => { host = 'https://other.invalid'; account = 'other-account' } }
 }
 
 test('reopening polls only GET before history and clears completed pending', async () => {
@@ -220,4 +223,38 @@ test('same desktop target recovers queued UUID from recent receipts', async () =
   f.recentReplies.push([f.receipt('QUEUED')]); f.replies.push(f.receipt('QUEUED'))
   await f.page.copyTo(target, f.request.sourceConversationId, 0)
   assert.equal(f.calls[0].body.requestId, f.request.requestId)
+})
+
+
+test('assistant clipboard includes the visible generated-content label', async () => {
+  const f = fixture(); f.page.conversationStore = await f.Store.open()
+  await f.page.copyMessage(new f.model.PersonalMessage('assistant', 'Synthetic answer'))
+  assert.deepEqual(f.clipboard, ['personal.aiGenerated\nSynthetic answer'])
+})
+
+test('report captures conversation, failure is not success, and retry succeeds', async () => {
+  const f = fixture(); f.page.conversationStore = await f.Store.open()
+  f.page.conversationId = f.history.conversationId
+  await f.page.openReport(); f.page.reportDescription = 'Synthetic report'
+  f.reportReplies.push(new Error('internal server secret'))
+  await f.page.submitReport()
+  assert.equal(f.page.reportSubmitted, false); assert.equal(f.page.reportError, 'error.network')
+  assert.deepEqual(f.reportCalls[0], [f.history.conversationId, 'Synthetic report', 'synthetic-account'])
+  f.reportReplies.push(123); await f.page.submitReport(); assert.equal(f.page.reportSubmitted, true)
+})
+
+test('report does not update success after account changes', async () => {
+  const f = fixture(); f.page.conversationStore = await f.Store.open()
+  f.page.conversationId = f.history.conversationId
+  await f.page.openReport(); f.page.reportDescription = 'Synthetic report'
+  f.reportReplies.push(() => { f.change(); return 123 })
+  await f.page.submitReport(); assert.equal(f.page.reportSubmitted, false)
+})
+
+
+test('AI label is as large as body with full foreground contrast; report title is conversation scoped', () => {
+  const source = readFileSync(new URL('../entry/src/main/ets/pages/Personal.ets', import.meta.url), 'utf8')
+  assert.ok(source.includes("Text(this.t('personal.aiGenerated')).fontSize(16).fontWeight(FontWeight.Medium).fontColor(Tk.L.fg)"))
+  assert.ok(source.includes('Text(message.content).fontSize(16).copyOption'))
+  assert.ok(source.includes("Text(this.t('personal.report.conversation')).fontWeight(FontWeight.Medium)"))
 })

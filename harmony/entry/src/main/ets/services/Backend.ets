@@ -1,7 +1,7 @@
 import { ContractCapabilities } from 'contract'
 import { BackupConsent, decodeBackupConsent } from '../model/ProjectFiles'
 import { http } from '@kit.NetworkKit'
-import { JSON as ArkJson } from '@kit.ArkTS'
+import { JSON as ArkJson, util } from '@kit.ArkTS'
 import { ApiError, Unauthorized, checkEnvelope } from '../model/Envelope'
 import { RelayProject } from '../model/Capture'
 import { SessionStore } from './SessionStore'
@@ -129,6 +129,24 @@ export class Backend {
     return o
   }
 
+  async reportAssistant(conversationId: string, description: string, expectedSession: string): Promise<number> {
+    const host: string = baseUrlOf(this.region())
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(conversationId) || description.trim().length === 0 || description.trim().length > 2000) throw new ApiError(1, 'Invalid report')
+    const context: Record<string, Object> = { 'type': 'ai-content-report', 'platform': 'harmony', 'conversationId': conversationId.toLowerCase() }
+    const payload: Record<string, Object> = { 'kind': 'BUG', 'text': description.trim(), 'page': 'mobile/personal/assistant', 'clientContext': context }
+    const boundary: string = 'awd-' + util.generateRandomUUID(true)
+    const body: string = '--' + boundary + '\r\nContent-Disposition: form-data; name="payload"\r\n\r\n' + ArkJson.stringify(payload) + '\r\n--' + boundary + '--\r\n'
+    const text: string = await this.execute('/api/feedback', http.RequestMethod.POST, body, expectedSession, READ_TIMEOUT_MS, 'multipart/form-data; boundary=' + boundary)
+    if (await this.session.current() !== expectedSession || baseUrlOf(this.region()) !== host) throw new Unauthorized()
+    const raw: Record<string, Object> | null = asRecord(ArkJson.parse(text))
+    if (raw === null || typeof raw['code'] !== 'number') throw new ApiError(1, 'Invalid response')
+    await this.check(raw)
+    const data: Record<string, Object> | null = asRecord(raw['data'])
+    const id: Object | undefined = data === null ? undefined : data['id']
+    if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) throw new ApiError(1, 'Invalid response')
+    return id as number
+  }
+
   async personalRequest(path: string, method: http.RequestMethod, body: Record<string, Object> | null, expectedSession: string): Promise<Record<string, Object>> {
     const host: string = baseUrlOf(this.region())
     const text: string = await this.execute('/api/mobile/' + path, method, body === null ? null : ArkJson.stringify(body), expectedSession, 240000)
@@ -197,7 +215,7 @@ export class Backend {
     }
   }
 
-  private async execute(path: string, method: http.RequestMethod, body: string | null, expectedSession: string | null = null, timeout: number = READ_TIMEOUT_MS): Promise<string> {
+  private async execute(path: string, method: http.RequestMethod, body: string | null, expectedSession: string | null = null, timeout: number = READ_TIMEOUT_MS, contentType: string = 'application/json; charset=utf-8'): Promise<string> {
     const sid: string | null = await this.session.current()
     if (expectedSession !== null && sid !== expectedSession) throw new Unauthorized()
     const region: AccountRegion = this.region()
@@ -212,7 +230,7 @@ export class Backend {
           connectTimeout: CONNECT_TIMEOUT_MS, readTimeout: timeout, maxRedirects: 0,
         }
       } else {
-        header['Content-Type'] = 'application/json; charset=utf-8'
+        header['Content-Type'] = contentType
         options = {
           method: method, header: header, extraData: body, expectDataType: http.HttpDataType.STRING,
           connectTimeout: CONNECT_TIMEOUT_MS, readTimeout: timeout, maxRedirects: 0,

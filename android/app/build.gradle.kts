@@ -101,5 +101,8 @@ dependencies {
     implementation(libs.coil.compose); implementation(libs.coil.video)
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation(libs.junit)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation(libs.junit); testImplementation(libs.okhttp.mockwebserver); testImplementation(libs.kotlinx.coroutines.test)
 }

@@ -520,5 +520,8 @@
   "personal.report.sent": "Laporan terkirim",
   "personal.report.privacy": "Deskripsi dan ID percakapan Anda akan dikirim untuk menangani laporan. Teks percakapan lengkap dan file tidak dilampirkan secara otomatis.",
   "intro.title": "AI WorkDeck · Ikhtisar",
-  "intro.overview": "Ambil foto, rekam audio, dan arsipkan berkas proyek. Masuk untuk menyinkronkan proyek. Asisten pribadi dan kalender memerlukan langganan aktif serta persetujuan terpisah saat diaktifkan. Kenali fiturnya sebelum memilih masuk atau mendaftar."
+  "intro.overview": "Ambil foto, rekam audio, dan arsipkan berkas proyek. Masuk untuk menyinkronkan proyek. Asisten pribadi dan kalender memerlukan langganan aktif serta persetujuan terpisah saat diaktifkan. Kenali fiturnya sebelum memilih masuk atau mendaftar.",
+  "personal.aiGenerated": "Konten buatan AI",
+  "personal.copyMessage": "Salin",
+  "personal.report.conversation": "Laporkan percakapan ini"
 }
