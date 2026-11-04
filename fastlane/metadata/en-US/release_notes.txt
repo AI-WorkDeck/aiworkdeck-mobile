@@ -1,3 +1,3 @@
-1. Capture and chat in your personal workspace, organize materials into projects, and continue conversations on your desktop.
-2. Subscribe to Personal Pro monthly from account settings, restore purchases, and manage renewals. Subscription benefits sync across devices using the same account.
-3. Improved navigation and screen restoration during iPhone rotation and Duo split-screen use.
+1. Accounts with pay-as-you-go billing enabled can use cloud features without a subscription. Included subscription allowances and other benefits remain available.
+2. View cloud billing status, credit limits, outstanding balances, and relevant deadlines. Activation and payment options depend on your distribution channel.
+3. Improved cloud recovery and cross-device sync protection. Cloud cleanup preserves local originals, and previously queued uploads require a manual retry after reconnecting.
