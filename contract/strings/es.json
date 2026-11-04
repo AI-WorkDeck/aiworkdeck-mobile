@@ -520,5 +520,8 @@
   "personal.report.sent": "Denuncia enviada",
   "personal.report.privacy": "Se enviarán tu descripción y el ID de conversación para gestionar la denuncia. El chat completo y los archivos no se adjuntan automáticamente.",
   "intro.title": "AI WorkDeck · Descripción general",
-  "intro.overview": "Haz fotos, graba audio y archiva archivos de proyectos. Inicia sesión para sincronizar proyectos. El asistente personal y el calendario requieren una suscripción activa y un consentimiento aparte al activarlos. Conoce las funciones antes de iniciar sesión o registrarte."
+  "intro.overview": "Haz fotos, graba audio y archiva archivos de proyectos. Inicia sesión para sincronizar proyectos. El asistente personal y el calendario requieren una suscripción activa y un consentimiento aparte al activarlos. Conoce las funciones antes de iniciar sesión o registrarte.",
+  "personal.aiGenerated": "Contenido generado por IA",
+  "personal.copyMessage": "Copiar",
+  "personal.report.conversation": "Denunciar esta conversación"
 }

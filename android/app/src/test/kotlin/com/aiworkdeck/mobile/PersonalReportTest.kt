@@ -55,6 +55,15 @@ class PersonalReportTest {
             assertTrue(state.reportSubmitted); assertEquals(2, server.requestCount)
         }
     }
+    @Test fun emptyServerErrorStillShowsRetryableFailure() = runTest {
+        MockWebServer().use { server ->
+            server.start(); server.enqueue(MockResponse().setBody("""{"code":1,"message":""}"""))
+            val state = state(server); state.submitReport()
+            assertFalse(state.reportSubmitted); assertFalse(state.reporting)
+            assertFalse(state.reportError.isNullOrBlank())
+            assertEquals("Reported concern", state.reportDescription)
+        }
+    }
     @Test fun inFlightReportPreventsDuplicateAndAccountChangeCannotPublishSuccess() = runTest {
         MockWebServer().use { server ->
             server.start(); val entered = CountDownLatch(1); val release = CountDownLatch(1)

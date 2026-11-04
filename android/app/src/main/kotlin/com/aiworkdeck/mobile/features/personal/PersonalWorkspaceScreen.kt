@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -67,7 +66,7 @@ class PersonalWorkspaceState(
             backend.reportAssistant(id, reportDescription)
             if (store.isCurrent() && reportConversationId == id) reportSubmitted = true
         } catch (e: CancellationException) { throw e }
-        catch (e: Exception) { if (store.isCurrent()) reportError = e.message ?: tr("error.network") }
+        catch (e: Exception) { if (store.isCurrent() && reportConversationId == id) reportError = e.message?.takeIf { it.isNotBlank() } ?: tr("error.network") }
         finally { reporting = false }
     }
     suspend fun prepareCopy() {
@@ -253,7 +252,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
     LaunchedEffect(notificationEventId, state.calendar) {
         if (notificationEventId != null) { state.tab = "calendar"; state.selected = state.calendar?.events?.find { it.id == notificationEventId } }
     }
-    Column(Modifier.fillMaxSize().background(Tk.L.bg).padding(16.dp).imePadding()) {
+    Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(16.dp).imePadding()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(tr("personal." + state.tab), style = MaterialTheme.typography.titleLarge, color = Tk.L.fg)
             TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("home.settings")) }
@@ -276,8 +275,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (state.messages.isEmpty()) item { Text(tr("personal.ask"), style = MaterialTheme.typography.titleMedium, color = Tk.L.fg); Text(tr("personal.summaries", mapOf("count" to (state.status?.summaryCount ?: 0))), color = Tk.L.fgMuted) }
                 items(state.messages) { message ->
-                    SelectionContainer { Text(message.second, color = Tk.L.fg, modifier = Modifier.fillMaxWidth().padding(12.dp)) }
-                    if (message.first == "assistant") TextButton(onClick = { state.openReport() }, enabled = !state.reporting) { Text(tr("personal.report.title")) }
+                    PersonalMessage(message.first, message.second)
                 }
                 if (state.sources.isNotEmpty()) item { Text(tr("personal.sources"), color = Tk.L.fgMuted) }
                 items(state.sources) { source -> TextButton(onClick = { onProject(RelayProject(source.deviceId, null, source.projectKey, source.projectName)) }) { Text(source.projectName + " · " + personalSourceDate(source.sourceUpdatedAt)) } }
@@ -293,6 +291,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
             }
             if (state.copySuccess) Text(tr("personal.copy.success"), color = Tk.L.fgMuted)
             TextButton(onClick = { scope.launch { state.prepareCopy() } }, enabled = !state.busy && !state.loading && state.pending == null && state.messages.isNotEmpty()) { Text(tr("personal.copy.title")) }
+            if (state.messages.any { it.first == "assistant" }) TextButton(onClick = { state.openReport() }, enabled = !state.reporting && state.conversationId != null) { Text(tr("personal.report.conversation")) }
             Row {
                 OutlinedTextField(value = state.draft, onValueChange = { state.draft = it }, enabled = !state.busy && !state.loading, placeholder = { Text(tr("personal.ask")) }, modifier = Modifier.weight(1f), maxLines = 5)
                 TextButton(onClick = { scope.launch { state.send() } }, enabled = !state.busy && !state.loading && state.draft.isNotBlank() && state.status?.enabled == true && state.status?.subscriptionActive == true) { Text(tr("personal.send")) }
@@ -338,7 +337,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
     }
     if (state.reportConversationId != null) {
         AlertDialog(onDismissRequest = { if (!state.reporting) state.reportConversationId = null },
-            title = { Text(tr("personal.report.title")) },
+            title = { Text(tr("personal.report.conversation")) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.reportSubmitted) Text(tr("personal.report.sent"))
                 else {

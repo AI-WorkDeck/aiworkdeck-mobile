@@ -520,5 +520,8 @@
   "personal.report.sent": "Bildirim gönderildi",
   "personal.report.privacy": "Bildirimi işlemek için açıklamanız ve konuşma kimliği gönderilir. Sohbetin tamamı ve dosyalar otomatik olarak eklenmez.",
   "intro.title": "AI WorkDeck · Genel bakış",
-  "intro.overview": "Fotoğraf çekin, ses kaydedin ve proje dosyalarını arşivleyin. Projeleri eşitlemek için giriş yapın. Kişisel asistan ve takvim, etkin abonelik ve etkinleştirme sırasında ayrı onay gerektirir. Giriş yapmayı veya kaydolmayı seçmeden önce özellikleri inceleyin."
+  "intro.overview": "Fotoğraf çekin, ses kaydedin ve proje dosyalarını arşivleyin. Projeleri eşitlemek için giriş yapın. Kişisel asistan ve takvim, etkin abonelik ve etkinleştirme sırasında ayrı onay gerektirir. Giriş yapmayı veya kaydolmayı seçmeden önce özellikleri inceleyin.",
+  "personal.aiGenerated": "Yapay zekâ tarafından oluşturulan içerik",
+  "personal.copyMessage": "Kopyala",
+  "personal.report.conversation": "Bu konuşmayı bildir"
 }
