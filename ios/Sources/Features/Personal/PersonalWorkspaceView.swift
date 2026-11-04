@@ -73,7 +73,7 @@ final class PersonalWorkspaceModel {
                 pendingCalendarEventID = nil
                 if CalendarReminders.shared.selectedEventID == id { CalendarReminders.shared.selectedEventID = nil }
             }
-            let allowed = calendar?.enabled == true && calendar?.subscriptionActive == true
+            let allowed = calendar?.enabled == true && calendar?.canReadCloud == true
             if allowed && CalendarReminders.shared.enabled { await CalendarRemotePush.shared.prepare() }
             if !allowed { CalendarRemotePush.shared.clear() }
             CalendarReminders.shared.replace(allowed ? (calendar?.events ?? []) : [])
@@ -217,11 +217,11 @@ private struct AssistantView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
-                if let status = model.status, !status.enabled || !status.subscriptionActive {
-                    Text(status.subscriptionActive ? tr("personal.assistantConsent") : tr("personal.subscription")).font(.callout).foregroundStyle(.secondary)
-                    if status.subscriptionActive && !status.backupEnabled { Button(tr("backup.title")) { showBackup = true } }
-                    if !status.subscriptionActive { Button(tr("settings.account")) { showSettings = true } }
-                    if status.subscriptionActive && status.backupEnabled { Button(tr("common.on")) { showConsent = true }.disabled(model.loading) }
+                if let status = model.status, !status.enabled || !status.canUseCloud {
+                    Text(status.canUseCloud ? tr("personal.assistantConsent") : tr("postpaid.restricted")).font(.callout).foregroundStyle(.secondary)
+                    if status.canUseCloud && !status.backupEnabled { Button(tr("backup.title")) { showBackup = true } }
+                    if !status.canUseCloud { Button(tr("settings.account")) { showSettings = true } }
+                    if status.canUseCloud && status.backupEnabled { Button(tr("common.on")) { showConsent = true }.disabled(model.loading) }
                 }
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20) {
@@ -256,7 +256,7 @@ private struct AssistantView: View {
                     TextField(tr("personal.ask"), text: $model.draft, prompt: Text(tr("personal.ask")).foregroundStyle(colorScheme == .dark ? T.D.fgMuted : T.L.fgMuted), axis: .vertical)
                         .foregroundStyle(colorScheme == .dark ? T.D.fg : T.L.fg)
                         .lineLimit(1...5).focused($inputFocused).disabled(model.busy).accessibilityIdentifier("personal.input")
-                    Button(tr("personal.send")) { inputFocused = false; Task { await model.send() } }.disabled(model.busy || model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.status?.enabled != true || model.status?.subscriptionActive != true).accessibilityIdentifier("personal.send")
+                    Button(tr("personal.send")) { inputFocused = false; Task { await model.send() } }.disabled(model.busy || model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.status?.enabled != true || model.status?.canUseCloud != true).accessibilityIdentifier("personal.send")
                 }.padding(12).background(colorScheme == .dark ? T.D.surface : T.L.bg)
                     .tint(colorScheme == .dark ? T.D.fg : T.L.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -311,9 +311,9 @@ private struct PersonalCalendarView: View {
     var body: some View {
         NavigationStack {
             List {
-                if let calendar = model.calendar, !calendar.enabled || !calendar.subscriptionActive {
-                    Text(calendar.subscriptionActive ? tr("personal.calendarConsent") : tr("personal.subscription"))
-                    if calendar.subscriptionActive { Button(tr("common.on")) { showConsent = true }.disabled(model.loading) }
+                if let calendar = model.calendar, !calendar.enabled || !calendar.canReadCloud {
+                    Text(calendar.canReadCloud ? tr("personal.calendarConsent") : tr("postpaid.restricted"))
+                    if calendar.canWriteCloud { Button(tr("common.on")) { showConsent = true }.disabled(model.loading) }
                 }
                 if model.calendar?.enabled == true {
                     Picker(tr("personal.calendar"), selection: $days) {

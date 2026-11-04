@@ -41,9 +41,9 @@ fun BackupConsentScreen(onClose: () -> Unit) {
             Text(tr("backup.message"))
             consent?.let { state ->
                 Text(tr(if (state.enabled) "backup.enabled" else "backup.disabled"))
-                if (!state.subscriptionActive) Text(tr("backup.subscriptionRequired"))
+                if (!state.canWriteCloud) Text(tr("postpaid.restricted"))
                 if (state.enabled) TextButton(onClick = { disable = true }, enabled = !busy) { Text(tr("backup.disable"), color = Tk.L.accent) }
-                else if (state.subscriptionActive) Button(onClick = { save(true) }, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = Tk.L.accent, contentColor = Tk.D.fg)) { Text(tr("backup.enable")) }
+                else if (state.canWriteCloud) Button(onClick = { save(true) }, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = Tk.L.accent, contentColor = Tk.D.fg)) { Text(tr("backup.enable")) }
                 if (!state.decided) TextButton(onClick = { save(false) }, enabled = !busy) { Text(tr("backup.decline"), color = Tk.L.accent) }
             }
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Tk.L.accent, trackColor = Tk.L.rule)

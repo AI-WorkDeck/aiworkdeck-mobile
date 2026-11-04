@@ -20,6 +20,22 @@ class EvidenceStoreTest {
     private fun facts() = DeviceFacts(model = "Pixel 8", osVersion = "14", appVersion = "1.0.0")
     private fun newTemp(name: String, bytes: String): File = tmp.newFile(name).apply { writeBytes(bytes.toByteArray()) }
 
+    @Test fun cloudPauseSurvivesReloadAndLateReceiptUntilManualRetry() = runTest {
+        val root = tmp.newFolder()
+        val store = EvidenceStore(root, facts())
+        val item = store.save(MediaKind.photo, newTemp("paused.jpg", "retained"), Instant.now(), null, null)
+        store.updateState(item.id, TransferState.failed, cloudResumeRequired = true)
+        val reloaded = EvidenceStore(root, facts())
+        reloaded.updateState(item.id, TransferState.uploaded)
+        val paused = reloaded.loadAll().single()
+        assertTrue(paused.cloudResumeRequired)
+        assertEquals(TransferState.failed, paused.state)
+        assertTrue(paused.localFile.exists())
+        reloaded.updateState(item.id, TransferState.waiting, cloudResumeRequired = false)
+        assertFalse(reloaded.loadAll().single().cloudResumeRequired)
+        assertEquals(TransferState.waiting, reloaded.loadAll().single().state)
+    }
+
     // ① save 后 media/ 有文件、manifest/ 有 JSON，且 sha256 与 MessageDigest 直接算的一致
     @Test fun saveWritesMediaAndManifestWithMatchingSha() = runTest {
         val root = tmp.newFolder()

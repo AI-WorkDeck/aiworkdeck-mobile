@@ -281,6 +281,7 @@ actor API: ArchiveMoveServing {
     func accountLogin(account: String, password: String) async throws -> LoginResult {
         let r = try await post("/api/auth/account-login", body: ["account": account, "password": password], as: LoginResult.self)
         guard let r, !r.sessionId.isEmpty, r.user.id > 0 else { throw APIError(message: tr("error.loginNoData")) }
+        try await CloudEpoch.shared.accountChanged()
         SessionStore.current = r.sessionId
         return r
     }
@@ -294,6 +295,7 @@ actor API: ArchiveMoveServing {
         let r = try await post("/api/auth/sms-login/verify",
                                body: ["phone": phone, "code": code], as: LoginResult.self)
         guard let r else { throw APIError(message: tr("error.loginNoData")) }
+        try await CloudEpoch.shared.accountChanged()
         SessionStore.current = r.sessionId
         return r
     }
@@ -310,6 +312,7 @@ actor API: ArchiveMoveServing {
         let r = try await post("/api/auth/mail-login/verify",
                                body: ["email": email, "code": code], as: LoginResult.self)
         guard let r else { throw APIError(message: tr("error.loginNoData")) }
+        try await CloudEpoch.shared.accountChanged()
         SessionStore.current = r.sessionId
         return r
     }
@@ -342,7 +345,9 @@ actor API: ArchiveMoveServing {
     /// 幂等键是 clientMediaId：弱网重传、进程被杀重启都不会在中转区产生重复件，
     /// 所以这里不需要「先建记录再传字节」的两段式。
     func upload(item: CaptureItem, project: RelayProject, fileName: String,
-                account: ArchiveMoveAccount? = nil, progress: @Sendable @escaping (Double) -> Void) async throws {
+                account: ArchiveMoveAccount? = nil, cloudGeneration: Int? = nil, progress: @Sendable @escaping (Double) -> Void) async throws {
+        let uploadRevision: Int
+        if let cloudGeneration { uploadRevision = cloudGeneration } else { uploadRevision = await CloudEpoch.shared.revision() }
         let baseURL = account?.baseURL ?? Backend.baseURL
         let sessionID = account?.sessionID ?? SessionStore.current
         if let binding = item.watchAccountBinding,
@@ -383,7 +388,8 @@ actor API: ArchiveMoveServing {
         defer { try? FileManager.default.removeItem(at: tmp) }
 
         progress(0.05)
-        let (data, resp) = try await session.upload(for: req, fromFile: tmp)
+        let frozen = try await CloudEpoch.shared.authorize(req, session: session, expectedGeneration: uploadRevision)
+        let (data, resp) = try await session.upload(for: frozen, fromFile: tmp)
         progress(1)
 
         guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
@@ -414,7 +420,7 @@ actor API: ArchiveMoveServing {
     func verifiedAccount(sessionID: String, baseURL: URL) async throws -> AccountUser {
         var request = Self.request(baseURL.appendingPathComponent("/api/auth/me"))
         request.setValue(sessionID, forHTTPHeaderField: "X-Session-Id")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: try await authorize(request))
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode),
               let envelope = try? JSONDecoder().decode(Envelope<AccountUser>.self, from: data),
               envelope.code == 0, let user = envelope.data, user.id > 0 else {
@@ -466,7 +472,7 @@ actor API: ArchiveMoveServing {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpMethod = method
         request.httpBody = body
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: try await authorize(request))
         guard let http = response as? HTTPURLResponse else { throw APIError(message: tr("error.badResponse")) }
         return try Self.decodeMoveResponse(data, statusCode: http.statusCode, registration: registration)
     }
@@ -524,6 +530,19 @@ actor API: ArchiveMoveServing {
         }
         do { return try JSONDecoder().decode([MediaStatus].self, from: data) }
         catch { throw APIError(message: tr("error.badResponse")) }
+    }
+
+    func cloudBillingState(policyVersion: String? = nil, resume: Bool = false) async throws -> PostpaidState {
+        guard let accountSession = SessionStore.current, !accountSession.isEmpty else { throw APIError(message: tr("error.signInRequired")) }
+        let accountBase = Backend.baseURL
+        let request = try policyVersion.map { try jsonPost(resume ? "/api/mobile/billing/resume-cloud" : "/api/mobile/billing/postpaid-accept", body: ["policyVersion": $0]) }
+            ?? Self.request(Backend.baseURL.appendingPathComponent("/api/mobile/billing/cloud-state"))
+        let (data, response) = try await send(request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw APIError(message: tr("balance.unavailable"))
+        }
+        guard accountSession == SessionStore.current, accountBase == Backend.baseURL else { throw APIError(message: tr("files.error.closed")) }
+        return try JSONDecoder().decode(PostpaidState.self, from: data)
     }
 
     // MARK: 账单
@@ -889,8 +908,16 @@ actor API: ArchiveMoveServing {
         catch { throw APIError(message: tr("error.badResponse")) }
     }
 
+    private func authorize(_ request: URLRequest) async throws -> URLRequest {
+        let current = SessionStore.current
+        let base = Backend.baseURL
+        let result = try await CloudEpoch.shared.authorize(request, session: session)
+        guard current == SessionStore.current, base == Backend.baseURL else { throw APIError(message: tr("files.error.closed")) }
+        return result
+    }
+
     private func send(_ req: URLRequest) async throws -> (Data, URLResponse) {
-        do { return try await session.data(for: req) }
+        do { return try await session.data(for: try await authorize(req)) }
         catch { throw APIError(message: tr("error.network")) }
     }
 
@@ -904,7 +931,7 @@ actor API: ArchiveMoveServing {
 
         let (data, resp): (Data, URLResponse)
         do {
-            (data, resp) = try await session.data(for: req)
+            (data, resp) = try await session.data(for: try await authorize(req))
         } catch {
             // 网络层失败要与业务失败分开说。用户看到「验证码错误」和看到
             // 「连不上服务器」会做完全不同的事。

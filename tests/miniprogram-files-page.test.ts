@@ -14,6 +14,8 @@ function setup(online = true, enabled = false, subscriptionActive = false, listF
     getStorageSync: (key: string) => key === 'awd.session' ? 'session' : undefined,
     setStorageSync() {},
     request(opts: any) {
+      if (opts.url.endsWith('/auth/me')) { opts.success({statusCode:200,data:{code:0,data:{id:71}}}); return }
+      if (opts.url.endsWith('/billing/cloud-state')) { opts.success({statusCode:404,data:{}}); return }
       requests.push(opts.url)
       const ok = (data: unknown) => opts.success({ statusCode: 200, data })
       if (opts.url.endsWith('/catalog')) return ok([{ ...catalog, locations: [{ ...desktop, online }] }])

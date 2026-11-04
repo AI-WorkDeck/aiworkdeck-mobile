@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { cloudCanUse, cloudCanRead, cloudCanWrite } from '../../utils/cloud-access'
 import { getSession, myProjects, personalRequest, uuid, setPersonalPreview } from '../../utils/api'
 import { PersonalConversation, personalCopyTarget, personalCopyDestinations, desktopCopyNeedsUpgrade, desktopCopyMatches, desktopCopyTerminal, desktopCopyStatusKey, type PersonalCopyDestination, type DesktopCopyReceipt, type PersonalCopyResult, upcoming, projectIdentity, type AssistantStatus, type CalendarSnapshot, type PersonalReply, type PersonalSource, type CalendarEvent, type PersonalMessage } from '../../utils/personal'
 import { PERSONAL_CONSENT_VERSION } from '../../utils/contract/capabilities'
@@ -10,6 +11,7 @@ import type { Metrics } from '../../utils/layout'
 Page({
   data: {
     tab: 'assistant', direction: 'ltr', labels: {} as Record<string, string>, metrics: {} as Metrics,
+    assistantAllowed: false, calendarAllowed: false, calendarWritable: false,
     status: null as AssistantStatus | null, calendar: null as CalendarSnapshot | null,
     messages: [] as PersonalMessage[], sources: [] as PersonalSource[], events: [] as CalendarEvent[],
     projects: [] as { id: string; name: string }[], projectIndex: 0, days: 3,
@@ -29,9 +31,10 @@ Page({
   },
   onShow() {
     if (!getSession()) { wx.reLaunch({ url: '/pages/start/start' }); return }
-    if (this.session !== getSession()) { this.conversation = new PersonalConversation(); this.session = getSession(); this.setData({ draft: '', messages: [], sources: [], status: null, calendar: null, events: [], copyTargets: [], copyReady: false, copyStatus: '', copyCanRetry: false, copySuccess: '', busy: false, loading: false, error: '', calendarError: '' }); this.restoreLocal() }
+    if (this.session !== getSession()) { this.conversation = new PersonalConversation(); this.session = getSession(); this.setData({ draft: '', messages: [], sources: [], status: null, calendar: null, assistantAllowed: false, calendarAllowed: false, calendarWritable: false, events: [], copyTargets: [], copyReady: false, copyStatus: '', copyCanRetry: false, copySuccess: '', busy: false, loading: false, error: '', calendarError: '' }); this.restoreLocal() }
     const labels: Record<string, string> = {}
     for (const key of ['assistant', 'calendar', 'ask', 'send', 'processing', 'newChat', 'assistantConsent', 'calendarConsent', 'subscription', 'remindersUnavailable', 'noEvents', 'today', 'sources']) labels[key] = t('personal.' + key)
+    labels.subscription = t('postpaid.restricted')
     Object.assign(labels, { copyTitle: t('personal.copy.title'), copyHint: t('personal.copy.hint'), copyUpgrade: t('personal.copy.upgrade'), emptyProjects: t('project.emptyTitle'), backup: t('backup.title'), account: t('settings.account'), projects: t('workspace.title'), capture: t('workspace.capture'), on: t('common.on'), off: t('common.off'), retry: t('project.retry'), refresh: t('common.refresh'), settings: t('home.settings'), next3: t('personal.nextDays', { days: 3 }), next5: t('personal.nextDays', { days: 5 }), files: t('project.files') })
     this.setData({ labels, direction: isRtl() ? 'rtl' : 'ltr', sources: this.displaySources(this.conversation.sources) }); this.renderCopy(); this.load()
   },
@@ -42,7 +45,7 @@ Page({
     if (this.data.loading) return
     this.setData({ loading: true })
     try { const status = await personalRequest<AssistantStatus>('assistant/status'); if (this.alive() && this.session === account) {
-      this.setData({ status, error: '', summary: t('personal.summaries', { count: status.summaryCount }) })
+      this.setData({ assistantAllowed: cloudCanUse(status), status, error: '', summary: t('personal.summaries', { count: status.summaryCount }) })
       if (status.consentEnabled === false) { this.conversation = new PersonalConversation(); clearPersonalConversation(); this.setData({ messages: [], sources: [], draft: '', copyStatus: '', copyCanRetry: false }) }
     } }
     catch (error) { if (this.alive() && this.session === account) this.setData({ error: (error as Error).message }) }
@@ -52,7 +55,7 @@ Page({
       if (this.alive() && this.session === account) {
         const seen = new Set<string>()
         const projects = [{ id: '', name: t('personal.allProjects') }, ...calendar.events.filter(e => { const key = projectIdentity(e); if (seen.has(key)) return false; seen.add(key); return true }).map(e => ({ id: projectIdentity(e), name: e.projectName }))]
-        this.setData({ calendar, projects, calendarError: '', projectIndex: 0 }); this.filter()
+        this.setData({ calendarAllowed: cloudCanRead(calendar), calendarWritable: cloudCanWrite(calendar), calendar, projects, calendarError: '', projectIndex: 0 }); this.filter()
       }
     } catch (error) { if (this.alive() && this.session === account) this.setData({ calendarError: (error as Error).message }) }
     if (this.alive() && this.session === account) { this.setData({ loading: false }); if (!this.restored && this.data.status?.enabled) await this.restoreRemote() }
@@ -113,7 +116,7 @@ Page({
   onProject(e: { detail: { value: string } }) { this.setData({ projectIndex: Number(e.detail.value) }); this.filter() },
   filter() { this.setData({ events: upcoming(this.data.calendar?.events ?? [], this.data.days, this.data.projects[this.data.projectIndex]?.id ?? '') }) },
   async onSend() {
-    if (this.data.busy || this.data.loading || !this.data.draft.trim() || !this.data.status?.enabled) return
+    if (this.data.busy || this.data.loading || !this.data.draft.trim() || !this.data.status?.enabled || !cloudCanUse(this.data.status)) return
     const account = this.session
     const question = this.conversation.question(this.data.draft.trim(), uuid)
     this.setData({ busy: true, error: '' })

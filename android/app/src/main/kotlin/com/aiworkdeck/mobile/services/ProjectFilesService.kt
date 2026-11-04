@@ -20,7 +20,10 @@ import java.util.UUID
 import kotlin.coroutines.coroutineContext
 
 @Serializable
-data class BackupConsent(val enabled: Boolean, val decided: Boolean, val subscriptionActive: Boolean, val consentVersion: String? = null)
+data class BackupConsent(val enabled: Boolean, val decided: Boolean, val subscriptionActive: Boolean, val consentVersion: String? = null, val cloudAccess: CloudAccess? = null) {
+    val canWriteCloud: Boolean get() = cloudAccess?.canWrite ?: subscriptionActive
+    val canReadCloud: Boolean get() = cloudAccess?.canRead ?: subscriptionActive
+}
 @Serializable
 data class ProjectFile(val id: String, val name: String, val path: String = "", val size: Long,
     val uid: String? = null, val source: String? = null, val deviceId: String? = null,
@@ -103,6 +106,24 @@ class ProjectFilesService(private val baseURL: String, private val session: Stri
         } catch (e: kotlinx.coroutines.CancellationException) { throw e }
         catch (e: Exception) { catalog ?: throw e }
     }
+    private val cloudCache = mutableMapOf<String, File>()
+    fun hasCloudCache(project: RelayProject, file: ProjectFile): Boolean = cloudCache[project.projectUid + ":" + file.uid]?.isFile == true
+    private val cloudQuoteHashes = mutableMapOf<String, String>()
+    suspend fun cloudQuote(project: RelayProject, file: ProjectFile): String {
+        val consent = json.decodeFromJsonElement<BackupConsent>(request("/api/mobile/backup-consent"))
+        check(consent.enabled && consent.canReadCloud) { tr("files.desktopRequired") }
+        val uid = project.projectUid ?: error(tr("files.error.response"))
+        val fid = file.uid ?: error(tr("files.error.response"))
+        val quote = request("/api/mobile/preview/catalog/${segment(uid)}/files/${segment(fid)}/quote")
+        val hash = quote["resourceHash"]?.jsonPrimitive?.content ?: error(tr("files.error.response"))
+        check(hash.matches(Regex("[a-fA-F0-9]{64}"))) { tr("files.error.response") }
+        cloudQuoteHashes[uid + ":" + fid] = hash
+        val cents = quote["quoteCents"]?.jsonPrimitive?.longOrNull ?: error(tr("files.error.response"))
+        val currency = quote["cashCurrency"]?.jsonPrimitive?.content ?: error(tr("files.error.response"))
+        check(cents >= 0 && currency in listOf("CNY", "USD") && quote["estimated"]?.jsonPrimitive?.booleanOrNull == true) { tr("files.error.response") }
+        val amount = java.text.NumberFormat.getCurrencyInstance().apply { this.currency = java.util.Currency.getInstance(currency) }.format(java.math.BigDecimal.valueOf(cents, 2))
+        return tr("postpaid.estimate", mapOf("amount" to amount)) + "\n" + tr("postpaid.partialCharge")
+    }
     suspend fun quote(file: ProjectFile): Int {
         validatePreview(file)
         return request("/api/mobile/transfer/quote?bytes=${file.size.coerceAtLeast(1)}").getValue("credits").jsonPrimitive.int
@@ -113,10 +134,12 @@ class ProjectFilesService(private val baseURL: String, private val session: Stri
         val existing = read(manifest)
         if (existing == null && isCloudFile(project, file)) {
             val consent = json.decodeFromJsonElement<BackupConsent>(request("/api/mobile/backup-consent"))
-            check(consent.enabled && consent.subscriptionActive) { tr("files.desktopRequired") }
+            check(consent.enabled && consent.canReadCloud) { tr("files.desktopRequired") }
             val uid = project.projectUid ?: error(tr("files.error.response"))
             val fid = file.uid ?: error(tr("files.error.response"))
-            return content("/api/mobile/preview/catalog/${segment(uid)}/files/${segment(fid)}/content", file.size, file.extension).also { cloudFiles.add(it) }
+            cloudCache[uid + ":" + fid]?.takeIf { it.isFile }?.let { return it }
+            val hash = cloudQuoteHashes.remove(uid + ":" + fid) ?: error(tr("files.error.response"))
+            return content("/api/mobile/preview/catalog/${segment(uid)}/files/${segment(fid)}/content?requestId=${UUID.randomUUID()}&expectedHash=$hash", file.size, file.extension).also { cloudFiles.add(it); cloudCache[uid + ":" + fid] = it }
         }
         var pending = existing ?: Pending(UUID.randomUUID().toString(), project, file).also { save(manifest, it) }
         val original = pending.file
@@ -164,7 +187,9 @@ class ProjectFilesService(private val baseURL: String, private val session: Stri
         ensureOpen(); coroutineContext.ensureActive()
         val builder = builder(path)
         if (body != null) builder.post(body.toString().toRequestBody("application/json".toMediaType()))
-        client.newCall(builder.build()).execute().use { response ->
+        val authorized = CloudEpoch.authorize(builder.build(), client)
+        ensureOpen()
+        client.newCall(authorized).execute().use { response ->
             ensureOpen(); coroutineContext.ensureActive()
             check(response.isSuccessful) { tr("files.error.response") }
             val value = json.parseToJsonElement(response.body?.string() ?: "").jsonObject

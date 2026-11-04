@@ -9,7 +9,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
 
-@Serializable data class PersonalStatus(val enabled: Boolean, val subscriptionActive: Boolean, val backupEnabled: Boolean, val summaryCount: Int, val reason: String? = null, val consentEnabled: Boolean? = null)
+@Serializable data class PersonalStatus(val enabled: Boolean, val subscriptionActive: Boolean, val backupEnabled: Boolean, val summaryCount: Int, val reason: String? = null, val consentEnabled: Boolean? = null, val cloudAccess: CloudAccess? = null) { val canUseCloud: Boolean get() = cloudAccess?.canUse ?: subscriptionActive }
 @Serializable data class PersonalSettings(val enabled: Boolean, val subscriptionActive: Boolean)
 @Serializable data class PersonalSource(val deviceId: String, val projectKey: String, val projectName: String, val sourceUpdatedAt: String? = null)
 @Serializable data class PersonalReply(val conversationId: String, val requestId: String, val answer: String, val sources: List<PersonalSource> = emptyList(), val status: String = "completed")
@@ -29,7 +29,7 @@ import java.util.UUID
         status == "OPEN" && !date.isBefore(today) && date.isBefore(today.plusDays(days.toLong()))
     }.getOrDefault(false)
 }
-@Serializable data class PersonalCalendar(val enabled: Boolean, val subscriptionActive: Boolean, val events: List<PersonalCalendarEvent> = emptyList(), val syncedAt: String? = null)
+@Serializable data class PersonalCalendar(val enabled: Boolean, val subscriptionActive: Boolean, val events: List<PersonalCalendarEvent> = emptyList(), val syncedAt: String? = null, val cloudAccess: CloudAccess? = null) { val canReadCloud: Boolean get() = cloudAccess?.canRead ?: subscriptionActive; val canWriteCloud: Boolean get() = cloudAccess?.canWrite ?: subscriptionActive }
 
 fun reminderEvents(events: List<PersonalCalendarEvent>, now: Instant = Instant.now()): List<PersonalCalendarEvent> =
     events.filter { it.status == "OPEN" && it.reminder?.isAfter(now) == true }.sortedBy { it.reminder }.take(50)

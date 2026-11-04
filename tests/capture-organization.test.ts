@@ -16,6 +16,7 @@ function fixture(body: unknown = { code: 0, id: 1, clientMediaId: 'synthetic', d
     setStorageSync: (key: string, value: unknown) => storage.set(key, value),
     removeStorageSync: (key: string) => storage.delete(key),
     getFileSystemManager: () => ({ unlink: () => {} }),
+    request: (options: any) => { if(options.url.endsWith('/auth/me')) {options.success({statusCode:200,data:{code:0,data:{id:71}}});return} assert.ok(options.url.endsWith('/billing/cloud-state')); options.success({statusCode:404,data:{}}) },
     uploadFile: (options: any) => {
       requests.push(options)
       queueMicrotask(() => options.success({ statusCode: 200, data: JSON.stringify(body) }))

@@ -1,3 +1,5 @@
+import { invalidateCloudEpoch } from '../services/CloudEpoch'
+import { common, Want } from '@kit.AbilityKit'
 import { Prefs } from '../services/Prefs'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { ContractCapabilities, ContractLocale } from 'contract'
@@ -9,7 +11,7 @@ import { Tk } from '../design/Tokens'
 import { formatBytes } from '../model/Format'
 import { RelayProject } from '../model/Capture'
 import { Unauthorized } from '../model/Envelope'
-import { AccountUser, MediaUsage, SubscriptionBalance } from '../services/ApiTypes'
+import { AccountUser, MediaUsage, SubscriptionBalance, asRecord } from '../services/ApiTypes'
 import { ServiceLocator } from '../services/ServiceLocator'
 import { billingAvailableIn, regionLabelKey } from '../model/AccountRegion'
 import { errorText, toast } from './Feedback'
@@ -51,6 +53,10 @@ export struct Settings {
   @State usage: MediaUsage | null = null
   @State subscription: SubscriptionBalance | null = null
   @State backup: BackupConsent | null = null
+  @State postpaid: Record<string, Object> | null = null
+  @State postpaidBusy: boolean = false
+  @State postpaidError: string = ''
+  private postpaidSession: string = ''
   private token: number = -1
   /** 这一屏还在不在。异步回调回来时组件可能已经销毁，往里写 @State 是错误日志甚至崩溃。 */
   private alive: boolean = false
@@ -73,6 +79,7 @@ export struct Settings {
       if (!this.alive) return
       this.saveToAlbum = v
     }).catch((): void => {})
+    this.loadPostpaid().catch((): void => {})
     if (billingAvailableIn(ServiceLocator.region)) {
       ServiceLocator.backend.subscriptionBalance().then((s: SubscriptionBalance | null): void => {
         if (this.alive) this.subscription = s
@@ -283,6 +290,17 @@ export struct Settings {
       this.infoRow(this.t('subscription.monthly'), `${this.credits(this.subscription.monthlyUsedCents)} / ${this.credits(this.subscription.monthlyLimitCents)}`)
     }
     // 国际站计费未开通（dev-board#664）：国际区不放充值入口
+    Column() {
+      Text(this.t('postpaid.title')).fontColor(Tk.L.fg)
+      Text(this.postpaidText()).fontColor(Tk.L.fg)
+      Text(this.t('postpaid.notice')).fontColor(Tk.L.fgMuted)
+      if (this.canResumeCloud()) { Button(this.t('postpaid.resume')).enabled(!this.postpaidBusy).onClick((): void => this.confirmResumeCloud()) }
+      if (this.canAcceptPostpaid()) { Button(this.t('postpaid.accept')).enabled(!this.postpaidBusy).onClick((): void => this.confirmPostpaid()) }
+      Button(this.t('project.retry')).enabled(!this.postpaidBusy).onClick((): void => { this.loadPostpaid().catch((): void => {}) })
+      if (this.postpaidError.length > 0) { Text(this.postpaidError).fontColor(Tk.S.failed) }
+      if (billingAvailableIn(ServiceLocator.region)) { Button(this.t('postpaid.repay')).onClick((): void => this.openRepayment()) }
+      else { Text(this.t('postpaid.channelUnavailable')).fontColor(Tk.L.fgMuted) }
+    }
     if (RECHARGE_CHANNEL !== 'false' && billingAvailableIn(ServiceLocator.region)) {
       Text(this.t('recharge.entry'))
         .fontSize(Tk.Ty.small)
@@ -399,6 +417,72 @@ export struct Settings {
   }
 
   /** 本端还不能充值时的说明。只有一个「关闭」：这不是待办，是一句去哪儿充的指路。 */
+  private async loadPostpaid(accept: boolean = false, resume: boolean = false): Promise<void> {
+    if (this.postpaidBusy) return
+    this.postpaidBusy = true; this.postpaidError = ''
+    const session: string | null = await ServiceLocator.session.current()
+    if (session === null) { this.postpaidBusy = false; return }
+    try {
+      if ((accept || resume) && session !== this.postpaidSession) throw new Error(this.t('files.error.closed'))
+      const billing: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['billing'])
+      const frozenAccess: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['cloudAccess'])
+      const version: string | undefined = (accept || (resume && frozenAccess !== null && frozenAccess['frozen'] === true)) && billing !== null ? billing['policyVersion'] as string : undefined
+      if (resume) { invalidateCloudEpoch(); await ServiceLocator.queue.pauseCloudUploads() }
+      const value: Record<string, Object> = await ServiceLocator.backend.cloudBillingState(session, version, resume)
+      if (this.alive && session === await ServiceLocator.session.current()) { this.postpaid = value; this.postpaidSession = session; if (accept || resume) { await ServiceLocator.backend.reconnectCloud(session) } }
+    } catch (_) { if (this.alive) this.postpaidError = this.t('balance.unavailable') }
+    finally { if (this.alive) this.postpaidBusy = false }
+  }
+  private postpaidText(): string {
+    const b: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['billing'])
+    const a: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['cloudAccess'])
+    if (b === null || a === null) return ''
+    const currency: string = b['cashCurrency'] as string
+    let text: string = ''
+    const fields: string[] = ['creditLimitCents', 'availableCreditCents', 'debtCents']
+    const keys: string[] = ['postpaid.limit', 'postpaid.available', 'postpaid.debt']
+    for (let i: number = 0; i < fields.length; i++) {
+      const amount: Object = b[fields[i]]
+      if (typeof amount === 'number') text += this.t(keys[i]) + ': ' + currency + ' ' + (amount as number / 100).toFixed(2) + '\n'
+    }
+    const storage: Record<string, Object> | null = asRecord(b['storagePrice'])
+    const egress: Record<string, Object> | null = asRecord(b['egressPrice'])
+    if (storage !== null) text += this.t('postpaid.storageRate', { 'amount': currency + ' ' + (storage['cashCentsPerGiBMonth'] as number / 100).toFixed(2)}) + '\n'
+    if (egress !== null) text += this.t('postpaid.egressRate', { 'amount': currency + ' ' + (egress['cashCentsPerGiB'] as number / 100).toFixed(2)}) + '\n'
+    if (typeof b['remindAt'] === 'string') text += this.t('postpaid.remind') + ': ' + b['remindAt'] + '\n'
+    if (typeof b['cleanupAt'] === 'string') text += this.t('postpaid.cleanup') + ': ' + b['cleanupAt'] + '\n'
+    if (a['cleanupState'] === 'complete') text += this.t('postpaid.cleared')
+    else if (a['canUse'] !== true) text += this.t('postpaid.restricted')
+    return text
+  }
+  private canResumeCloud(): boolean {
+    const b: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['billing'])
+    const a: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['cloudAccess'])
+    return b !== null && a !== null && b['accepted'] === true && (a['frozen'] !== true || b['debtCents'] === 0)
+  }
+  private confirmResumeCloud(): void {
+    if (!this.canResumeCloud() || this.postpaidBusy) return
+    this.getUIContext().showAlertDialog({title: this.t('postpaid.resume'), message: this.t('postpaid.resumeNotice'),
+      primaryButton: {value: this.t('common.cancel'), action: (): void => {}},
+      secondaryButton: {value: this.t('postpaid.resume'), action: (): void => { this.loadPostpaid(false, true).catch((): void => {}) }} })
+  }
+  private canAcceptPostpaid(): boolean {
+    const b: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['billing'])
+    return billingAvailableIn(ServiceLocator.region) && b !== null && b['accepted'] === false && b['acceptEnabled'] === true && asRecord(b['egressPrice']) !== null
+  }
+  private confirmPostpaid(): void {
+    if (!this.canAcceptPostpaid() || this.postpaidBusy) return
+    this.getUIContext().showAlertDialog({title: this.t('postpaid.accept'), message: this.t('postpaid.notice'),
+      primaryButton: {value: this.t('common.cancel'), action: (): void => {}},
+      secondaryButton: {value: this.t('postpaid.accept'), action: (): void => { this.loadPostpaid(true).catch((): void => {}) }} })
+  }
+
+  private openRepayment(): void {
+    const want: Want = { action: 'ohos.want.action.viewData', entities: ['entity.system.browsable'], uri: 'https://aiworkdeck.com/zh/account#wallet' }
+    const ctx: common.UIAbilityContext = ServiceLocator.ctx as common.UIAbilityContext
+    ctx.startAbility(want).catch((): void => { toast(this.getUIContext(), this.t('login.webError')) })
+  }
+
   private showRechargeNotice(): void {
     this.getUIContext().showAlertDialog({
       title: this.t('recharge.external.title'),

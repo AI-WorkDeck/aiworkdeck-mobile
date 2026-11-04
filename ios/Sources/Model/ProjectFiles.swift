@@ -45,6 +45,14 @@ struct ProjectFileListing: Sendable {
 struct ProjectFileQuote: Decodable, Sendable {
     let credits: Int
     let balanceCents: Int64?
+    var resourceHash: String? = nil
+    var quoteCents: Int64? = nil
+    var cashCurrency: String? = nil
+    var estimated: Bool? = nil
+    var monetaryEstimate: String? {
+        guard let cents = quoteCents, let currency = cashCurrency, ["CNY", "USD"].contains(currency), cents >= 0 else { return nil }
+        return (Decimal(cents) / 100).formatted(.currency(code: currency))
+    }
 }
 
 /// Confirmed server terminal state: a later transfer needs a new quote and explicit consent.
@@ -79,7 +87,9 @@ struct BackupConsent: Decodable, Sendable {
     let decided: Bool
     let subscriptionActive: Bool
     let consentVersion: String?
-    var canReadCloud: Bool { enabled && subscriptionActive }
+    var cloudAccess: CloudAccess? = nil
+    var canWriteCloud: Bool { cloudAccess?.canWrite ?? subscriptionActive }
+    var canReadCloud: Bool { enabled && (cloudAccess?.canRead ?? subscriptionActive) }
 }
 
 protocol ProjectFilesServing: Sendable {

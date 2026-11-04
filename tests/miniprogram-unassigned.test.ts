@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { enqueueCapture, assignCapture, listItems, processQueue, recoverOnLaunch, tallyFor, removeItems } from '../miniprogram/utils/queue.ts'
+import { enqueueCapture, assignCapture, listItems, processQueue, recoverOnLaunch, tallyFor, removeItems, pauseCloudUploads, retry } from '../miniprogram/utils/queue.ts'
 import { t } from '../miniprogram/utils/i18n.ts'
 
 let storage: Record<string, any> = {}
@@ -19,7 +19,7 @@ const project = { deviceId: 'synthetic-desktop', key: '7', projectUid: 'syntheti
   uploadFile: (o: any) => { uploads.push(o); o.success({ statusCode: 200, data: JSON.stringify({ code: 0 }) }); return {} },
   navigateTo: (o: any) => routes.push(o.url), navigateBack: () => { back++ },
   reLaunch: (o: any) => routes.push(o.url), showToast() {},
-  request: (o: any) => o.success({ statusCode: 200, data: [{ ...project, locations: [{ kind: 'desktop', deviceId: project.deviceId, key: project.key, online: true }] }] }),
+  request: (o: any) => o.url.endsWith('/auth/me') ? o.success({statusCode:200,data:{code:0,data:{id:71}}}) : o.url.endsWith('/billing/cloud-state') ? o.success({statusCode:404,data:{}}) : o.success({ statusCode: 200, data: [{ ...project, locations: [{ kind: 'desktop', deviceId: project.deviceId, key: project.key, online: true }] }] }),
 }
 let definition: any
 ;(globalThis as any).Page = (page: any) => { definition = page }
@@ -58,6 +58,7 @@ test('assigning a locally saved capture starts upload once with its unchanged me
   const original = enqueueCapture('/synthetic/photo', 'image', null)
   saved()
   assert.equal(assignCapture(original.clientMediaId, project), true)
+  await new Promise(resolve => setImmediate(resolve))
   assert.equal(uploads.length, 1)
   assert.equal(uploads[0].formData.deviceId, project.deviceId)
   assert.equal(uploads[0].formData.projectKey, project.key)
@@ -77,6 +78,7 @@ test('assignment while local saving is pending cannot race the file preservation
   assert.equal(assignCapture(original.clientMediaId, project), true)
   assert.equal(uploads.length, 0)
   saved()
+  await new Promise(resolve => setImmediate(resolve))
   assert.equal(uploads.length, 1)
   assert.equal(uploads[0].filePath, '/synthetic/saved-0')
 })
@@ -135,7 +137,8 @@ test('unassigned photo/video local-save failures are visible and keep a temporar
     library.refresh()
     assert.equal(library.data.days[0].items[0].errorText, t('capture.saveFailed'))
     assert.equal(assignCapture(item.clientMediaId, project), true)
-    assert.equal(uploads.length, 1)
+    await new Promise(resolve => setImmediate(resolve))
+  assert.equal(uploads.length, 1)
     assert.equal(uploads[0].filePath, `/synthetic/${kind}`)
   }
 })
@@ -151,4 +154,23 @@ test('deleting a capture before its file-save callback cleans up the new file an
   assert.deepEqual(removed, ['/synthetic/saved-0'])
   assert.equal(notices.length, 0)
   assert.equal(uploads.length, 0)
+})
+
+test('cloud resume pause persists, survives launch recovery and preserves originals until manual retry', async () => {
+ await reset()
+ const item = enqueueCapture('/synthetic/retained', 'image', project)
+ pauseCloudUploads()
+ saved()
+ await new Promise(resolve => setImmediate(resolve))
+ recoverOnLaunch(); processQueue()
+ await new Promise(resolve => setImmediate(resolve))
+ assert.equal(uploads.length, 0)
+ assert.equal(listItems()[0].cloudResumeRequired, true)
+ assert.equal(listItems()[0].state, 'failed')
+ assert.equal(listItems()[0].filePath, '/synthetic/saved-0')
+ assert.equal(removed.length, 0)
+ retry(item.clientMediaId)
+ await new Promise(resolve => setImmediate(resolve))
+ assert.equal(uploads.length, 1)
+ assert.equal(listItems()[0].cloudResumeRequired, false)
 })

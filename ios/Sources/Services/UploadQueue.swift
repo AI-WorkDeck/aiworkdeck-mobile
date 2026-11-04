@@ -40,6 +40,7 @@ actor UploadQueue {
         if !stale.isEmpty { await onChange?() }
 
         while true {
+            let cloudGeneration = await CloudEpoch.shared.revision()
             // Unassigned captures stay local until the user explicitly moves them.
             guard let item = try? await EvidenceStore.shared.claimNextUpload(),
                   let target = item.project else { break }
@@ -49,7 +50,7 @@ actor UploadQueue {
                 try await API.shared.upload(
                     item: item,
                     project: target,
-                    fileName: Self.fileName(for: item)
+                    fileName: Self.fileName(for: item), cloudGeneration: cloudGeneration
                 ) { _ in }
 
                 // 进了中转区 ≠ 到了电脑：真正的 arrived 由 checkDelivered 按回执改
@@ -81,7 +82,7 @@ actor UploadQueue {
         if hasFailed {
             let waited = lastFailedRoundAt.map { Date().timeIntervalSince($0) } ?? .infinity
             if waited >= autoRetryBackoff {
-                await retryFailed()
+                await retryFailed(manual: false)
                 return
             }
         }
@@ -133,11 +134,18 @@ actor UploadQueue {
     }
 
     /// 把失败的重新排回待传。用户手动点「重试」时调用。
-    func retryFailed() async {
+    func pauseCloudUploads() async throws {
+        for item in try await EvidenceStore.shared.loadAll() where [.waiting, .uploading, .failed].contains(item.state) {
+            try await EvidenceStore.shared.updateState(item.id, to: .failed, cloudResumeRequired: true)
+        }
+        await onChange?()
+    }
+
+    func retryFailed(manual: Bool = true) async {
         let failed = (try? await EvidenceStore.shared.loadAll())?
             .filter { !$0.moveBlocksMutation && $0.state == .failed } ?? []
-        for f in failed {
-            try? await EvidenceStore.shared.updateState(f.id, to: .waiting, progress: 0)
+        for f in failed where manual || !f.cloudResumeRequired {
+            try? await EvidenceStore.shared.updateState(f.id, to: .waiting, progress: 0, cloudResumeRequired: manual ? false : nil)
         }
         await onChange?()
         await kick()

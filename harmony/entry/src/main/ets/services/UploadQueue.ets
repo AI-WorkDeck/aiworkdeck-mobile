@@ -1,3 +1,4 @@
+import { cloudGeneration } from './CloudEpoch'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { CaptureItem } from '../model/Capture'
 import { RelayProject } from '../model/Capture'
@@ -75,9 +76,10 @@ export class UploadQueue {
     try {
       await this.recoverStale()
       while (true) {
+        const generation: number = cloudGeneration()
         const item: CaptureItem | null = await this.nextPending()
         if (item === null) break
-        const ok: boolean = await this.uploadOne(item)
+        const ok: boolean = await this.uploadOne(item, generation)
         if (!ok) break
       }
       return (await this.hasActionableWaiting()) ? KickResult.hasMoreWaiting : KickResult.done
@@ -101,10 +103,18 @@ export class UploadQueue {
   }
 
   /** 把失败的重新排回待传。用户手动点「重试」时调用，不看退避、不看次数。 */
+  async pauseCloudUploads(): Promise<void> {
+    const items: CaptureItem[] = await this.store.loadAll()
+    for (const item of items) if (item.state === TransferState.waiting || item.state === TransferState.uploading || item.state === TransferState.failed) {
+      await this.store.updateState(item.id, TransferState.failed, 0, null, true)
+    }
+    this.emit()
+  }
+
   async retryFailed(): Promise<void> {
     const items: CaptureItem[] = await this.store.loadAll()
     const failed: CaptureItem[] = items.filter((i: CaptureItem): boolean => i.state === TransferState.failed)
-    for (const f of failed) await this.store.updateState(f.id, TransferState.waiting, 0, null)
+    for (const f of failed) await this.store.updateState(f.id, TransferState.waiting, 0, null, false)
     if (failed.length > 0) this.emit()
     await this.kick()
   }
@@ -174,18 +184,18 @@ export class UploadQueue {
   private async nextPending(): Promise<CaptureItem | null> {
     const items: CaptureItem[] = await this.store.loadAll()
     const pending: CaptureItem[] = items.filter((i: CaptureItem): boolean =>
-      i.state === TransferState.waiting && i.project !== null)
+      !i.cloudResumeRequired && i.state === TransferState.waiting && i.project !== null)
     return pending.length === 0 ? null : pending[pending.length - 1]
   }
 
   private async hasActionableWaiting(): Promise<boolean> {
     const items: CaptureItem[] = await this.store.loadAll()
     return items.some((i: CaptureItem): boolean =>
-      i.state === TransferState.waiting && i.project !== null)
+      !i.cloudResumeRequired && i.state === TransferState.waiting && i.project !== null)
   }
 
   /** 一件的上传。成功 true；失败/未授权 false——调用方据此 break，弱网下不把后面几条也挤掉。 */
-  private async uploadOne(item: CaptureItem): Promise<boolean> {
+  private async uploadOne(item: CaptureItem, generation: number): Promise<boolean> {
     const project: RelayProject | null = item.project
     if (project === null) return false
     await this.store.updateState(item.id, TransferState.uploading, 0, null)
@@ -196,7 +206,7 @@ export class UploadQueue {
       await this.uploader.upload(item, project, fileName, (p: number): void => {
         this.progress.set(item.id, p)
         this.emit()
-      })
+      }, generation)
       // 进了中转区 ≠ 到了电脑：真正的 arrived 由 checkDelivered 按回执改
       await this.store.updateState(item.id, TransferState.uploaded, 1, null)
       this.attempts.delete(item.id)
@@ -233,7 +243,7 @@ export class UploadQueue {
    */
   private async autoRetryFailed(): Promise<void> {
     const items: CaptureItem[] = await this.store.loadAll()
-    const failed: CaptureItem[] = items.filter((i: CaptureItem): boolean => i.state === TransferState.failed)
+    const failed: CaptureItem[] = items.filter((i: CaptureItem): boolean => !i.cloudResumeRequired && i.state === TransferState.failed)
     let any: boolean = false
     for (const f of failed) {
       const next: TransferState | null = TransferStateOps.next(f.state, TransferEvent.retryAuto, this.attemptsOf(f.id))

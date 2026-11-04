@@ -5,6 +5,10 @@ import Foundation
 struct AssistantStatus: Decodable {
     let enabled: Bool
     let subscriptionActive: Bool
+    var cloudAccess: CloudAccess? = nil
+    var canUseCloud: Bool { cloudAccess?.canUse ?? subscriptionActive }
+    var canReadCloud: Bool { cloudAccess?.canRead ?? subscriptionActive }
+    var canWriteCloud: Bool { cloudAccess?.canWrite ?? subscriptionActive }
     let backupEnabled: Bool
     let summaryCount: Int
     let reason: String?
@@ -106,6 +110,10 @@ enum PersonalDates {
 struct PersonalCalendar: Decodable {
     let enabled: Bool
     let subscriptionActive: Bool
+    var cloudAccess: CloudAccess? = nil
+    var canUseCloud: Bool { cloudAccess?.canUse ?? subscriptionActive }
+    var canReadCloud: Bool { cloudAccess?.canRead ?? subscriptionActive }
+    var canWriteCloud: Bool { cloudAccess?.canWrite ?? subscriptionActive }
     let events: [PersonalCalendarEvent]
     let syncedAt: String?
 }
@@ -134,6 +142,8 @@ struct PersonalWorkspaceService {
         req.httpMethod = method; req.httpBody = body
         req.timeoutInterval = 240
         if body != nil { req.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+        req = try await CloudEpoch.shared.authorize(req, session: session)
+        guard sessionID() == account, baseURL() == host else { throw CancellationError() }
         let (data, response) = try await session.data(for: req)
         try Task.checkCancellation()
         guard sessionID() == account, baseURL() == host else { throw CancellationError() }

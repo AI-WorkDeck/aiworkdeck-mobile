@@ -28,6 +28,7 @@ export struct Personal {
   @State assistantSubscribed: boolean = false
   @State backupEnabled: boolean = false
   @State calendarEnabled: boolean = false
+  @State calendarWritable: boolean = false
   @State calendarSubscribed: boolean = false
   @State summaryCount: number = 0
   @State messages: PersonalMessage[] = []
@@ -117,6 +118,11 @@ export struct Personal {
     ServiceLocator.session.current().then((session: string | null): void => { if (session !== null && this.alive) { this.session = session; this.load() } })
   }
   aboutToDisappear(): void { this.alive = false; this.version++ }
+  private cloudAllowed(state: Record<string, Object>, permission: string): boolean {
+    const value: Object | undefined = state['cloudAccess']
+    if (value === undefined || value === null) return state['subscriptionActive'] === true
+    return (value as Record<string, Object>)[permission] === true
+  }
   private async request(path: string, method: http.RequestMethod = http.RequestMethod.GET, body: Record<string, Object> | null = null): Promise<Record<string, Object>> {
     if (this.host !== ServiceLocator.baseUrl()) throw new Error(this.t('files.error.closed'))
     return await ServiceLocator.backend.personalRequest(path, method, body, this.session)
@@ -130,7 +136,7 @@ export struct Personal {
       try {
         const status: Record<string, Object> = await this.request('assistant/status')
         if (!this.alive || version !== this.version) return
-        this.assistantEnabled = status['enabled'] === true; this.assistantSubscribed = status['subscriptionActive'] === true; this.backupEnabled = status['backupEnabled'] === true
+        this.assistantEnabled = status['enabled'] === true; this.assistantSubscribed = this.cloudAllowed(status, 'canUse'); this.backupEnabled = status['backupEnabled'] === true
         this.summaryCount = typeof status['summaryCount'] === 'number' ? status['summaryCount'] as number : 0; this.error = ''
         if (status['consentEnabled'] === false) {
           await PersonalConversationStore.clear()
@@ -143,7 +149,7 @@ export struct Personal {
       try {
         const calendar: Record<string, Object> = await this.request('calendar/events')
         if (!this.alive || version !== this.version) return
-        this.calendarEnabled = calendar['enabled'] === true; this.calendarSubscribed = calendar['subscriptionActive'] === true
+        this.calendarEnabled = calendar['enabled'] === true; this.calendarSubscribed = this.cloudAllowed(calendar, 'canRead'); this.calendarWritable = this.cloudAllowed(calendar, 'canWrite')
         this.events = this.calendarEnabled && this.calendarSubscribed ? personalEvents(calendar['events']) : []; this.calendarError = ''
         if (this.reminders && !await CalendarReminders.replace(this.events)) this.calendarError = this.t('personal.remindersUnavailable')
         if (!this.alive || version !== this.version) return
@@ -351,7 +357,7 @@ export struct Personal {
           Button(this.t('workspace.capture')).layoutWeight(1).onClick((): void => { this.stack.pushPath(new NavPathInfo('Home', '')) })
         }
         if (this.tab === 'assistant') {
-          if (!this.assistantEnabled || !this.assistantSubscribed) { Text(this.t(this.assistantSubscribed ? 'personal.assistantConsent' : 'personal.subscription')).fontColor(Tk.L.fgMuted); if (this.assistantSubscribed && this.backupEnabled) Button(this.t('common.on')).onClick((): void => { this.consent('assistant') }) }
+          if (!this.assistantEnabled || !this.assistantSubscribed) { Text(this.t(this.assistantSubscribed ? 'personal.assistantConsent' : 'postpaid.restricted')).fontColor(Tk.L.fgMuted); if (this.assistantSubscribed && this.backupEnabled) Button(this.t('common.on')).onClick((): void => { this.consent('assistant') }) }
           if (!this.assistantSubscribed || !this.backupEnabled) Button(this.t(this.assistantSubscribed ? 'backup.title' : 'settings.account')).onClick((): void => { this.stack.pushPath(new NavPathInfo('Settings', '')) })
           Scroll() {
             Column({ space: Tk.Sp.s4 }) {
@@ -399,7 +405,7 @@ export struct Personal {
           Row() { TextArea({ text: this.draft, placeholder: this.t('personal.ask') }).enabled(!this.busy && !this.loading).layoutWeight(1).maxLines(5).onChange((value: string): void => { this.draft = value }); Button(this.t('personal.send')).enabled(!this.busy && !this.loading && this.draft.trim().length > 0 && this.assistantEnabled && this.assistantSubscribed).onClick((): void => { this.send() }) }
           Row() { Button(this.t('personal.newChat')).enabled(!this.busy && !this.loading && this.pendingId.length === 0).onClick((): void => { this.resetConversation(); this.saveConversation() }); if (this.assistantEnabled) Button(this.t('common.off')).enabled(!this.busy).onClick((): void => { this.configure('assistant', false) }) }
         } else {
-          if (!this.calendarEnabled || !this.calendarSubscribed) { Text(this.t(this.calendarSubscribed ? 'personal.calendarConsent' : 'personal.subscription')).fontColor(Tk.L.fgMuted); if (this.calendarSubscribed) Button(this.t('common.on')).onClick((): void => { this.consent('calendar') }) }
+          if (!this.calendarEnabled || !this.calendarSubscribed) { Text(this.t(this.calendarSubscribed ? 'personal.calendarConsent' : 'postpaid.restricted')).fontColor(Tk.L.fgMuted); if (this.calendarWritable) Button(this.t('common.on')).onClick((): void => { this.consent('calendar') }) }
           Row() { ForEach([1, 3, 5], (days: number): void => { Button(days === 1 ? this.t('personal.today') : this.t('personal.nextDays', { 'days': days })).onClick((): void => { this.days = days }) }); Button(this.t('common.refresh')).enabled(!this.loading).onClick((): void => { this.load() }) }
           Select(this.projectOptions()).selected(0).onSelect((index: number): void => { this.project = index === 0 ? '' : this.projectChoices()[index - 1].identity() })
           Row() {

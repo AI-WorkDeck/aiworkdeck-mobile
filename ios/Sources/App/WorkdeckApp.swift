@@ -6,6 +6,7 @@ struct WorkdeckApp: App {
     @State private var model = AppModel()
 
     init() {
+        _ = CloudEpoch.launchAt
         // 锁屏卡片 / 灵动岛的「停止录音」在主进程执行，落到录音单例。
         // 顺带在启动时就把单例建起来：它的 init 会收掉上次进程遗留的 Live Activity。
         let recorder = AudioRecorderService.shared

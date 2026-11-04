@@ -70,8 +70,9 @@ class UploadQueue(
         try {
             recoverStale()
             while (true) {
+                val generation = CloudEpoch.revision()
                 val item = nextPending() ?: break
-                val ok = uploadOne(item)
+                val ok = withContext(CloudWriteGeneration(generation)) { uploadOne(item) }
                 if (!ok) break
             }
             if (hasActionableWaiting()) KickResult.hasMoreWaiting else KickResult.done
@@ -102,9 +103,15 @@ class UploadQueue(
     }
 
     /** 把失败的重新排回待传。用户手动点「重试」时调用，不看退避、不看次数。 */
+    suspend fun pauseCloudUploads() {
+        for (item in store.loadAll().filter { it.state in setOf(TransferState.waiting, TransferState.uploading, TransferState.failed) })
+            store.updateState(item.id, TransferState.failed, cloudResumeRequired = true)
+        _changes.tryEmit(Unit)
+    }
+
     suspend fun retryFailed() = withContext(Dispatchers.IO) {
         val failed = store.loadAll().filter { it.state == TransferState.failed }
-        for (f in failed) store.updateState(f.id, TransferState.waiting, progress = 0.0)
+        for (f in failed) store.updateState(f.id, TransferState.waiting, progress = 0.0, cloudResumeRequired = false)
         if (failed.isNotEmpty()) _changes.tryEmit(Unit)
         kick()
         Unit
@@ -150,10 +157,10 @@ class UploadQueue(
     /** 目标项目按件走；没记项目的件跳过（Android 无兜底 project，等旧记录被用户手动归类）。
      * 先传最早拍的：loadAll 按拍摄时间降序，取最后一个即最早。 */
     private suspend fun nextPending(): CaptureItem? =
-        store.loadAll().filter { it.state == TransferState.waiting && it.project != null }.lastOrNull()
+        store.loadAll().filter { !it.cloudResumeRequired && it.state == TransferState.waiting && it.project != null }.lastOrNull()
 
     private suspend fun hasActionableWaiting(): Boolean =
-        store.loadAll().any { it.state == TransferState.waiting && it.project != null }
+        store.loadAll().any { !it.cloudResumeRequired && it.state == TransferState.waiting && it.project != null }
 
     /** 一件的上传。成功 true；失败/未授权 false——调用方据此 break，弱网下不把后面几条也挤掉。 */
     private suspend fun uploadOne(item: CaptureItem): Boolean {
@@ -199,7 +206,7 @@ class UploadQueue(
     /** 自动重排：走契约的 retry_auto 事件与 guard（attempts <= maxAutoRetries），
      * 超过次数的件留在 failed，等用户手动 retryFailed()。 */
     private suspend fun autoRetryFailed() {
-        val failed = store.loadAll().filter { it.state == TransferState.failed }
+        val failed = store.loadAll().filter { !it.cloudResumeRequired && it.state == TransferState.failed }
         var any = false
         for (f in failed) {
             val n = attempts[f.id] ?: 0

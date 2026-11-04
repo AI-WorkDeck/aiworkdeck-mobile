@@ -49,7 +49,7 @@ class Backend(
     suspend fun verifyMailLoginCode(email: String, code: String): LoginResult =
         login(post("/api/auth/mail-login/verify", buildJsonObject { put("email", email); put("code", code) }))
     suspend fun deleteAccount() { envelope(post("/api/auth/account/delete", buildJsonObject {})) }
-    fun logout() = session.clear()
+    fun logout() { CloudEpoch.accountChanged(); session.clear() }
     /** 本机有没有会话。只判断「有没有」，是否还有效由第一次真实请求的 401 发现。 */
     fun hasSession(): Boolean = session.current() != null
 
@@ -63,6 +63,18 @@ class Backend(
     suspend fun myProjects(): List<RelayProject> = bare<List<CatalogProject>>("/api/mobile/catalog").map { it.toRelayProject() }
     suspend fun mediaUsage(): MediaUsage = bare("/api/mobile/media/usage")
     /** 统一账户余额。成功回裸对象、失败回信封，两者都是 JsonObject，靠 bare() 里探 code 字段区分。 */
+    suspend fun cloudBillingState(): PostpaidState = bare("/api/mobile/billing/cloud-state")
+    suspend fun acceptPostpaid(policyVersion: String, resume: Boolean = false): PostpaidState {
+        val body = buildJsonObject { put("policyVersion", policyVersion) }.toString().toRequestBody("application/json".toMediaType())
+        val result = json.parseToJsonElement(execute(Request.Builder().url(baseUrl + if (resume) "/api/mobile/billing/resume-cloud" else "/api/mobile/billing/postpaid-accept").post(body))).jsonObject
+        checkEnvelopeCode(result)
+        return json.decodeFromJsonElement(result)
+    }
+    suspend fun reconnectCloud() = withContext(Dispatchers.IO) {
+        val id = session.current() ?: throw Unauthorized()
+        val request = Request.Builder().url(baseUrl + "/api/mobile/media").header("X-Session-Id", id).post("".toRequestBody()).build()
+        CloudEpoch.reconnect(request, client)
+    }
     suspend fun billingBalance(): BillingBalance = bare("/api/mobile/billing/balance")
     suspend fun mediaStatus(ids: List<String>): List<MediaStatus> =
         if (ids.isEmpty()) emptyList() else bare("/api/mobile/media/status?clientMediaIds=" + ids.joinToString(","))
@@ -180,6 +192,7 @@ class Backend(
     private fun login(text: String): LoginResult {
         val r = json.decodeFromJsonElement<LoginResult>(envelope(text)["data"] ?: throw ApiError(1, tr("error.server", mapOf("code" to 1))))
         if (r.sessionId.isBlank() || r.user.id <= 0) throw ApiError(1, tr("error.loginNoData"))
+        CloudEpoch.accountChanged()
         session.save(r.sessionId); return r
     }
     /** 全站信封：code 0 成功；4010 未登录（清会话）；其他为业务错误。裸数组不进这里。
@@ -200,7 +213,10 @@ class Backend(
         session.current()?.let { b.header("X-Session-Id", it) }
         b.header("X-App-Language", languageProvider())
         val transport = if (upload) client.newBuilder().readTimeout(120, java.util.concurrent.TimeUnit.SECONDS).build() else client
-        transport.newCall(b.build()).execute().use { resp ->
+        val origin = baseUrl
+        val request = CloudEpoch.authorize(b.build(), transport, expectedGeneration = kotlinx.coroutines.currentCoroutineContext()[CloudWriteGeneration]?.value)
+        check(accountActive() && origin == baseUrl && request.header("X-Session-Id") == session.current()) { tr("files.error.closed") }
+        transport.newCall(request).execute().use { resp ->
             val text = resp.body?.string() ?: ""
             check(accountActive()) { tr("files.error.closed") }
             kotlinx.coroutines.currentCoroutineContext().ensureActive()

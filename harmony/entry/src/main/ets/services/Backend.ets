@@ -1,3 +1,4 @@
+import { cloudEpoch, requiresCloudEpoch, reconnectCloud, cloudAccountChanged } from './CloudEpoch'
 import { ContractCapabilities } from 'contract'
 import { BackupConsent, decodeBackupConsent } from '../model/ProjectFiles'
 import { http } from '@kit.NetworkKit'
@@ -70,6 +71,7 @@ export class Backend {
   }
 
   async logout(): Promise<void> {
+    await cloudAccountChanged()
     await this.session.clear()
   }
 
@@ -187,6 +189,26 @@ export class Backend {
     return parsed
   }
 
+  async reconnectCloud(expectedSession: string): Promise<void> {
+    if (await this.session.current() !== expectedSession) throw new Unauthorized()
+    const region: AccountRegion = this.region()
+    await reconnectCloud(baseUrlOf(region), expectedSession, currentAppLanguage(region))
+    if (await this.session.current() !== expectedSession) throw new Unauthorized()
+  }
+  async cloudBillingState(expectedSession: string, policyVersion?: string, resume: boolean = false): Promise<Record<string, Object>> {
+    const host: string = baseUrlOf(this.region())
+    if (await this.session.current() !== expectedSession) throw new Unauthorized()
+    const path: string = policyVersion === undefined ? '/api/mobile/billing/cloud-state' : resume ? '/api/mobile/billing/resume-cloud' : '/api/mobile/billing/postpaid-accept'
+    const body: Record<string, string> = { 'policyVersion': policyVersion ?? '' }
+    const text: string = await this.execute(path, policyVersion === undefined ? http.RequestMethod.GET : http.RequestMethod.POST,
+      policyVersion === undefined ? null : ArkJson.stringify(body), expectedSession)
+    if (await this.session.current() !== expectedSession || baseUrlOf(this.region()) !== host) throw new Unauthorized()
+    const value: Record<string, Object> | null = asRecord(ArkJson.parse(text))
+    if (value === null || asRecord(value['billing']) === null || asRecord(value['cloudAccess']) === null) throw new ApiError(1, 'Invalid response')
+    await this.check(value)
+    return value
+  }
+
   private async envelope(path: string, body: Record<string, string>): Promise<Record<string, Object>> {
     const text: string = await this.execute(path, http.RequestMethod.POST, ArkJson.stringify(body))
     const o: Record<string, Object> | null = asRecord(ArkJson.parse(text))
@@ -201,6 +223,7 @@ export class Backend {
     if (data === null) throw new ApiError(1, 'empty data')
     const result: LoginResult = decodeLoginResult(data)
     if (result.sessionId.length === 0 || result.user.id <= 0) throw new ApiError(1, 'invalid login identity')
+    await cloudAccountChanged()
     await this.session.save(result.sessionId)
     return result
   }
@@ -221,6 +244,11 @@ export class Backend {
     const region: AccountRegion = this.region()
     const header: Record<string, string> = { 'X-App-Language': currentAppLanguage(region) }
     if (sid !== null) header['X-Session-Id'] = sid
+    if (sid !== null && requiresCloudEpoch(path, method)) {
+      const epoch: string | null = await cloudEpoch(baseUrlOf(region), sid, currentAppLanguage(region))
+      if (sid !== await this.session.current() || region !== this.region()) throw new Unauthorized()
+      if (epoch !== null) header['X-Cloud-Epoch'] = epoch
+    }
     const client: http.HttpRequest = http.createHttp()
     try {
       let options: http.HttpRequestOptions

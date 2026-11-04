@@ -96,6 +96,7 @@ struct SettingsView: View {
                                     .foregroundStyle(T.L.fgFaint)
                             }
                         }
+                        PostpaidSection(canRepay: AccountRegion.current.billingEnabled, repay: { showRecharge = true })
                         if AccountRegion.current.billingEnabled {
                             Button(tr("subscription.store.title")) { showSubscription = true }
                                 .accessibilityIdentifier("settings.subscription")

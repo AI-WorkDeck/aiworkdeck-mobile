@@ -64,12 +64,12 @@ export struct ProjectFiles {
     if (service === null || project === null) return
     await service.canOpen(file)
     const desktop: boolean = await service.useDesktop(project, file)
-    if (desktop && !service.hasPending(project, file)) {
-      const credits: number = await service.quote(file)
+    if ((!desktop && !service.hasCloudCache(project, file)) || (desktop && !service.hasPending(project, file))) {
+      const message: string = desktop ? tr('workspace.quote', { 'name': file.name, 'credits': await service.quote(file) }) : await service.cloudQuote(project, file)
       await service.ensureActive()
       const confirmed: boolean = await new Promise<boolean>((resolve: (v: boolean) => void): void => {
         this.getUIContext().showAlertDialog({ title: tr('workspace.download'),
-          message: tr('workspace.quote', { 'name': file.name, 'credits': credits }), autoCancel: true,
+          message: message, autoCancel: true,
           cancel: (): void => resolve(false),
           primaryButton: { value: tr('common.cancel'), action: (): void => resolve(false) },
           secondaryButton: { value: tr('workspace.download'), action: (): void => resolve(true) } })

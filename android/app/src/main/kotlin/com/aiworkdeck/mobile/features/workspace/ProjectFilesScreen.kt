@@ -51,7 +51,7 @@ fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var truncated by remember { mutableStateOf(false) }
-    var quote by remember { mutableStateOf<Pair<ProjectFile, Int>?>(null) }
+    var quote by remember { mutableStateOf<Pair<ProjectFile, String>?>(null) }
     suspend fun load() {
         loading = true; error = null
         try { service.files(project).let { files = it.files; truncated = it.truncated } }
@@ -76,8 +76,9 @@ fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
             try {
                 validatePreview(file)
                 check(canPreview(context, file.extension)) { tr("files.noPreviewApp") }
-                if (isCloudFile(project, file) || service.hasPending(project, file)) open(file)
-                else quote = file to service.quote(file)
+                if (service.hasPending(project, file) || service.hasCloudCache(project, file)) open(file)
+                else if (isCloudFile(project, file)) quote = file to service.cloudQuote(project, file)
+                else quote = file to tr("workspace.quote", mapOf("name" to file.name, "credits" to service.quote(file)))
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) { error = e.message }
             finally { busy = false }
@@ -112,7 +113,7 @@ fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
         }
         quote?.let { (file, credits) ->
             AlertDialog(onDismissRequest = { quote = null }, containerColor = Tk.L.bg, titleContentColor = Tk.L.fg, textContentColor = Tk.L.fg, title = { Text(tr("workspace.download"), color = Tk.L.accent) },
-                text = { Text(tr("workspace.quote", mapOf("name" to file.name, "credits" to credits))) },
+                text = { Text(credits) },
                 confirmButton = { TextButton(onClick = { quote = null; scope.launch { open(file) } }) { Text(tr("workspace.download"), color = Tk.L.accent) } },
                 dismissButton = { TextButton(onClick = { quote = null }) { Text(tr("common.cancel"), color = Tk.L.accent) } })
         }

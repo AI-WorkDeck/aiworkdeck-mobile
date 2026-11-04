@@ -1,6 +1,6 @@
 {
-  "serverCommit": "c1f10397db61f1d3baa350b66b3826b053334056",
-  "sha256": "0420cbe5d6882074a34038ebf55d8ecfd89fc82521ad34a502cea4212744e35b",
-  "pulledAt": "2026-11-03T11:40:10.793Z",
-  "note": "钉自 /Users/zewei/.codex/worktrees/recording-file-actions/1-2 checkba_cloud 的干净工作区，照 serverCommit 可复现。"
+  "serverCommit": "a231508b0395138e874206b8daad37b50f56900e",
+  "sha256": "e7dc25959358943d8dfd05060c5ffb4a8b8a661c6579203dfe8809d0a0556e2b",
+  "pulledAt": "2026-11-04T08:32:46.539Z",
+  "note": "钉自 /Users/zewei/.codex/worktrees/1701-cloud-postpaid/1-2 checkba_cloud 的干净工作区，照 serverCommit 可复现。"
 }

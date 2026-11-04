@@ -131,7 +131,7 @@ actor EvidenceStore {
             item.lastError = tr("watch.accountChanged")
             try writeManifest(item)
         }
-        guard var item = try loadAll().last(where: { !$0.moveBlocksMutation && $0.state == .waiting && $0.project != nil &&
+        guard var item = try loadAll().last(where: { !$0.moveBlocksMutation && !$0.cloudResumeRequired && $0.state == .waiting && $0.project != nil &&
             ($0.watchAccountBinding == nil || $0.watchAccountBinding == currentWatchBinding) }) else { return nil }
         item.state = .uploading
         item.uploadAttempted = true
@@ -195,8 +195,13 @@ actor EvidenceStore {
     }
 
     func updateState(_ id: UUID, to state: TransferState, progress: Double = 0,
-                     error: String? = nil) throws {
+                     error: String? = nil, cloudResumeRequired: Bool? = nil) throws {
         guard var item = try? loadOne(id), !item.moveBlocksMutation else { return }
+        if let cloudResumeRequired { item.cloudResumeRequired = cloudResumeRequired }
+        if item.cloudResumeRequired {
+            item.state = .failed; item.lastError = tr("postpaid.uploadPaused"); item.progress = 0
+            try writeManifest(item); return
+        }
         item.state = state
         item.progress = progress
         // 成功时清掉旧的失败原因，否则界面会一直挂着上次那条已经不成立的错
@@ -329,6 +334,7 @@ actor EvidenceStore {
             lastError: row.lastError,
             savedToAlbum: row.savedToAlbum ?? false,
             project: row.project,
+            cloudResumeRequired: row.cloudResumeRequired ?? false,
             uploadAttempted: row.uploadAttempted ?? (row.project != nil),
             watchAccountBinding: row.watchAccountBinding,
             archiveMove: row.archiveMove, remoteClientMediaId: row.remoteClientMediaId
@@ -339,7 +345,7 @@ actor EvidenceStore {
         let row = StoredRow(kind: item.kind, state: item.state, progress: item.progress,
                             manifest: item.manifest, lastError: item.lastError,
                             savedToAlbum: item.savedToAlbum, project: item.project,
-                            uploadAttempted: item.uploadAttempted, watchAccountBinding: item.watchAccountBinding,
+                            cloudResumeRequired: item.cloudResumeRequired, uploadAttempted: item.uploadAttempted, watchAccountBinding: item.watchAccountBinding,
                             archiveMove: item.archiveMove, remoteClientMediaId: item.remoteClientMediaId)
         let u = manifestDir.appendingPathComponent("\(item.id.uuidString).json")
         try JSONEncoder.iso.encode(row).write(to: u, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
@@ -376,6 +382,7 @@ private struct StoredRow: Codable {
     var savedToAlbum: Bool?
     /// 归档去向。未归类记录等待用户手动指定。
     var project: RelayProject?
+    var cloudResumeRequired: Bool?
     var uploadAttempted: Bool?
     var watchAccountBinding: String?
     var archiveMove: ArchiveMove?

@@ -30,6 +30,7 @@ class App : Application() {
         super.onCreate()
         val prefs = Prefs(this, AccountRegion.ofDefault(BuildConfig.DEFAULT_REGION))
         val store = EvidenceStore(File(filesDir, "FieldEvidence"), deviceFacts())
+        com.aiworkdeck.mobile.services.CloudEpoch.configure(File(filesDir, "CloudEpoch"), store)
         // 主机跟着账号区域现取，不在这里定死：登录页换区后同一个 Backend 下一个请求就打新主机
         val backend = Backend(
             baseUrlProvider = { prefs.accountRegion.baseUrl },

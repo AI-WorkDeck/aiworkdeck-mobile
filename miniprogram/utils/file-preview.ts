@@ -1,3 +1,4 @@
+import { cloudCanRead } from './cloud-access'
 import { ApiError, fileRequest, downloadProjectContent, getSession, backupConsent, uuid, type RelayProject } from './api'
 import { previewKind, unsupportedKey, type ProjectFile } from './project-files'
 import { t } from './i18n'
@@ -25,6 +26,17 @@ export async function previewQuote(file: ProjectFile): Promise<number> {
   validatePreview(file)
   const quote = await fileRequest<{ credits: number }>(`/api/mobile/transfer/quote?bytes=${Math.max(1, file.size)}`)
   return quote.credits
+}
+const cloudPreviews = new Map<string, string>()
+export function hasCloudPreview(project: RelayProject, file: ProjectFile): boolean { return cloudPreviews.has(pullKey(project, file)) }
+export interface CloudQuote { resourceHash: string; quoteCents: number; cashCurrency: 'CNY' | 'USD'; estimated: boolean }
+export async function cloudPreviewQuote(project: RelayProject, file: ProjectFile): Promise<CloudQuote> {
+  const consent = await backupConsent()
+  if (!consent.enabled || !cloudCanRead(consent)) throw new ApiError(-1, t('files.desktopRequired'))
+  if (!project.projectUid || !file.uid) throw new ApiError(-1, t('files.error.response'))
+  const result = await fileRequest<CloudQuote>(`/api/mobile/preview/catalog/${encodeURIComponent(project.projectUid)}/files/${encodeURIComponent(file.uid)}/quote`, undefined, true)
+  if (!/^[a-fA-F0-9]{64}$/.test(result.resourceHash ?? '') || !Number.isSafeInteger(result.quoteCents) || result.quoteCents < 0 || !['CNY', 'USD'].includes(result.cashCurrency) || result.estimated !== true) throw new ApiError(-1, t('files.error.response'))
+  return result
 }
 /** Save the idempotency key before the charged request; retry lost responses with that same key. */
 export async function pullPreview(project: RelayProject, file: ProjectFile, active: () => boolean): Promise<string> {
@@ -80,18 +92,28 @@ export async function pullPreview(project: RelayProject, file: ProjectFile, acti
   ensureActive()
   return pending.path
 }
-export async function cloudPreview(project: RelayProject, file: ProjectFile, active: () => boolean = () => true): Promise<string> {
+export async function cloudPreview(project: RelayProject, file: ProjectFile, active: () => boolean = () => true, expectedHash?: string): Promise<string> {
   validatePreview(file)
   const session = getSession()
   const consent = await backupConsent()
   if (!active() || !session || session !== getSession()) throw new ApiError(-1, t('files.error.closed'))
-  if (!consent.enabled || !consent.subscriptionActive) throw new ApiError(-1, t('files.desktopRequired'))
+  if (!consent.enabled || !cloudCanRead(consent)) throw new ApiError(-1, t('files.desktopRequired'))
   if (!project.projectUid || !file.uid) throw new ApiError(-1, t('files.error.response'))
-  return downloadProjectContent(`/api/mobile/preview/catalog/${encodeURIComponent(project.projectUid)}/files/${encodeURIComponent(file.uid)}/content`, file.size)
+  const cached = cloudPreviews.get(pullKey(project, file))
+  if (cached) return cached
+  if (!/^[a-fA-F0-9]{64}$/.test(expectedHash ?? '')) throw new ApiError(-1, t('files.error.response'))
+  const path = await downloadProjectContent(`/api/mobile/preview/catalog/${encodeURIComponent(project.projectUid)}/files/${encodeURIComponent(file.uid)}/content?requestId=${uuid()}&expectedHash=${expectedHash}`, file.size)
+  if (!active() || session !== getSession()) throw new ApiError(-1, t('files.error.closed'))
+  cloudPreviews.set(pullKey(project, file), path)
+  return path
 }
 
 /** Completed previews are page-scoped; unresolved charged transfers remain recoverable. */
 export function clearCompletedPreviews(session: string | null): void {
+  for (const [key, path] of cloudPreviews) if (JSON.parse(key)[0] === session) {
+    wx.getFileSystemManager().unlink({filePath: path, fail: () => {}})
+    cloudPreviews.delete(key)
+  }
   const rows = ledger()
   for (const [key, row] of Object.entries(rows)) {
     if (!row.acknowledged || JSON.parse(key)[0] !== session) continue

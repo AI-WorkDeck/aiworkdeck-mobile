@@ -20,6 +20,7 @@ export type { QueueState } from './contract/states'
 const STORAGE_KEY = 'awd.queue'
 
 export interface QueueItem {
+  cloudResumeRequired?: boolean
   organization?: CaptureOrganization
   organizationScope?: string | null
   /** uuid()，幂等键，重传不产生重复件 */
@@ -82,6 +83,7 @@ function updateItem(clientMediaId: string, mutate: (item: QueueItem) => void): b
   const item = items.find((it) => it.clientMediaId === clientMediaId)
   if (!item) return false
   mutate(item)
+  if (item.cloudResumeRequired) { item.state = 'failed'; item.errorMessage = t('postpaid.uploadPaused') }
   writeItems(items)
   return true
 }
@@ -242,7 +244,7 @@ function scheduleRetry(clientMediaId: string, attempts: number): void {
   const delay = RETRY_DELAYS_MS[attempts - 1]
   setTimeout(() => {
     updateItem(clientMediaId, (it) => {
-      if (it.state === 'failed') it.state = 'waiting'
+      if (it.state === 'failed' && !it.cloudResumeRequired) it.state = 'waiting'
     })
     processQueue()
   }, delay)
@@ -257,7 +259,7 @@ export function recoverOnLaunch(): void {
   const items = readItems()
   let changed = false
   for (const it of items) {
-    const to = recover(it.state, it.attempts ?? 0)
+    const to = it.cloudResumeRequired ? 'failed' : recover(it.state, it.attempts ?? 0)
     if (to !== it.state) { it.state = to; changed = true }
   }
   if (changed) writeItems(items)
@@ -267,7 +269,7 @@ export function recoverOnLaunch(): void {
 /** 逐个（单飞）把 waiting → uploading → uploaded；失败 → failed，继续下一个。 */
 export function processQueue(): void {
   if (uploading) return
-  const next = readItems().find((it) => it.state === 'waiting' && isAssigned(it) && !savingIds.has(it.clientMediaId))
+  const next = readItems().find((it) => !it.cloudResumeRequired && it.state === 'waiting' && isAssigned(it) && !savingIds.has(it.clientMediaId))
   if (!next) return
 
   uploading = true
@@ -315,9 +317,18 @@ export function processQueue(): void {
     })
 }
 
+export function pauseCloudUploads(): void {
+  const items = readItems()
+  for (const item of items) if (['waiting', 'uploading', 'failed'].includes(item.state)) {
+    item.cloudResumeRequired = true; item.state = 'failed'; item.errorMessage = t('postpaid.uploadPaused')
+  }
+  writeItems(items)
+}
+
 export function retry(clientMediaId: string): void {
   updateItem(clientMediaId, (it) => {
     if (it.state === 'failed') {
+      it.cloudResumeRequired = false
       it.state = 'waiting'
       it.errorMessage = undefined
       it.attempts = 0
