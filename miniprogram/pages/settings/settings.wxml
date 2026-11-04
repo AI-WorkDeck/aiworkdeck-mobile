@@ -36,6 +36,13 @@
     <text class="row__value">{{item.value}}</text>
   </view>
 
+  <view class="row"><text>{{postpaidTitle}}</text></view>
+  <view wx:for="{{postpaidRows}}" wx:key="label" class="row"><text>{{item.label}}</text><text>{{item.value}}</text></view>
+  <text class="hint">{{postpaidNotice}}</text><text class="hint">{{postpaidState}}</text>
+  <button wx:if="{{canAcceptPostpaid}}" loading="{{postpaidBusy}}" disabled="{{postpaidBusy}}" bindtap="onAcceptPostpaid">{{postpaidAccept}}</button>
+  <button wx:if="{{canResumeCloud}}" loading="{{postpaidBusy}}" disabled="{{postpaidBusy}}" bindtap="onResumeCloud">{{postpaidResume}}</button>
+  <button wx:if="{{hasDebt}}" bindtap="onRecharge">{{postpaidRepay}}</button>
+  <button wx:if="{{postpaidError}}" bindtap="onPostpaidRetry">{{postpaidError}}</button>
   <view class="row tappable" bindtap="onBackup">
     <text class="row__label">{{backupTitle}}</text>
     <text class="row__value">{{backupText}}</text>

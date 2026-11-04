@@ -8,6 +8,7 @@ function fixture() {
   const requests = []; let destroyed = 0
   class ApiError extends Error {} class Unauthorized extends Error {}
   const mocks = {
+    './CloudEpoch': {requiresCloudEpoch: () => false},
     contract: { ContractCapabilities: {} }, '../model/ProjectFiles': {},
     '@kit.NetworkKit': { http: { RequestMethod: { POST: 'POST' }, HttpDataType: { STRING: 'STRING' }, createHttp: () => ({ request: async (url, options) => { requests.push({url, options}); return { responseCode: status, result: JSON.stringify(reply) } }, destroy: () => destroyed++ }) } },
     '@kit.ArkTS': { JSON, util: { generateRandomUUID: () => 'synthetic-boundary' } },

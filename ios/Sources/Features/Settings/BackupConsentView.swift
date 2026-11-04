@@ -12,11 +12,11 @@ struct BackupConsentView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text(tr("backup.message"))
                     if let consent = model.backupConsent {
-                        if !consent.subscriptionActive { Text(tr("backup.subscriptionRequired")) }
+                        if !consent.canWriteCloud { Text(tr("postpaid.restricted")) }
                         if consent.enabled {
                             Button(tr("backup.disable"), role: .destructive) { confirmDisable = true }
                                 .accessibilityIdentifier("backup.disable")
-                        } else if consent.subscriptionActive {
+                        } else if consent.canWriteCloud {
                             Button(tr("backup.enable")) { save(true) }
                                 .buttonStyle(.borderedProminent)
                                 .accessibilityIdentifier("backup.enable")

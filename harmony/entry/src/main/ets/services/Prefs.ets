@@ -35,6 +35,17 @@ export class Prefs {
     this.ctx = ctx
   }
 
+  async cloudEpochBinding(scope: string): Promise<string> {
+    const p: preferences.Preferences = await this.open()
+    return await p.get('cloudEpoch.v1.' + scope, '') as string
+  }
+  async setCloudEpochBinding(scope: string, epoch: string, current: () => boolean): Promise<boolean> {
+    const p: preferences.Preferences = await this.open()
+    if (!current()) return false
+    p.putSync('cloudEpoch.v1.' + scope, epoch); await p.flush()
+    return current()
+  }
+
   private async open(): Promise<preferences.Preferences> {
     const cached: preferences.Preferences | null = this.store
     if (cached !== null) return cached

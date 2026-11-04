@@ -16,6 +16,7 @@ test('delayed mini-program upload cannot recreate results after logout or same-u
     const id = 'synthetic-' + change
     const storage = new Map<string, any>([
       ['awd.session', 'session-a'], ['awd.user', { id: 71 }],
+      ['awd.cloudEpoch.v1.https://addin.aiworkdeck.com:71', 'legacy'],
       ['awd.queue', [{ clientMediaId: id, filePath: '/synthetic/original.jpg', fileName: 'original.jpg', saved: true,
         deviceId: 'desktop-a', projectKey: '1', projectName: 'Synthetic', mediaType: 'image', capturedAt: '2026-10-30T10:00:00Z', createdAt: 1, state: 'waiting' }]],
     ])
@@ -25,9 +26,11 @@ test('delayed mini-program upload cannot recreate results after logout or same-u
       setStorageSync: (key: string, value: unknown) => storage.set(key, structuredClone(value)),
       removeStorageSync: (key: string) => storage.delete(key),
       getFileSystemManager: () => ({ unlink() {} }),
-      uploadFile: (options: any) => { pending = options; return {} },
+      request: (options: any) => { if(options.url.endsWith('/auth/me')) {options.success({statusCode:200,data:{code:0,data:{id:71}}});return} assert.ok(options.url.endsWith('/billing/cloud-state')); options.success({statusCode:404,data:{}}) },
+    uploadFile: (options: any) => { pending = options; return {} },
     }
     processQueue()
+    await new Promise(resolve => setImmediate(resolve))
     assert.ok(pending, 'actual upload must already be in flight')
     if (change === 'logout') setSession(null)
     if (change === 'relogin') setSession('session-b')
@@ -35,7 +38,7 @@ test('delayed mini-program upload cannot recreate results after logout or same-u
     await new Promise(resolve => setImmediate(resolve))
     const item = listItems()[0]
     assert.equal(item.filePath, '/synthetic/original.jpg')
-    assert.equal(item.state, 'uploaded')
+    assert.equal(item.state, change === 'unchanged' ? 'uploaded' : 'failed')
     if (change === 'unchanged') assert.equal(item.organization?.archiveName, 'archive.jpg')
     else assert.equal(item.organization, undefined)
   }
@@ -89,4 +92,13 @@ test('Harmony clearing during pending disk flush leaves no resurrected organizat
   release!()
   await saving
   assert.equal(values.size, 0)
+})
+
+test('Harmony epoch persistence refuses stale authorization after awaiting the preferences store', async () => {
+  const {prefs,values}=harmonyPrefs(async()=>{})
+  let current=true
+  const pending=prefs.setCloudEpochBinding('account:41','7',()=>current)
+  current=false
+  assert.equal(await pending,false)
+  assert.equal(values.has('cloudEpoch.v1.account:41'),false)
 })

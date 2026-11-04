@@ -1,3 +1,4 @@
+import { configureCloudEpoch } from './CloudEpoch'
 import { common } from '@kit.AbilityKit'
 import { PersonalConversationStore } from './PersonalConversationStore'
 import { Backend } from './Backend'
@@ -150,6 +151,7 @@ export class ServiceLocator {
     ServiceLocator.storeRef = store
     ServiceLocator.uploaderRef = uploader
     ServiceLocator.queueRef = new UploadQueue(store, uploader, backend)
+    configureCloudEpoch(prefs, store)
     ServiceLocator.ctxRef = ctx
   }
 

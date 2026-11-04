@@ -178,3 +178,13 @@ test('retry after catalog rename keeps the original downloaded extension and vie
   assert.match(f.previews[0].uri, /\.pdf$/)
   assert.equal(f.previews[0].mimeType, 'application/pdf')
 })
+
+test('cloud access permissions override true and false subscription identities', () => {
+  const granted = models.decodeBackupConsent({enabled: true, decided: true, subscriptionActive: false, cloudAccess: {canRead: true, canWrite: true}})
+  assert.equal(granted.canReadCloud, true)
+  assert.equal(granted.canWriteCloud, true)
+  assert.equal(granted.subscriptionActive, false)
+  const blocked = models.decodeBackupConsent({enabled: true, decided: true, subscriptionActive: true, cloudAccess: {canRead: false, canWrite: false}})
+  assert.equal(blocked.canReadCloud, false)
+  assert.equal(blocked.canWriteCloud, false)
+})

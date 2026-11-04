@@ -585,7 +585,7 @@ final class ProjectFilesTests: XCTestCase {
         await service.close()
     }
 
-    func testCatalogAndCloudOnlyFileReadNeverChargesOrAcknowledgesRelay() async throws {
+    func testCloudFileReadUsesQuotedHashAndBillingAttemptWithoutRelay() async throws {
         var paths: [String] = []
         ProjectFilesURLProtocol.handler = { request in
             let path = request.url!.path
@@ -600,17 +600,23 @@ final class ProjectFilesTests: XCTestCase {
             if path.hasSuffix("/files") {
                 return .json(#"{"files":[{"id":"23","uid":"file-uid","source":"cloud","name":"a.pdf","path":"a.pdf","size":3},{"id":"24","uid":"desktop-file","source":"desktop","name":"desktop.pdf","path":"desktop.pdf","size":3}],"count":2,"truncated":false}"#)
             }
+            if path.hasSuffix("/quote") { return .json(#"{"credits":1,"quoteCents":1,"cashCurrency":"CNY","estimated":true,"resourceHash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#) }
             XCTAssertEqual(path, "/api/mobile/preview/catalog/cloud-uid/files/file-uid/content")
+            let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
+            XCTAssertEqual(query.first { $0.name == "expectedHash" }?.value, String(repeating: "a", count: 64))
+            XCTAssertNotNil(UUID(uuidString: query.first { $0.name == "requestId" }?.value ?? ""))
             return .binary(Data([1, 2, 3]))
         }
         let service = client()
         let projects = try await service.projects()
         let listing = try await service.files(in: projects[0])
         XCTAssertEqual(listing.files.count, 1, "Cloud location must not route desktop bytes to cloud content")
+        let quote = try await service.quote(for: listing.files[0], in: projects[0])
+        XCTAssertEqual(quote.quoteCents, 1)
         let pull = try await service.preparePull(project: projects[0], file: listing.files[0])
         let url = try await service.download(pull)
         XCTAssertEqual(try Data(contentsOf: url), Data([1, 2, 3]))
-        XCTAssertEqual(paths.count, 4)
+        XCTAssertEqual(paths.count, 6)
         XCTAssertFalse(paths.contains { $0.contains("/transfer/") })
         await service.close()
     }

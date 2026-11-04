@@ -1,7 +1,8 @@
+import { formatMoney } from '../../utils/money'
 import { takePersonalPreview } from '../../utils/api'
 import { getSelectedProject, getSession, myProjects, fileRequest, uuid, type RelayProject } from '../../utils/api'
 import { folderEntries, mergeLiveFiles, previewKind, extension, type ProjectFile, type FileEntry } from '../../utils/project-files'
-import { validatePreview, previewQuote, hasPendingPull, pullPreview, cloudPreview, clearCompletedPreviews } from '../../utils/file-preview'
+import { validatePreview, previewQuote, cloudPreviewQuote, hasCloudPreview, hasPendingPull, pullPreview, cloudPreview, clearCompletedPreviews } from '../../utils/file-preview'
 import { sameProject } from '../../utils/project-catalog'
 import type { Metrics } from '../../utils/layout'
 import { t } from '../../utils/i18n'
@@ -116,7 +117,14 @@ Page({
       if (file.source === 'backup' && desktopOnline) file = { ...file, source: 'desktop' }
       let path: string
       if (file.source === 'cloud' || file.source === 'backup') {
-        path = await cloudPreview(project, file, () => this.alive())
+        if (hasCloudPreview(project, file)) { path = await cloudPreview(project, file, () => this.alive()) }
+        else {
+        const quote = await cloudPreviewQuote(project, file)
+        if (!this.alive()) return
+        const accepted = await wx.showModal({title: t('workspace.download'), content: file.name + '\n' + t('postpaid.estimate', {amount: formatMoney(quote.quoteCents, quote.cashCurrency)}) + '\n' + t('postpaid.partialCharge')})
+        if (!accepted.confirm || !this.alive()) return
+        path = await cloudPreview(project, file, () => this.alive(), quote.resourceHash)
+        }
       } else {
         if (this.unavailableDesktop === `${file.deviceId}:${file.projectKey}`) throw new Error(t('files.desktopRequired'))
         if (!desktopOnline) {

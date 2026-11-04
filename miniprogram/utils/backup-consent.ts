@@ -1,3 +1,4 @@
+import { cloudCanWrite } from './cloud-access'
 import { backupConsent, setBackupConsent, getSession, type BackupConsent } from './api'
 import { t } from './i18n'
 
@@ -7,13 +8,13 @@ export async function chooseBackupConsent(current: BackupConsent): Promise<Backu
   const session = getSession()
   const { confirm } = await wx.showModal({
     title: t('backup.title'),
-    content: t('backup.message') + (current.subscriptionActive ? '' : '\n\n' + t('backup.subscriptionRequired')),
-    showCancel: current.subscriptionActive,
-    confirmText: t(current.subscriptionActive ? 'backup.enable' : 'backup.decline'),
+    content: t('backup.message') + (cloudCanWrite(current) ? '' : '\n\n' + t('postpaid.restricted')),
+    showCancel: cloudCanWrite(current),
+    confirmText: t(cloudCanWrite(current) ? 'backup.enable' : 'backup.decline'),
     cancelText: t('backup.decline'),
   })
   if (session !== getSession()) throw new Error(t('backup.error'))
-  return setBackupConsent(current.subscriptionActive && confirm)
+  return setBackupConsent(cloudCanWrite(current) && confirm)
 }
 export async function promptBackupOnFirstUse(): Promise<void> {
   const session = getSession()

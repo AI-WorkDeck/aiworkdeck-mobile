@@ -50,12 +50,12 @@ data class CatalogProject(val projectUid: String, val name: String, val location
 @Serializable
 data class StoredRow(
     val kind: MediaKind, val state: String, val progress: Double, val manifest: CaptureManifest,
-    val lastError: String? = null, val savedToAlbum: Boolean? = null, val project: RelayProject? = null,
+    val cloudResumeRequired: Boolean = false, val lastError: String? = null, val savedToAlbum: Boolean? = null, val project: RelayProject? = null,
 )
 
 data class CaptureItem(
     val id: String, val kind: MediaKind, val state: TransferState, val manifest: CaptureManifest, val localFile: File,
-    val progress: Double, val lastError: String?, val savedToAlbum: Boolean, val project: RelayProject?,
+    val progress: Double, val lastError: String?, val savedToAlbum: Boolean, val project: RelayProject?, val cloudResumeRequired: Boolean = false,
 ) {
     val capturedAt: Instant get() = IsoTime.parse(manifest.capturedAt) ?: Instant.EPOCH
 }

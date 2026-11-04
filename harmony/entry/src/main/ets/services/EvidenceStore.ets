@@ -1,3 +1,4 @@
+import { tr } from '../design/L10n'
 import { fileIo as fs, hash } from '@kit.CoreFileKit'
 import { JSON as ArkJson, util } from '@kit.ArkTS'
 import { hilog } from '@kit.PerformanceAnalysisKit'
@@ -63,6 +64,7 @@ function decodeRow(o: Record<string, Object>): StoredRow | null {
     state: state,
     progress: getNumber(o, 'progress') ?? 0,
     manifest: manifest,
+    cloudResumeRequired: getBoolean(o, 'cloudResumeRequired'),
     lastError: getString(o, 'lastError'),
     savedToAlbum: getBoolean(o, 'savedToAlbum'),
     project: project === null ? undefined : project,
@@ -149,14 +151,16 @@ export class EvidenceStore {
     return await this.run<CaptureItem[]>(async (): Promise<CaptureItem[]> => this.loadAllLocked())
   }
 
-  async updateState(id: string, to: TransferState, progress: number, error: string | null): Promise<void> {
+  async updateState(id: string, to: TransferState, progress: number, error: string | null, cloudResumeRequired: boolean | null = null): Promise<void> {
     await this.run<void>(async (): Promise<void> => {
       const row: StoredRow | null = this.readRow(id)
       if (row === null) return
       // 成功时清掉旧的失败原因，否则界面会一直挂着上次那条已经不成立的错
+      const paused: boolean = cloudResumeRequired === null ? row.cloudResumeRequired === true : cloudResumeRequired
       const updated: StoredRow = {
-        kind: row.kind, state: to, progress: progress, manifest: row.manifest,
-        lastError: to === TransferState.failed && error !== null ? error : undefined,
+        cloudResumeRequired: paused,
+        kind: row.kind, state: paused ? TransferState.failed : to, progress: paused ? 0 : progress, manifest: row.manifest,
+        lastError: paused ? tr('postpaid.uploadPaused') : to === TransferState.failed && error !== null ? error : undefined,
         savedToAlbum: row.savedToAlbum, project: row.project,
       }
       this.writeRow(id, updated)
@@ -169,7 +173,7 @@ export class EvidenceStore {
       const row: StoredRow | null = this.readRow(id)
       if (row === null || row.project !== undefined || row.state !== TransferState.waiting) return
       const updated: StoredRow = {
-        kind: row.kind, state: row.state, progress: row.progress, manifest: row.manifest,
+        cloudResumeRequired: row.cloudResumeRequired, kind: row.kind, state: row.state, progress: row.progress, manifest: row.manifest,
         lastError: row.lastError, savedToAlbum: row.savedToAlbum, project: p,
       }
       this.writeRow(id, updated)
@@ -181,7 +185,7 @@ export class EvidenceStore {
       const row: StoredRow | null = this.readRow(id)
       if (row === null) return
       const updated: StoredRow = {
-        kind: row.kind, state: row.state, progress: row.progress, manifest: row.manifest,
+        cloudResumeRequired: row.cloudResumeRequired, kind: row.kind, state: row.state, progress: row.progress, manifest: row.manifest,
         lastError: row.lastError, savedToAlbum: true, project: row.project,
       }
       this.writeRow(id, updated)
@@ -330,6 +334,7 @@ export class EvidenceStore {
       lastError,
       row.savedToAlbum === true,
       row.project === undefined ? null : row.project,
+      row.cloudResumeRequired === true,
     )
   }
 }

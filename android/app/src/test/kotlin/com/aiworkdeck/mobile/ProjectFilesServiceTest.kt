@@ -77,13 +77,22 @@ class ProjectFilesServiceTest {
         val s = service(); active = false
         rejected { s.download(project, file) }; assertEquals(0, server.requestCount)
     }
-    @Test fun cloudIdentityWithoutSourceUsesConsentAndNeverCharges() = runTest {
+    @Test fun cloudIdentityWithoutSourceUsesConsentAndUniqueBillingAttempt() = runTest {
         val cloud = project.copy(deviceId = "cloud", projectUid = "uid")
         assertTrue(isCloudFile(cloud, file))
+        body("""{"enabled":true,"decided":true,"subscriptionActive":true}""")
+        body("""{"quoteCents":1,"cashCurrency":"CNY","estimated":true,"resourceHash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}""")
         body("""{"enabled":true,"decided":true,"subscriptionActive":true}"""); content()
-        val s = service(); val local = s.download(cloud, file.copy(uid = "fid"))
+        val s = service()
+        s.cloudQuote(cloud, file.copy(uid = "fid"))
         assertEquals("/api/mobile/backup-consent", server.takeRequest().path)
-        assertEquals("/api/mobile/preview/catalog/uid/files/fid/content", server.takeRequest().path)
+        assertEquals("/api/mobile/preview/catalog/uid/files/fid/quote", server.takeRequest().path)
+        val local = s.download(cloud, file.copy(uid = "fid"))
+        assertEquals("/api/mobile/backup-consent", server.takeRequest().path)
+        val download = server.takeRequest()
+        assertEquals("/api/mobile/preview/catalog/uid/files/fid/content", download.requestUrl!!.encodedPath)
+        assertNotNull(java.util.UUID.fromString(download.requestUrl!!.queryParameter("requestId")))
+        assertEquals("a".repeat(64), download.requestUrl!!.queryParameter("expectedHash"))
         s.close(); assertFalse(local.exists())
     }
     @Test fun missingCloudConsentPreventsBytes() = runTest {

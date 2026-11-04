@@ -22,6 +22,25 @@ final class ArchiveMoveTests: XCTestCase {
         return try XCTUnwrap(result)
     }
 
+    func testCloudPauseSurvivesReloadAndLateUploadReceiptUntilManualRetry() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = EvidenceStore(root: root)
+        let item = try await saved(store, state: .uploading)
+        try await store.updateState(item.id, to: .failed, cloudResumeRequired: true)
+        let reloaded = EvidenceStore(root: root)
+        try await reloaded.updateState(item.id, to: .uploaded)
+        let paused = try await loaded(reloaded, item.id)
+        XCTAssertTrue(paused.cloudResumeRequired)
+        XCTAssertEqual(paused.state, .failed)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: item.localURL.path))
+        let candidate = try await reloaded.claimNextUpload(currentWatchBinding: account.binding)
+        XCTAssertNil(candidate)
+        try await reloaded.updateState(item.id, to: .waiting, cloudResumeRequired: false)
+        let manual = try await reloaded.claimNextUpload(currentWatchBinding: account.binding)
+        XCTAssertEqual(manual?.id, item.id)
+    }
+
     func testPersistBeforeRegistrationAndOnlyDoneChangesProjectAndRemoteIdentity() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

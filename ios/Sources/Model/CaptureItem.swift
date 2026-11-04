@@ -108,6 +108,7 @@ struct CaptureItem: Identifiable, Sendable {
     var project: RelayProject?
     /// Even a failed request may have reached the server. Never silently reroute
     /// its idempotency key after the first upload attempt.
+    var cloudResumeRequired = false
     var uploadAttempted = false
     /// Watch recordings and moved remote receipts must stay bound to their owner.
     var watchAccountBinding: String? = nil

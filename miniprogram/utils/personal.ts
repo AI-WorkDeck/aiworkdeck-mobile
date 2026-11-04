@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
-export interface AssistantStatus { enabled: boolean; subscriptionActive: boolean; backupEnabled: boolean; summaryCount: number; reason?: string; consentEnabled?: boolean }
+export interface AssistantStatus { cloudAccess?: import('./cloud-access').CloudAccess; enabled: boolean; subscriptionActive: boolean; backupEnabled: boolean; summaryCount: number; reason?: string; consentEnabled?: boolean }
 export interface PersonalSource { deviceId: string; projectKey: string; projectName: string; sourceUpdatedAt?: string }
 export interface PersonalReply { status?: 'running' | 'completed' | 'failed'; conversationId: string; requestId: string; answer: string; sources: PersonalSource[] }
 export interface PersonalQuestion { conversationId?: string; requestId: string; message: string }
@@ -8,7 +8,7 @@ export interface CalendarEvent extends PersonalSource {
   id: string; projectUid?: string; title: string; dueDate: string; dueTime?: string; timeZone: string;
   remindAt?: string; status: 'OPEN' | 'DONE'; updatedAt?: string; files: { fileId: string | number; fileName: string }[]
 }
-export interface CalendarSnapshot { enabled: boolean; subscriptionActive: boolean; events: CalendarEvent[]; syncedAt?: string }
+export interface CalendarSnapshot { cloudAccess?: import('./cloud-access').CloudAccess; enabled: boolean; subscriptionActive: boolean; events: CalendarEvent[]; syncedAt?: string }
 export interface PersonalMessage { role: string; content: string }
 export function projectIdentity(event: CalendarEvent): string { return event.projectUid ?? `${event.deviceId}:${event.projectKey}` }
 export function upcoming(events: CalendarEvent[], days: number, project = '', now = new Date()): CalendarEvent[] {

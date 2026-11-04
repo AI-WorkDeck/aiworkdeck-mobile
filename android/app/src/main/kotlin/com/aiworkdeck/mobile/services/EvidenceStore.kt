@@ -67,11 +67,12 @@ class EvidenceStore(private val root: File, private val facts: DeviceFacts) {
 
     suspend fun loadAll(): List<CaptureItem> = withContext(Dispatchers.IO) { mutex.withLock { loadAllLocked() } }
 
-    suspend fun updateState(id: String, to: TransferState, progress: Double = 0.0, error: String? = null) = withContext(Dispatchers.IO) {
+    suspend fun updateState(id: String, to: TransferState, progress: Double = 0.0, error: String? = null, cloudResumeRequired: Boolean? = null) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val row = readRowLocked(id) ?: return@withLock
             // 成功时清掉旧的失败原因，否则界面会一直挂着上次那条已经不成立的错
-            val updated = row.copy(state = to.raw, progress = progress, lastError = if (to == TransferState.failed) error else null)
+            val paused = cloudResumeRequired ?: row.cloudResumeRequired
+            val updated = row.copy(cloudResumeRequired = paused, state = if (paused) TransferState.failed.raw else to.raw, progress = if (paused) 0.0 else progress, lastError = if (paused) tr("postpaid.uploadPaused") else if (to == TransferState.failed) error else null)
             writeRowLocked(id, updated)
         }
     }
@@ -157,7 +158,7 @@ class EvidenceStore(private val root: File, private val facts: DeviceFacts) {
             id = id, kind = row.kind, state = state ?: TransferState.failed, manifest = row.manifest,
             localFile = File(media, "$id.${row.kind.ext}"), progress = row.progress,
             lastError = if (state == null) tr("queue.unknownState", mapOf("state" to row.state)) else row.lastError,
-            savedToAlbum = row.savedToAlbum ?: false, project = row.project,
+            savedToAlbum = row.savedToAlbum ?: false, project = row.project, cloudResumeRequired = row.cloudResumeRequired,
         )
     }
 

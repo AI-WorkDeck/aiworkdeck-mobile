@@ -196,6 +196,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     if (!hideBalanceRow) {
                         InfoRow(tr("balance.title"), balanceCaption(balance, balanceErrorKey))
                     }
+                    PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { uriHandler.openUri("https://aiworkdeck.com/zh/account#wallet") })
                     balance?.subscription?.takeIf { it.active }?.let { sub ->
                         InfoRow(tr("subscription.available"), creditsCaption(sub.availableCents))
                         InfoRow(tr("subscription.weekly"), "${creditsCaption(sub.weeklyUsedCents)} / ${creditsCaption(sub.weeklyLimitCents)}")

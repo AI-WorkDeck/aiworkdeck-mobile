@@ -77,6 +77,7 @@ export function sameProject(a: RelayProject, b: RelayProject): boolean {
 
 /** 落盘行，与 iOS StoredRow 同形。state 存正式名字符串。 */
 export interface StoredRow {
+  cloudResumeRequired?: boolean
   kind: string
   state: string
   progress: number
@@ -87,6 +88,7 @@ export interface StoredRow {
 }
 
 export class CaptureItem {
+  cloudResumeRequired: boolean
   id: string
   kind: MediaKind
   state: TransferState
@@ -99,7 +101,8 @@ export class CaptureItem {
 
   constructor(id: string, kind: MediaKind, state: TransferState, manifest: CaptureManifest,
     localPath: string, progress: number, lastError: string | null,
-    savedToAlbum: boolean, project: RelayProject | null) {
+    savedToAlbum: boolean, project: RelayProject | null, cloudResumeRequired: boolean = false) {
+    this.cloudResumeRequired = cloudResumeRequired
     this.id = id
     this.kind = kind
     this.state = state

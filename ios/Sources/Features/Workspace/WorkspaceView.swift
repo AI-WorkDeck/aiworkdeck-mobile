@@ -506,7 +506,10 @@ private struct FileDownloadView: View {
                             if busy { ProgressView(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudDownload" : "workspace.downloading")) }
                             if let error { Text(error).foregroundStyle(T.S.failed) }
                             if let quote, !approved {
-                                Text((project.isCloud || file.source == "backup" || file.source == "cloud") ? tr("workspace.cloudHint") : tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)]))
+                                if let amount = quote.monetaryEstimate {
+                                    Text(tr("postpaid.estimate", ["amount": amount]))
+                                    Text(tr("postpaid.partialCharge"))
+                                } else { Text(tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)])) }
                                 Button(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudOpen" : "workspace.download")) { approved = true; Task { await download() } }
                                     .buttonStyle(.borderedProminent)
                                     .accessibilityIdentifier("workspace.confirmDownload")
@@ -546,7 +549,10 @@ private struct FileDownloadView: View {
         } catch let error as ProjectFileTerminalError {
             self.error = error.localizedDescription
             approved = false; quote = nil
-        } catch { self.error = error.localizedDescription }
+        } catch {
+            self.error = error.localizedDescription
+            if project.isCloud || file.source == "backup" || file.source == "cloud" { approved = false; quote = nil }
+        }
         busy = false
     }
 }

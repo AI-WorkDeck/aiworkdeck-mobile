@@ -19,7 +19,7 @@ export interface ProjectFile {
 }
 export interface FileListing { files: ProjectFile[]; truncated: boolean }
 export interface FileEntry { key: string; name: string; path: string; folder: boolean; file?: ProjectFile }
-export interface BackupConsent { enabled: boolean; decided: boolean; subscriptionActive: boolean }
+export interface BackupConsent { enabled: boolean; decided: boolean; subscriptionActive: boolean; canWriteCloud: boolean; canReadCloud: boolean }
 
 export function fileExtension(name: string): string {
   const dot: number = name.lastIndexOf('.')
@@ -95,7 +95,10 @@ export function decodeBackupConsent(value: Object | null): BackupConsent {
   const o: Record<string, Object> | null = asRecord(value)
   if (o === null || getBoolean(o, 'enabled') === undefined || getBoolean(o, 'decided') === undefined ||
     getBoolean(o, 'subscriptionActive') === undefined) throw new ApiError(1, tr('backup.error'))
-  return { enabled: getBoolean(o, 'enabled')!, decided: getBoolean(o, 'decided')!, subscriptionActive: getBoolean(o, 'subscriptionActive')! }
+  const access: Record<string, Object> | null = asRecord(o['cloudAccess'])
+  return { enabled: getBoolean(o, 'enabled')!, decided: getBoolean(o, 'decided')!, subscriptionActive: getBoolean(o, 'subscriptionActive')!,
+    canWriteCloud: access === null ? getBoolean(o, 'subscriptionActive')! : getBoolean(access, 'canWrite') === true,
+    canReadCloud: access === null ? getBoolean(o, 'subscriptionActive')! : getBoolean(access, 'canRead') === true }
 }
 
 export function previewMime(name: string): string {

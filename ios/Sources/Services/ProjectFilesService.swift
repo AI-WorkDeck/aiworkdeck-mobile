@@ -53,6 +53,8 @@ actor ProjectFilesService: ProjectFilesServing {
 
     deinit { try? FileManager.default.removeItem(at: cacheDirectory) }
 
+    private var cloudQuoteHashes: [String: String] = [:]
+
     func backupConsent() async throws -> BackupConsent {
         let data = try await response(request("/api/mobile/backup-consent"))
         return try decode(BackupConsent.self, data)
@@ -152,7 +154,13 @@ actor ProjectFilesService: ProjectFilesServing {
         try validatePreview(file)
         try await validateAccess(project: project, file: file)
         if project.isCloud || file.source == "cloud" || file.source == "backup" {
-            return ProjectFileQuote(credits: 0, balanceCents: nil)
+            guard let projectUID = project.projectUid, let fileUID = file.uid else { throw failure("files.error.response") }
+            let data = try await response(request("/api/mobile/preview/catalog/\(projectUID)/files/\(fileUID)/quote"))
+            if let envelope = try? JSONDecoder().decode(CodeOnly.self, from: data), envelope.code != 0 { throw failure("files.error.response") }
+            let quote = try decode(ProjectFileQuote.self, data)
+            guard quote.monetaryEstimate != nil, quote.estimated == true, let hash = quote.resourceHash, hash.range(of: "^[a-fA-F0-9]{64}$", options: .regularExpression) != nil else { throw failure("files.error.response") }
+            cloudQuoteHashes[projectUID + ":" + fileUID] = hash
+            return quote
         }
         return try await json("/api/mobile/transfer/quote?bytes=\(max(1, file.size))")
     }
@@ -277,7 +285,8 @@ actor ProjectFilesService: ProjectFilesServing {
         }
         if pull.project.isCloud || pull.file.source == "backup" || pull.file.source == "cloud" {
             guard let projectUID = pull.project.projectUid, let fileUID = pull.file.uid else { throw failure("files.error.response") }
-            let source = try await saveContent(path: "/api/mobile/preview/catalog/\(projectUID)/files/\(fileUID)/content",
+            guard let hash = cloudQuoteHashes.removeValue(forKey: projectUID + ":" + fileUID) else { throw failure("files.error.response") }
+            let source = try await saveContent(path: "/api/mobile/preview/catalog/\(projectUID)/files/\(fileUID)/content?requestId=\(UUID().uuidString)&expectedHash=\(hash)",
                                                name: pull.file.name, expectedSize: pull.file.size)
             var saved = false
             defer {
@@ -435,7 +444,11 @@ actor ProjectFilesService: ProjectFilesServing {
     private func response(_ request: URLRequest) async throws -> Data {
         let data: Data
         let response: URLResponse
-        do { (data, response) = try await session.data(for: request, delegate: noRedirect) }
+        do {
+            let authorized = try await CloudEpoch.shared.authorize(request, session: session)
+            try ensureOpen()
+            (data, response) = try await session.data(for: authorized, delegate: noRedirect)
+        }
         catch {
             try ensureOpen()
             throw failure("error.network")

@@ -196,10 +196,10 @@ class PersonalWorkspaceState(
                 if (status?.consentEnabled == false) {
                     PersonalConversationStore.clear(context); conversationStore = null
                     desktopCopy = null; copyTargets = null; messages.clear(); sources = emptyList(); conversationId = null; pending = null; draft = ""
-                } else if (status?.enabled == true && status?.subscriptionActive == true) restore = true
+                } else if (status?.enabled == true && status?.canUseCloud == true) restore = true
                 else { messages.clear(); sources = emptyList() }
             } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message }
-            try { calendar = backend.personalCalendar(); calendarError = null; CalendarReminders.replace(context, calendar?.takeIf { it.enabled && it.subscriptionActive }?.events ?: emptyList()) }
+            try { calendar = backend.personalCalendar(); calendarError = null; CalendarReminders.replace(context, calendar?.takeIf { it.enabled && it.canReadCloud }?.events ?: emptyList()) }
             catch (e: CancellationException) { throw e } catch (e: Exception) { calendarError = e.message }
             if (restore && !busy) restoreConversation(conversationStore ?: PersonalConversationStore.open(context, backend))
         } finally { loading = false }
@@ -218,7 +218,7 @@ class PersonalWorkspaceState(
         finally { loading = false }
     }
     suspend fun send() {
-        if (busy || loading || draft.isBlank() || status?.enabled != true || status?.subscriptionActive != true) return
+        if (busy || loading || draft.isBlank() || status?.enabled != true || status?.canUseCloud != true) return
         val store = conversationStore ?: return
         if (!store.isCurrent()) return
         val question = pending?.takeIf { it.message == draft.trim() } ?: PersonalQuestion(conversationId, draft.trim())
@@ -265,11 +265,11 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
         }
         if (state.tab == "assistant") {
             state.status?.let { status ->
-                if (!status.enabled || !status.subscriptionActive) {
-                    Text(tr(if (status.subscriptionActive) "personal.assistantConsent" else "personal.subscription"), color = Tk.L.fgMuted)
-                    if (status.subscriptionActive && !status.backupEnabled) TextButton(onClick = { onOpen(Overlay.Backup) }) { Text(tr("backup.title")) }
-                    if (!status.subscriptionActive) TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("settings.account")) }
-                    if (status.subscriptionActive && status.backupEnabled) TextButton(onClick = { consent = "assistant" }) { Text(tr("common.on")) }
+                if (!status.enabled || !status.canUseCloud) {
+                    Text(tr(if (status.canUseCloud) "personal.assistantConsent" else "postpaid.restricted"), color = Tk.L.fgMuted)
+                    if (status.canUseCloud && !status.backupEnabled) TextButton(onClick = { onOpen(Overlay.Backup) }) { Text(tr("backup.title")) }
+                    if (!status.canUseCloud) TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("settings.account")) }
+                    if (status.canUseCloud && status.backupEnabled) TextButton(onClick = { consent = "assistant" }) { Text(tr("common.on")) }
                 }
             }
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -294,7 +294,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
             if (state.messages.any { it.first == "assistant" }) TextButton(onClick = { state.openReport() }, enabled = !state.reporting && state.conversationId != null) { Text(tr("personal.report.conversation")) }
             Row {
                 OutlinedTextField(value = state.draft, onValueChange = { state.draft = it }, enabled = !state.busy && !state.loading, placeholder = { Text(tr("personal.ask")) }, modifier = Modifier.weight(1f), maxLines = 5)
-                TextButton(onClick = { scope.launch { state.send() } }, enabled = !state.busy && !state.loading && state.draft.isNotBlank() && state.status?.enabled == true && state.status?.subscriptionActive == true) { Text(tr("personal.send")) }
+                TextButton(onClick = { scope.launch { state.send() } }, enabled = !state.busy && !state.loading && state.draft.isNotBlank() && state.status?.enabled == true && state.status?.canUseCloud == true) { Text(tr("personal.send")) }
             }
             Row {
                 TextButton(onClick = { state.newConversation() }, enabled = !state.busy && !state.loading && state.pending == null) { Text(tr("personal.newChat")) }
@@ -302,9 +302,9 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
             }
         } else {
             val calendar = state.calendar
-            if (calendar != null && (!calendar.enabled || !calendar.subscriptionActive)) {
-                Text(tr(if (calendar.subscriptionActive) "personal.calendarConsent" else "personal.subscription"), color = Tk.L.fgMuted)
-                if (calendar.subscriptionActive) TextButton(onClick = { consent = "calendar" }) { Text(tr("common.on")) }
+            if (calendar != null && (!calendar.enabled || !calendar.canReadCloud)) {
+                Text(tr(if (calendar.canReadCloud) "personal.calendarConsent" else "postpaid.restricted"), color = Tk.L.fgMuted)
+                if (calendar.canWriteCloud) TextButton(onClick = { consent = "calendar" }) { Text(tr("common.on")) }
             }
             Row { for (n in listOf(1, 3, 5)) TextButton(onClick = { days = n }) { Text(if (n == 1) tr("personal.today") else tr("personal.nextDays", mapOf("days" to n))) }; TextButton(onClick = { scope.launch { state.load(context) } }) { Text(tr("common.refresh")) } }
             var expanded by remember { mutableStateOf(false) }
@@ -315,7 +315,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
                     calendar?.events?.distinctBy { it.projectIdentity }?.forEach { event -> DropdownMenuItem(text = { Text(event.projectName) }, onClick = { project = event.projectIdentity; expanded = false }) }
                 }
             }
-            Row { Text(tr("personal.reminders"), color = Tk.L.fg, modifier = Modifier.weight(1f)); Switch(checked = reminders, enabled = calendar?.enabled == true && calendar.subscriptionActive, onCheckedChange = { on ->
+            Row { Text(tr("personal.reminders"), color = Tk.L.fg, modifier = Modifier.weight(1f)); Switch(checked = reminders, enabled = calendar?.enabled == true && calendar.canReadCloud, onCheckedChange = { on ->
                 if (!on) { CalendarReminders.clear(context); reminders = false }
                 else if (Build.VERSION.SDK_INT >= 33) launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 else { reminders = CalendarReminders.enable(context); notificationError = !reminders; scope.launch { CalendarReminders.replace(context, calendar?.events ?: emptyList()) } }

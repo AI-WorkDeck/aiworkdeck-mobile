@@ -25,11 +25,11 @@ export class BackupConsentService {
     const decision: boolean | null = await new Promise<boolean | null>((resolve: (value: boolean | null) => void): void => {
       ui.showAlertDialog({ title: tr('backup.title'),
         message: current.enabled ? tr('backup.disableMessage') : tr('backup.message') +
-          (current.subscriptionActive ? '' : '\n\n' + tr('backup.subscriptionRequired')),
+          (current.canWriteCloud ? '' : '\n\n' + tr('postpaid.restricted')),
         autoCancel: true, cancel: (): void => resolve(null),
         primaryButton: { value: tr(current.enabled ? 'common.cancel' : 'backup.decline'), action: (): void => resolve(current.enabled ? null : false) },
-        secondaryButton: { value: tr(current.enabled ? 'backup.disable' : current.subscriptionActive ? 'backup.enable' : 'backup.decline'),
-          action: (): void => resolve(!current.enabled && current.subscriptionActive) },
+        secondaryButton: { value: tr(current.enabled ? 'backup.disable' : current.canWriteCloud ? 'backup.enable' : 'backup.decline'),
+          action: (): void => resolve(!current.enabled && current.canWriteCloud) },
       })
     })
     if (!alive() || session !== await ServiceLocator.session.current()) throw new ApiError(1, tr('backup.error'))

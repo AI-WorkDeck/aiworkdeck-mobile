@@ -7,6 +7,7 @@
  * （见 docs/specs/2026-08-20-project-sync-relay.md）。
  */
 
+import { listItems, pauseCloudUploads } from './queue'
 import { t, wireCodeFor } from './i18n'
 import { BACKUP_CONSENT_VERSION } from './contract/capabilities'
 import { fromCatalog, sameProject, type CatalogProject, type ProjectLocation } from './project-catalog'
@@ -120,6 +121,7 @@ function clearFilePreviews(): void {
 
 export function setSession(v: string | null): void {
   if (getSession() !== v) {
+    invalidateCloudEpoch(); pauseCloudUploads()
     clearFilePreviews()
     wx.removeStorageSync('awd.personalConversation')
     wx.removeStorageSync('awd.captureOrganize')
@@ -229,12 +231,56 @@ function authHeader(): Record<string, string> {
   return headers
 }
 
-function request<T>(
+const cloudLaunchedAt = Date.now()
+let cloudGeneration = 0
+export function invalidateCloudEpoch(): void { cloudGeneration++; cloudEpochs.clear() }
+const cloudEpochs = new Map<string, Promise<string | null>>()
+function needsCloudEpoch(path: string, method: string): boolean {
+  return method !== 'GET' && !/^\/api\/(auth|account|feedback|mobile\/billing)(\/|$)/.test(path)
+}
+export async function cloudWriteHeaders(path: string, method = 'POST', explicit = false): Promise<Record<string, string>> {
+  const session = getSession(), headers = authHeader()
+  if (!session || !needsCloudEpoch(path, method)) return headers
+  const revision = cloudGeneration
+  const key = BASE_URL + '\n' + session
+  let pending = cloudEpochs.get(key)
+  if (!pending || explicit) {
+    pending = new Promise<string | null>((resolve, reject) => wx.request({
+      url: BASE_URL + '/api/mobile/billing/cloud-state', method: 'GET', header: headers,
+      success: res => {
+        if (res.statusCode === 404) { resolve(null); return }
+        const state = res.data as {cloudAccess?: {epoch?: number}}
+        const epoch = state?.cloudAccess?.epoch
+        if (res.statusCode === 200 && Number.isSafeInteger(epoch) && epoch! >= 0) resolve(String(epoch))
+        else reject(new ApiError(1, t('postpaid.refresh')))
+      }, fail: () => reject(new ApiError(-1, t('error.unreachable'))),
+    }))
+    cloudEpochs.set(key, pending)
+    pending.catch(() => { if (cloudEpochs.get(key) === pending) cloudEpochs.delete(key) })
+  }
+  const epoch = await pending
+  const identity = await request<AccountUser>('/api/auth/me', 'GET')
+  if (!identity?.id || revision !== cloudGeneration) throw new ApiError(1, t('postpaid.refresh'))
+  const binding = 'awd.cloudEpoch.v1.' + BASE_URL + ':' + identity.id
+  const current = epoch ?? 'legacy'
+  const old = wx.getStorageSync(binding) as string | undefined
+  const legacyQueue = listItems().some(item => ['waiting','uploading','failed'].includes(item.state) && item.createdAt < cloudLaunchedAt)
+  if (!explicit && ((!!old && old !== current) || (!old && legacyQueue))) {
+    pauseCloudUploads(); throw new ApiError(1, t('postpaid.refresh'))
+  }
+  if (revision !== cloudGeneration || session !== getSession()) throw new ApiError(1, t('postpaid.refresh'))
+  wx.setStorageSync(binding, current)
+  if (session !== getSession()) throw new ApiError(1, t('files.error.closed'))
+  return epoch === null ? headers : {...headers, 'X-Cloud-Epoch': epoch}
+}
+
+async function request<T>(
   url: string,
   method: 'GET' | 'POST' | 'PUT',
   data?: Record<string, unknown>,
   opts: { bare?: boolean; rootEnvelope?: boolean; timeout?: number } = {},
 ): Promise<T> {
+  const headers = needsCloudEpoch(url, method) ? await cloudWriteHeaders(url, method) : authHeader()
   return new Promise((resolve, reject) => {
     wx.request({
       url: BASE_URL + url,
@@ -242,7 +288,7 @@ function request<T>(
       timeout: opts.timeout ?? 30000,
       data,
       header: {
-        ...authHeader(),
+        ...headers,
         ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}),
       },
       success: (res) => {
@@ -534,7 +580,7 @@ export function mediaStatus(ids: string[]): Promise<MediaStatus[]> {
 }
 
 /** 上传一件现场影像到中转区。幂等键是 clientMediaId，弱网重传不会产生重复件。 */
-export function uploadMedia(opts: {
+export async function uploadMedia(opts: {
   filePath: string
   deviceId: string
   projectKey: string
@@ -545,13 +591,14 @@ export function uploadMedia(opts: {
   onProgress?: (percent: number) => void
 }): Promise<CaptureOrganization | undefined> {
   const organize = captureOrganizationEnabled()
+  const headers = await cloudWriteHeaders('/api/mobile/media')
   return new Promise((resolve, reject) => {
     const task = wx.uploadFile({
       url: BASE_URL + '/api/mobile/media',
       filePath: opts.filePath,
       timeout: 180000,
       name: 'file',
-      header: authHeader(),
+      header: headers,
       formData: {
         deviceId: opts.deviceId,
         projectKey: opts.projectKey,
@@ -629,6 +676,7 @@ export function downloadProjectContent(path: string, expectedSize: number): Prom
 }
 
 export interface BackupConsent {
+  cloudAccess?: import('./cloud-access').CloudAccess
   enabled: boolean
   decided: boolean
   subscriptionActive: boolean
@@ -656,4 +704,18 @@ export function setPersonalPreview(project: RelayProject): void { personalPrevie
 export function takePersonalPreview(): RelayProject | null {
   const value = personalPreview; personalPreview = null
   return value?.session === getSession() ? value?.project ?? null : null
+}
+
+export function cloudBillingState(): Promise<import('./cloud-access').PostpaidState> {
+  return request('/api/mobile/billing/cloud-state', 'GET', undefined, { bare: true })
+}
+export async function reconnectCloud(): Promise<void> {
+  invalidateCloudEpoch(); pauseCloudUploads()
+  await cloudWriteHeaders('/api/mobile/media', 'POST', true)
+}
+export function resumeCloud(policyVersion: string): Promise<import('./cloud-access').PostpaidState> {
+  return request('/api/mobile/billing/resume-cloud', 'POST', { policyVersion }, { bare: true })
+}
+export function acceptPostpaid(policyVersion: string): Promise<import('./cloud-access').PostpaidState> {
+  return request('/api/mobile/billing/postpaid-accept', 'POST', { policyVersion }, { bare: true })
 }

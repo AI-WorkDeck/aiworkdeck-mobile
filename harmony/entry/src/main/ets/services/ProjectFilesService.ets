@@ -13,6 +13,12 @@ import { tr } from '../design/L10n'
 
 /** One workspace owns its requests. Session changes and closing the page invalidate every continuation. */
 export class ProjectFilesService {
+  private cloudCache: Map<string, string> = new Map<string, string>()
+  hasCloudCache(project: RelayProject, file: ProjectFile): boolean {
+    const path: string | undefined = this.cloudCache.get(project.projectUid + ":" + file.uid)
+    return path !== undefined && fs.accessSync(path)
+  }
+  private cloudQuoteHashes: Map<string, string> = new Map<string, string>()
   private active: boolean = true
   private readonly session: string
   private readonly sessionKey: string
@@ -110,6 +116,20 @@ export class ProjectFilesService {
     await this.ensureActive()
   }
 
+  async cloudQuote(project: RelayProject, file: ProjectFile): Promise<string> {
+    const consent = await ServiceLocator.backend.backupConsent()
+    await this.ensureActive()
+    if (!consent.enabled || !consent.canReadCloud) throw new ApiError(1, tr('files.desktopRequired'))
+    if (project.projectUid === undefined || file.uid === undefined) throw new ApiError(1, tr('files.error.response'))
+    const value: Record<string, Object> = await this.request(`/api/mobile/preview/catalog/${encodeURIComponent(project.projectUid)}/files/${encodeURIComponent(file.uid)}/quote`)
+    const hash: string | undefined = getString(value, 'resourceHash')
+    if (hash === undefined || !/^[a-fA-F0-9]{64}$/.test(hash)) throw new ApiError(1, tr('files.error.response'))
+    this.cloudQuoteHashes.set(project.projectUid + ':' + file.uid, hash)
+    const cents: number | undefined = getNumber(value, 'quoteCents')
+    const currency: string | undefined = getString(value, 'cashCurrency')
+    if (cents === undefined || !Number.isSafeInteger(cents) || cents < 0 || (currency !== 'CNY' && currency !== 'USD') || value['estimated'] !== true) throw new ApiError(1, tr('files.error.response'))
+    return tr('postpaid.estimate', { 'amount': currency + ' ' + (cents / 100).toFixed(2) }) + '\n' + tr('postpaid.partialCharge')
+  }
   async quote(file: ProjectFile): Promise<number> {
     validatePreview(file)
     const quote: Record<string, Object> = await this.request(`/api/mobile/transfer/quote?bytes=${Math.max(1, file.size)}`)
@@ -168,10 +188,18 @@ export class ProjectFilesService {
     } else {
       const consent = await ServiceLocator.backend.backupConsent()
       await this.ensureActive()
-      if (!consent.enabled || !consent.subscriptionActive) throw new ApiError(1, tr('files.desktopRequired'))
+      if (!consent.enabled || !consent.canReadCloud) throw new ApiError(1, tr('files.desktopRequired'))
       if (project.projectUid === undefined || file.uid === undefined) throw new ApiError(1, tr('files.error.response'))
-      path = await this.download(`/api/mobile/preview/catalog/${encodeURIComponent(project.projectUid)}/files/${encodeURIComponent(file.uid)}/content`, file.size, fileExtension(file.name))
+      const key: string = project.projectUid + ':' + file.uid
+      const cached: string | undefined = this.cloudCache.get(key)
+      if (cached !== undefined && fs.accessSync(cached)) { path = cached } else {
+      const hash: string | undefined = this.cloudQuoteHashes.get(key)
+      this.cloudQuoteHashes.delete(key)
+      if (hash === undefined) throw new ApiError(1, tr('files.error.response'))
+      path = await this.download(`/api/mobile/preview/catalog/${encodeURIComponent(project.projectUid)}/files/${encodeURIComponent(file.uid)}/content?requestId=${util.generateRandomUUID(false)}&expectedHash=${hash}`, file.size, fileExtension(file.name))
       this.completed.push(path)
+      this.cloudCache.set(key, path)
+      }
     }
     await this.ensureActive()
     const info: filePreview.PreviewInfo = { uri: fileUri.getUriFromPath(path), title: file.name, mimeType: previewMime(path) }

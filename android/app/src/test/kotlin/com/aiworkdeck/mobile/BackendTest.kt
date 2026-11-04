@@ -28,6 +28,19 @@ class BackendTest {
 
     @After fun tearDown() { server.shutdown() }
 
+    @Test fun cloudCapabilitiesOverrideSubscriptionWithoutMutatingIdentity() = runTest {
+        session.save("account-a")
+        server.enqueue(MockResponse().setBody("""{"enabled":true,"decided":true,"subscriptionActive":false,"cloudAccess":{"canUse":true,"canWrite":true,"canRead":true,"reason":"ready","epoch":1,"includedStorageBytes":0,"cleanupEligible":false,"notificationStatus":"none","frozen":false,"cleanupState":"none"}}"""))
+        val granted = backend.backupConsent()
+        assertFalse(granted.subscriptionActive)
+        assertTrue(granted.canWriteCloud)
+        assertTrue(granted.canReadCloud)
+        server.enqueue(MockResponse().setBody("""{"enabled":true,"decided":true,"subscriptionActive":true,"cloudAccess":{"canUse":false,"canWrite":false,"canRead":false,"reason":"cleared","epoch":2,"includedStorageBytes":0,"cleanupEligible":false,"notificationStatus":"delivered","frozen":true,"cleanupState":"complete"}}"""))
+        val denied = backend.backupConsent()
+        assertFalse(denied.canWriteCloud)
+        assertFalse(denied.canReadCloud)
+    }
+
     @Test fun defaultProjectUsesAuthenticatedPostAndPreservesIdentity() = runTest {
         session.save("test-account")
         server.enqueue(MockResponse().setBody(

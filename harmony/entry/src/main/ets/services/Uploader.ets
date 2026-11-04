@@ -1,3 +1,4 @@
+import { cloudEpoch } from './CloudEpoch'
 import { request } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { fileIo as fs } from '@kit.CoreFileKit'
@@ -73,12 +74,14 @@ export class Uploader {
   }
 
   async upload(item: CaptureItem, project: RelayProject, fileName: string,
-    onProgress: (p: number) => void): Promise<UploadResult> {
+    onProgress: (p: number) => void, expectedGeneration?: number): Promise<UploadResult> {
     const sid: string | null = await this.session.current()
     if (sid === null) throw new Unauthorized()
     const deviceId: string = await this.prefs.deviceId()
     const clientMediaId: string = item.manifest.clientMediaId
     const region: AccountRegion = this.region()
+    const epoch: string | null = await cloudEpoch(baseUrlOf(region), sid, currentAppLanguage(region), false, expectedGeneration)
+    if (sid !== await this.session.current() || region !== this.region()) throw new Unauthorized()
     const organizationScope: string = Prefs.organizationScope(baseUrlOf(region), sid)
     const organize: boolean = this.prefs.organizeCaptures(organizationScope)
 
@@ -86,14 +89,14 @@ export class Uploader {
     let task: request.agent.Task
     try {
       task = await request.agent.create(this.ctx,
-        this.config(item.localPath, fileName, sid, deviceId, project, item, organize, region))
+        this.config(item.localPath, fileName, sid, deviceId, project, item, organize, region, epoch))
     } catch (e) {
       hilog.warn(DOMAIN, TAG, 'sandbox path rejected, copying to cache: %{public}s', (e as Error).message)
       copiedPath = `${this.ctx.cacheDir}/upload-${clientMediaId}.${MediaKindOps.ext(item.kind)}`
       fs.copyFileSync(item.localPath, copiedPath)
       task = await request.agent.create(this.ctx,
         this.config(`internal://cache/upload-${clientMediaId}.${MediaKindOps.ext(item.kind)}`,
-          fileName, sid, deviceId, project, item, organize, region))
+          fileName, sid, deviceId, project, item, organize, region, epoch))
     }
 
     const tid: string = task.tid
@@ -199,7 +202,7 @@ export class Uploader {
   // ---- 内部 ----
 
   private config(path: string, fileName: string, sid: string, deviceId: string,
-    project: RelayProject, item: CaptureItem, organize: boolean, region: AccountRegion): request.agent.Config {
+    project: RelayProject, item: CaptureItem, organize: boolean, region: AccountRegion, epoch: string | null): request.agent.Config {
     const file: request.agent.FileSpec = {
       path: path, filename: fileName, mimeType: mimeOf(item.kind),
     }
@@ -214,6 +217,7 @@ export class Uploader {
       { name: 'file', value: file },
     ]
     const headers: Record<string, string> = { 'X-Session-Id': sid, 'X-App-Language': currentAppLanguage(region) }
+    if (epoch !== null) headers['X-Cloud-Epoch'] = epoch
     const conf: request.agent.Config = {
       action: request.agent.Action.UPLOAD,
       url: `${baseUrlOf(region)}/api/mobile/media`,

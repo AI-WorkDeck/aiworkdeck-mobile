@@ -15,7 +15,10 @@ function fixture() {
   ;(globalThis as any).wx = {
     getStorageSync: (key: string) => key === 'awd.session' ? session : undefined,
     removeStorageSync() {},
+    setStorageSync() {},
     request(opts: any) {
+      if (opts.url.endsWith('/auth/me')) { opts.success({statusCode:200,data:{code:0,data:{id:71}}}); return }
+      if (opts.url.endsWith('/billing/cloud-state')) { opts.success({statusCode:404,data:{}}); return }
       calls.push(opts)
       if (opts.url.endsWith('/assistant/chat')) {
         if (fail) return opts.fail()
@@ -40,6 +43,7 @@ test('failed transport preserves draft and repeats the same request UUID without
   const id = calls[0].data.requestId
   succeed()
   const pending = page.onSend()
+  await new Promise(resolve => setImmediate(resolve))
   assert.equal(calls[1].data.requestId, id)
   assert.equal(calls[1].data.projectKey, undefined)
   complete(); await pending
@@ -49,7 +53,7 @@ test('failed transport preserves draft and repeats the same request UUID without
 })
 test('late response after account switch cannot publish the former answer', async () => {
   const { page, succeed, changeAccount, complete } = fixture(); succeed()
-  const pending = page.onSend(); changeAccount(); complete(); await pending
+  const pending = page.onSend(); await new Promise(resolve => setImmediate(resolve)); changeAccount(); complete(); await pending
   assert.equal(page.data.messages.length, 0)
 })
 test('assistant disable clears current conversation only after settings succeeds', async () => {
@@ -74,6 +78,8 @@ test('restart recovers original pending result and history with GET only', async
     getStorageSync: (key: string) => key === 'awd.session' ? 'synthetic-account' : key === 'awd.user' ? { id: 71 } : key === 'awd.personalConversation' ? stored : undefined,
     setStorageSync() {},
     request(opts: any) {
+      if (opts.url.endsWith('/auth/me')) { opts.success({statusCode:200,data:{code:0,data:{id:71}}}); return }
+      if (opts.url.endsWith('/billing/cloud-state')) { opts.success({statusCode:404,data:{}}); return }
       requests.push(opts.method + ' ' + opts.url)
       const data = opts.url.includes('/requests/') ? { status: 'completed', conversationId: 'conversation', requestId: 'persisted-id', answer: 'Recovered', sources: [] }
         : { conversationId: 'conversation', messages: [{ role: 'user', content: 'Synthetic question' }, { role: 'assistant', content: 'Recovered' }] }
@@ -97,8 +103,11 @@ test('copy uses cloud location ID, preserves source history and requires confirm
   let confirmed = false
   ;(globalThis as any).wx = {
     getStorageSync: (key: string) => key === 'awd.session' ? 'synthetic-account' : undefined,
+    setStorageSync() {},
     showModal: async () => ({ confirm: confirmed }),
     request(opts: any) {
+      if (opts.url.endsWith('/auth/me')) { opts.success({statusCode:200,data:{code:0,data:{id:71}}}); return }
+      if (opts.url.endsWith('/billing/cloud-state')) { opts.success({statusCode:404,data:{}}); return }
       calls.push(opts)
       const data = opts.url.endsWith('/catalog') ? [
         { projectUid: 'formal-uid', name: 'Same name', projectType: 'BLANK', locations: [{ kind: 'desktop', deviceId: 'd', key: '999' }, { kind: 'cloud', deviceId: 'cloud', key: '71' }] },
@@ -148,9 +157,11 @@ test('desktop copy requires location proof and keeps ambiguous delivery UUID acr
   const calls: any[] = []; let saved: any
   ;(globalThis as any).wx = {
     getStorageSync: (key: string) => key === 'awd.session' ? 'synthetic-account' : key === 'awd.user' ? { id: 71 } : key === 'awd.personalConversation' ? saved : undefined,
-    setStorageSync(_key: string, value: any) { saved = structuredClone(value) },
+    setStorageSync(key: string, value: any) { if(key==='awd.personalConversation') saved = structuredClone(value) },
     showModal: async () => ({ confirm: true }),
     request(opts: any) {
+      if (opts.url.endsWith('/auth/me')) { opts.success({statusCode:200,data:{code:0,data:{id:71}}}); return }
+      if (opts.url.endsWith('/billing/cloud-state')) { opts.success({statusCode:404,data:{}}); return }
       if (opts.url.endsWith('/desktop-copies')) return opts.success({ statusCode: 200, data: { code: 0, data: [] } })
       calls.push(opts)
       if (calls.length === 1) return opts.fail()
@@ -187,4 +198,12 @@ test('desktop copy does not create a new request when recent receipt recovery fa
   assert.equal(posts, 0)
   assert.equal(page.conversation.desktopCopy, undefined)
   assert.ok(page.data.error)
+})
+
+test('postpaid restriction preserves local draft and does not send a paid request', async () => {
+  const {page, calls} = fixture()
+  page.data.status.cloudAccess = {canUse: false, canRead: true, canWrite: false, cleanupState: 'none'}
+  await page.onSend()
+  assert.equal(calls.length, 0)
+  assert.equal(page.data.draft, 'Synthetic question')
 })

@@ -47,6 +47,8 @@ function fakeWx() {
     showToast: () => {},
     showModal: async () => { modals++; return { confirm: choice, cancel: !choice } },
     request: (opts: any) => {
+      if (opts.url.endsWith('/auth/me')) { opts.success({statusCode:200,data:{code:0,data:{id:71}}}); return }
+      if (opts.url.endsWith('/billing/cloud-state')) { opts.success({statusCode:404,data:{}}); return }
       requests.push(opts)
       if (opts.url.endsWith('/backup-consent')) {
         if (opts.method === 'PUT') {
@@ -96,14 +98,14 @@ test('unsupported files never quote, create a pull or download bytes', async () 
   assert.equal(mock.downloads, 0)
 })
 
-test('cloud content requires both subscription and affirmative consent before any byte transfer', async () => {
+test('cloud content requires authoritative access and affirmative consent before any byte transfer', async () => {
   for (const consent of [{ enabled: false, subscriptionActive: true }, { enabled: true, subscriptionActive: false }]) {
     const mock = fakeWx(); mock.setConsent(consent)
     await assert.rejects(cloudPreview(project, file('1', 'a.pdf', { uid: 'uid' })))
     assert.equal(mock.downloads, 0)
   }
   const mock = fakeWx(); mock.setConsent({ enabled: true, subscriptionActive: true })
-  assert.equal(await cloudPreview(project, file('1', 'a.pdf', { uid: 'uid' })), '/temp.pdf')
+  assert.equal(await cloudPreview(project, file('1', 'a.pdf', { uid: 'uid' }), () => true, 'a'.repeat(64)), '/temp.pdf')
   assert.equal(mock.downloads, 1)
 })
 
