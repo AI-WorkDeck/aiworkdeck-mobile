@@ -252,7 +252,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
     LaunchedEffect(notificationEventId, state.calendar) {
         if (notificationEventId != null) { state.tab = "calendar"; state.selected = state.calendar?.events?.find { it.id == notificationEventId } }
     }
-    Column(Modifier.fillMaxSize().background(Tk.L.bg).padding(16.dp).imePadding()) {
+    Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(16.dp).imePadding()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(tr("personal." + state.tab), style = MaterialTheme.typography.titleLarge, color = Tk.L.fg)
             TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("home.settings")) }
