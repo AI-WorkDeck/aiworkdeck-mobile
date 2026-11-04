@@ -49,7 +49,7 @@ export struct Personal {
   private session: string = ''
   private host: string = ''
   private alive: boolean = false
-  private conversationId: string = ''
+  @State conversationId: string = ''
   private pendingId: string = ''
   private pendingText: string = ''
   private pendingConversationId: string = ''

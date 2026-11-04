@@ -258,3 +258,10 @@ test('AI label is as large as body with full foreground contrast; report title i
   assert.ok(source.includes('Text(message.content).fontSize(16).copyOption'))
   assert.ok(source.includes("Text(this.t('personal.report.conversation')).fontWeight(FontWeight.Medium)"))
 })
+
+
+test('restored conversation identity is observable so report visibility updates after async history loading', () => {
+  const source = readFileSync(new URL('../entry/src/main/ets/pages/Personal.ets', import.meta.url), 'utf8')
+  assert.match(source, /@State conversationId: string = ''/)
+  assert.doesNotMatch(source, /private conversationId:/)
+})
