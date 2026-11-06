@@ -4,26 +4,20 @@ import { GlassBar, StatusDot } from '../design/Components'
 import { tr } from '../design/L10n'
 import { Tk } from '../design/Tokens'
 import { CaptureItem, MediaKind } from '../model/Capture'
-import { formatHms } from '../model/Format'
+import { formatClock, formatDay, formatHms } from '../model/Format'
 import { TransferStateOps } from '../model/TransferState'
 import { RecorderService } from '../services/RecorderService'
 import { ViewerRequest } from './ViewerRequest'
 
-/** 哈希只露前 12 位：够两边核对是不是同一件，又不至于把整条状态行挤没。 */
-const SHA_PREFIX: number = 12
+/** 录音快进 / 快退一步的秒数。 */
+const SKIP_SECONDS: number = 15
 const MAX_ZOOM: number = 5
 const DOUBLE_TAP_ZOOM: number = 2.5
 const BLACK: string = '#000000'
-/**
- * 录音件的播放条高度（vp）。`Video` 把控制条画在**自己的底边**上，所以录音件不能
- * 让播放器铺满全屏——满屏时控制条正好落到底座那条元信息下面，被玻璃底座盖住，
- * 既看不见也点不着（走查实测：控制条 y 2517–2657 压着底座的 2512–2620）。
- */
-const AUDIO_PLAYER_H: number = 120
 
 /**
  * 全屏看大图。左右滑同一天的其他件；照片可缩放，录像与录音交给系统播放器。
- * 只放核对要用的东西：状态、失败原因、哈希前缀、时刻、项目。不做编辑、不做分享——
+ * 只放核对要用的东西：状态、失败原因、时刻、日期 · 类型、项目；哈希放在「记录详情」里（质证要用时可复制）。不做编辑、不做分享——
  * 取证件不该从这一屏流出去。镜像安卓 `ViewerScreen.kt` 与 iOS `ViewerView`。
  *
  * 要看哪一段由 `ViewerRequest` 带进来（只带 id 与起点），条目每次从 `AppModel.items` 取，
@@ -38,6 +32,12 @@ export struct Viewer {
   /** 照片缩放。翻页时复位——上一张放大着，下一张进来也是放大的会让人以为拍糊了。 */
   @State zoom: number = 1
   private pinchBase: number = 1
+  @State showingDetails: boolean = false
+  /** 录音播放：进度条与 ±15 秒由我们自己画，`Video` 只负责出声。 */
+  @State audioTime: number = 0
+  @State audioDuration: number = 0
+  @State audioPlaying: boolean = false
+  private audioController: VideoController = new VideoController()
   private token: number = -1
 
   aboutToAppear(): void {
@@ -68,6 +68,9 @@ export struct Viewer {
             this.index = i
             this.zoom = 1
             this.pinchBase = 1
+            this.audioTime = 0
+            this.audioDuration = 0
+            this.audioPlaying = false
           })
         }
         .width('100%')
@@ -131,22 +134,7 @@ export struct Viewer {
         if (RecorderService.shared.state.isRecording) {
           Text(tr('player.stopRecordingFirst')).fontColor(Tk.D.fg)
         } else if (item.kind === MediaKind.audio) {
-          // 音符与播放条竖着排、整体居中：录音没有画面，把播放器铺满屏只会让
-          // 控制条钻到底座下面去，而音符也被播放器那层不透明底色盖掉。
-          Column({ space: Tk.Sp.s2 }) {
-            Text('♪')
-              .fontSize(Tk.Ty.hero)
-              .fontColor(Tk.D.fgMuted)
-              .textAlign(TextAlign.Center)
-            Video({ src: fileUri.getUriFromPath(item.localPath) })
-              .controls(true)
-              .autoPlay(false)
-              .width('100%')
-              .height(AUDIO_PLAYER_H)
-          }
-          .width('100%')
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
+          this.audioPage(item)
         } else {
           Video({ src: fileUri.getUriFromPath(item.localPath) })
             .controls(true)
@@ -160,6 +148,81 @@ export struct Viewer {
     .width('100%')
     .height('100%')
     .backgroundColor(BLACK)
+  }
+
+  /**
+   * 录音页：音符 + 可拖的进度条（左已播、右总长）+ 后退 15 秒 / 播放暂停 / 前进 15 秒。
+   * `Video` 不出控制条、只占 1vp，声音照出；录像仍用 `Video` 自带的可拖进度条。
+   */
+  @Builder
+  audioPage(item: CaptureItem) {
+    Column({ space: Tk.Sp.s4 }) {
+      Text('♪')
+        .fontSize(Tk.Ty.hero)
+        .fontColor(Tk.D.fgMuted)
+        .textAlign(TextAlign.Center)
+      Video({ src: fileUri.getUriFromPath(item.localPath), controller: this.audioController })
+        .controls(false)
+        .autoPlay(false)
+        .width(1)
+        .height(1)
+        .onPrepared((e: PreparedInfo): void => { this.audioDuration = e.duration })
+        .onUpdate((e: PlaybackInfo): void => { this.audioTime = e.time })
+        .onStart((): void => { this.audioPlaying = true })
+        .onPause((): void => { this.audioPlaying = false })
+        .onFinish((): void => { this.audioPlaying = false })
+      Slider({ value: this.audioTime, min: 0, max: this.audioDuration > 0 ? this.audioDuration : 1, step: 0.1 })
+        .width('100%')
+        .enabled(this.audioDuration > 0)
+        .selectedColor(Tk.D.fg)
+        .onChange((value: number, mode: SliderChangeMode): void => {
+          this.audioTime = value
+          if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) this.seekAudio(value)
+        })
+      // 时间保持 LTR（RTL 语言下也不翻转）
+      Row() {
+        Text(formatClock(this.audioTime)).fontSize(Tk.Ty.micro).fontColor(Tk.D.fgMuted)
+        Blank()
+        Text(formatClock(this.audioDuration)).fontSize(Tk.Ty.micro).fontColor(Tk.D.fgMuted)
+      }
+      .width('100%')
+      .direction(Direction.Ltr)
+      Row({ space: Tk.Sp.s8 }) {
+        Text('-' + SKIP_SECONDS)
+          .fontSize(Tk.Ty.body)
+          .fontColor(Tk.D.fg)
+          .width(Tk.touchMin)
+          .height(Tk.touchMin)
+          .textAlign(TextAlign.Center)
+          .accessibilityText(tr('player.back15'))
+          .onClick((): void => this.seekAudio(this.audioTime - SKIP_SECONDS))
+        Text(this.audioPlaying ? '❚❚' : '▶')
+          .fontSize(Tk.Ty.title)
+          .fontColor(Tk.D.fg)
+          .width(Tk.touchMin)
+          .height(Tk.touchMin)
+          .textAlign(TextAlign.Center)
+          .accessibilityText(tr(this.audioPlaying ? 'player.pause' : 'player.play'))
+          .onClick((): void => {
+            if (this.audioPlaying) this.audioController.pause()
+            else this.audioController.start()
+          })
+        Text('+' + SKIP_SECONDS)
+          .fontSize(Tk.Ty.body)
+          .fontColor(Tk.D.fg)
+          .width(Tk.touchMin)
+          .height(Tk.touchMin)
+          .textAlign(TextAlign.Center)
+          .accessibilityText(tr('player.forward15'))
+          .onClick((): void => this.seekAudio(this.audioTime + SKIP_SECONDS))
+      }
+      .justifyContent(FlexAlign.Center)
+      .direction(Direction.Ltr)
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ left: Tk.Sp.gutter, right: Tk.Sp.gutter })
+    .justifyContent(FlexAlign.Center)
   }
 
   // MARK: - 顶栏与底座
@@ -182,6 +245,14 @@ export struct Viewer {
         .fontColor(Tk.D.fgMuted)
         .layoutWeight(1)
         .textAlign(TextAlign.End)
+      Text('ⓘ')
+        .fontSize(Tk.Ty.body)
+        .fontColor(this.showingDetails ? Tk.D.fg : Tk.D.fgMuted)
+        .width(Tk.touchMin)
+        .height(Tk.touchMin)
+        .textAlign(TextAlign.Center)
+        .accessibilityText(tr('viewer.details'))
+        .onClick((): void => { this.showingDetails = !this.showingDetails })
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
@@ -213,7 +284,7 @@ export struct Viewer {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       Row({ space: Tk.Sp.s2 }) {
-        Text(this.shaPrefix())
+        Text(this.dateKind())
           .fontSize(Tk.Ty.nano)
           .fontColor(Tk.D.fgMuted)
         Text(this.projectName())
@@ -225,12 +296,58 @@ export struct Viewer {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+
+      if (this.showingDetails) {
+        this.details()
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     .padding({
       left: Tk.Sp.gutter, right: Tk.Sp.gutter, top: Tk.Sp.s2, bottom: Tk.Sp.s3,
     })
+  }
+
+  /** 记录详情：拍摄时间、位置（±精度）、设备、文件指纹。都可长按复制。 */
+  @Builder
+  details() {
+    Column({ space: Tk.Sp.s2 }) {
+      this.detailRow(tr('details.capturedAt'), this.capturedAt(), false)
+      if (this.location().length > 0) {
+        this.detailRow(tr('details.location'), this.location(), false)
+      }
+      this.detailRow(tr('details.device'), this.device(), false)
+      // 文件指纹：质证时证明文件未被改动；平时用不到，所以只放在详情里
+      this.detailRow(tr('details.fingerprint'), this.fingerprint(), true)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .margin({ top: Tk.Sp.s2 })
+  }
+
+  @Builder
+  detailRow(label: string, value: string, mono: boolean) {
+    Column({ space: Tk.Sp.s1 }) {
+      Text(label)
+        .fontSize(Tk.Ty.nano)
+        .fontColor(Tk.D.fgMuted)
+      if (mono) {
+        // 哈希保持 LTR（RTL 语言下也不翻转）
+        Text(value)
+          .fontSize(Tk.Ty.nano)
+          .fontColor(Tk.D.fg)
+          .fontFamily('monospace')
+          .direction(Direction.Ltr)
+          .copyOption(CopyOptions.LocalDevice)
+      } else {
+        Text(value)
+          .fontSize(Tk.Ty.small)
+          .fontColor(Tk.D.fg)
+          .copyOption(CopyOptions.LocalDevice)
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 
   // MARK: - 当前这一件
@@ -263,9 +380,39 @@ export struct Viewer {
     return err === null ? '' : err
   }
 
-  private shaPrefix(): string {
+  /** 「日期 · 类型」：取代原来的哈希前缀。 */
+  private dateKind(): string {
     const it: CaptureItem | null = this.current()
-    return it === null ? '' : it.manifest.sha256.substring(0, SHA_PREFIX)
+    return it === null ? '' : formatDay(it.capturedAtMs()) + ' · ' + kindLabel(it.kind)
+  }
+
+  private capturedAt(): string {
+    const it: CaptureItem | null = this.current()
+    return it === null ? '' : formatDay(it.capturedAtMs()) + ' ' + formatHms(it.capturedAtMs())
+  }
+
+  private location(): string {
+    const it: CaptureItem | null = this.current()
+    if (it === null || it.manifest.latitude === undefined || it.manifest.longitude === undefined) return ''
+    const acc: number | undefined = it.manifest.horizontalAccuracy
+    return `${it.manifest.latitude.toFixed(5)}, ${it.manifest.longitude.toFixed(5)}` + (acc === undefined ? '' : ` ±${Math.round(acc)}m`)
+  }
+
+  private device(): string {
+    const it: CaptureItem | null = this.current()
+    return it === null ? '' : it.manifest.deviceModel
+  }
+
+  private fingerprint(): string {
+    const it: CaptureItem | null = this.current()
+    return it === null ? '' : it.manifest.sha256
+  }
+
+  private seekAudio(seconds: number): void {
+    const max: number = this.audioDuration
+    const target: number = seconds < 0 ? 0 : (seconds > max ? max : seconds)
+    this.audioTime = target
+    this.audioController.setCurrentTime(target, SeekMode.Accurate)
   }
 
   private time(): string {
@@ -303,4 +450,9 @@ export struct Viewer {
 function clampZoom(v: number): number {
   if (v < 1) return 1
   return v > MAX_ZOOM ? MAX_ZOOM : v
+}
+
+function kindLabel(kind: MediaKind): string {
+  if (kind === MediaKind.photo) return tr('home.mode.photo')
+  return kind === MediaKind.video ? tr('home.mode.video') : tr('home.mode.audio')
 }

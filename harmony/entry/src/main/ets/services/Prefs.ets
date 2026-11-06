@@ -17,6 +17,9 @@ const KEY_DEVICE_ID: string = 'deviceId'
 const KEY_LIBRARY_VIEW: string = 'libraryView'
 const KEY_ACCOUNT_REGION: string = 'accountRegion'
 const KEY_APP_LOCALE: string = 'appLocale'
+const KEY_RECENT_PROJECTS: string = 'recentProjectIds'
+/** 选项目页「最近使用」最多记几个。 */
+const RECENT_PROJECTS_MAX: number = 5
 
 export const LIBRARY_VIEW_GRID: string = 'grid'
 export const LIBRARY_VIEW_LIST: string = 'list'
@@ -181,6 +184,21 @@ export class Prefs {
       await store.put(KEY_SELECTED_PROJECT, ArkJson.stringify(p))
     }
     await store.flush()
+  }
+
+  /** 最近选过的项目 id（新的在前，最多 5 个）。只是 id、不是凭据，放 preferences 即可（对位 iOS RecentProjects）。 */
+  async recentProjectIds(): Promise<string[]> {
+    const p: preferences.Preferences = await this.open()
+    const empty: string[] = []
+    const v: preferences.ValueType = await p.get(KEY_RECENT_PROJECTS, empty)
+    return Array.isArray(v) ? (v as string[]) : empty
+  }
+
+  async useRecentProject(id: string): Promise<void> {
+    const ids: string[] = [id].concat((await this.recentProjectIds()).filter((x: string): boolean => x !== id))
+    const p: preferences.Preferences = await this.open()
+    await p.put(KEY_RECENT_PROJECTS, ids.slice(0, RECENT_PROJECTS_MAX))
+    await p.flush()
   }
 
   /** 图集的看法（grid / list）。进程被杀回来也该是用户上次选的那种，所以落盘而不是留内存。 */
