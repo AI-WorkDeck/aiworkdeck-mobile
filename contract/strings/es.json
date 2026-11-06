@@ -555,5 +555,6 @@
   "player.forward15": "Avanzar 15 segundos",
   "settings.billing": "Facturación",
   "settings.cloud": "Almacenamiento en la nube",
-  "settings.general": "General"
+  "settings.general": "General",
+  "bqt.rechargeInBqt": "Recargue o renueve en la app Baoqingtian"
 }

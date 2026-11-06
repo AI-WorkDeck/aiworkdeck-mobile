@@ -58,6 +58,7 @@ class BillingFixturesTest {
             assertEquals(name, e["currency"]!!.jsonPrimitive.content, got.currency)
             val wantPlan = e["plan"]!!.let { if (it is JsonNull) null else it.jsonPrimitive.content }
             assertEquals(name, wantPlan, got.plan)
+            assertEquals(name, e["billingLine"]?.jsonPrimitive?.content, got.billingLine)
         }
     }
 

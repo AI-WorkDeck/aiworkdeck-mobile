@@ -32,7 +32,7 @@ object ContractStrings {
         ContractLocale("hi", "hi-IN", "हिन्दी", "Hindi", "ltr"),
         ContractLocale("ar", "ar-SA", "العربية", "Arabic", "rtl"),
     )
-    val table: Map<String, Map<String, String>> = buildMap(557) {
+    val table: Map<String, Map<String, String>> = buildMap(558) {
         fillChunk0(this)
         fillChunk1(this)
         fillChunk2(this)
@@ -626,5 +626,6 @@ object ContractStrings {
         m["settings.billing"] = mapOf("zh-Hans" to "费用", "zh-Hant" to "費用", "en" to "Billing", "ja" to "料金", "ko" to "요금", "th" to "ค่าใช้จ่าย", "ms" to "Bil", "id" to "Tagihan", "vi" to "Thanh toán", "fr" to "Facturation", "de" to "Abrechnung", "es" to "Facturación", "pt-BR" to "Cobrança", "it" to "Fatturazione", "ru" to "Оплата", "el" to "Χρεώσεις", "tr" to "Faturalandırma", "nl" to "Facturering", "hi" to "बिलिंग", "ar" to "الفوترة")
         m["settings.cloud"] = mapOf("zh-Hans" to "云端存储", "zh-Hant" to "雲端儲存", "en" to "Cloud storage", "ja" to "クラウドストレージ", "ko" to "클라우드 저장공간", "th" to "พื้นที่คลาวด์", "ms" to "Storan awan", "id" to "Penyimpanan cloud", "vi" to "Lưu trữ đám mây", "fr" to "Stockage cloud", "de" to "Cloud-Speicher", "es" to "Almacenamiento en la nube", "pt-BR" to "Armazenamento na nuvem", "it" to "Archiviazione cloud", "ru" to "Облачное хранилище", "el" to "Αποθήκευση cloud", "tr" to "Bulut depolama", "nl" to "Cloudopslag", "hi" to "क्लाउड स्टोरेज", "ar" to "التخزين السحابي")
         m["settings.general"] = mapOf("zh-Hans" to "通用", "zh-Hant" to "一般", "en" to "General", "ja" to "一般", "ko" to "일반", "th" to "ทั่วไป", "ms" to "Umum", "id" to "Umum", "vi" to "Chung", "fr" to "Général", "de" to "Allgemein", "es" to "General", "pt-BR" to "Geral", "it" to "Generali", "ru" to "Основные", "el" to "Γενικά", "tr" to "Genel", "nl" to "Algemeen", "hi" to "सामान्य", "ar" to "عام")
+        m["bqt.rechargeInBqt"] = mapOf("zh-Hans" to "请在包晴天 App 充值或续费", "zh-Hant" to "請在包晴天 App 儲值或續費", "en" to "Top up or renew in the Baoqingtian app", "ja" to "包晴天アプリでチャージまたは更新してください", "ko" to "바오칭톈 앱에서 충전 또는 갱신하세요", "th" to "โปรดเติมเงินหรือต่ออายุในแอป Baoqingtian", "ms" to "Sila tambah nilai atau perbaharui dalam aplikasi Baoqingtian", "id" to "Isi ulang atau perpanjang di aplikasi Baoqingtian", "vi" to "Vui lòng nạp tiền hoặc gia hạn trong ứng dụng Baoqingtian", "fr" to "Rechargez ou renouvelez dans l'application Baoqingtian", "de" to "Bitte in der Baoqingtian-App aufladen oder verlängern", "es" to "Recargue o renueve en la app Baoqingtian", "pt-BR" to "Recarregue ou renove no app Baoqingtian", "it" to "Ricarica o rinnova nell'app Baoqingtian", "ru" to "Пополните счёт или продлите в приложении Baoqingtian", "el" to "Κάντε φόρτιση ή ανανέωση στην εφαρμογή Baoqingtian", "tr" to "Baoqingtian uygulamasında yükleme veya yenileme yapın", "nl" to "Opwaarderen of verlengen in de Baoqingtian-app", "hi" to "Baoqingtian ऐप में रिचार्ज या नवीनीकरण करें", "ar" to "يرجى الشحن أو التجديد في تطبيق Baoqingtian")
     }
 }

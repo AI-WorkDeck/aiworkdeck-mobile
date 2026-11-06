@@ -555,5 +555,6 @@
   "player.forward15": "Μπροστά 15 δευτερόλεπτα",
   "settings.billing": "Χρεώσεις",
   "settings.cloud": "Αποθήκευση cloud",
-  "settings.general": "Γενικά"
+  "settings.general": "Γενικά",
+  "bqt.rechargeInBqt": "Κάντε φόρτιση ή ανανέωση στην εφαρμογή Baoqingtian"
 }

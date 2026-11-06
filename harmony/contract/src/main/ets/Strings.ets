@@ -12404,5 +12404,27 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "nl": "Algemeen",
     "hi": "सामान्य",
     "ar": "عام"
+  },
+  "bqt.rechargeInBqt": {
+    "zh-Hans": "请在包晴天 App 充值或续费",
+    "zh-Hant": "請在包晴天 App 儲值或續費",
+    "en": "Top up or renew in the Baoqingtian app",
+    "ja": "包晴天アプリでチャージまたは更新してください",
+    "ko": "바오칭톈 앱에서 충전 또는 갱신하세요",
+    "th": "โปรดเติมเงินหรือต่ออายุในแอป Baoqingtian",
+    "ms": "Sila tambah nilai atau perbaharui dalam aplikasi Baoqingtian",
+    "id": "Isi ulang atau perpanjang di aplikasi Baoqingtian",
+    "vi": "Vui lòng nạp tiền hoặc gia hạn trong ứng dụng Baoqingtian",
+    "fr": "Rechargez ou renouvelez dans l'application Baoqingtian",
+    "de": "Bitte in der Baoqingtian-App aufladen oder verlängern",
+    "es": "Recargue o renueve en la app Baoqingtian",
+    "pt-BR": "Recarregue ou renove no app Baoqingtian",
+    "it": "Ricarica o rinnova nell'app Baoqingtian",
+    "ru": "Пополните счёт или продлите в приложении Baoqingtian",
+    "el": "Κάντε φόρτιση ή ανανέωση στην εφαρμογή Baoqingtian",
+    "tr": "Baoqingtian uygulamasında yükleme veya yenileme yapın",
+    "nl": "Opwaarderen of verlengen in de Baoqingtian-app",
+    "hi": "Baoqingtian ऐप में रिचार्ज या नवीनीकरण करें",
+    "ar": "يرجى الشحن أو التجديد في تطبيق Baoqingtian"
   }
 }

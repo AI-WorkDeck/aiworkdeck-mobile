@@ -555,5 +555,6 @@
   "player.forward15": "15 saniye ileri",
   "settings.billing": "Faturalandırma",
   "settings.cloud": "Bulut depolama",
-  "settings.general": "Genel"
+  "settings.general": "Genel",
+  "bqt.rechargeInBqt": "Baoqingtian uygulamasında yükleme veya yenileme yapın"
 }

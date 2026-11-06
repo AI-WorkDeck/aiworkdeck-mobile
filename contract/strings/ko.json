@@ -555,5 +555,6 @@
   "player.forward15": "15초 앞으로",
   "settings.billing": "요금",
   "settings.cloud": "클라우드 저장공간",
-  "settings.general": "일반"
+  "settings.general": "일반",
+  "bqt.rechargeInBqt": "바오칭톈 앱에서 충전 또는 갱신하세요"
 }

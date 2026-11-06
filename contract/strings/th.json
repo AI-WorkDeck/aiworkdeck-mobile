@@ -555,5 +555,6 @@
   "player.forward15": "ไปข้างหน้า 15 วินาที",
   "settings.billing": "ค่าใช้จ่าย",
   "settings.cloud": "พื้นที่คลาวด์",
-  "settings.general": "ทั่วไป"
+  "settings.general": "ทั่วไป",
+  "bqt.rechargeInBqt": "โปรดเติมเงินหรือต่ออายุในแอป Baoqingtian"
 }

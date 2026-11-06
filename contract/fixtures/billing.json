@@ -11,7 +11,12 @@
       "display": "$9.90" },
     { "name": "上游没给 plan 这个字段：解成 null（getPlan() 自己只回 paid/free，不会是 null）", "json": { "balanceCents": 5000, "currency": "CNY", "plan": null },
       "expect": { "balanceCents": 5000, "currency": "CNY", "plan": null },
-      "display": "¥50.00" }
+      "display": "¥50.00" },
+    { "name": "包晴天律师：billingLine=bqt，balanceCents 已是积分折算值；各端须收起本站充值、订阅购买与后付费还款，改提示去包晴天 App", "json": { "balanceCents": 3297, "currency": "CNY", "plan": "paid", "billingLine": "bqt",
+        "bqtMember": { "points": "98.92", "cents": 3297, "outstandingCents": 0, "failedCount": 0, "centsPerPoint": 33.333333, "levelCode": "GROWTH", "status": "ACTIVE", "aiWorkbench": true, "expireAt": "2027-11-06T00:00:00Z", "fetchedAt": "2026-11-06T08:00:00Z", "rechargeAllowed": false } },
+      "expect": { "balanceCents": 3297, "currency": "CNY", "plan": "paid", "billingLine": "bqt",
+        "bqtMember": { "points": "98.92", "cents": 3297, "outstandingCents": 0, "failedCount": 0, "centsPerPoint": 33.333333, "levelCode": "GROWTH", "status": "ACTIVE", "aiWorkbench": true, "expireAt": "2027-11-06T00:00:00Z", "fetchedAt": "2026-11-06T08:00:00Z", "rechargeAllowed": false } },
+      "display": "¥32.97" }
   ],
   "recharge": [
     { "name": "qrcode：codeUrl 与 qrCode 都在，redirectUrl 不出现",
