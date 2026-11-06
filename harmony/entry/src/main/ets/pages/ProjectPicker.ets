@@ -199,6 +199,7 @@ export struct ProjectPicker {
       Divider().color(Tk.L.rule)
     }
     .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 
   /** 一行：名称（可带一行副标题），当前项目右侧打勾。 */

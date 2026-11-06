@@ -175,6 +175,7 @@ export struct Viewer {
         .width('100%')
         .enabled(this.audioDuration > 0)
         .selectedColor(Tk.D.fg)
+        .trackColor(Tk.D.fgMuted)
         .onChange((value: number, mode: SliderChangeMode): void => {
           this.audioTime = value
           if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) this.seekAudio(value)
@@ -196,7 +197,7 @@ export struct Viewer {
           .textAlign(TextAlign.Center)
           .accessibilityText(tr('player.back15'))
           .onClick((): void => this.seekAudio(this.audioTime - SKIP_SECONDS))
-        Text(this.audioPlaying ? '❚❚' : '▶')
+        Text(this.audioPlaying ? '❚❚' : '▶\uFE0E')
           .fontSize(Tk.Ty.title)
           .fontColor(Tk.D.fg)
           .width(Tk.touchMin)
