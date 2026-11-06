@@ -390,6 +390,8 @@ export interface BillingBalance {
   currency: 'CNY' | 'USD'
   plan: string | null
   subscription?: SubscriptionBalance
+  /** 计费线 standard / circle / bqt；旧服务器缺席时按 standard */
+  billingLine?: 'standard' | 'circle' | 'bqt'
 }
 
 /**

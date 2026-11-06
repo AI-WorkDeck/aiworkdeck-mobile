@@ -28,12 +28,14 @@
     </view>
   </view>
   <text wx:if="{{balanceVisible && openHint}}" class="hint">{{openHint}}</text>
+  <text wx:if="{{bqt}}" class="hint">{{bqtHint}}</text>
 
   <view wx:for="{{subscriptionRows}}" wx:key="label" class="row">
     <text class="row__label">{{item.label}}</text>
     <text class="row__value">{{item.value}}</text>
   </view>
 
+  <block wx:if="{{!bqt}}">
   <view class="row"><text class="row__label">{{postpaidTitle}}</text><text class="row__value">{{postpaidState}}</text></view>
   <view wx:for="{{postpaidRows}}" wx:key="label" class="row"><text class="row__label">{{item.label}}</text><text class="row__value">{{item.value}}</text></view>
   <text class="hint">{{postpaidNotice}}</text>
@@ -41,6 +43,7 @@
   <button wx:if="{{canResumeCloud}}" loading="{{postpaidBusy}}" disabled="{{postpaidBusy}}" bindtap="onResumeCloud">{{postpaidResume}}</button>
   <button wx:if="{{hasDebt}}" bindtap="onRecharge">{{postpaidRepay}}</button>
   <button wx:if="{{postpaidError}}" bindtap="onPostpaidRetry">{{postpaidError}}</button>
+  </block>
   <view class="rule"></view>
 
   <!-- 云端存储：备份 -->

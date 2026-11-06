@@ -555,5 +555,6 @@
   "player.forward15": "Forward 15 seconds",
   "settings.billing": "Billing",
   "settings.cloud": "Cloud storage",
-  "settings.general": "General"
+  "settings.general": "General",
+  "bqt.rechargeInBqt": "Top up or renew in the Baoqingtian app"
 }

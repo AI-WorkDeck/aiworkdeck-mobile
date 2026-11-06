@@ -555,5 +555,6 @@
   "player.forward15": "15秒進む",
   "settings.billing": "料金",
   "settings.cloud": "クラウドストレージ",
-  "settings.general": "一般"
+  "settings.general": "一般",
+  "bqt.rechargeInBqt": "包晴天アプリでチャージまたは更新してください"
 }

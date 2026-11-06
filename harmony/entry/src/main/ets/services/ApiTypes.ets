@@ -251,6 +251,19 @@ export function decodeCatalog(v: Object | null): RelayProject[] {
   return result
 }
 
+/** 余额接口里设置页要用的两样：订阅额度与计费线。 */
+export interface BillingSnapshot {
+  subscription: SubscriptionBalance | null
+  billingLine: string
+}
+
+/** 计费线 standard / circle / bqt；旧服务器缺席时按 standard。 */
+export function decodeBillingLine(v: Object | null): string {
+  const root: Record<string, Object> | null = asRecord(v)
+  const line: string | undefined = root === null ? undefined : getString(root, 'billingLine')
+  return line ?? 'standard'
+}
+
 /** Missing legacy subscription is distinct from an empty allowance. */
 export function decodeSubscriptionBalance(v: Object | null): SubscriptionBalance | null {
   const root: Record<string, Object> | null = asRecord(v)

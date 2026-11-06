@@ -555,5 +555,6 @@
   "player.forward15": "前进 15 秒",
   "settings.billing": "费用",
   "settings.cloud": "云端存储",
-  "settings.general": "通用"
+  "settings.general": "通用",
+  "bqt.rechargeInBqt": "请在包晴天 App 充值或续费"
 }

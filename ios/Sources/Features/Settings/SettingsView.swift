@@ -38,6 +38,11 @@ struct SettingsView: View {
         guard AccountRegion.current.billingEnabled else {
             return API.BalanceRowPlan(showRow: false, showRecharge: false, textKey: nil)
         }
+        // 包晴天律师只在包晴天 App 充值：本站充值会被服务端拒绝（bqt_recharge_via_bqt），
+        // 内购是先扣钱后到账，入口必须藏掉。
+        if isBqt {
+            return API.BalanceRowPlan(showRow: true, showRecharge: false, textKey: nil)
+        }
         switch balanceState {
         case .unknown:
             return API.BalanceRowPlan(showRow: false, showRecharge: false, textKey: nil)
@@ -106,9 +111,16 @@ struct SettingsView: View {
                                     infoRow(tr("subscription.sandbox.expires"), date.formatted(date: .abbreviated, time: .shortened))
                                 }
                             }
-                            PostpaidSection(canRepay: true, repay: { showRecharge = true })
-                            navRow(tr("subscription.store.title")) { showSubscription = true }
-                                .accessibilityIdentifier("settings.subscription")
+                            if isBqt {
+                                Text(tr("bqt.rechargeInBqt"))
+                                    .font(T.F.small())
+                                    .foregroundStyle(T.L.fgMuted)
+                                    .accessibilityIdentifier("settings.bqtHint")
+                            } else {
+                                PostpaidSection(canRepay: true, repay: { showRecharge = true })
+                                navRow(tr("subscription.store.title")) { showSubscription = true }
+                                    .accessibilityIdentifier("settings.subscription")
+                            }
                         }
                     }
 
@@ -379,6 +391,11 @@ struct SettingsView: View {
             .font(T.F.small())
             .foregroundStyle(T.L.accent)
             .frame(minHeight: T.touchMin)
+    }
+
+    private var isBqt: Bool {
+        if case .ok(let b) = balanceState { return b.billingLine == "bqt" }
+        return false
     }
 
     private var accountName: String {

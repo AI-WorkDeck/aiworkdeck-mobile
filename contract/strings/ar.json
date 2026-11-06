@@ -555,5 +555,6 @@
   "player.forward15": "تقديم 15 ثانية",
   "settings.billing": "الفوترة",
   "settings.cloud": "التخزين السحابي",
-  "settings.general": "عام"
+  "settings.general": "عام",
+  "bqt.rechargeInBqt": "يرجى الشحن أو التجديد في تطبيق Baoqingtian"
 }

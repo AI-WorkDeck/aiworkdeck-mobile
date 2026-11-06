@@ -555,5 +555,6 @@
   "player.forward15": "Вперёд на 15 секунд",
   "settings.billing": "Оплата",
   "settings.cloud": "Облачное хранилище",
-  "settings.general": "Основные"
+  "settings.general": "Основные",
+  "bqt.rechargeInBqt": "Пополните счёт или продлите в приложении Baoqingtian"
 }

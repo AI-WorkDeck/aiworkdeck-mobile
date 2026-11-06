@@ -110,6 +110,8 @@ Page({
     subscriptionRows: [] as { label: string, value: string }[],
     // 充值入口跟余额行分开算：NOT_CONNECTED 时行在、入口也要在（dev-board#535）
     rechargeVisible: false,
+    bqt: false,
+    bqtHint: '',
     rechargeText: t('recharge.entry'),
     // 「充值后即开通统一账户」只在 NOT_CONNECTED 时说，别的态说这句是废话
     openHint: '',
@@ -207,7 +209,11 @@ Page({
             { label: t('subscription.weekly'), value: `${credits(b.subscription.weeklyUsedCents)} / ${credits(b.subscription.weeklyLimitCents)}` },
             { label: t('subscription.monthly'), value: `${credits(b.subscription.monthlyUsedCents)} / ${credits(b.subscription.monthlyLimitCents)}` },
           ] : [],
-          rechargeVisible: CAN_RECHARGE,
+          // 包晴天律师只在包晴天 App 充值：本站充值会被服务端以 bqt_recharge_via_bqt 拒绝，
+          // 而虚拟支付是先扣钱后到账，所以充值、后付费还款一律收起
+          bqt: b.billingLine === 'bqt',
+          bqtHint: b.billingLine === 'bqt' ? t('bqt.rechargeInBqt') : '',
+          rechargeVisible: CAN_RECHARGE && b.billingLine !== 'bqt',
           openHint: '',
         })
       })
@@ -288,6 +294,7 @@ Page({
   },
   onPostpaidRetry() { this.loadPostpaid() },
   onRecharge() {
+    if (this.data.bqt) return
     wx.navigateTo({ url: '/pages/recharge/recharge' })
   },
 

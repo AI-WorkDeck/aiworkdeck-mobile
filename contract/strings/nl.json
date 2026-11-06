@@ -555,5 +555,6 @@
   "player.forward15": "15 seconden vooruit",
   "settings.billing": "Facturering",
   "settings.cloud": "Cloudopslag",
-  "settings.general": "Algemeen"
+  "settings.general": "Algemeen",
+  "bqt.rechargeInBqt": "Opwaarderen of verlengen in de Baoqingtian-app"
 }
