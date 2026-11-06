@@ -22,8 +22,6 @@ const TAG: string = 'Queue'
 const POLL_MS: number = 20000
 /** 行缩略图边长。 */
 const ROW_THUMB: number = 56
-/** 哈希只给前 12 位：够核对，又不至于把一行撑爆。 */
-const SHA_PREFIX: number = 12
 /** 进度条永远给一点起始宽度：0% 的条看起来像卡死了，实际是刚开始。 */
 const PROGRESS_FLOOR: number = 5
 /** 进度按 5% 一档进键——键变才重画，逐字节刷新只会让缩略图闪。 */
@@ -51,7 +49,6 @@ interface QueueRowVM {
   error: string
   /** 到期提醒；不该提醒时空串。 */
   expires: string
-  sha: string
   organization: string
 }
 
@@ -280,14 +277,6 @@ export struct Queue {
             .fontSize(Tk.Ty.nano)
             .fontColor(Tk.S.waiting)
         }
-
-        // 哈希前 12 位。要核对时不用进详情页
-        Text(r.sha)
-          .fontSize(Tk.Ty.nano)
-          .fontColor(Tk.L.fgFaint)
-          .fontFamily('monospace')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
@@ -416,7 +405,6 @@ export struct Queue {
       progress: progress,
       error: error,
       expires: expires,
-      sha: item.manifest.sha256.substring(0, SHA_PREFIX),
     }
     return row
   }
