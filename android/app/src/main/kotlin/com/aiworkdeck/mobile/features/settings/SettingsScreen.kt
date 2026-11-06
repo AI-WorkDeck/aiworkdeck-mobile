@@ -34,6 +34,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aiworkdeck.contract.ContractCapabilities
@@ -60,6 +62,8 @@ import kotlinx.coroutines.launch
 /** 用量读不到时的占位。一条「—」比一行报错更符合这行信息的分量。 */
 private const val DASH = "—"
 
+private const val HELP_EMAIL = "hi@aiworkdeck.com"
+
 /**
  * 本端的充值通道，唯一来源是 contract/capabilities.json。当前是 "external"：还没接通支付，
  * 入口只弹一句「去哪里充」。改回 "wxpay-app"（#428 真接通）时这里会跟着变，界面不会留错入口。
@@ -67,7 +71,7 @@ private const val DASH = "—"
 private val RECHARGE_CHANNEL: String = ContractCapabilities.recharge
 
 /**
- * 设置。四组：影像（存相册）、归档目标（项目与云端用量）、账号（区域、服务器、退出、注销）、关于。
+ * 设置。账号名在顶；分组：费用、云端（用量与备份）、影像、通用（项目、语言、区域）、关于；末尾退出与注销。
  * 镜像 iOS `SettingsView`。
  */
 @Composable
@@ -96,9 +100,12 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
     var confirmingDelete by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
+    var backupEnabled by remember { mutableStateOf<Boolean?>(null) }
 
     // 进页面拉一次用量。失败静默——占位「—」比一条报错更符合这行信息的分量。
     LaunchedEffect(Unit) { usage = try { model.mediaUsage() } catch (_: Exception) { null } }
+    // 备份行右侧的「已开启 / 未开启」。读不到就不写状态，只留入口。
+    LaunchedEffect(Unit) { backupEnabled = try { ServiceLocator.backend.backupConsent().enabled } catch (_: Exception) { null } }
     // 同上，余额读不到时不能拖垮整个设置页；两种业务失败态分别降级显示。
     LaunchedEffect(Unit) {
         // 国际站计费未开通（dev-board#664）：不拉、不显示，hideBalanceRow 保持默认 true
@@ -128,6 +135,61 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                     .padding(horizontal = Tk.Sp.gutter).padding(bottom = Tk.Sp.s16),
             ) {
+                // 账号：名字放最上面，一眼知道登的是谁。
+                Column(Modifier.padding(top = Tk.Sp.s4)) {
+                    val name = account?.let { it.displayName.ifEmpty { it.username } } ?: DASH
+                    Text(name, style = Fonts.heading(), color = Tk.L.fg)
+                    account?.username?.takeIf { it != name }?.let { Text(it, style = Fonts.nano(), color = Tk.L.fgFaint) }
+                }
+
+                // 费用：余额、充值、订阅、后付费放一起；国际站计费未开通（dev-board#664）时整组不出现。
+                if (region.showsBilling) {
+                    Group(tr("settings.billing")) {
+                        // 本期只展示余额：不放充值入口、不放任何指向官网充值的文案或链接
+                        // （App Store 3.1.3 一旦出现站外购买行动号召就会触发强制内购）。
+                        // NOT_CONNECTED/DISABLED/REVIEW_ACCOUNT 与「还没拉完」共用 hideBalanceRow
+                        // 默认 true：这三个终态整行不渲染，不给任何误导性的补救指引；未知态借同一
+                        // 默认值不闪烁（N6）。
+                        if (!hideBalanceRow) {
+                            InfoRow(tr("balance.title"), balanceCaption(balance, balanceErrorKey))
+                        }
+                        balance?.subscription?.takeIf { it.active }?.let { sub ->
+                            InfoRow(tr("subscription.available"), creditsCaption(sub.availableCents))
+                            InfoRow(tr("subscription.weekly"), "${creditsCaption(sub.weeklyUsedCents)} / ${creditsCaption(sub.weeklyLimitCents)}")
+                            InfoRow(tr("subscription.monthly"), "${creditsCaption(sub.monthlyUsedCents)} / ${creditsCaption(sub.monthlyLimitCents)}")
+                        }
+                        // 安卓还没接通支付通道（微信开放平台 APP 支付未开通，dev-board#428），
+                        // 契约 capabilities.recharge = "external"：入口照放，点开只说明去哪里充。
+                        // **不跟着余额行显隐**——入口依赖新用户没有的状态正是 2026-09-09
+                        // 「充值在哪」那起事故本身（contract/schema/billing.schema.json 的 UI 映射、
+                        // docs/MOBILE_DEV_DISCIPLINE.md §1）。
+                        if (showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL)) {
+                            TextAction(tr("recharge.entry"), color = Tk.L.accent) { showRechargeNotice = true }
+                        }
+                        PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { uriHandler.openUri("https://aiworkdeck.com/zh/account#wallet") })
+                    }
+                }
+
+                // 云端：用量与备份，都是「我的东西在云上占多少、有没有备份」。
+                Group(tr("settings.cloud")) {
+                    InfoRow(tr("settings.relay"), usageCaption(usage))
+                    UsageBar(usage)
+                    usage?.persistentUsedBytes?.let { used ->
+                        val quota = usage?.persistentQuotaBytes
+                        val caption = if (quota != null && usage?.persistentQuotaAvailable != false)
+                            "${formatBytes(used)} / ${formatBytes(quota)}"
+                        else tr("settings.quotaUnavailable", mapOf("used" to formatBytes(used)))
+                        InfoRow(tr("settings.persistent"), caption)
+                    }
+                    NavRow(tr("backup.title"), backupEnabled?.let { tr(if (it) "backup.enabled" else "backup.disabled") }) {
+                        onOpen(com.aiworkdeck.mobile.Overlay.Backup)
+                    }
+                    // 不计费区域也照旧渲染后付费段（它自己决定显示什么），参数不变。
+                    if (!region.showsBilling) {
+                        PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { uriHandler.openUri("https://aiworkdeck.com/zh/account#wallet") })
+                    }
+                }
+
                 Group(tr("settings.media")) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
@@ -161,70 +223,20 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     }
                 }
 
-                Group(tr("backup.title")) {
-                    TextAction(tr("backup.title"), color = Tk.L.accent) { onOpen(com.aiworkdeck.mobile.Overlay.Backup) }
-                }
-                Group(tr("settings.archiveTarget")) {
-                    InfoRow(tr("home.eyebrow"), project?.name ?: DASH)
-                    InfoRow(tr("settings.relay"), usageCaption(usage))
-                    UsageBar(usage)
-                    usage?.persistentUsedBytes?.let { used ->
-                        val quota = usage?.persistentQuotaBytes
-                        val caption = if (quota != null && usage?.persistentQuotaAvailable != false)
-                            "${formatBytes(used)} / ${formatBytes(quota)}"
-                        else tr("settings.quotaUnavailable", mapOf("used" to formatBytes(used)))
-                        InfoRow(tr("settings.persistent"), caption)
-                    }
-                    TextAction(tr("settings.switchProject"), color = Tk.L.accent) {
+                Group(tr("settings.general")) {
+                    NavRow(tr("settings.switchProject"), project?.name ?: DASH) {
                         onOpen(com.aiworkdeck.mobile.Overlay.Projects)
                     }
-                }
-
-                Group(tr("settings.account")) {
-                    InfoRow(tr("settings.signedIn"), account?.displayName ?: DASH)
+                    NavRow(tr("settings.language"), L10n.currentDisplayName) { showLanguagePicker = true }
+                    // 区域登录后固定，这里只读；换区要退出登录后在登录页重选。
                     InfoRow(tr("settings.region"), tr(region.labelKey))
-                    Column(Modifier.fillMaxWidth().noRipple { showLanguagePicker = true }) {
-                        Text(tr("settings.language"), style = Fonts.small(), color = Tk.L.fg)
-                        Text(L10n.currentDisplayName, style = Fonts.nano(), color = Tk.L.accent)
-                    }
-                    InfoRow(tr("settings.server"), Uri.parse(region.baseUrl).host ?: DASH)
-                    // 本期只展示余额：不放充值入口、不放任何指向官网充值的文案或链接
-                    // （App Store 3.1.3 一旦出现站外购买行动号召就会触发强制内购）。
-                    // NOT_CONNECTED/DISABLED/REVIEW_ACCOUNT 与「还没拉完」共用 hideBalanceRow
-                    // 默认 true：这三个终态整行不渲染，不给任何误导性的补救指引；未知态借同一
-                    // 默认值不闪烁（N6）。
-                    if (!hideBalanceRow) {
-                        InfoRow(tr("balance.title"), balanceCaption(balance, balanceErrorKey))
-                    }
-                    PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { uriHandler.openUri("https://aiworkdeck.com/zh/account#wallet") })
-                    balance?.subscription?.takeIf { it.active }?.let { sub ->
-                        InfoRow(tr("subscription.available"), creditsCaption(sub.availableCents))
-                        InfoRow(tr("subscription.weekly"), "${creditsCaption(sub.weeklyUsedCents)} / ${creditsCaption(sub.weeklyLimitCents)}")
-                        InfoRow(tr("subscription.monthly"), "${creditsCaption(sub.monthlyUsedCents)} / ${creditsCaption(sub.monthlyLimitCents)}")
-                    }
-                    // 安卓还没接通支付通道（微信开放平台 APP 支付未开通，dev-board#428），
-                    // 契约 capabilities.recharge = "external"：入口照放，点开只说明去哪里充。
-                    // **不跟着余额行显隐**——入口依赖新用户没有的状态正是 2026-09-09
-                    // 「充值在哪」那起事故本身（contract/schema/billing.schema.json 的 UI 映射、
-                    // docs/MOBILE_DEV_DISCIPLINE.md §1）。
-                    // 国际站计费未开通（dev-board#664），入口一并不出现；大陆站照旧。
-                    if (showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL)) {
-                        TextAction(tr("recharge.entry"), color = Tk.L.accent) { showRechargeNotice = true }
-                    }
-                    TextAction(tr("common.signOut"), color = Tk.S.failed) { model.signOut(); onClose() }
-                    // 各应用商店的账号删除要求（与 App Store 5.1.1(v)）都指向这个入口。
-                    // 放在退出登录下面、字号更小：它比退出重得多，不该长得一样容易误点。
-                    Text(
-                        tr("settings.deleteAccount"), style = Fonts.micro(), color = Tk.L.fgMuted,
-                        modifier = Modifier.heightIn(min = Tk.touchMin).noRipple { confirmingDelete = true }
-                            .wrapContentHeight(),
-                    )
-                    deleteError?.let { Text(it, style = Fonts.nano(), color = Tk.S.failed) }
                 }
 
                 Group(tr("settings.about")) {
                     InfoRow(tr("settings.version"), BuildConfig.VERSION_NAME)
                     InfoRow(tr("settings.package"), BuildConfig.APPLICATION_ID)
+                    NavRow(tr("settings.help"), HELP_EMAIL) { uriHandler.openUri("mailto:$HELP_EMAIL") }
+                    InfoRow(tr("settings.server"), Uri.parse(region.baseUrl).host ?: DASH)
                     TextAction(tr("privacy.policy"), color = Tk.L.accent) {
                         uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR))
                     }
@@ -234,6 +246,16 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                         }
                     }
                 }
+
+                TextAction(tr("common.signOut"), color = Tk.S.failed, modifier = Modifier.padding(top = Tk.Sp.s4)) { model.signOut(); onClose() }
+                // 各应用商店的账号删除要求（与 App Store 5.1.1(v)）都指向这个入口。
+                // 放在退出登录下面、字号更小：它比退出重得多，不该长得一样容易误点。
+                Text(
+                    tr("settings.deleteAccount"), style = Fonts.micro(), color = Tk.L.fgMuted,
+                    modifier = Modifier.heightIn(min = Tk.touchMin).noRipple { confirmingDelete = true }
+                        .wrapContentHeight(),
+                )
+                deleteError?.let { Text(it, style = Fonts.nano(), color = Tk.S.failed) }
             }
         }
 
@@ -376,10 +398,35 @@ private fun Group(title: String, content: @Composable () -> Unit) {
     }
 }
 
+/** 一行一项：名称在左，值在右，单行。 */
 @Composable
-private fun InfoRow(key: String, value: String, valueColor: Color = Tk.L.fgFaint) {
-    Column(Modifier.fillMaxWidth()) {
-        Text(key, style = Fonts.small(), color = Tk.L.fg)
-        Text(value, style = Fonts.nano(), color = valueColor)
+private fun InfoRow(key: String, value: String, valueColor: Color = Tk.L.fgMuted) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 32.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s3),
+    ) {
+        Text(key, style = Fonts.small(), color = Tk.L.fg, maxLines = 1)
+        Text(
+            value, style = Fonts.small(), color = valueColor, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End, modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** 可点的一行：名称、可选值、右箭头。 */
+@Composable
+private fun NavRow(title: String, value: String?, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).noRipple(onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s3),
+    ) {
+        Text(title, style = Fonts.small(), color = Tk.L.fg, maxLines = 1)
+        Text(
+            value.orEmpty(), style = Fonts.small(), color = Tk.L.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End, modifier = Modifier.weight(1f),
+        )
+        Text("›", style = Fonts.body(), color = Tk.L.fgFaint)
     }
 }
