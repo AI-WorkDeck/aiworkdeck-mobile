@@ -163,7 +163,12 @@ struct QueueView: View {
                    let expiry = model.cloudExpiry[item.effectiveClientMediaId.uuidString.lowercased()] {
                     Text(tr("queue.expiresOn", ["date": Self.monthDay(expiry)]))
                 }
-                Text(item.manifest.sha256).font(T.F.mono(11)).textSelection(.enabled)
+                // 文件指纹只在详情里出现，并说明用途。
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tr("details.fingerprint")).font(T.F.nano()).foregroundStyle(T.L.fgFaint)
+                    Text(item.manifest.sha256).font(T.F.mono(11)).textSelection(.enabled)
+                        .environment(\.layoutDirection, .leftToRight)
+                }
             }
             .frame(maxWidth: 640, alignment: .leading)
             .padding(T.Sp.gutter)
@@ -253,11 +258,6 @@ struct QueueView: View {
                         .padding(.top, 1)
                 }
 
-                // 哈希前 12 位。要核对时不用进详情页。
-                Text(item.manifest.sha256.prefix(12))
-                    .font(T.F.mono(10))
-                    .foregroundStyle(T.L.fgFaint)
-                    .padding(.top, 1)
             }
 
             Spacer(minLength: 0)
