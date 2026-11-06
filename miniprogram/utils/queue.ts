@@ -122,12 +122,17 @@ export function isAssigned(item: Pick<QueueItem, 'deviceId' | 'projectKey'>): bo
   return !!item.deviceId && !!item.projectKey
 }
 
+/** 能不能指定归属：图集长按只在这里为真时才去选项目，免得选完才告诉用户「不能移」。 */
+export function canAssign(item: QueueItem): boolean {
+  return !item.deviceId && !item.projectKey && !item.projectUid && item.state === 'waiting' && (item.attempts ?? 0) === 0
+}
+
 /** Assignment is one-way: an existing destination, even before upload, is immutable here. */
 export function assignCapture(id: string, project: RelayProject): boolean {
   if (!project.deviceId || !project.key) return false
   const items = readItems()
   const item = items.find(it => it.clientMediaId === id)
-  if (!item || item.deviceId || item.projectKey || item.projectUid || item.state !== 'waiting' || (item.attempts ?? 0) > 0) return false
+  if (!item || !canAssign(item)) return false
   Object.assign(item, { deviceId: project.deviceId, projectKey: project.key,
     projectUid: project.projectUid, projectName: project.name })
   writeItems(items)

@@ -11,7 +11,7 @@ import { Tk } from '../design/Tokens'
 import { formatBytes } from '../model/Format'
 import { RelayProject } from '../model/Capture'
 import { Unauthorized } from '../model/Envelope'
-import { AccountUser, MediaUsage, SubscriptionBalance, asRecord } from '../services/ApiTypes'
+import { AccountUser, BillingSnapshot, MediaUsage, SubscriptionBalance, asRecord } from '../services/ApiTypes'
 import { ServiceLocator } from '../services/ServiceLocator'
 import { billingAvailableIn, regionLabelKey } from '../model/AccountRegion'
 import { errorText, toast } from './Feedback'
@@ -37,8 +37,12 @@ function hostOf(url: string): string {
   return slash < 0 ? rest : rest.substring(0, slash)
 }
 
+/** 帮助邮箱（与 iOS 设置页同一个地址）。 */
+const HELP_EMAIL: string = 'hi@aiworkdeck.com'
+
 /**
- * 设置。四组：影像（存相册）、归档目标（项目与云端用量）、账号（服务器、退出、注销）、关于。
+ * 设置。顶部账号名；分组：费用、云端存储（用量与备份）、归档目标、影像、通用（语言、区域）、关于；
+ * 最底下退出登录与注销。对位 iOS #91 的信息结构。
  * 镜像安卓 `SettingsScreen.kt` 与 iOS `SettingsView`。
  */
 @Component
@@ -52,6 +56,8 @@ export struct Settings {
   @State projectName: string = DASH
   @State usage: MediaUsage | null = null
   @State subscription: SubscriptionBalance | null = null
+  /** 包晴天律师（billingLine = bqt）只在包晴天 App 充值 */
+  @State bqt: boolean = false
   @State backup: BackupConsent | null = null
   @State postpaid: Record<string, Object> | null = null
   @State postpaidBusy: boolean = false
@@ -81,8 +87,10 @@ export struct Settings {
     }).catch((): void => {})
     this.loadPostpaid().catch((): void => {})
     if (billingAvailableIn(ServiceLocator.region)) {
-      ServiceLocator.backend.subscriptionBalance().then((s: SubscriptionBalance | null): void => {
-        if (this.alive) this.subscription = s
+      ServiceLocator.backend.billingSnapshot().then((b: BillingSnapshot): void => {
+        if (!this.alive) return
+        this.subscription = b.subscription
+        this.bqt = b.billingLine === 'bqt'
       }).catch((): void => { if (this.alive) this.subscription = null })
     }
     // 进页面拉一次用量。读不到就留占位「—」，比一条报错更符合这行信息的分量；
@@ -111,10 +119,16 @@ export struct Settings {
         this.topBar()
         Scroll() {
           Column() {
-            this.mediaGroup()
+            this.accountHeader()
+            if (billingAvailableIn(ServiceLocator.region)) {
+              this.billingGroup()
+            }
+            this.cloudGroup()
             this.archiveGroup()
-            this.accountGroup()
+            this.mediaGroup()
+            this.generalGroup()
             this.aboutGroup()
+            this.signOutRows()
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
@@ -217,17 +231,6 @@ export struct Settings {
         .onClick((): void => { this.stack.pushPath(new NavPathInfo('DdClient', '')) })
     }
     this.infoRow(this.t('home.eyebrow'), this.projectName)
-    Text(this.t('backup.title') + ' · ' + (this.backup === null ? DASH : this.t(this.backup.enabled ? 'backup.enabled' : 'backup.disabled')))
-      .height(Tk.touchMin).fontColor(Tk.L.accent)
-      .onClick((): void => { this.changeBackup().catch((): void => toast(this.getUIContext(), this.t('backup.error'))) })
-    this.infoRow(this.t('settings.relay'), this.usageCaption())
-    Progress({ value: this.usageFraction(), total: 100, type: ProgressType.Linear })
-      .color(Tk.L.accent)
-      .backgroundColor(Tk.L.sunken)
-      .width('100%')
-    if (this.usage?.persistentUsedBytes !== undefined) {
-      this.infoRow(this.t('settings.persistent'), this.persistentCaption())
-    }
     Text(this.t('settings.switchProject'))
       .fontSize(Tk.Ty.small)
       .fontColor(Tk.L.accent)
@@ -238,26 +241,94 @@ export struct Settings {
     this.rule()
   }
 
+  /** 账号：名字放在最上面，一眼知道登的是谁。 */
   @Builder
-  accountGroup() {
-    this.eyebrow(this.t('settings.account'))
-    this.infoRow(this.t('settings.signedIn'), this.accountName())
-    // 区域登录后固定（换区 = 退出登录后在登录页重选），这里只读显示；服务器行跟着区域走
-    if (ContractCapabilities.intlAccount) {
-      this.infoRow(this.t('settings.region'), this.t(regionLabelKey(ServiceLocator.region)))
-    }
+  accountHeader() {
     Column({ space: Tk.Sp.s1 }) {
-      Text(this.t('settings.language'))
-        .fontSize(Tk.Ty.small)
+      Text(this.accountName())
+        .fontSize(Tk.Ty.heading)
         .fontColor(Tk.L.fg)
-      Text(L10n.displayName(L10n.preference, this.locale))
-        .fontSize(Tk.Ty.nano)
-        .fontColor(Tk.L.accent)
+      if (this.accountUsername().length > 0) {
+        Text(this.accountUsername())
+          .fontSize(Tk.Ty.nano)
+          .fontColor(Tk.L.fgFaint)
+      }
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
-    .margin({ bottom: Tk.Sp.s3 })
-    .onClick((): void => {
+    .margin({ top: Tk.Sp.s4 })
+    .accessibilityText(this.t('settings.signedIn') + ' ' + this.accountName())
+  }
+
+  /** 费用：余额、充值、后付费放一起；国际区不计费时整组不出现。 */
+  @Builder
+  billingGroup() {
+    this.eyebrow(this.t('settings.billing'))
+    if (this.subscription?.active === true) {
+      this.infoRow(this.t('subscription.available'), this.credits(this.subscription.availableCents))
+      this.infoRow(this.t('subscription.weekly'), `${this.credits(this.subscription.weeklyUsedCents)} / ${this.credits(this.subscription.weeklyLimitCents)}`)
+      this.infoRow(this.t('subscription.monthly'), `${this.credits(this.subscription.monthlyUsedCents)} / ${this.credits(this.subscription.monthlyLimitCents)}`)
+    }
+    // 包晴天律师只在包晴天 App 充值（本站充值会被服务端以 bqt_recharge_via_bqt 拒绝）：
+    // 收起充值与后付费段，只留一句去哪里充
+    if (this.bqt) {
+      Text(this.t('bqt.rechargeInBqt'))
+        .fontSize(Tk.Ty.small)
+        .fontColor(Tk.L.fgMuted)
+        .width('100%')
+        .margin({ top: Tk.Sp.s2, bottom: Tk.Sp.s2 })
+    } else {
+      if (RECHARGE_CHANNEL !== 'false') {
+        this.navRow(this.t('recharge.entry'), '', (): void => this.showRechargeNotice())
+      }
+      this.postpaidSection()
+    }
+    this.rule()
+  }
+
+  /** 云端：用量与备份，都是「我的东西在云上占多少、有没有备份」。 */
+  @Builder
+  cloudGroup() {
+    this.eyebrow(this.t('settings.cloud'))
+    this.infoRow(this.t('settings.relay'), this.usageCaption())
+    Progress({ value: this.usageFraction(), total: 100, type: ProgressType.Linear })
+      .color(Tk.L.accent)
+      .backgroundColor(Tk.L.sunken)
+      .width('100%')
+      .margin({ bottom: Tk.Sp.s2 })
+    if (this.usage?.persistentUsedBytes !== undefined) {
+      this.infoRow(this.t('settings.persistent'), this.persistentCaption())
+    }
+    this.navRow(this.t('backup.title'), this.backup === null ? DASH : this.t(this.backup.enabled ? 'backup.enabled' : 'backup.disabled'), (): void => {
+      this.changeBackup().catch((): void => toast(this.getUIContext(), this.t('backup.error')))
+    })
+    // 不计费区域照旧渲染后付费段（它自己显示「通道不可用」），只是不给还款入口
+    if (!billingAvailableIn(ServiceLocator.region)) {
+      this.postpaidSection()
+    }
+    this.rule()
+  }
+
+  // 国际站计费未开通（dev-board#664）：国际区不放充值 / 还款入口
+  @Builder
+  postpaidSection() {
+    Column() {
+      Text(this.t('postpaid.title')).fontColor(Tk.L.fg)
+      Text(this.postpaidText()).fontColor(Tk.L.fg)
+      Text(this.t('postpaid.notice')).fontColor(Tk.L.fgMuted)
+      if (this.canResumeCloud()) { Button(this.t('postpaid.resume')).enabled(!this.postpaidBusy).onClick((): void => this.confirmResumeCloud()) }
+      if (this.canAcceptPostpaid()) { Button(this.t('postpaid.accept')).enabled(!this.postpaidBusy).onClick((): void => this.confirmPostpaid()) }
+      Button(this.t('project.retry')).enabled(!this.postpaidBusy).onClick((): void => { this.loadPostpaid().catch((): void => {}) })
+      if (this.postpaidError.length > 0) { Text(this.postpaidError).fontColor(Tk.S.failed) }
+      if (billingAvailableIn(ServiceLocator.region)) { Button(this.t('postpaid.repay')).onClick((): void => this.openRepayment()) }
+      else { Text(this.t('postpaid.channelUnavailable')).fontColor(Tk.L.fgMuted) }
+    }
+  }
+
+  @Builder
+  generalGroup() {
+    this.eyebrow(this.t('settings.general'))
+    this.navRow(this.t('settings.language'), L10n.displayName(L10n.preference, this.locale), (): void => {
       this.showLanguagePicker = !this.showLanguagePicker
     })
     if (this.showLanguagePicker) {
@@ -283,35 +354,20 @@ export struct Settings {
       .width('100%')
       .padding({ left: Tk.Sp.s3, bottom: Tk.Sp.s3 })
     }
-    this.infoRow(this.t('settings.server'), hostOf(ServiceLocator.baseUrl()))
-    if (this.subscription?.active === true) {
-      this.infoRow(this.t('subscription.available'), this.credits(this.subscription.availableCents))
-      this.infoRow(this.t('subscription.weekly'), `${this.credits(this.subscription.weeklyUsedCents)} / ${this.credits(this.subscription.weeklyLimitCents)}`)
-      this.infoRow(this.t('subscription.monthly'), `${this.credits(this.subscription.monthlyUsedCents)} / ${this.credits(this.subscription.monthlyLimitCents)}`)
+    // 区域登录后固定（换区 = 退出登录后在登录页重选），这里只读显示；服务器行跟着区域走
+    if (ContractCapabilities.intlAccount) {
+      this.infoRow(this.t('settings.region'), this.t(regionLabelKey(ServiceLocator.region)))
     }
-    // 国际站计费未开通（dev-board#664）：国际区不放充值入口
-    Column() {
-      Text(this.t('postpaid.title')).fontColor(Tk.L.fg)
-      Text(this.postpaidText()).fontColor(Tk.L.fg)
-      Text(this.t('postpaid.notice')).fontColor(Tk.L.fgMuted)
-      if (this.canResumeCloud()) { Button(this.t('postpaid.resume')).enabled(!this.postpaidBusy).onClick((): void => this.confirmResumeCloud()) }
-      if (this.canAcceptPostpaid()) { Button(this.t('postpaid.accept')).enabled(!this.postpaidBusy).onClick((): void => this.confirmPostpaid()) }
-      Button(this.t('project.retry')).enabled(!this.postpaidBusy).onClick((): void => { this.loadPostpaid().catch((): void => {}) })
-      if (this.postpaidError.length > 0) { Text(this.postpaidError).fontColor(Tk.S.failed) }
-      if (billingAvailableIn(ServiceLocator.region)) { Button(this.t('postpaid.repay')).onClick((): void => this.openRepayment()) }
-      else { Text(this.t('postpaid.channelUnavailable')).fontColor(Tk.L.fgMuted) }
-    }
-    if (RECHARGE_CHANNEL !== 'false' && billingAvailableIn(ServiceLocator.region)) {
-      Text(this.t('recharge.entry'))
-        .fontSize(Tk.Ty.small)
-        .fontColor(Tk.L.accent)
-        .height(Tk.touchMin)
-        .onClick((): void => this.showRechargeNotice())
-    }
+    this.rule()
+  }
+
+  @Builder
+  signOutRows() {
     Text(this.t('common.signOut'))
       .fontSize(Tk.Ty.small)
       .fontColor(Tk.S.failed)
       .height(Tk.touchMin)
+      .margin({ top: Tk.Sp.s4 })
       .onClick((): void => {
         AppModel.shared.signOut().catch((): void => {})
       })
@@ -321,7 +377,6 @@ export struct Settings {
       .fontColor(Tk.L.fgMuted)
       .height(Tk.touchMin)
       .onClick((): void => this.confirmDelete())
-    this.rule()
   }
 
   @Builder
@@ -329,6 +384,8 @@ export struct Settings {
     this.eyebrow(this.t('settings.about'))
     this.infoRow(this.t('settings.version'), ServiceLocator.facts.appVersion)
     this.infoRow(this.t('settings.package'), ServiceLocator.ctx.applicationInfo.name)
+    this.infoRow(this.t('settings.help'), HELP_EMAIL)
+    this.infoRow(this.t('settings.server'), hostOf(ServiceLocator.baseUrl()))
     this.rule()
   }
 
@@ -340,19 +397,45 @@ export struct Settings {
       .margin({ top: Tk.Sp.s6, bottom: Tk.Sp.s3 })
   }
 
+  /** 一行一项：名称在左，值在右。 */
   @Builder
   infoRow(key: string, value: string) {
-    Column({ space: Tk.Sp.s1 }) {
+    Row({ space: Tk.Sp.s3 }) {
       Text(key)
         .fontSize(Tk.Ty.small)
         .fontColor(Tk.L.fg)
       Text(value)
-        .fontSize(Tk.Ty.nano)
+        .fontSize(Tk.Ty.small)
+        .fontColor(Tk.L.fgMuted)
+        .textAlign(TextAlign.End)
+        .layoutWeight(1)
+        .copyOption(CopyOptions.LocalDevice)
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 32 })
+    .alignItems(VerticalAlign.Center)
+  }
+
+  /** 可点的一行：名称、可选状态、右箭头。 */
+  @Builder
+  navRow(title: string, value: string, action: () => void) {
+    Row({ space: Tk.Sp.s3 }) {
+      Text(title)
+        .fontSize(Tk.Ty.small)
+        .fontColor(Tk.L.fg)
+      Text(value)
+        .fontSize(Tk.Ty.small)
+        .fontColor(Tk.L.fgMuted)
+        .textAlign(TextAlign.End)
+        .layoutWeight(1)
+      Text('›')
+        .fontSize(Tk.Ty.body)
         .fontColor(Tk.L.fgFaint)
     }
-    .alignItems(HorizontalAlign.Start)
     .width('100%')
-    .margin({ bottom: Tk.Sp.s3 })
+    .height(Tk.touchMin)
+    .alignItems(VerticalAlign.Center)
+    .onClick(action)
   }
 
   @Builder
@@ -367,6 +450,13 @@ export struct Settings {
     const a: AccountUser | null = AppModel.shared.account
     if (a === null) return DASH
     return a.displayName.length > 0 ? a.displayName : a.username
+  }
+
+  /** 用户名与显示名不同时才多写一行。 */
+  private accountUsername(): string {
+    const a: AccountUser | null = AppModel.shared.account
+    if (a === null || a.username === this.accountName()) return ''
+    return a.username
   }
 
   private syncProject(): void {

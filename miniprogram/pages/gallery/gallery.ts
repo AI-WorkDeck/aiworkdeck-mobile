@@ -8,7 +8,7 @@ import { isRecording } from '../../utils/recorder'
 import { Icon } from '../../utils/icons'
 import type { Metrics } from '../../utils/layout'
 import { getSelectedProject } from '../../utils/api'
-import { listItems, removeItems, subscribe, pollStatus, isAssigned, type QueueItem } from '../../utils/queue'
+import { listItems, removeItems, subscribe, pollStatus, isAssigned, canAssign, type QueueItem } from '../../utils/queue'
 import {
   deleteWarning, dotClass, groupByDay, phaseLabels, projectsIn, stateText, tallyOf, PHASE_LABEL, type Tally,
 } from '../../utils/phase'
@@ -49,6 +49,14 @@ function kindIcon(mediaType: QueueItem['mediaType']): string {
   if (mediaType === 'video') return Icon.videoWhite
   if (mediaType === 'audio') return Icon.micWhite
   return Icon.imageWhite
+}
+
+/** 录音时钟：m:ss，超过一小时 h:mm:ss */
+function clock(seconds: number): string {
+  const v = Math.floor(Number.isFinite(seconds) ? Math.max(seconds, 0) : 0)
+  const mm = `${Math.floor(v / 60) % 60}`.padStart(2, '0')
+  const ss = `${v % 60}`.padStart(2, '0')
+  return v >= 3600 ? `${Math.floor(v / 3600)}:${mm}:${ss}` : `${Math.floor(v / 60)}:${ss}`
 }
 
 function readCols(): number {
@@ -109,6 +117,16 @@ Page({
     selectLabel: t('library.select'),
     emptyText: t('library.empty'),
     emptyHint: t('library.emptyHint'),
+    audioActive: false,
+    audioPlaying: false,
+    audioTime: 0,
+    audioDuration: 0,
+    audioTimeText: clock(0),
+    audioDurationText: clock(0),
+    playLabel: t('player.play'),
+    pauseLabel: t('player.pause'),
+    back15Label: t('player.back15'),
+    forward15Label: t('player.forward15'),
   },
 
   unsubscribe: null as (() => void) | null,
@@ -196,6 +214,10 @@ Page({
       viewA11y: viewA11yFor(this.data.view),
       emptyText: t('library.empty'),
       emptyHint: t('library.emptyHint'),
+      playLabel: t('player.play'),
+      pauseLabel: t('player.pause'),
+      back15Label: t('player.back15'),
+      forward15Label: t('player.forward15'),
       projects,
       viewingId,
       viewingName,
@@ -263,7 +285,7 @@ Page({
 
   onAssign(e: WechatMiniprogram.BaseEvent<WechatMiniprogram.IAnyObject, { id: string }>) {
     const item = listItems().find(it => it.clientMediaId === e.currentTarget.dataset.id)
-    if (!item || isAssigned(item)) return
+    if (!item || !canAssign(item)) return
     wx.navigateTo({ url: `/pages/project/project?assign=${encodeURIComponent(item.clientMediaId)}` })
   },
 
@@ -325,6 +347,17 @@ Page({
     ctx.obeyMuteSwitch = false
     ctx.src = cell.filePath
     ctx.onEnded(() => this.stopAudio())
+    ctx.onPlay(() => this.setData({ audioPlaying: true }))
+    ctx.onPause(() => this.setData({ audioPlaying: false }))
+    ctx.onTimeUpdate(() => {
+      const duration = Number.isFinite(ctx.duration) ? ctx.duration : 0
+      this.setData({
+        audioTime: Math.floor(ctx.currentTime),
+        audioDuration: Math.floor(duration),
+        audioTimeText: clock(ctx.currentTime),
+        audioDurationText: clock(duration),
+      })
+    })
     ctx.onError(() => {
       this.stopAudio()
       wx.showToast({ title: t('player.playFailed'), icon: 'none' })
@@ -332,6 +365,7 @@ Page({
     ctx.play()
     this.audio = ctx
     this.audioId = cell.clientMediaId
+    this.setData({ audioActive: true, audioPlaying: true, audioTime: 0, audioDuration: 0, audioTimeText: clock(0), audioDurationText: clock(0) })
     wx.showToast({ title: t('player.playingToast', { time: cell.time }), icon: 'none', duration: 2000 })
   },
 
@@ -341,8 +375,26 @@ Page({
       this.audio.destroy()
       this.audio = null
       this.audioId = ''
+      this.setData({ audioActive: false, audioPlaying: false })
     }
   },
+
+  onTogglePause() {
+    if (!this.audio) return
+    if (this.data.audioPlaying) this.audio.pause()
+    else this.audio.play()
+  },
+
+  seekAudio(seconds: number) {
+    if (!this.audio) return
+    const target = Math.min(Math.max(seconds, 0), this.data.audioDuration || 0)
+    this.audio.seek(target)
+    this.setData({ audioTime: target, audioTimeText: clock(target) })
+  },
+
+  onSeek(e: { detail: { value: number } }) { this.seekAudio(e.detail.value) },
+  onBack15() { this.seekAudio(this.data.audioTime - 15) },
+  onForward15() { this.seekAudio(this.data.audioTime + 15) },
 
   onDelete() {
     if (this.selected.size === 0) return

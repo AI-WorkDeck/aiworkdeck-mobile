@@ -44,7 +44,9 @@ data class SubscriptionBalance(val active: Boolean, val availableCents: Long,
  * 不是套餐名，上游没给这个字段时才是 null——不得直接渲染给用户。 */
 @Serializable
 data class BillingBalance(val balanceCents: Long, val currency: String, val plan: String? = null,
-    val subscription: SubscriptionBalance? = null)
+    val subscription: SubscriptionBalance? = null,
+    /** 计费线 standard / circle / bqt；旧服务器缺席时按 standard。 */
+    val billingLine: String? = null)
 
 /**
  * 信封 code=1 时 /api/mobile/billing 系列接口附带的机器可读判别位（dev-board#425 复审 C2）。

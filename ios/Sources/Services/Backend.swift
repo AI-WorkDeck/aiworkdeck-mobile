@@ -574,6 +574,8 @@ actor API: ArchiveMoveServing {
         let currency: String
         let plan: String?
         var subscription: SubscriptionBalance? = nil
+        /// 计费线：standard / circle / bqt。旧服务器没有这个字段时按 standard。
+        var billingLine: String? = nil
     }
 
     /// 失败信封携带的机器可读判别位（dev-board#425 契约 `Envelope.kind`）。

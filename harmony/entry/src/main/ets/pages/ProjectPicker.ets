@@ -1,7 +1,7 @@
 import { AppModel } from '../AppModel'
 import { tr } from '../design/L10n'
 import { Tk } from '../design/Tokens'
-import { RelayProject, projectId } from '../model/Capture'
+import { RelayProject, projectId, sameProject } from '../model/Capture'
 import { Unauthorized } from '../model/Envelope'
 import { formatDay } from '../model/Format'
 import { ScreenshotMode } from '../ScreenshotMode'
@@ -25,6 +25,8 @@ export struct ProjectPicker {
   @State projects: RelayProject[] = []
   @State loading: boolean = true
   @State failure: string = ''
+  @State query: string = ''
+  @State recentIds: string[] = []
 
   aboutToAppear(): void {
     this.load()
@@ -33,12 +35,10 @@ export struct ProjectPicker {
   build() {
     NavDestination() {
       Column() {
-        Column({ space: Tk.Sp.s2 }) {
-          Text(tr('project.eyebrow'))
-            .fontSize(Tk.Ty.nano)
-            .fontColor(Tk.L.fgMuted)
+        // 页头压紧：这一页只做一件事——尽快点到要的项目（对位 iOS #91）
+        Column({ space: Tk.Sp.s1 }) {
           Text(tr('project.title'))
-            .fontSize(Tk.Ty.display)
+            .fontSize(Tk.Ty.heading)
             .fontColor(Tk.L.fg)
           Text(tr('project.hint', { 'date': formatDay(ScreenshotMode.archiveMs(Date.now())) }))
             .fontSize(Tk.Ty.micro)
@@ -46,20 +46,26 @@ export struct ProjectPicker {
         }
         .alignItems(HorizontalAlign.Start)
         .width('100%')
-        .margin({ top: Tk.Sp.s10, bottom: Tk.Sp.s6 })
+        .margin({ top: Tk.Sp.s4, bottom: Tk.Sp.s3 })
 
-        if (!this.assigning) {
-          Text(tr('project.none'))
-            .height(Tk.touchMin)
-            .fontColor(Tk.L.accent)
-            .onClick((): void => {
-              if (this.loading) return
-              this.loading = true
-              ServiceLocator.backend.defaultProject().then((project: RelayProject): Promise<void> => AppModel.shared.selectProject(project))
-                .then((): void => { if (this.switching) this.stack.pop() })
-                .catch((error: Error): void => { this.failure = errorText(error) })
-                .finally((): void => { this.loading = false })
-            })
+        if (!this.loading && this.projects.length > 0) {
+          TextInput({ text: this.query, placeholder: tr('workspace.searchProjects') })
+            .width('100%')
+            .margin({ bottom: Tk.Sp.s2 })
+            .onChange((value: string): void => { this.query = value })
+        }
+
+        // 临时项目是一行，不是一个孤零零的链接；有搜索词时收起来
+        if (!this.assigning && this.query.trim().length === 0) {
+          this.row(tr('project.none'), tr('project.noneHint'), AppModel.shared.selectedProject?.isDefault === true, (): void => {
+            if (this.loading) return
+            this.loading = true
+            ServiceLocator.backend.defaultProject().then((project: RelayProject): Promise<void> => AppModel.shared.selectProject(project))
+              .then((): void => { if (this.switching) this.stack.pop() })
+              .catch((error: Error): void => { this.failure = errorText(error) })
+              .finally((): void => { this.loading = false })
+          })
+          Divider().color(Tk.L.rule)
         }
 
         // 内容区吃掉中间所有空间，页脚（退出登录）永远贴在底下
@@ -146,50 +152,118 @@ export struct ProjectPicker {
   @Builder
   list() {
     List() {
-      ForEach(this.projects, (p: RelayProject): void => {
-        ListItem() {
-          Column() {
-            Row() {
-              Column({ space: Tk.Sp.s1 }) {
-                Text(p.name)
-                  .fontSize(Tk.Ty.body)
-                  .fontColor(Tk.L.fg)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                Text(p.projectUid !== undefined ? tr('project.unifiedIdentity', { 'id': p.projectUid }) : (p.deviceName ?? p.deviceId))
-                  .fontSize(Tk.Ty.nano)
-                  .fontColor(Tk.L.fgFaint)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-              }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
-
-              Text('›')
-                .fontSize(Tk.Ty.body)
-                .fontColor(Tk.L.fgFaint)
-            }
-            .width('100%')
-            .constraintSize({ minHeight: Tk.touchMin })
-            .alignItems(VerticalAlign.Center)
-            .onClick((): void => this.pick(p))
-
-            if (!this.assigning) {
-              Text(tr('project.files')).height(Tk.touchMin).fontColor(Tk.L.accent)
-                .onClick((): void => {
-                  ProjectFilesRequest.project = p
-                  this.stack.pushPath(new NavPathInfo('ProjectFiles', ''))
-                })
-            }
-            Divider().color(Tk.L.rule)
-          }
-          .width('100%')
-        }
+      if (this.recent().length > 0) {
+        ListItem() { this.sectionTitle(tr('project.recent')) }
+        ForEach(this.recent(), (p: RelayProject): void => {
+          ListItem() { this.projectRow(p) }
+        }, (p: RelayProject): string => 'recent:' + projectId(p))
+        ListItem() { this.sectionTitle(tr('personal.allProjects')) }
+      }
+      ForEach(this.matches(), (p: RelayProject): void => {
+        ListItem() { this.projectRow(p) }
       }, (p: RelayProject): string => projectId(p))
+      if (this.matches().length === 0) {
+        ListItem() {
+          Text(tr('project.noMatch'))
+            .fontSize(Tk.Ty.small)
+            .fontColor(Tk.L.fgMuted)
+            .height(Tk.touchMin)
+        }
+      }
     }
     .width('100%')
     .height('100%')
     .scrollBar(BarState.Off)
+  }
+
+  @Builder
+  sectionTitle(text: string) {
+    Text(text)
+      .fontSize(Tk.Ty.nano)
+      .fontColor(Tk.L.fgMuted)
+      .margin({ top: Tk.Sp.s4, bottom: Tk.Sp.s1 })
+  }
+
+  @Builder
+  projectRow(p: RelayProject) {
+    Column() {
+      // 电脑名只在项目分布在多台电脑上时才帮得上忙；内部 id 不给用户看
+      this.row(p.name, this.showsDevice() ? (p.deviceName ?? '') : '', this.isCurrent(p), (): void => this.pick(p))
+      if (!this.assigning) {
+        Text(tr('project.files')).height(Tk.touchMin).fontColor(Tk.L.accent)
+          .onClick((): void => {
+            ProjectFilesRequest.project = p
+            this.stack.pushPath(new NavPathInfo('ProjectFiles', ''))
+          })
+      }
+      Divider().color(Tk.L.rule)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  /** 一行：名称（可带一行副标题），当前项目右侧打勾。 */
+  @Builder
+  row(title: string, subtitle: string, current: boolean, action: () => void) {
+    Row({ space: Tk.Sp.s3 }) {
+      Column({ space: Tk.Sp.s1 }) {
+        Text(title)
+          .fontSize(Tk.Ty.body)
+          .fontColor(Tk.L.fg)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (subtitle.length > 0) {
+          Text(subtitle)
+            .fontSize(Tk.Ty.nano)
+            .fontColor(Tk.L.fgFaint)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+
+      if (current) {
+        Text('✓')
+          .fontSize(Tk.Ty.body)
+          .fontColor(Tk.L.accent)
+      }
+    }
+    .width('100%')
+    .constraintSize({ minHeight: Tk.touchMin })
+    .alignItems(VerticalAlign.Center)
+    .onClick(action)
+  }
+
+  /** 有搜索词时只留名字匹配的。 */
+  private matches(): RelayProject[] {
+    const q: string = this.query.trim().toLowerCase()
+    if (q.length === 0) return this.projects
+    return this.projects.filter((p: RelayProject): boolean => p.name.toLowerCase().includes(q))
+  }
+
+  /** 最近用过的（最多 5 个）。项目不多时一眼就能看完，不必再分一段。 */
+  private recent(): RelayProject[] {
+    if (this.query.trim().length > 0 || this.projects.length <= 6) return []
+    const out: RelayProject[] = []
+    for (const id of this.recentIds) {
+      const hit: RelayProject | undefined = this.projects.find((p: RelayProject): boolean => projectId(p) === id)
+      if (hit !== undefined) out.push(hit)
+    }
+    return out
+  }
+
+  private showsDevice(): boolean {
+    const names: Set<string> = new Set<string>()
+    for (const p of this.projects) {
+      if (p.deviceName !== undefined && p.deviceName.length > 0) names.add(p.deviceName)
+    }
+    return names.size > 1
+  }
+
+  private isCurrent(p: RelayProject): boolean {
+    const current: RelayProject | null = AppModel.shared.selectedProject
+    return !this.assigning && current !== null && sameProject(current, p)
   }
 
   private load(): void {
@@ -210,6 +284,7 @@ export struct ProjectPicker {
     }
     try {
       this.projects = (await ServiceLocator.backend.myProjects()).filter((p: RelayProject): boolean => this.assigning || p.isDefault !== true)
+      this.recentIds = await ServiceLocator.prefs.recentProjectIds().catch((): string[] => [])
     } catch (e) {
       // 会话在别处失效了：回登录页比留在这儿干瞪眼有用
       if (e instanceof Unauthorized) {
@@ -230,6 +305,7 @@ export struct ProjectPicker {
   }
 
   private pick(p: RelayProject): void {
+    ServiceLocator.prefs.useRecentProject(projectId(p)).catch((): void => {})
     if (this.assigning) {
       this.assign(p).catch((): void => toast(this.getUIContext(), tr('library.assignFailed')))
       return

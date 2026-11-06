@@ -280,3 +280,43 @@ page {
 .dock__delete--off {
   opacity: 0.4;
 }
+
+/* ---- 录音播放条 ------------------------------------------------------------ */
+.player {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--s3) var(--gutter);
+  background: var(--dk-surface);
+  border-top: 1rpx solid var(--dk-rule);
+}
+
+.player__slider {
+  margin: 0 0 var(--s1);
+}
+
+.player__times {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--t-micro);
+  color: var(--dk-fg-muted);
+}
+
+.player__controls {
+  display: flex;
+  justify-content: center;
+  gap: var(--s8);
+  margin-top: var(--s2);
+}
+
+.player__btn {
+  font-size: var(--t-small);
+  color: var(--dk-fg);
+}
+
+.player__btn--main {
+  padding: 0 var(--s5);
+  border-radius: 999px;
+  background: var(--dk-rule);
+}

@@ -163,10 +163,16 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                         // **不跟着余额行显隐**——入口依赖新用户没有的状态正是 2026-09-09
                         // 「充值在哪」那起事故本身（contract/schema/billing.schema.json 的 UI 映射、
                         // docs/MOBILE_DEV_DISCIPLINE.md §1）。
-                        if (showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL)) {
-                            TextAction(tr("recharge.entry"), color = Tk.L.accent) { showRechargeNotice = true }
+                        // 包晴天律师只在包晴天 App 充值（本站充值会被服务端以 bqt_recharge_via_bqt 拒绝）：
+                        // 收起充值与后付费段，只留一句去哪里充。
+                        if (balance?.billingLine == "bqt") {
+                            Text(tr("bqt.rechargeInBqt"), style = Fonts.small(), color = Tk.L.fgMuted)
+                        } else {
+                            if (showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL)) {
+                                TextAction(tr("recharge.entry"), color = Tk.L.accent) { showRechargeNotice = true }
+                            }
+                            PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { uriHandler.openUri("https://aiworkdeck.com/zh/account#wallet") })
                         }
-                        PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { uriHandler.openUri("https://aiworkdeck.com/zh/account#wallet") })
                     }
                 }
 

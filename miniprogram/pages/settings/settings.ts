@@ -14,7 +14,7 @@ import { chooseBackupConsent } from '../../utils/backup-consent'
  * 余额行与充值入口的显隐规则一律走契约（contract/schema/billing.schema.json 的 UI 映射，
  * 实现在 utils/money.ts 的 balanceRowForError），按 kind 分支，不匹配 message 措辞。
  */
-import { billingBalance, getPhone, logout, maskPhone, backupConsent, setBackupConsent, getSession } from '../../utils/api'
+import { billingBalance, getAccountUser, getPhone, logout, maskPhone, backupConsent, setBackupConsent, getSession } from '../../utils/api'
 import type { ApiError, BillingBalance } from '../../utils/api'
 import type { Metrics } from '../../utils/layout'
 import {
@@ -57,6 +57,25 @@ function miniProgramVersion(): string {
   }
 }
 
+/** 分组标题：费用 / 云端存储 / 影像 / 通用 / 关于 */
+function groupLabels() {
+  return {
+    billingLabel: t('settings.billing'),
+    cloudLabel: t('settings.cloud'),
+    mediaLabel: t('settings.media'),
+    generalLabel: t('settings.general'),
+    aboutLabel: t('settings.about'),
+  }
+}
+
+/** 顶部账号名：显示名优先，其次脱敏手机号、用户名；号码与名字不同时在名字下面补一行。 */
+function accountState() {
+  const user = getAccountUser()
+  const phoneText = maskPhone(getPhone())
+  const accountName = user?.displayName || phoneText || user?.username || t('settings.account')
+  return { accountName, phoneText: phoneText === accountName ? '' : phoneText }
+}
+
 function languageState() {
   const options = getLanguagePickerOptions()
   const pref = getLocalePreference()
@@ -82,6 +101,8 @@ Page({
     navTitle: t('settings.title'),
     accountLabel: t('settings.account'),
     phoneText: '',
+    accountName: '',
+    ...groupLabels(),
     balanceTitle: t('balance.title'),
     // 未知态（还没拉到结果）不渲染，避免先出现空壳行再消失的首帧闪烁（与项目页原来同一口径）
     balanceVisible: false,
@@ -89,6 +110,8 @@ Page({
     subscriptionRows: [] as { label: string, value: string }[],
     // 充值入口跟余额行分开算：NOT_CONNECTED 时行在、入口也要在（dev-board#535）
     rechargeVisible: false,
+    bqt: false,
+    bqtHint: '',
     rechargeText: t('recharge.entry'),
     // 「充值后即开通统一账户」只在 NOT_CONNECTED 时说，别的态说这句是废话
     openHint: '',
@@ -108,7 +131,8 @@ Page({
       metrics: app.globalData.metrics,
       navTitle: t('settings.title'),
       accountLabel: t('settings.account'),
-      phoneText: maskPhone(getPhone()),
+      ...accountState(),
+      ...groupLabels(),
       balanceTitle: t('balance.title'),
       rechargeText: t('recharge.entry'),
       versionLabel: t('settings.version'),
@@ -126,6 +150,8 @@ Page({
       organizeEnabled: captureOrganizationEnabled(),
       navTitle: t('settings.title'),
       accountLabel: t('settings.account'),
+      ...accountState(),
+      ...groupLabels(),
       balanceTitle: t('balance.title'),
       rechargeText: t('recharge.entry'),
       versionLabel: t('settings.version'),
@@ -155,6 +181,8 @@ Page({
     this.setData({
       navTitle: t('settings.title'),
       accountLabel: t('settings.account'),
+      ...accountState(),
+      ...groupLabels(),
       balanceTitle: t('balance.title'),
       rechargeText: t('recharge.entry'),
       versionLabel: t('settings.version'),
@@ -181,7 +209,11 @@ Page({
             { label: t('subscription.weekly'), value: `${credits(b.subscription.weeklyUsedCents)} / ${credits(b.subscription.weeklyLimitCents)}` },
             { label: t('subscription.monthly'), value: `${credits(b.subscription.monthlyUsedCents)} / ${credits(b.subscription.monthlyLimitCents)}` },
           ] : [],
-          rechargeVisible: CAN_RECHARGE,
+          // 包晴天律师只在包晴天 App 充值：本站充值会被服务端以 bqt_recharge_via_bqt 拒绝，
+          // 而虚拟支付是先扣钱后到账，所以充值、后付费还款一律收起
+          bqt: b.billingLine === 'bqt',
+          bqtHint: b.billingLine === 'bqt' ? t('bqt.rechargeInBqt') : '',
+          rechargeVisible: CAN_RECHARGE && b.billingLine !== 'bqt',
           openHint: '',
         })
       })
@@ -262,6 +294,7 @@ Page({
   },
   onPostpaidRetry() { this.loadPostpaid() },
   onRecharge() {
+    if (this.data.bqt) return
     wx.navigateTo({ url: '/pages/recharge/recharge' })
   },
 

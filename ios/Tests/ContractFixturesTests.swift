@@ -121,6 +121,7 @@ final class ContractFixturesTests: XCTestCase {
             XCTAssertEqual(balance.balanceCents, Int64(expect["balanceCents"] as! Int), name)
             XCTAssertEqual(balance.currency, expect["currency"] as! String, name)
             XCTAssertEqual(balance.plan, expect["plan"] as? String, name)
+            XCTAssertEqual(balance.billingLine, expect["billingLine"] as? String, name)
         }
     }
 
