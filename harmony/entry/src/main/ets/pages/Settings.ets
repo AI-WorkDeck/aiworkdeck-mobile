@@ -11,7 +11,7 @@ import { Tk } from '../design/Tokens'
 import { formatBytes } from '../model/Format'
 import { RelayProject } from '../model/Capture'
 import { Unauthorized } from '../model/Envelope'
-import { AccountUser, MediaUsage, SubscriptionBalance, asRecord } from '../services/ApiTypes'
+import { AccountUser, BillingSnapshot, MediaUsage, SubscriptionBalance, asRecord } from '../services/ApiTypes'
 import { ServiceLocator } from '../services/ServiceLocator'
 import { billingAvailableIn, regionLabelKey } from '../model/AccountRegion'
 import { errorText, toast } from './Feedback'
@@ -56,6 +56,8 @@ export struct Settings {
   @State projectName: string = DASH
   @State usage: MediaUsage | null = null
   @State subscription: SubscriptionBalance | null = null
+  /** 包晴天律师（billingLine = bqt）只在包晴天 App 充值 */
+  @State bqt: boolean = false
   @State backup: BackupConsent | null = null
   @State postpaid: Record<string, Object> | null = null
   @State postpaidBusy: boolean = false
@@ -85,8 +87,10 @@ export struct Settings {
     }).catch((): void => {})
     this.loadPostpaid().catch((): void => {})
     if (billingAvailableIn(ServiceLocator.region)) {
-      ServiceLocator.backend.subscriptionBalance().then((s: SubscriptionBalance | null): void => {
-        if (this.alive) this.subscription = s
+      ServiceLocator.backend.billingSnapshot().then((b: BillingSnapshot): void => {
+        if (!this.alive) return
+        this.subscription = b.subscription
+        this.bqt = b.billingLine === 'bqt'
       }).catch((): void => { if (this.alive) this.subscription = null })
     }
     // 进页面拉一次用量。读不到就留占位「—」，比一条报错更符合这行信息的分量；
@@ -265,10 +269,20 @@ export struct Settings {
       this.infoRow(this.t('subscription.weekly'), `${this.credits(this.subscription.weeklyUsedCents)} / ${this.credits(this.subscription.weeklyLimitCents)}`)
       this.infoRow(this.t('subscription.monthly'), `${this.credits(this.subscription.monthlyUsedCents)} / ${this.credits(this.subscription.monthlyLimitCents)}`)
     }
-    if (RECHARGE_CHANNEL !== 'false') {
-      this.navRow(this.t('recharge.entry'), '', (): void => this.showRechargeNotice())
+    // 包晴天律师只在包晴天 App 充值（本站充值会被服务端以 bqt_recharge_via_bqt 拒绝）：
+    // 收起充值与后付费段，只留一句去哪里充
+    if (this.bqt) {
+      Text(this.t('bqt.rechargeInBqt'))
+        .fontSize(Tk.Ty.small)
+        .fontColor(Tk.L.fgMuted)
+        .width('100%')
+        .margin({ top: Tk.Sp.s2, bottom: Tk.Sp.s2 })
+    } else {
+      if (RECHARGE_CHANNEL !== 'false') {
+        this.navRow(this.t('recharge.entry'), '', (): void => this.showRechargeNotice())
+      }
+      this.postpaidSection()
     }
-    this.postpaidSection()
     this.rule()
   }
 

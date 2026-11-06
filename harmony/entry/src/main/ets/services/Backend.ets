@@ -9,7 +9,7 @@ import { SessionStore } from './SessionStore'
 import { AccountRegion, baseUrlOf, currentAppLanguage } from '../model/AccountRegion'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import {
-  LoginResult, MediaStatus, MediaUsage, SubscriptionBalance, decodeSubscriptionBalance,
+  LoginResult, MediaStatus, MediaUsage, SubscriptionBalance, decodeSubscriptionBalance, BillingSnapshot, decodeBillingLine,
   asRecord, decodeLoginResult, decodeMediaStatuses, decodeMediaUsage, decodeCatalog,
 } from './ApiTypes'
 
@@ -94,8 +94,14 @@ export class Backend {
     return decodeCatalog(await this.bare('/api/mobile/catalog'))
   }
 
+  async billingSnapshot(): Promise<BillingSnapshot> {
+    const raw: Object | null = await this.bare('/api/mobile/billing/balance')
+    const snapshot: BillingSnapshot = { subscription: decodeSubscriptionBalance(raw), billingLine: decodeBillingLine(raw) }
+    return snapshot
+  }
+
   async subscriptionBalance(): Promise<SubscriptionBalance | null> {
-    return decodeSubscriptionBalance(await this.bare('/api/mobile/billing/balance'))
+    return (await this.billingSnapshot()).subscription
   }
 
   async mediaUsage(): Promise<MediaUsage> {
