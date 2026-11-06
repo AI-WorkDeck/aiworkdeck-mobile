@@ -543,5 +543,17 @@
   "postpaid.resume": "Pulihkan sambungan awan",
   "postpaid.resumeNotice": "Hanya kebenaran awan dipulihkan. Tugas lama kekal dijeda; cuba semula secara manual atau aktifkan sandaran semula. Fail asal setempat dikekalkan.",
   "postpaid.uploadPaused": "Muat naik dijeda. Cuba semula secara manual.",
-  "postpaid.refresh": "Kebenaran awan berubah. Pulihkan sambungan dalam Tetapan; tugas lama perlu dicuba semula secara manual."
+  "postpaid.refresh": "Kebenaran awan berubah. Pulihkan sambungan dalam Tetapan; tugas lama perlu dicuba semula secara manual.",
+  "project.recent": "Terkini",
+  "project.noneHint": "Jangan failkan dahulu — susun kemudian dalam pustaka",
+  "project.noMatch": "Tiada projek sepadan",
+  "details.capturedAt": "Masa dirakam",
+  "details.location": "Lokasi",
+  "details.device": "Peranti",
+  "details.fingerprint": "Cap jari fail (SHA-256, membuktikan fail tidak diubah)",
+  "player.back15": "Undur 15 saat",
+  "player.forward15": "Maju 15 saat",
+  "settings.billing": "Bil",
+  "settings.cloud": "Storan awan",
+  "settings.general": "Umum"
 }

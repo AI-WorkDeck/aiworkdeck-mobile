@@ -46,10 +46,10 @@ struct WorkspaceView: View {
                     NavigationLink(value: project) {
                         VStack(alignment: .leading) {
                             Text(project.name)
-                            if let device = project.deviceName {
+                            // 电脑名只在项目分布在多台电脑上时才帮得上忙；内部 id 不给用户看。
+                            if Set(projects.compactMap(\.deviceName)).count > 1, let device = project.deviceName {
                                 Text(device).font(.caption).foregroundStyle(.secondary)
                             }
-                            Text(project.identityCaption).font(.caption2).foregroundStyle(.secondary)
                         }
                     }
                     .accessibilityIdentifier("workspace.project.\(project.key)")

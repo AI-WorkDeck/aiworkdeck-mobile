@@ -543,5 +543,17 @@
   "postpaid.resume": "Bulut bağlantısını geri yükle",
   "postpaid.resumeNotice": "Yalnızca bulut izni geri yüklenir. Eski görevler duraklatılmış kalır; elle yeniden deneyin veya yedeklemeyi tekrar açın. Yerel asıllar korunur.",
   "postpaid.uploadPaused": "Yükleme duraklatıldı. Elle yeniden deneyin.",
-  "postpaid.refresh": "Bulut izni değişti. Ayarlardan bağlantıyı geri yükleyin; eski görevleri elle yeniden deneyin."
+  "postpaid.refresh": "Bulut izni değişti. Ayarlardan bağlantıyı geri yükleyin; eski görevleri elle yeniden deneyin.",
+  "project.recent": "Son kullanılanlar",
+  "project.noneHint": "Şimdilik projeye ekleme — sonra kitaplıkta düzenle",
+  "project.noMatch": "Eşleşen proje yok",
+  "details.capturedAt": "Çekim zamanı",
+  "details.location": "Konum",
+  "details.device": "Cihaz",
+  "details.fingerprint": "Dosya parmak izi (SHA-256, değiştirilmediğini kanıtlar)",
+  "player.back15": "15 saniye geri",
+  "player.forward15": "15 saniye ileri",
+  "settings.billing": "Faturalandırma",
+  "settings.cloud": "Bulut depolama",
+  "settings.general": "Genel"
 }

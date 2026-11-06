@@ -15,6 +15,7 @@ struct ProjectPickerView: View {
     @State private var projects: [RelayProject] = []
     @State private var loading = true
     @State private var error: String?
+    @State private var query = ""
 
     private var captureInProgress: Bool {
         onSelect == nil && (AudioRecorderService.shared.isRecording || AudioRecorderService.shared.isBusy ||
@@ -24,23 +25,11 @@ struct ProjectPickerView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
-                header
-                if onSelect == nil {
-                    Button {
-                        Task {
-                            choosing = true
-                            do {
-                                try await model.selectDefaultProject()
-                                if let onBrowse { onBrowse() } else { onClose() }
-                            }
-                            catch { self.error = error.localizedDescription }
-                            choosing = false
-                        }
-                    } label: { Label(tr("project.none"), systemImage: "tray") }
-                    .frame(minHeight: T.touchMin)
-                    .disabled(captureInProgress)
-                    .accessibilityIdentifier("projectPicker.none")
-
+                if let hint = hintText {
+                    Text(hint)
+                        .font(T.F.micro())
+                        .foregroundStyle(T.L.fgFaint)
+                        .padding(.vertical, T.Sp.s2)
                 }
                 if captureInProgress {
                     Text(tr("project.captureInProgress"))
@@ -64,6 +53,9 @@ struct ProjectPickerView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .background(T.L.bg)
             .task { await load() }
+            .navigationTitle(tr(titleKey ?? (onSelect == nil ? "project.title" : "library.move")))
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: tr("workspace.searchProjects"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(tr("common.back"), action: onClose)
@@ -76,67 +68,113 @@ struct ProjectPickerView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: T.Sp.s2) {
-            Eyebrow(text: tr("project.eyebrow"))
-            Text(tr(titleKey ?? (onSelect == nil ? "project.title" : "library.move")))
-                .font(T.F.display())
-                .foregroundStyle(T.L.fg)
-            Text(hintKey.map { tr($0) } ?? (onSelect == nil ? tr("project.hint", ["date": AppModel.today]) : tr("library.moveHint")))
-                .font(T.F.micro())
-                .foregroundStyle(T.L.fgFaint)
-                .padding(.top, T.Sp.s1)
-        }
-        .padding(.top, T.Sp.s3)
-        .padding(.bottom, T.Sp.s3)
+    private var hintText: String? {
+        hintKey.map { tr($0) } ?? (onSelect == nil ? tr("project.hint", ["date": AppModel.today]) : tr("library.moveHint"))
     }
+
+    /// 选择页只做一件事：尽快点到要的项目。
+    /// 顺序：临时项目（仅采集目标）→ 最近用过 → 全部；有搜索词时只显示匹配。
+    private var candidates: [RelayProject] { projects.filter { onSelect != nil || $0.isDefault != true } }
+    private var matches: [RelayProject] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        return q.isEmpty ? candidates : candidates.filter { $0.name.localizedCaseInsensitiveContains(q) }
+    }
+    private var recent: [RelayProject] {
+        guard query.isEmpty, candidates.count > 6 else { return [] }
+        return RecentProjects.ids.compactMap { id in candidates.first { $0.id == id } }
+    }
+    /// 只有项目分布在多台电脑上时，电脑名才帮得上忙。
+    private var showsDevice: Bool { Set(candidates.compactMap(\.deviceName)).count > 1 }
 
     private var list: some View {
         ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(projects.filter { onSelect != nil || $0.isDefault != true }) { p in
-                    Button {
-                        Task {
-                            choosing = true
-                            do {
-                                if let onSelect { try await onSelect(p) }
-                                else { await model.selectProject(p) }
-                                onClose()
-                            } catch { self.error = error.localizedDescription }
-                            choosing = false
-                        }
-                    } label: {
-                        HStack(spacing: T.Sp.s3) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(p.name)
-                                    .font(T.F.body())
-                                    .foregroundStyle(T.L.fg)
-                                    .lineLimit(1)
-                                if let d = p.deviceName, !d.isEmpty {
-                                    Text(d)
-                                        .font(T.F.nano())
-                                        .foregroundStyle(T.L.fgFaint)
-                                }
-                                Text(p.identityCaption)
-                                    .font(T.F.nano())
-                                    .foregroundStyle(T.L.fgFaint)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Spacer(minLength: 0)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(T.L.fgFaint)
-                        }
+            LazyVStack(alignment: .leading, spacing: 0) {
+                if onSelect == nil, query.isEmpty { noneRow }
+                if !recent.isEmpty {
+                    sectionTitle(tr("project.recent"))
+                    ForEach(recent) { row($0) }
+                    sectionTitle(tr("personal.allProjects"))
+                }
+                ForEach(matches) { row($0) }
+                if matches.isEmpty {
+                    Text(tr("project.noMatch"))
+                        .font(T.F.small()).foregroundStyle(T.L.fgMuted)
                         .frame(minHeight: T.touchMin)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(captureInProgress)
-                    .accessibilityIdentifier("projectPicker.project.\(p.key)")
-                    Hairline()
                 }
             }
         }
+        .scrollDismissesKeyboard(.immediately)
+    }
+
+    private func sectionTitle(_ text: String) -> some View {
+        Eyebrow(text: text).padding(.top, T.Sp.s4).padding(.bottom, T.Sp.s1)
+    }
+
+    private var noneRow: some View {
+        VStack(spacing: 0) {
+            Button {
+                Task {
+                    choosing = true
+                    do {
+                        try await model.selectDefaultProject()
+                        if let onBrowse { onBrowse() } else { onClose() }
+                    }
+                    catch { self.error = error.localizedDescription }
+                    choosing = false
+                }
+            } label: {
+                rowLabel(title: tr("project.none"), subtitle: tr("project.noneHint"),
+                         icon: "tray", current: model.selectedProject?.isDefault == true)
+            }
+            .buttonStyle(.plain)
+            .disabled(captureInProgress)
+            .accessibilityIdentifier("projectPicker.none")
+            Hairline()
+        }
+    }
+
+    private func row(_ p: RelayProject) -> some View {
+        VStack(spacing: 0) {
+            Button {
+                Task {
+                    choosing = true
+                    do {
+                        if let onSelect { try await onSelect(p) }
+                        else { await model.selectProject(p) }
+                        RecentProjects.use(p.id)
+                        onClose()
+                    } catch { self.error = error.localizedDescription }
+                    choosing = false
+                }
+            } label: {
+                rowLabel(title: p.name, subtitle: showsDevice ? p.deviceName : nil,
+                         icon: nil, current: onSelect == nil && model.selectedProject?.id == p.id)
+            }
+            .buttonStyle(.plain)
+            .disabled(captureInProgress)
+            .accessibilityIdentifier("projectPicker.project.\(p.key)")
+            Hairline()
+        }
+    }
+
+    private func rowLabel(title: String, subtitle: String?, icon: String?, current: Bool) -> some View {
+        HStack(spacing: T.Sp.s3) {
+            if let icon {
+                Image(systemName: icon).foregroundStyle(T.L.accent).frame(width: 22)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(T.F.body()).foregroundStyle(T.L.fg).lineLimit(1)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle).font(T.F.nano()).foregroundStyle(T.L.fgFaint).lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+            if current {
+                Image(systemName: "checkmark").font(.system(size: 14, weight: .semibold)).foregroundStyle(T.L.accent)
+            }
+        }
+        .frame(minHeight: T.touchMin)
+        .contentShape(Rectangle())
     }
 
     private var loadingRow: some View {
@@ -190,5 +228,14 @@ struct ProjectPickerView: View {
             self.error = error.localizedDescription
         }
         loading = false
+    }
+}
+
+/// 最近用过的项目（只存 id，最多 5 个）。项目条目不是凭据，存 UserDefaults 即可。
+enum RecentProjects {
+    private static let key = "recentProjectIDs"
+    static var ids: [String] { UserDefaults.standard.stringArray(forKey: key) ?? [] }
+    static func use(_ id: String) {
+        UserDefaults.standard.set(Array(([id] + ids.filter { $0 != id }).prefix(5)), forKey: key)
     }
 }

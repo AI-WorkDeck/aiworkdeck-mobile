@@ -543,5 +543,17 @@
   "postpaid.resume": "Cloudverbinding herstellen",
   "postpaid.resumeNotice": "Alleen de cloudrechten worden hersteld. Oude taken blijven gepauzeerd; probeer ze handmatig opnieuw of zet de back-up weer aan. Lokale originelen blijven behouden.",
   "postpaid.uploadPaused": "Upload gepauzeerd. Probeer handmatig opnieuw.",
-  "postpaid.refresh": "De cloudrechten zijn gewijzigd. Herstel de verbinding in Instellingen; oude taken moet u handmatig opnieuw proberen."
+  "postpaid.refresh": "De cloudrechten zijn gewijzigd. Herstel de verbinding in Instellingen; oude taken moet u handmatig opnieuw proberen.",
+  "project.recent": "Recent",
+  "project.noneHint": "Nog niet indelen — later sorteren in de bibliotheek",
+  "project.noMatch": "Geen overeenkomende projecten",
+  "details.capturedAt": "Vastgelegd",
+  "details.location": "Locatie",
+  "details.device": "Apparaat",
+  "details.fingerprint": "Bestandsvingerafdruk (SHA-256, bewijst dat het ongewijzigd is)",
+  "player.back15": "15 seconden terug",
+  "player.forward15": "15 seconden vooruit",
+  "settings.billing": "Facturering",
+  "settings.cloud": "Cloudopslag",
+  "settings.general": "Algemeen"
 }

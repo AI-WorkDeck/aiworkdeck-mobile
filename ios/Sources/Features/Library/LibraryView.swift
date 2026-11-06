@@ -29,7 +29,7 @@ struct LibraryView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var appeared = false
     @State private var movingItem: CaptureItem?
-    @State private var moveError: String?
+    @State private var deleteError: String?
 
     /// 预览目标：同一天的件 + 当前下标。
     private struct ViewerTarget: Identifiable {
@@ -119,9 +119,9 @@ struct LibraryView: View {
                 if fixedProject == nil { viewingID = target.id }
             }).environment(model).preferredColorScheme(.light)
         }
-        .alert(tr("library.move"), isPresented: Binding(get: { moveError != nil }, set: { if !$0 { moveError = nil } })) {
-            Button(tr("common.ok"), role: .cancel) { moveError = nil }
-        } message: { Text(moveError ?? "") }
+        .alert(tr("library.delete"), isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button(tr("common.ok"), role: .cancel) { deleteError = nil }
+        } message: { Text(deleteError ?? "") }
         // 用 alert 不用 confirmationDialog：后者在 iOS 26 模拟器上把「取消」画丢了，
         // 删除这种事两个按钮必须都看得见
         .alert(tr("delete.title", ["n": String(selected.count)]), isPresented: $confirmDelete) {
@@ -130,7 +130,7 @@ struct LibraryView: View {
                 selected = []
                 selecting = false
                 Task {
-                    if !(await model.delete(ids: ids)) { moveError = tr("queue.moveInProgress") }
+                    if !(await model.delete(ids: ids)) { deleteError = tr("queue.moveInProgress") }
                 }
             }
             Button(tr("common.cancel"), role: .cancel) {}
@@ -338,9 +338,6 @@ struct LibraryView: View {
                         .foregroundStyle(T.S.failed)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(item.manifest.sha256.prefix(12))
-                    .font(T.F.mono(10))
-                    .foregroundStyle(T.D.fgMuted)
             }
             Spacer(minLength: 0)
         }
@@ -352,11 +349,12 @@ struct LibraryView: View {
         .accessibilityIdentifier("library.item.\(item.id)")
     }
 
+    /// 只在真能移动时出现（规则与队列页一致：未上传的直接改目标，已落盘的走桌面端移动请求）。
+    @ViewBuilder
     private func moveButton(_ item: CaptureItem) -> some View {
-        Button {
-            if item.canMoveToProject { movingItem = item }
-            else { moveError = tr("library.moveSynced") }
-        } label: { Label(tr("library.move"), systemImage: "folder") }
+        if item.canMoveToProject || item.canRequestArchiveMove {
+            Button { movingItem = item } label: { Label(tr("library.move"), systemImage: "folder") }
+        }
     }
 
     private var emptyState: some View {
@@ -464,14 +462,14 @@ struct LibraryView: View {
 
     private var tallyRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
-            pill(tally.uploading, TransferPhase.uploading.caption, T.S.waitingOnDark)
+            if tally.uploading > 0 { pill(tally.uploading, TransferPhase.uploading.caption, T.S.waitingOnDark) }
             if tally.failed > 0 {
                 Text(tr("tally.failedSuffix", ["m": String(tally.failed)]))
                     .font(T.F.nano())
                     .foregroundStyle(T.S.failed)
                     .padding(.trailing, T.Sp.s2)
             }
-            pill(tally.staged, TransferPhase.staged.caption, T.S.movingOnDark)
+            if tally.staged > 0 { pill(tally.staged, TransferPhase.staged.caption, T.S.movingOnDark) }
             pill(tally.landed, TransferPhase.landed.caption, T.S.arrivedOnDark)
         }
         .accessibilityElement(children: .combine)
@@ -567,7 +565,7 @@ struct LibraryView: View {
                 .foregroundStyle(T.D.fgMuted)
             Spacer()
             Button {
-                if selectedItems.contains(where: { $0.moveBlocksMutation }) { moveError = tr("queue.moveInProgress") }
+                if selectedItems.contains(where: { $0.moveBlocksMutation }) { deleteError = tr("queue.moveInProgress") }
                 else { confirmDelete = true }
             } label: {
                 Text(tr("delete.title", ["n": String(selected.count)]))

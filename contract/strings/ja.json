@@ -543,5 +543,17 @@
   "postpaid.resume": "クラウド接続を復元",
   "postpaid.resumeNotice": "クラウド権限のみ復元します。以前のタスクは停止したままです。手動で再試行するか、バックアップを再度有効にしてください。端末の原本は保持されます。",
   "postpaid.uploadPaused": "アップロードは停止中です。手動で再試行してください。",
-  "postpaid.refresh": "クラウド権限が変更されました。設定で接続を復元してください。以前のタスクは手動で再試行が必要です。"
+  "postpaid.refresh": "クラウド権限が変更されました。設定で接続を復元してください。以前のタスクは手動で再試行が必要です。",
+  "project.recent": "最近使用",
+  "project.noneHint": "今はプロジェクトに入れず、後でライブラリで整理",
+  "project.noMatch": "一致するプロジェクトはありません",
+  "details.capturedAt": "撮影日時",
+  "details.location": "位置",
+  "details.device": "撮影端末",
+  "details.fingerprint": "ファイル指紋（SHA-256、改変がないことの証明用）",
+  "player.back15": "15秒戻る",
+  "player.forward15": "15秒進む",
+  "settings.billing": "料金",
+  "settings.cloud": "クラウドストレージ",
+  "settings.general": "一般"
 }

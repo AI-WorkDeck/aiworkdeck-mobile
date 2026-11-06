@@ -235,10 +235,6 @@ struct RelayProject: Codable, Identifiable, Hashable, Sendable {
         if let uid = projectUid, let otherUid = other.projectUid { return uid == otherUid }
         return !aliases.isDisjoint(with: other.aliases)
     }
-    var identityCaption: String {
-        if let projectUid { return tr("project.unifiedIdentity", ["id": projectUid]) }
-        return tr("project.identity", ["key": key, "device": deviceId])
-    }
 }
 
 struct CodeOnly: Decodable {
