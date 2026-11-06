@@ -543,5 +543,17 @@
   "postpaid.resume": "恢復雲端連線",
   "postpaid.resumeNotice": "僅恢復雲端權限，舊任務仍暫停；請逐項手動重試或重新開啟備份。本機原件保留。",
   "postpaid.uploadPaused": "任務已暫停，請手動重試。",
-  "postpaid.refresh": "雲端權限已變更，請在設定中明確恢復雲端連線；舊任務仍需手動重試。"
+  "postpaid.refresh": "雲端權限已變更，請在設定中明確恢復雲端連線；舊任務仍需手動重試。",
+  "project.recent": "最近使用",
+  "project.noneHint": "先不歸入專案，之後在資料庫整理",
+  "project.noMatch": "沒有符合的專案",
+  "details.capturedAt": "拍攝時間",
+  "details.location": "位置",
+  "details.device": "拍攝裝置",
+  "details.fingerprint": "檔案指紋（SHA-256，用於證明未被修改）",
+  "player.back15": "倒退 15 秒",
+  "player.forward15": "快轉 15 秒",
+  "settings.billing": "費用",
+  "settings.cloud": "雲端儲存",
+  "settings.general": "一般"
 }

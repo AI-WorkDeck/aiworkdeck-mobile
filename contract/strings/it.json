@@ -543,5 +543,17 @@
   "postpaid.resume": "Ripristina connessione cloud",
   "postpaid.resumeNotice": "Vengono ripristinati solo i permessi cloud. Le attività precedenti restano sospese: riprovale manualmente o riattiva il backup. Gli originali locali restano disponibili.",
   "postpaid.uploadPaused": "Caricamento sospeso. Riprova manualmente.",
-  "postpaid.refresh": "I permessi cloud sono cambiati. Ripristina la connessione nelle impostazioni; le attività precedenti richiedono un nuovo tentativo manuale."
+  "postpaid.refresh": "I permessi cloud sono cambiati. Ripristina la connessione nelle impostazioni; le attività precedenti richiedono un nuovo tentativo manuale.",
+  "project.recent": "Recenti",
+  "project.noneHint": "Non archiviare ora: riordina dopo nella libreria",
+  "project.noMatch": "Nessun progetto corrispondente",
+  "details.capturedAt": "Acquisito il",
+  "details.location": "Posizione",
+  "details.device": "Dispositivo",
+  "details.fingerprint": "Impronta del file (SHA-256, prova che non è stato modificato)",
+  "player.back15": "Indietro di 15 secondi",
+  "player.forward15": "Avanti di 15 secondi",
+  "settings.billing": "Fatturazione",
+  "settings.cloud": "Archiviazione cloud",
+  "settings.general": "Generali"
 }

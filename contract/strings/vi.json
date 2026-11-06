@@ -543,5 +543,17 @@
   "postpaid.resume": "Khôi phục kết nối đám mây",
   "postpaid.resumeNotice": "Chỉ khôi phục quyền đám mây. Tác vụ cũ vẫn tạm dừng; hãy thử lại thủ công hoặc bật lại sao lưu. Bản gốc trên thiết bị được giữ lại.",
   "postpaid.uploadPaused": "Tải lên đã tạm dừng. Hãy thử lại thủ công.",
-  "postpaid.refresh": "Quyền đám mây đã thay đổi. Khôi phục kết nối trong Cài đặt; tác vụ cũ vẫn cần thử lại thủ công."
+  "postpaid.refresh": "Quyền đám mây đã thay đổi. Khôi phục kết nối trong Cài đặt; tác vụ cũ vẫn cần thử lại thủ công.",
+  "project.recent": "Gần đây",
+  "project.noneHint": "Chưa xếp vào dự án — sắp xếp sau trong thư viện",
+  "project.noMatch": "Không có dự án phù hợp",
+  "details.capturedAt": "Thời điểm ghi",
+  "details.location": "Vị trí",
+  "details.device": "Thiết bị",
+  "details.fingerprint": "Dấu vân tay tệp (SHA-256, chứng minh tệp chưa bị sửa)",
+  "player.back15": "Lùi 15 giây",
+  "player.forward15": "Tới 15 giây",
+  "settings.billing": "Thanh toán",
+  "settings.cloud": "Lưu trữ đám mây",
+  "settings.general": "Chung"
 }

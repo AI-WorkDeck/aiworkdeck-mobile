@@ -543,5 +543,17 @@
   "postpaid.resume": "Cloud-Verbindung wiederherstellen",
   "postpaid.resumeNotice": "Nur die Cloud-Berechtigung wird wiederhergestellt. Alte Aufgaben bleiben pausiert. Starten Sie sie manuell oder aktivieren Sie die Sicherung erneut. Lokale Originale bleiben erhalten.",
   "postpaid.uploadPaused": "Upload pausiert. Manuell erneut versuchen.",
-  "postpaid.refresh": "Die Cloud-Berechtigung hat sich geändert. Stellen Sie die Verbindung in den Einstellungen wieder her; alte Aufgaben müssen manuell neu gestartet werden."
+  "postpaid.refresh": "Die Cloud-Berechtigung hat sich geändert. Stellen Sie die Verbindung in den Einstellungen wieder her; alte Aufgaben müssen manuell neu gestartet werden.",
+  "project.recent": "Zuletzt verwendet",
+  "project.noneHint": "Noch nicht zuordnen – später in der Mediathek sortieren",
+  "project.noMatch": "Keine passenden Projekte",
+  "details.capturedAt": "Aufgenommen",
+  "details.location": "Standort",
+  "details.device": "Gerät",
+  "details.fingerprint": "Datei-Fingerabdruck (SHA-256, belegt Unverändertheit)",
+  "player.back15": "15 Sekunden zurück",
+  "player.forward15": "15 Sekunden vor",
+  "settings.billing": "Abrechnung",
+  "settings.cloud": "Cloud-Speicher",
+  "settings.general": "Allgemein"
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchConnectivity
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
@@ -60,77 +61,70 @@ struct SettingsView: View {
     private var settings: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    group(tr("settings.account")) {
-                        HStack(spacing: T.Sp.s3) {
-                            AccountAvatar()
-                            infoRow(tr("settings.signedIn"), model.account?.displayName ?? "—")
-                        }.accessibilityIdentifier("settings.account")
-                        infoRow(tr("settings.relay"), usageCaption)
-                        if let caption = persistentCaption { infoRow(tr("settings.persistent"), caption) }
-                        // 还没读完时整行不渲染，见 BalanceState 上的注释。
-                        if let caption = balanceCaption {
-                            infoRow(tr("balance.title"), caption)
-                        }
-                        if case .ok(let b) = balanceState, let sub = b.subscription, sub.active {
-                            infoRow(tr("subscription.available"), credits(sub.availableCents))
-                            infoRow(tr("subscription.weekly"), "\(credits(sub.weeklyUsedCents)) / \(credits(sub.weeklyLimitCents))")
-                            infoRow(tr("subscription.monthly"), "\(credits(sub.monthlyUsedCents)) / \(credits(sub.monthlyLimitCents))")
-                        }
-                        if case .ok(let b) = balanceState, let sub = b.subscription,
-                           sub.sandbox == true, let test = sub.sandboxSubscription {
-                            infoRow(tr("subscription.sandbox.title"), tr(test.active ? "subscription.sandbox.active" : "subscription.sandbox.inactive"))
-                            if let date = test.expiryDate {
-                                infoRow(tr("subscription.sandbox.expires"), date.formatted(date: .abbreviated, time: .shortened))
+                    // 账号：头像 + 名字，一眼知道登的是谁。
+                    HStack(spacing: T.Sp.s3) {
+                        AccountAvatar()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(accountName).font(T.F.heading()).foregroundStyle(T.L.fg)
+                            if let username = model.account?.username, username != accountName {
+                                Text(username).font(T.F.nano()).foregroundStyle(T.L.fgFaint)
                             }
                         }
-                        // 充值入口与余额行分开算：NOT_CONNECTED 时行在、入口也要在
-                        // （dev-board#535：触发 NOT_CONNECTED 的正是最该去充值把账户开出来的人）。
-                        if plan.showRecharge {
-                            Button(tr("recharge.entry")) { showRecharge = true }
-                                .font(T.F.small())
-                                .foregroundStyle(T.L.accent)
-                                .frame(minHeight: T.touchMin, alignment: .leading)
-                            if case .failed(.notConnected) = balanceState {
+                    }
+                    .padding(.top, T.Sp.s4)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("settings.account")
+
+                    // 费用：余额与充值放一起，国际区不计费时整组不出现。
+                    if AccountRegion.current.billingEnabled {
+                        group(tr("settings.billing")) {
+                            // 还没读完时整行不渲染，见 BalanceState 上的注释。
+                            if let caption = balanceCaption {
+                                HStack {
+                                    infoRow(tr("balance.title"), caption)
+                                    // 充值入口与余额行分开算：NOT_CONNECTED 时行在、入口也要在
+                                    // （dev-board#535：触发 NOT_CONNECTED 的正是最该去充值把账户开出来的人）。
+                                    if plan.showRecharge { rechargeButton }
+                                }
+                            } else if plan.showRecharge {
+                                rechargeButton
+                            }
+                            if plan.showRecharge, case .failed(.notConnected) = balanceState {
                                 Text(tr("recharge.openHint"))
                                     .font(T.F.nano())
                                     .foregroundStyle(T.L.fgFaint)
                             }
-                        }
-                        PostpaidSection(canRepay: AccountRegion.current.billingEnabled, repay: { showRecharge = true })
-                        if AccountRegion.current.billingEnabled {
-                            Button(tr("subscription.store.title")) { showSubscription = true }
-                                .accessibilityIdentifier("settings.subscription")
-                        }
-                        // 区域登录后固定，这里只读；换区要退出登录后在登录页重选。
-                        infoRow(tr("settings.region"), tr(AccountRegion.current.labelKey))
-                        HStack {
-                            Text(tr("settings.language")).font(T.F.small()).foregroundStyle(T.L.fg)
-                            Spacer()
-                            Picker(tr("settings.language"), selection: Binding(
-                                get: { L10n.preference },
-                                set: { L10n.selectLanguage($0) }
-                            )) {
-                                Text(tr("settings.languageFollowSystem")).tag(L10n.systemPreference)
-                                ForEach(L10n.supportedLocales) { loc in
-                                    Text(loc.nativeName).tag(loc.code)
+                            if case .ok(let b) = balanceState, let sub = b.subscription, sub.active {
+                                infoRow(tr("subscription.available"), credits(sub.availableCents))
+                                infoRow(tr("subscription.weekly"), "\(credits(sub.weeklyUsedCents)) / \(credits(sub.weeklyLimitCents))")
+                                infoRow(tr("subscription.monthly"), "\(credits(sub.monthlyUsedCents)) / \(credits(sub.monthlyLimitCents))")
+                            }
+                            if case .ok(let b) = balanceState, let sub = b.subscription,
+                               sub.sandbox == true, let test = sub.sandboxSubscription {
+                                infoRow(tr("subscription.sandbox.title"), tr(test.active ? "subscription.sandbox.active" : "subscription.sandbox.inactive"))
+                                if let date = test.expiryDate {
+                                    infoRow(tr("subscription.sandbox.expires"), date.formatted(date: .abbreviated, time: .shortened))
                                 }
                             }
-                            .pickerStyle(.menu)
-                            .accessibilityIdentifier("settings.language")
+                            PostpaidSection(canRepay: true, repay: { showRecharge = true })
+                            navRow(tr("subscription.store.title")) { showSubscription = true }
+                                .accessibilityIdentifier("settings.subscription")
                         }
-                        infoRow(tr("settings.server"), Backend.baseURL.host ?? "—")
-                        Button(tr("common.signOut")) { model.signOut(); onClose() }
-                            .font(T.F.small())
-                            .foregroundStyle(T.S.failed)
-                            .frame(minHeight: T.touchMin, alignment: .leading)
+                    }
 
-                        // 审核指南 5.1.1(v)：支持注册就必须在 App 内能删账号。
-                        // 放在退出登录下面、字号更小，是因为它比退出重得多，
-                        // 不该跟退出长得一样容易误点。
-                        Button(tr("settings.deleteAccount")) { confirmDelete = true }
-                            .font(T.F.micro())
-                            .foregroundStyle(T.L.fgMuted)
-                            .frame(minHeight: T.touchMin, alignment: .leading)
+                    // 云端：用量与备份，都是「我的东西在云上占多少、有没有备份」。
+                    group(tr("settings.cloud")) {
+                        infoRow(tr("settings.relay"), usageCaption)
+                        if let caption = persistentCaption { infoRow(tr("settings.persistent"), caption) }
+                        if let error = model.backupError { Text(error).font(T.F.small()).foregroundStyle(T.S.failed) }
+                        navRow(tr("backup.title"), value: model.backupConsent.map { tr($0.enabled ? "backup.enabled" : "backup.disabled") }) {
+                            showBackup = true
+                        }
+                        .accessibilityIdentifier("settings.backup")
+                        // 不计费区域也照旧渲染后付费段（它自己决定显示什么），只是不给还款入口。
+                        if !AccountRegion.current.billingEnabled {
+                            PostpaidSection(canRepay: false, repay: {})
+                        }
                     }
 
                     group(tr("settings.media")) {
@@ -175,36 +169,75 @@ struct SettingsView: View {
                                 .padding(.top, T.Sp.s2)
                         }
 
-                        infoRow(tr("settings.originals"), tr("settings.originals.hint"))
+                        // 本地原图不是开关，是一条说明：放成脚注，不和开关长得一样。
+                        (Text(tr("settings.originals")).bold() + Text(" · " + tr("settings.originals.hint")))
+                            .font(T.F.nano())
+                            .foregroundStyle(T.L.fgFaint)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    group(tr("backup.title")) {
-                        if let consent = model.backupConsent {
-                            Text(tr(consent.enabled ? "backup.enabled" : "backup.disabled"))
-                        }
-                        if let error = model.backupError { Text(error).foregroundStyle(T.S.failed) }
-                        Button(tr("backup.title")) { showBackup = true }
-                            .accessibilityIdentifier("settings.backup")
+                    // 没配对手表的人用不到这一组。
+                    if WCSession.isSupported(), WCSession.default.isPaired {
+                        group(tr("watch.title")) {
+                            Text(tr("watch.phoneHint"))
+                                .font(T.F.small()).foregroundStyle(T.L.fgMuted)
+                            if let error = WatchPhoneBridge.shared.lastError {
+                                Text(error).font(T.F.small()).foregroundStyle(T.S.failed)
+                            }
+                            Button(tr("watch.retry")) {
+                                WatchPhoneBridge.shared.publishContext()
+                                Task { await WatchPhoneBridge.shared.importPending() }
+                            }
                             .frame(minHeight: T.touchMin)
+                        }
                     }
 
-                    group(tr("watch.title")) {
-                        Text(tr("watch.phoneHint"))
-                            .font(T.F.small()).foregroundStyle(T.L.fgMuted)
-                        if let error = WatchPhoneBridge.shared.lastError {
-                            Text(error).font(T.F.small()).foregroundStyle(T.S.failed)
+                    group(tr("settings.general")) {
+                        HStack {
+                            Text(tr("settings.language")).font(T.F.small()).foregroundStyle(T.L.fg)
+                            Spacer()
+                            Picker(tr("settings.language"), selection: Binding(
+                                get: { L10n.preference },
+                                set: { L10n.selectLanguage($0) }
+                            )) {
+                                Text(tr("settings.languageFollowSystem")).tag(L10n.systemPreference)
+                                ForEach(L10n.supportedLocales) { loc in
+                                    Text(loc.nativeName).tag(loc.code)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .accessibilityIdentifier("settings.language")
                         }
-                        Button(tr("watch.retry")) {
-                            WatchPhoneBridge.shared.publishContext()
-                            Task { await WatchPhoneBridge.shared.importPending() }
-                        }
-                        .frame(minHeight: T.touchMin)
+                        // 区域登录后固定，这里只读；换区要退出登录后在登录页重选。
+                        infoRow(tr("settings.region"), tr(AccountRegion.current.labelKey))
                     }
 
                     group(tr("settings.about")) {
                         infoRow(tr("settings.version"), Device.facts.appVersion).accessibilityIdentifier("settings.about")
-                        infoRow(tr("settings.help"), "hi@aiworkdeck.com")
+                        HStack {
+                            Text(tr("settings.help")).font(T.F.small()).foregroundStyle(T.L.fg)
+                            Spacer()
+                            Link("hi@aiworkdeck.com", destination: URL(string: "mailto:hi@aiworkdeck.com")!)
+                                .font(T.F.small())
+                                .foregroundStyle(T.L.accent)
+                        }
+                        .frame(minHeight: T.touchMin)
+                        infoRow(tr("settings.server"), Backend.baseURL.host ?? "—")
                     }
+
+                    Button(tr("common.signOut")) { model.signOut(); onClose() }
+                        .font(T.F.small())
+                        .foregroundStyle(T.S.failed)
+                        .frame(minHeight: T.touchMin, alignment: .leading)
+                        .padding(.top, T.Sp.s4)
+
+                    // 审核指南 5.1.1(v)：支持注册就必须在 App 内能删账号。
+                    // 放在退出登录下面、字号更小，是因为它比退出重得多，
+                    // 不该跟退出长得一样容易误点。
+                    Button(tr("settings.deleteAccount")) { confirmDelete = true }
+                        .font(T.F.micro())
+                        .foregroundStyle(T.L.fgMuted)
+                        .frame(minHeight: T.touchMin, alignment: .leading)
                 }
                 .padding(.horizontal, T.Sp.gutter)
                 .padding(.bottom, T.Sp.s16)
@@ -305,22 +338,52 @@ struct SettingsView: View {
     private func group<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: T.Sp.s3) {
             Eyebrow(text: title)
-                .padding(.top, T.Sp.s6)
+                .padding(.top, T.Sp.s5)
                 .padding(.bottom, T.Sp.s1)
             content()
             Hairline().padding(.top, T.Sp.s2)
         }
     }
 
+    /// 一行一项：名称在左，值在右，行高统一。
     private func infoRow(_ k: String, _ v: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .firstTextBaseline, spacing: T.Sp.s3) {
             Text(k).font(T.F.small()).foregroundStyle(T.L.fg)
+            Spacer(minLength: T.Sp.s3)
             Text(v)
-                .font(T.F.nano())
-                .foregroundStyle(T.L.fgFaint)
-                .fixedSize(horizontal: false, vertical: true)
+                .font(T.F.small())
+                .foregroundStyle(T.L.fgMuted)
+                .multilineTextAlignment(.trailing)
+                .monospacedDigit()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+    }
+
+    /// 可点的一行：名称、可选状态、右箭头。
+    private func navRow(_ title: String, value: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: T.Sp.s3) {
+                Text(title).font(T.F.small()).foregroundStyle(T.L.fg)
+                Spacer(minLength: T.Sp.s3)
+                if let value { Text(value).font(T.F.small()).foregroundStyle(T.L.fgMuted) }
+                Image(systemName: "chevron.forward").font(.system(size: 12, weight: .semibold)).foregroundStyle(T.L.fgFaint)
+            }
+            .frame(minHeight: T.touchMin)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var rechargeButton: some View {
+        Button(tr("recharge.entry")) { showRecharge = true }
+            .font(T.F.small())
+            .foregroundStyle(T.L.accent)
+            .frame(minHeight: T.touchMin)
+    }
+
+    private var accountName: String {
+        guard let a = model.account else { return "—" }
+        return a.displayName.isEmpty ? a.username : a.displayName
     }
 
     /// 「已用 / 配额」。满了之后上传会被拒并提示去桌面端收件，这行让用户提前有数。
@@ -332,6 +395,7 @@ struct SettingsView: View {
         guard let used = usage?.persistentUsedBytes else { return nil }
         let f = ByteCountFormatter()
         f.countStyle = .binary
+        f.allowsNonnumericFormatting = false
         let usedText = f.string(fromByteCount: used)
         guard usage?.persistentQuotaAvailable != false, let quota = usage?.persistentQuotaBytes else {
             return tr("settings.quotaUnavailable", ["used": usedText])
@@ -343,6 +407,7 @@ struct SettingsView: View {
         guard let usage else { return "—" }
         let f = ByteCountFormatter()
         f.countStyle = .binary
+        f.allowsNonnumericFormatting = false
         return "\(f.string(fromByteCount: usage.usedBytes)) / \(f.string(fromByteCount: usage.quotaBytes))"
     }
 

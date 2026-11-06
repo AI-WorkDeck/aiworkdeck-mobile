@@ -543,5 +543,17 @@
   "postpaid.resume": "恢复云连接",
   "postpaid.resumeNotice": "仅恢复云权限，旧任务仍暂停；请逐项手动重试或重新开启备份。本机原件保留。",
   "postpaid.uploadPaused": "任务已暂停，请手动重试。",
-  "postpaid.refresh": "云权限已变化，请在设置中明确恢复云连接；旧任务仍需手动重试。"
+  "postpaid.refresh": "云权限已变化，请在设置中明确恢复云连接；旧任务仍需手动重试。",
+  "project.recent": "最近使用",
+  "project.noneHint": "先不归入项目，之后在资料库整理",
+  "project.noMatch": "没有匹配的项目",
+  "details.capturedAt": "拍摄时间",
+  "details.location": "位置",
+  "details.device": "拍摄设备",
+  "details.fingerprint": "文件指纹（SHA-256，用于证明未被改动）",
+  "player.back15": "后退 15 秒",
+  "player.forward15": "前进 15 秒",
+  "settings.billing": "费用",
+  "settings.cloud": "云端存储",
+  "settings.general": "通用"
 }

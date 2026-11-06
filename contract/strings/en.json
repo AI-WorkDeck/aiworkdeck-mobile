@@ -543,5 +543,17 @@
   "postpaid.resume": "Restore cloud connection",
   "postpaid.resumeNotice": "Restore cloud permission only. Previous tasks stay paused; retry them manually or enable backup again. Local originals remain.",
   "postpaid.uploadPaused": "Upload paused. Retry manually.",
-  "postpaid.refresh": "Cloud permission changed. Restore the cloud connection in Settings; previous tasks still need manual retry."
+  "postpaid.refresh": "Cloud permission changed. Restore the cloud connection in Settings; previous tasks still need manual retry.",
+  "project.recent": "Recent",
+  "project.noneHint": "Don't file yet — sort it later in the library",
+  "project.noMatch": "No matching projects",
+  "details.capturedAt": "Captured",
+  "details.location": "Location",
+  "details.device": "Device",
+  "details.fingerprint": "File fingerprint (SHA-256, proves the file is unaltered)",
+  "player.back15": "Back 15 seconds",
+  "player.forward15": "Forward 15 seconds",
+  "settings.billing": "Billing",
+  "settings.cloud": "Cloud storage",
+  "settings.general": "General"
 }
