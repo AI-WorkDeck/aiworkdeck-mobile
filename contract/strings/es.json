@@ -543,5 +543,17 @@
   "postpaid.resume": "Restaurar conexión a la nube",
   "postpaid.resumeNotice": "Solo se restaura el permiso de la nube. Las tareas anteriores siguen pausadas: reinténtelas manualmente o active de nuevo la copia de seguridad. Se conservan los originales locales.",
   "postpaid.uploadPaused": "Carga pausada. Reintente manualmente.",
-  "postpaid.refresh": "El permiso de la nube cambió. Restaure la conexión en Ajustes; las tareas anteriores requieren un reintento manual."
+  "postpaid.refresh": "El permiso de la nube cambió. Restaure la conexión en Ajustes; las tareas anteriores requieren un reintento manual.",
+  "project.recent": "Recientes",
+  "project.noneHint": "No archivar aún: ordénelo después en la biblioteca",
+  "project.noMatch": "No hay proyectos coincidentes",
+  "details.capturedAt": "Capturado",
+  "details.location": "Ubicación",
+  "details.device": "Dispositivo",
+  "details.fingerprint": "Huella del archivo (SHA-256, prueba que no se modificó)",
+  "player.back15": "Retroceder 15 segundos",
+  "player.forward15": "Avanzar 15 segundos",
+  "settings.billing": "Facturación",
+  "settings.cloud": "Almacenamiento en la nube",
+  "settings.general": "General"
 }

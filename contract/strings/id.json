@@ -543,5 +543,17 @@
   "postpaid.resume": "Pulihkan koneksi cloud",
   "postpaid.resumeNotice": "Hanya izin cloud yang dipulihkan. Tugas lama tetap dijeda; coba lagi secara manual atau aktifkan kembali pencadangan. Berkas asli lokal tetap disimpan.",
   "postpaid.uploadPaused": "Unggahan dijeda. Coba lagi secara manual.",
-  "postpaid.refresh": "Izin cloud berubah. Pulihkan koneksi di Pengaturan; tugas lama perlu dicoba lagi secara manual."
+  "postpaid.refresh": "Izin cloud berubah. Pulihkan koneksi di Pengaturan; tugas lama perlu dicoba lagi secara manual.",
+  "project.recent": "Terbaru",
+  "project.noneHint": "Jangan diarsipkan dulu — rapikan nanti di pustaka",
+  "project.noMatch": "Tidak ada proyek yang cocok",
+  "details.capturedAt": "Waktu diambil",
+  "details.location": "Lokasi",
+  "details.device": "Perangkat",
+  "details.fingerprint": "Sidik jari file (SHA-256, membuktikan file tidak diubah)",
+  "player.back15": "Mundur 15 detik",
+  "player.forward15": "Maju 15 detik",
+  "settings.billing": "Tagihan",
+  "settings.cloud": "Penyimpanan cloud",
+  "settings.general": "Umum"
 }

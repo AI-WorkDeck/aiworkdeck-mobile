@@ -73,11 +73,12 @@ fun Pill(count: Int, label: String, color: Color, modifier: Modifier = Modifier)
  * （`tally.failedSuffix`）——失败是「上传中」桶里的异常，不是并列的第四态。
  */
 @Composable
-fun TallyRow(tally: TransferTally, onDark: Boolean = LocalOnDark.current, modifier: Modifier = Modifier) {
+fun TallyRow(tally: TransferTally, onDark: Boolean = LocalOnDark.current, modifier: Modifier = Modifier, hideZero: Boolean = false) {
     CompositionLocalProvider(LocalOnDark provides onDark) {
         Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
-            Pill(tally.uploading, TransferPhase.uploading.caption, dotColor(TransferState.uploading, onDark))
-            Pill(tally.staged, TransferPhase.staged.caption, dotColor(TransferState.uploaded, onDark))
+            // hideZero：图集顶栏只说有的，「0 上传中」是噪音；已落盘一桶始终在，作为总数的锚
+            if (!hideZero || tally.uploading > 0) Pill(tally.uploading, TransferPhase.uploading.caption, dotColor(TransferState.uploading, onDark))
+            if (!hideZero || tally.staged > 0) Pill(tally.staged, TransferPhase.staged.caption, dotColor(TransferState.uploaded, onDark))
             Pill(tally.landed, TransferPhase.landed.caption, dotColor(TransferState.arrived, onDark))
             if (tally.failed > 0) {
                 Text(text = tr("tally.failedSuffix", mapOf("m" to tally.failed)), style = Fonts.small(), color = Tk.S.failed)

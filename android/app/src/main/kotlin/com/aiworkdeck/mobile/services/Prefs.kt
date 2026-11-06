@@ -77,6 +77,15 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
             editor.apply()
         }
 
+    /** 最近选过的项目（只存 id，最多 5 个，新的在前）。项目条目不是凭据，存这儿即可。与 iOS `RecentProjects` 对齐。 */
+    val recentProjectIds: List<String>
+        get() = prefs.getString(KEY_RECENT_PROJECTS, null)?.split('\n')?.filter { it.isNotEmpty() } ?: emptyList()
+
+    fun useRecentProject(id: String) {
+        val ids = (listOf(id) + recentProjectIds.filter { it != id }).take(5)
+        prefs.edit().putString(KEY_RECENT_PROJECTS, ids.joinToString("\n")).apply()
+    }
+
     /**
      * 图集怎么看：列数、网格/列表、正在看的项目。
      * 存这儿而不是 `rememberSaveable`：后者只跨配置变更，进程被杀（现场把 app 切后台一会儿
@@ -116,5 +125,6 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
         const val KEY_LIBRARY_VIEW_MODE = "libraryViewMode"
         const val KEY_LIBRARY_VIEWING_PROJECT = "libraryViewingProject"
         const val KEY_APP_LOCALE = "appLocale"
+        const val KEY_RECENT_PROJECTS = "recentProjectIds"
     }
 }

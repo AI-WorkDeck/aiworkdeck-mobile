@@ -243,7 +243,7 @@ fun LibraryScreen(
         }
 
         assigning?.let { ids ->
-            ProjectPickerScreen(model, onClose = { assigning = null }, onSelect = { target ->
+            ProjectPickerScreen(model, onClose = { assigning = null }, markCurrent = false, onSelect = { target ->
                 scope.launch {
                     try { model.assignCaptures(ids, target); assigning = null }
                     catch (e: kotlinx.coroutines.CancellationException) { throw e }
@@ -360,7 +360,7 @@ private fun TopBar(
             }
         }
         // 计数单独一行：它会因为「含 N 失败」后缀变长，和右侧工具挤在一行会把顶栏撑成三行
-        TallyRow(tally, onDark = true, modifier = Modifier.padding(start = Tk.Sp.gutter, bottom = Tk.Sp.s2))
+        TallyRow(tally, onDark = true, modifier = Modifier.padding(start = Tk.Sp.gutter, bottom = Tk.Sp.s2), hideZero = true)
         Hairline(color = Tk.D.rule)
     }
 }
@@ -470,7 +470,7 @@ private fun ListRow(item: CaptureItem, selecting: Boolean, checked: Boolean, onA
     }
 }
 
-private fun kindLabel(kind: MediaKind): String = when (kind) {
+internal fun kindLabel(kind: MediaKind): String = when (kind) {
     MediaKind.photo -> tr("home.mode.photo")
     MediaKind.video -> tr("home.mode.video")
     MediaKind.audio -> tr("home.mode.audio")

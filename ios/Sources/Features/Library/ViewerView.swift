@@ -2,7 +2,7 @@ import AVKit
 import SwiftUI
 
 /// 记录预览。深色底，左右滑切换同一天的其他件；照片可缩放，录像/录音走系统播放器。
-/// 顶部只放核对要用的三样：时间、状态、哈希前缀。不做编辑、不做分享——取证件不该从这里流出去。
+/// 顶部只放核对要用的：日期时间、类型、状态。哈希放在详情里（质证要用时可复制）。不做编辑、不做分享——取证件不该从这里流出去。
 struct ViewerView: View {
     let items: [CaptureItem]
     @State private var index: Int
@@ -100,9 +100,9 @@ struct ViewerView: View {
                         .font(T.F.mono(11))
                         .foregroundStyle(.white.opacity(0.6))
                 }
-                Text(item.manifest.sha256.prefix(12))
-                    .font(T.F.mono(10))
-                    .foregroundStyle(.white.opacity(0.5))
+                Text(item.capturedAt.formatted(.dateTime.month().day().locale(L10n.formatLocale)) + " · " + kindLabel(item.kind))
+                    .font(T.F.nano())
+                    .foregroundStyle(.white.opacity(0.6))
             }
             Spacer(minLength: 0)
             Button { showingDetails.toggle() } label: {
@@ -139,14 +139,41 @@ struct ViewerView: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: T.Sp.s2) {
                 Text(item.project?.name ?? tr("library.unknownProject")).font(T.F.heading())
-                Text(item.state.detail)
-                Text(item.state.whereItIs).foregroundStyle(.secondary)
-                Text(item.capturedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .standard).locale(L10n.formatLocale)))
-                Text(item.manifest.sha256).font(T.F.mono(10)).textSelection(.enabled)
+                Text(item.state.detail + " · " + item.state.whereItIs).foregroundStyle(.secondary)
+                detailRow(tr("details.capturedAt"),
+                          item.capturedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .standard).locale(L10n.formatLocale)))
+                if let lat = item.manifest.latitude, let lon = item.manifest.longitude {
+                    detailRow(tr("details.location"), String(format: "%.5f, %.5f", lat, lon)
+                              + (item.manifest.horizontalAccuracy.map { " ±\(Int($0.rounded()))m" } ?? ""))
+                }
+                detailRow(tr("details.device"), item.manifest.deviceModel)
+                // 文件指纹：质证时证明文件未被改动；平时用不到，所以只放在详情里、可选中复制。
+                detailRow(tr("details.fingerprint"), item.manifest.sha256, mono: true)
             }.frame(maxWidth: .infinity, alignment: .leading).padding(T.Sp.gutter)
         }
-        .frame(maxHeight: 200)
+        .frame(maxHeight: 260)
         .background(T.D.bg)
+    }
+
+    private func detailRow(_ label: String, _ value: String, mono: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(T.F.nano()).foregroundStyle(.white.opacity(0.5))
+            if mono {
+                // 哈希保持 LTR（RTL 语言下也不翻转）
+                Text(value).font(T.F.mono(10)).textSelection(.enabled)
+                    .environment(\.layoutDirection, .leftToRight)
+            } else {
+                Text(value).font(T.F.small()).textSelection(.enabled)
+            }
+        }
+    }
+
+    private func kindLabel(_ kind: MediaKind) -> String {
+        switch kind {
+        case .photo: tr("home.mode.photo")
+        case .video: tr("home.mode.video")
+        case .audio: tr("home.mode.audio")
+        }
     }
 
 }
@@ -231,6 +258,10 @@ final class RecordPlayback {
     private(set) var itemID: UUID?
     private(set) var playing = false
     private(set) var message: String?
+    /// 当前位置与总长（秒），供录音进度条拖动定位。
+    private(set) var time: Double = 0
+    private(set) var duration: Double = 0
+    private var timeObserver: Any?
     private var generation = UUID()
     private let isRecording: () -> Bool
 
@@ -265,9 +296,26 @@ final class RecordPlayback {
             return
         }
         guard !Task.isCancelled, generation == request, !recording else { return }
-        player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        let loadedDuration = (try? await asset.load(.duration)).map(CMTimeGetSeconds) ?? 0
+        guard !Task.isCancelled, generation == request else { return }
+        let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        duration = loadedDuration.isFinite ? loadedDuration : 0
+        time = 0
+        timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 4), queue: .main) { [weak self] t in
+            MainActor.assumeIsolated { self?.time = CMTimeGetSeconds(t) }
+        }
+        self.player = player
         message = nil
     }
+
+    func seek(to seconds: Double) {
+        guard let player else { return }
+        let target = min(max(seconds, 0), duration)
+        time = target
+        player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    func skip(_ delta: Double) { seek(to: time + delta) }
 
     func toggle() {
         guard !recording else { blockRecording(); return }
@@ -296,6 +344,10 @@ final class RecordPlayback {
     func stop() {
         generation = UUID()
         player?.pause()
+        if let timeObserver { player?.removeTimeObserver(timeObserver) }
+        timeObserver = nil
+        time = 0
+        duration = 0
         player = nil
         itemID = nil
         playing = false
@@ -321,14 +373,29 @@ private struct MediaPlayerPage: View {
                 VStack(spacing: T.Sp.s4) {
                     Image(systemName: "waveform").font(.system(size: 44, weight: .light))
                     Text(tr("home.mode.audio")).font(T.F.heading())
-                    Button(action: playback.toggle) {
-                        Label(tr(playback.playing ? "player.pause" : "player.play"),
-                              systemImage: playback.playing ? "pause.fill" : "play.fill")
-                            .frame(minHeight: T.touchMin)
+                    AudioScrubber(playback: playback, enabled: selected && playback.player != nil)
+                    HStack(spacing: T.Sp.s8) {
+                        Button { playback.skip(-15) } label: {
+                            Image(systemName: "gobackward.15").font(.system(size: 24)).frame(width: T.touchMin, height: T.touchMin)
+                        }
+                        .accessibilityLabel(tr("player.back15"))
+                        Button(action: playback.toggle) {
+                            Image(systemName: playback.playing ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 56))
+                                .frame(minWidth: T.touchMin, minHeight: T.touchMin)
+                        }
+                        .accessibilityLabel(tr(playback.playing ? "player.pause" : "player.play"))
+                        .accessibilityIdentifier("media.playback")
+                        Button { playback.skip(15) } label: {
+                            Image(systemName: "goforward.15").font(.system(size: 24)).frame(width: T.touchMin, height: T.touchMin)
+                        }
+                        .accessibilityLabel(tr("player.forward15"))
                     }
-                    .accessibilityIdentifier("media.playback")
                     .disabled(!selected || playback.player == nil)
-                }.foregroundStyle(.white)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, T.Sp.gutter)
+                .frame(maxWidth: 560)
             } else if selected, let player = playback.player {
                 VideoPlayer(player: player)
             }
@@ -340,5 +407,42 @@ private struct MediaPlayerPage: View {
         .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { note in
             if let ended = note.object as? AVPlayerItem { playback.didEnd(ended) }
         }
+    }
+}
+
+/// 录音进度条：拖到任意位置，左右显示已播 / 总长。
+/// 录像用系统 VideoPlayer，自带进度条，不重复做。
+private struct AudioScrubber: View {
+    let playback: RecordPlayback
+    let enabled: Bool
+    @State private var dragging: Double?
+
+    var body: some View {
+        VStack(spacing: T.Sp.s1) {
+            Slider(value: Binding(
+                get: { dragging ?? playback.time },
+                set: { dragging = $0 }
+            ), in: 0...max(playback.duration, 1)) { editing in
+                if !editing, let d = dragging { playback.seek(to: d); dragging = nil }
+            }
+            .tint(.white)
+            HStack {
+                Text(Self.clock(dragging ?? playback.time))
+                Spacer()
+                Text(Self.clock(playback.duration))
+            }
+            .font(T.F.mono(11))
+            .monospacedDigit()
+            .foregroundStyle(.white.opacity(0.6))
+            .environment(\.layoutDirection, .leftToRight)
+        }
+        .disabled(!enabled)
+        .accessibilityIdentifier("media.scrubber")
+    }
+
+    static func clock(_ seconds: Double) -> String {
+        let s = Int(seconds.isFinite ? max(seconds, 0) : 0)
+        return s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
+                         : String(format: "%d:%02d", s / 60, s % 60)
     }
 }

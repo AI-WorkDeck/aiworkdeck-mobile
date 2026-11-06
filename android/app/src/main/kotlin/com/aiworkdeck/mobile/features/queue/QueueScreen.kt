@@ -207,13 +207,6 @@ private fun QueueRow(item: CaptureItem, progress: Double, expiresAt: String?, on
                     )
                 }
             }
-
-            // 哈希前 12 位。要核对时不用进详情页。
-            Text(
-                item.manifest.sha256.take(12),
-                style = Fonts.mono(Tk.Ty.nano), color = Tk.L.fgFaint,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
         }
 
         if (item.state == TransferState.failed) {

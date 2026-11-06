@@ -543,5 +543,17 @@
   "postpaid.resume": "Rétablir la connexion cloud",
   "postpaid.resumeNotice": "Seuls les droits cloud sont rétablis. Les anciennes tâches restent en pause : relancez-les manuellement ou réactivez la sauvegarde. Les originaux locaux sont conservés.",
   "postpaid.uploadPaused": "Envoi en pause. Réessayez manuellement.",
-  "postpaid.refresh": "Les droits cloud ont changé. Rétablissez la connexion dans les réglages ; les anciennes tâches nécessitent une relance manuelle."
+  "postpaid.refresh": "Les droits cloud ont changé. Rétablissez la connexion dans les réglages ; les anciennes tâches nécessitent une relance manuelle.",
+  "project.recent": "Récents",
+  "project.noneHint": "Ne pas classer maintenant — trier plus tard dans la bibliothèque",
+  "project.noMatch": "Aucun projet correspondant",
+  "details.capturedAt": "Capturé le",
+  "details.location": "Position",
+  "details.device": "Appareil",
+  "details.fingerprint": "Empreinte du fichier (SHA-256, prouve qu'il n'a pas été modifié)",
+  "player.back15": "Reculer de 15 secondes",
+  "player.forward15": "Avancer de 15 secondes",
+  "settings.billing": "Facturation",
+  "settings.cloud": "Stockage cloud",
+  "settings.general": "Général"
 }
