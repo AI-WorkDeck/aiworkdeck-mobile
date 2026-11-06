@@ -9,6 +9,17 @@
   background: var(--bg);
 }
 
+/* ---- 搜索：按名称过滤 ---------------------------------------------------- */
+.search {
+  height: var(--touch-min);
+  margin: var(--s2) 0;
+  padding: 0 var(--s3);
+  border-radius: var(--s2);
+  background: var(--bg-sunken);
+  font-size: var(--t-small);
+  color: var(--fg);
+}
+
 /* ---- 加载 / 错误 / 空态：三态共用一套居中布局 ---------------------------- */
 .status {
   display: flex;
@@ -61,9 +72,30 @@
   padding: 0 var(--s1);
 }
 
+.item__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .item__name {
   font-size: var(--t-body);
   color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item__sub {
+  font-size: var(--t-nano);
+  color: var(--fg-faint);
+}
+
+.item__check {
+  width: 36rpx;
+  height: 36rpx;
+  flex-shrink: 0;
+  margin-left: var(--s2);
 }
 
 .item__chevron {

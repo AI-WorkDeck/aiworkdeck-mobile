@@ -8,47 +8,51 @@
   style="min-height: calc(100vh - {{metrics.navTotalHeight}}px); padding-bottom: {{metrics.bottomInset}}px;"
 >
 
-  <!-- 账户：登录时记下的手机号，脱敏显示；一键登录没拿到号就只留标题 -->
-  <view class="row">
-    <text class="row__label">{{accountLabel}}</text>
-    <text wx:if="{{phoneText}}" class="row__value mono">{{phoneText}}</text>
+  <!-- 账号：名字在上，一眼知道登的是谁；手机号脱敏，与名字相同就不重复 -->
+  <view class="account">
+    <text class="account__name">{{accountName}}</text>
+    <text wx:if="{{phoneText}}" class="account__sub mono">{{phoneText}}</text>
   </view>
-  <view class="rule"></view>
 
-  <!-- 余额与充值：显隐规则在 contract/schema/billing.schema.json，页面只按 kind 分支的结果渲染。
+  <!-- 费用：余额、充值、订阅、后付费放一起。
+       显隐规则在 contract/schema/billing.schema.json，页面只按 kind 分支的结果渲染。
        充值入口与余额行**分开判**：NOT_CONNECTED 时行在、入口也在（dev-board#535） -->
-  <block wx:if="{{balanceVisible}}">
-    <view class="row">
-      <text class="row__label">{{balanceTitle}}</text>
-      <view class="row__right">
-        <text class="row__value">{{balanceText}}</text>
-        <view wx:if="{{rechargeVisible}}" class="row__action tappable" bindtap="onRecharge">
-          <text>{{rechargeText}}</text>
-        </view>
+  <text class="label group__head">{{billingLabel}}</text>
+  <view wx:if="{{balanceVisible}}" class="row">
+    <text class="row__label">{{balanceTitle}}</text>
+    <view class="row__right">
+      <text class="row__value">{{balanceText}}</text>
+      <view wx:if="{{rechargeVisible}}" class="row__action tappable" bindtap="onRecharge">
+        <text>{{rechargeText}}</text>
       </view>
     </view>
-    <text wx:if="{{openHint}}" class="hint">{{openHint}}</text>
-    <view class="rule"></view>
-  </block>
+  </view>
+  <text wx:if="{{balanceVisible && openHint}}" class="hint">{{openHint}}</text>
 
   <view wx:for="{{subscriptionRows}}" wx:key="label" class="row">
     <text class="row__label">{{item.label}}</text>
     <text class="row__value">{{item.value}}</text>
   </view>
 
-  <view class="row"><text>{{postpaidTitle}}</text></view>
-  <view wx:for="{{postpaidRows}}" wx:key="label" class="row"><text>{{item.label}}</text><text>{{item.value}}</text></view>
-  <text class="hint">{{postpaidNotice}}</text><text class="hint">{{postpaidState}}</text>
+  <view class="row"><text class="row__label">{{postpaidTitle}}</text><text class="row__value">{{postpaidState}}</text></view>
+  <view wx:for="{{postpaidRows}}" wx:key="label" class="row"><text class="row__label">{{item.label}}</text><text class="row__value">{{item.value}}</text></view>
+  <text class="hint">{{postpaidNotice}}</text>
   <button wx:if="{{canAcceptPostpaid}}" loading="{{postpaidBusy}}" disabled="{{postpaidBusy}}" bindtap="onAcceptPostpaid">{{postpaidAccept}}</button>
   <button wx:if="{{canResumeCloud}}" loading="{{postpaidBusy}}" disabled="{{postpaidBusy}}" bindtap="onResumeCloud">{{postpaidResume}}</button>
   <button wx:if="{{hasDebt}}" bindtap="onRecharge">{{postpaidRepay}}</button>
   <button wx:if="{{postpaidError}}" bindtap="onPostpaidRetry">{{postpaidError}}</button>
+  <view class="rule"></view>
+
+  <!-- 云端存储：备份 -->
+  <text class="label group__head">{{cloudLabel}}</text>
   <view class="row tappable" bindtap="onBackup">
     <text class="row__label">{{backupTitle}}</text>
     <text class="row__value">{{backupText}}</text>
   </view>
   <view class="rule"></view>
 
+  <!-- 影像：拍摄后自动整理 -->
+  <text class="label group__head">{{mediaLabel}}</text>
   <view class="row">
     <text class="row__label">{{organizeTitle}}</text>
     <switch checked="{{organizeEnabled}}" bindchange="onOrganizeChange" />
@@ -56,6 +60,8 @@
   <text class="hint">{{organizeHint}}</text>
   <view class="rule"></view>
 
+  <!-- 通用：语言 -->
+  <text class="label group__head">{{generalLabel}}</text>
   <picker mode="selector" range="{{languageOptions}}" range-key="label" value="{{languageIndex}}" bindchange="onLanguageChange">
     <view class="row tappable">
       <text class="row__label">{{languageLabel}}</text>
@@ -64,7 +70,8 @@
   </picker>
   <view class="rule"></view>
 
-  <!-- 版本 -->
+  <!-- 关于：版本 -->
+  <text class="label group__head">{{aboutLabel}}</text>
   <view class="row">
     <text class="row__label">{{versionLabel}}</text>
     <text class="row__value mono">{{versionText}}</text>

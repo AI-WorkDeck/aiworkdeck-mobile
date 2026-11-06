@@ -142,6 +142,12 @@ function setUser(u: AccountUser | null): void {
   }
 }
 
+/** 登录时存下的账号（设置页顶部显示名字用）；没登录或旧版本没存就是 null。 */
+export function getAccountUser(): AccountUser | null {
+  const v = wx.getStorageSync(KEY_USER)
+  return v && typeof v === 'object' ? (v as AccountUser) : null
+}
+
 /** 登录时记下的手机号，「我的」页脱敏展示用。取不到（一键登录且服务端没把号当用户名）就是 null，
  *  页面只显示「账号」两个字，不编一个号码出来。 */
 export function getPhone(): string | null {

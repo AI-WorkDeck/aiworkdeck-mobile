@@ -39,11 +39,15 @@
   <!-- 三段计数，只数正在看的项目 -->
   <view wx:if="{{viewingUnassigned}}" class="tally"><text class="tally__label">{{unassignedHint}}</text></view>
   <view wx:else class="tally">
-    <text class="tally__num mono tally__num--waiting">{{tally.uploading}}</text>
-    <text class="tally__label">{{phaseLabel.uploading}}</text>
+    <block wx:if="{{tally.uploading > 0}}">
+      <text class="tally__num mono tally__num--waiting">{{tally.uploading}}</text>
+      <text class="tally__label">{{phaseLabel.uploading}}</text>
+    </block>
     <text wx:if="{{tally.failed > 0}}" class="tally__failed">{{failedSuffix}}</text>
-    <text class="tally__num mono tally__num--moving">{{tally.staged}}</text>
-    <text class="tally__label">{{phaseLabel.staged}}</text>
+    <block wx:if="{{tally.staged > 0}}">
+      <text class="tally__num mono tally__num--moving">{{tally.staged}}</text>
+      <text class="tally__label">{{phaseLabel.staged}}</text>
+    </block>
     <text class="tally__num mono tally__num--arrived">{{tally.landed}}</text>
     <text class="tally__label">{{phaseLabel.landed}}</text>
   </view>
@@ -115,6 +119,17 @@
       </view>
     </view>
   </block>
+</view>
+
+<!-- 录音播放条：拖动定位、已播 / 总长、±15 秒。录像走 previewMedia 系统播放器，自带进度条。 -->
+<view wx:if="{{audioActive && !selecting}}" class="player" style="padding-bottom: {{metrics.bottomInset + 16}}px;">
+  <slider class="player__slider" min="0" max="{{audioDuration || 1}}" step="1" value="{{audioTime}}" block-size="14" activeColor="#EDE9DF" backgroundColor="rgba(255,255,255,0.2)" bindchange="onSeek" />
+  <view class="player__times mono" dir="ltr"><text>{{audioTimeText}}</text><text>{{audioDurationText}}</text></view>
+  <view class="player__controls">
+    <view class="player__btn tappable" bindtap="onBack15" aria-label="{{back15Label}}"><text class="mono">-15</text></view>
+    <view class="player__btn player__btn--main tappable" bindtap="onTogglePause" aria-label="{{audioPlaying ? pauseLabel : playLabel}}"><text>{{audioPlaying ? pauseLabel : playLabel}}</text></view>
+    <view class="player__btn tappable" bindtap="onForward15" aria-label="{{forward15Label}}"><text class="mono">+15</text></view>
+  </view>
 </view>
 
 <!-- 底座：选择态显示删除 -->

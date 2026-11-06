@@ -174,3 +174,31 @@ test('cloud resume pause persists, survives launch recovery and preserves origin
  assert.equal(uploads.length, 1)
  assert.equal(listItems()[0].cloudResumeRequired, false)
 })
+
+test('long press only opens the picker for media that can still be assigned', async () => {
+  await reset()
+  const item = enqueueCapture('/synthetic/photo', 'image', null)
+  saved()
+  storage['awd.queue'][0].attempts = 1
+  const library = instance(gallery)
+  library.onAssign({ currentTarget: { dataset: { id: item.clientMediaId } } })
+  assert.deepEqual(routes, [])
+})
+
+test('picker filters by name, records recent choices and marks the current project', async () => {
+  await reset()
+  const selection = instance(picker)
+  selection.onLoad({})
+  selection.onShow()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(selection.data.groups[0].items[0].current, false)
+  selection.onQuery({ detail: { value: 'nothing-like-this' } })
+  assert.equal(selection.data.groups.length, 0)
+  assert.equal(selection.data.total, 1)
+  selection.onQuery({ detail: { value: '合成' } })
+  selection.onSelectProject({ currentTarget: { dataset: { gi: 0, ii: 0 } } })
+  assert.deepEqual(storage['awd.recentProjects'], [project.projectUid])
+  selection.onShow()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(selection.data.groups[0].items[0].current, true)
+})

@@ -2,7 +2,11 @@
 
 <view class="page" style="padding-bottom: {{metrics.bottomInset}}px;">
 
-  <view wx:if="{{!assigning}}" class="item tappable" bindtap="onDefault"><text class="item__name">{{defaultText}}</text></view>
+  <input class="search" type="text" value="{{query}}" placeholder="{{searchText}}" confirm-type="search" bindinput="onQuery" />
+  <view wx:if="{{!assigning && !query}}" class="item tappable" bindtap="onDefault">
+    <view class="item__text"><text class="item__name">{{defaultText}}</text><text class="item__sub">{{noneHint}}</text></view>
+    <image wx:if="{{defaultCurrent}}" class="item__check" src="{{Icon.checkGreen}}" mode="aspectFit" />
+  </view>
   <view wx:if="{{!assigning}}" class="item tappable" bindtap="onOpenDd"><text class="item__name">{{ddTitle}}</text><text class="item__files">{{ddOpen}}</text><image class="item__chevron" src="{{Icon.chevron}}" mode="aspectFit" /></view>
   <view wx:if="{{loading}}" class="status">
     <text class="status__text">{{loadingText}}</text>
@@ -15,6 +19,10 @@
     </view>
   </view>
 
+  <view wx:elif="{{total > 0 && groups.length === 0}}" class="status">
+    <text class="status__text">{{noMatchText}}</text>
+  </view>
+
   <view wx:elif="{{groups.length === 0}}" class="status">
     <text class="status__text">{{emptyText}}</text>
     <view class="status__btn tappable" bindtap="onRefresh">
@@ -23,19 +31,23 @@
   </view>
 
   <view wx:else class="groups">
-    <view wx:for="{{groups}}" wx:for-item="group" wx:for-index="gi" wx:key="deviceId" class="group">
-      <text class="group__head">{{group.deviceName}}</text>
+    <view wx:for="{{groups}}" wx:for-item="group" wx:for-index="gi" wx:key="id" class="group">
+      <text wx:if="{{group.title}}" class="group__head">{{group.title}}</text>
       <view
         wx:for="{{group.items}}"
         wx:for-item="item"
         wx:for-index="ii"
-        wx:key="projectUid"
+        wx:key="id"
         class="item tappable"
         data-gi="{{gi}}"
         data-ii="{{ii}}"
         bindtap="onSelectProject"
       >
-        <text class="item__name">{{item.name}}</text>
+        <view class="item__text">
+          <text class="item__name">{{item.project.name}}</text>
+          <text wx:if="{{showDevice && item.project.deviceName}}" class="item__sub">{{item.project.deviceName}}</text>
+        </view>
+        <image wx:if="{{item.current}}" class="item__check" src="{{Icon.checkGreen}}" mode="aspectFit" />
         <text wx:if="{{!assigning}}" class="item__files" data-gi="{{gi}}" data-ii="{{ii}}" catchtap="onOpenFiles">{{filesText}}</text>
         <image class="item__chevron" src="{{Icon.chevron}}" mode="aspectFit" />
       </view>
