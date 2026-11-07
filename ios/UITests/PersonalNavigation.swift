@@ -176,8 +176,9 @@ extension XCTestCase {
     @MainActor func allowVisibleRecordingPermission() -> Bool {
         let permissionAlert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
         guard permissionAlert.exists else { return false }
-        for label in ["Allow", "允许", "OK"] where permissionAlert.buttons[label].exists {
-            permissionAlert.buttons[label].tap()
+        // iOS 27 的权限弹窗里同名按钮可能出现两次，按下标取会报「多个匹配」
+        for label in ["Allow", "允许", "OK"] where permissionAlert.buttons[label].firstMatch.exists {
+            permissionAlert.buttons[label].firstMatch.tap()
             return true
         }
         // An unrecognized system alert must also prevent querying covered app controls.
