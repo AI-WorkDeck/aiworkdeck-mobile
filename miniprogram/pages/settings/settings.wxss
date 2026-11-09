@@ -63,6 +63,11 @@
   text-align: right;
 }
 
+/* 后付费行：欠款或受限时用失败色 */
+.row__value--failed {
+  color: var(--st-failed);
+}
+
 /* 充值入口：文字按钮，不做实心块。尺寸不覆盖 .tappable 的 88rpx 最小可点区。 */
 .row__action {
   font-size: var(--t-small);

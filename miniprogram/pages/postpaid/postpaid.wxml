@@ -1,0 +1,41 @@
+<nav-bar title="{{navTitle}}" show-back="{{true}}" />
+
+<view
+  class="page"
+  dir="{{dir}}"
+  style="min-height: calc(100vh - {{metrics.navTotalHeight}}px); padding-bottom: {{metrics.bottomInset}}px;"
+>
+  <block wx:if="{{loaded}}">
+    <text wx:if="{{postpaidState}}" class="notice">{{postpaidState}}</text>
+
+    <!-- 数字一行一项：名称左、值右；欠款大于 0 用失败色 -->
+    <view class="rows">
+      <view wx:for="{{postpaidRows}}" wx:key="label" class="row">
+        <text class="row__label">{{item.label}}</text>
+        <text class="row__value {{item.alert ? 'row__value--alert' : ''}}">{{item.value}}</text>
+      </view>
+    </view>
+    <view class="hairline"></view>
+
+    <text wx:for="{{rateLines}}" wx:key="*this" class="rate">{{item}}</text>
+    <!-- 条款当脚注 -->
+    <text class="footnote">{{postpaidNotice}}</text>
+
+    <view class="actions">
+      <view wx:if="{{hasDebt}}" class="primary tappable {{postpaidBusy ? 'primary--busy' : ''}}" bindtap="onRepay">
+        <text class="primary__text">{{postpaidRepay}}</text>
+      </view>
+      <view wx:if="{{canAcceptPostpaid}}" class="primary tappable {{postpaidBusy ? 'primary--busy' : ''}}" bindtap="onAcceptPostpaid">
+        <text class="primary__text">{{postpaidAccept}}</text>
+      </view>
+      <view wx:if="{{canResumeCloud}}" class="primary tappable {{postpaidBusy ? 'primary--busy' : ''}}" bindtap="onResumeCloud">
+        <text class="primary__text">{{postpaidResume}}</text>
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{postpaidError}}">
+    <text class="notice">{{postpaidError}}</text>
+    <view class="retry tappable" bindtap="onPostpaidRetry"><text>{{retryText}}</text></view>
+  </block>
+</view>
