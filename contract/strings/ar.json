@@ -198,7 +198,7 @@
   "error.videoNoData": "لم يكتمل تسجيل الفيديو: لا توجد بيانات فيديو.",
   "home.queue.a11yHint": "يفتح قائمة انتظار الرفع",
   "home.gps.locating": "جارٍ تحديد الموقع عبر GPS",
-  "home.stampFeatures": "SHA-256 · GPS · الطابع الزمني",
+  "home.stampFeatures": "البصمة · الموقع · الوقت",
   "home.thumb.a11y": "أحدث لقطة، {n} في هذا المشروع",
   "home.desktop.waited": "قيد الانتظار {t}",
   "home.permission.micHint": "فعّله من الإعدادات ← Workdeck ← الميكروفون، ثم عد إلى هنا.",
@@ -556,5 +556,12 @@
   "settings.billing": "الفوترة",
   "settings.cloud": "التخزين السحابي",
   "settings.general": "عام",
-  "bqt.rechargeInBqt": "يرجى الشحن أو التجديد في تطبيق Baoqingtian"
+  "bqt.rechargeInBqt": "يرجى الشحن أو التجديد في تطبيق Baoqingtian",
+  "subscription.status.none": "غير مشترك",
+  "subscription.status.active": "نشط",
+  "subscription.store.price": "{price} / شهر",
+  "subscription.store.closed": "الاشتراكات غير متاحة بعد. تحقّق لاحقاً.",
+  "postpaid.status.off": "غير مفعّل",
+  "postpaid.status.on": "مفعّل",
+  "postpaid.status.restricted": "مقيّد"
 }

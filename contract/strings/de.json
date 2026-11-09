@@ -198,7 +198,7 @@
   "error.videoNoData": "Videoaufnahme nicht abgeschlossen: keine Videodaten.",
   "home.queue.a11yHint": "Öffnet die Upload-Warteschlange",
   "home.gps.locating": "GPS-Ortung",
-  "home.stampFeatures": "SHA-256 · GPS · Zeitstempel",
+  "home.stampFeatures": "Fingerabdruck · Ort · Zeit",
   "home.thumb.a11y": "Neueste Aufnahme, {n} in diesem Projekt",
   "home.desktop.waited": "wartet {t}",
   "home.permission.micHint": "Aktiviere es in Einstellungen → Workdeck → Mikrofon und komme dann zurück.",
@@ -556,5 +556,12 @@
   "settings.billing": "Abrechnung",
   "settings.cloud": "Cloud-Speicher",
   "settings.general": "Allgemein",
-  "bqt.rechargeInBqt": "Bitte in der Baoqingtian-App aufladen oder verlängern"
+  "bqt.rechargeInBqt": "Bitte in der Baoqingtian-App aufladen oder verlängern",
+  "subscription.status.none": "Nicht abonniert",
+  "subscription.status.active": "Aktiv",
+  "subscription.store.price": "{price} / Monat",
+  "subscription.store.closed": "Abonnements sind noch nicht verfügbar. Schau später wieder vorbei.",
+  "postpaid.status.off": "Aus",
+  "postpaid.status.on": "An",
+  "postpaid.status.restricted": "Eingeschränkt"
 }

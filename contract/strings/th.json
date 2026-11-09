@@ -198,7 +198,7 @@
   "error.videoNoData": "การบันทึกวิดีโอไม่สมบูรณ์: ไม่มีข้อมูลวิดีโอ",
   "home.queue.a11yHint": "เปิดคิวการอัปโหลด",
   "home.gps.locating": "กำลังระบุตำแหน่ง GPS",
-  "home.stampFeatures": "SHA-256 · GPS · ประทับเวลา",
+  "home.stampFeatures": "ลายนิ้วมือไฟล์ · ตำแหน่ง · เวลา",
   "home.thumb.a11y": "ไฟล์ที่บันทึกล่าสุด {n} รายการในโปรเจกต์นี้",
   "home.desktop.waited": "กำลังรอ {t}",
   "home.permission.micHint": "เปิดใน การตั้งค่า → Workdeck → ไมโครโฟน แล้วกลับมาอีกครั้ง",
@@ -556,5 +556,12 @@
   "settings.billing": "ค่าใช้จ่าย",
   "settings.cloud": "พื้นที่คลาวด์",
   "settings.general": "ทั่วไป",
-  "bqt.rechargeInBqt": "โปรดเติมเงินหรือต่ออายุในแอป Baoqingtian"
+  "bqt.rechargeInBqt": "โปรดเติมเงินหรือต่ออายุในแอป Baoqingtian",
+  "subscription.status.none": "ยังไม่สมัคร",
+  "subscription.status.active": "สมัครแล้ว",
+  "subscription.store.price": "{price} / เดือน",
+  "subscription.store.closed": "ยังไม่เปิดให้สมัครสมาชิก โปรดกลับมาใหม่ภายหลัง",
+  "postpaid.status.off": "ยังไม่เปิด",
+  "postpaid.status.on": "เปิดแล้ว",
+  "postpaid.status.restricted": "ถูกจำกัด"
 }
