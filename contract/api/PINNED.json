@@ -1,6 +1,6 @@
 {
-  "serverCommit": "52c4e7083ba62f2964f61b1645efb9df835afb38",
+  "serverCommit": "f6d6b1affc6d468ade4c38d959d091e28fa1ad3e",
   "sha256": "ee54b194061a89c043d71194dcb070e70c0702d6ec7d92fb225501ed48b48279",
-  "pulledAt": "2026-11-09T10:20:02.052Z",
+  "pulledAt": "2026-11-09T10:36:03.868Z",
   "note": "钉自 /Users/zewei/.codex/worktrees/algorithm-compliance-1717 的干净工作区，照 serverCommit 可复现。"
 }
