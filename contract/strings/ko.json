@@ -198,7 +198,7 @@
   "error.videoNoData": "동영상 녹화가 완료되지 않았습니다: 동영상 데이터가 없습니다.",
   "home.queue.a11yHint": "업로드 대기열 열기",
   "home.gps.locating": "GPS 위치 확인 중",
-  "home.stampFeatures": "SHA-256 · GPS · 타임스탬프",
+  "home.stampFeatures": "지문 · 위치 · 시각",
   "home.thumb.a11y": "최근 캡처, 이 프로젝트에 {n}개",
   "home.desktop.waited": "{t} 대기 중",
   "home.permission.micHint": "설정 → Workdeck → 마이크에서 켠 후 다시 돌아와 주세요.",
@@ -556,5 +556,12 @@
   "settings.billing": "요금",
   "settings.cloud": "클라우드 저장공간",
   "settings.general": "일반",
-  "bqt.rechargeInBqt": "바오칭톈 앱에서 충전 또는 갱신하세요"
+  "bqt.rechargeInBqt": "바오칭톈 앱에서 충전 또는 갱신하세요",
+  "subscription.status.none": "구독 안 함",
+  "subscription.status.active": "구독 중",
+  "subscription.store.price": "{price} / 월",
+  "subscription.store.closed": "구독이 아직 열리지 않았습니다. 나중에 다시 확인해 주세요.",
+  "postpaid.status.off": "사용 안 함",
+  "postpaid.status.on": "사용 중",
+  "postpaid.status.restricted": "제한됨"
 }

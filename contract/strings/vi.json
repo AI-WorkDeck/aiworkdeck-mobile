@@ -198,7 +198,7 @@
   "error.videoNoData": "Quay video chưa hoàn tất: không có dữ liệu video.",
   "home.queue.a11yHint": "Mở hàng đợi tải lên",
   "home.gps.locating": "Đang định vị GPS",
-  "home.stampFeatures": "SHA-256 · GPS · Dấu thời gian",
+  "home.stampFeatures": "Dấu vân tay · Vị trí · Thời gian",
   "home.thumb.a11y": "Bản ghi chụp mới nhất, {n} trong dự án này",
   "home.desktop.waited": "đang chờ {t}",
   "home.permission.micHint": "Bật trong Cài đặt → Workdeck → Microphone, sau đó quay lại.",
@@ -556,5 +556,12 @@
   "settings.billing": "Thanh toán",
   "settings.cloud": "Lưu trữ đám mây",
   "settings.general": "Chung",
-  "bqt.rechargeInBqt": "Vui lòng nạp tiền hoặc gia hạn trong ứng dụng Baoqingtian"
+  "bqt.rechargeInBqt": "Vui lòng nạp tiền hoặc gia hạn trong ứng dụng Baoqingtian",
+  "subscription.status.none": "Chưa đăng ký",
+  "subscription.status.active": "Đang hoạt động",
+  "subscription.store.price": "{price} / tháng",
+  "subscription.store.closed": "Chưa mở đăng ký. Vui lòng quay lại sau.",
+  "postpaid.status.off": "Chưa bật",
+  "postpaid.status.on": "Đã bật",
+  "postpaid.status.restricted": "Bị hạn chế"
 }

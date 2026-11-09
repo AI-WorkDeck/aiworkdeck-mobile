@@ -198,7 +198,7 @@
   "error.videoNoData": "वीडियो रिकॉर्डिंग पूरी नहीं हुई: कोई वीडियो डेटा नहीं।",
   "home.queue.a11yHint": "अपलोड क़तार खोलता है",
   "home.gps.locating": "GPS लोकेट हो रहा है",
-  "home.stampFeatures": "SHA-256 · GPS · टाइमस्टैम्प",
+  "home.stampFeatures": "फ़िंगरप्रिंट · स्थान · समय",
   "home.thumb.a11y": "नवीनतम कैप्चर, इस प्रोजेक्ट में {n}",
   "home.desktop.waited": "{t} प्रतीक्षा में",
   "home.permission.micHint": "सेटिंग्स → Workdeck → माइक्रोफ़ोन में इसे चालू करें, फिर वापस आएँ।",
@@ -556,5 +556,12 @@
   "settings.billing": "बिलिंग",
   "settings.cloud": "क्लाउड स्टोरेज",
   "settings.general": "सामान्य",
-  "bqt.rechargeInBqt": "Baoqingtian ऐप में रिचार्ज या नवीनीकरण करें"
+  "bqt.rechargeInBqt": "Baoqingtian ऐप में रिचार्ज या नवीनीकरण करें",
+  "subscription.status.none": "सदस्यता नहीं",
+  "subscription.status.active": "सक्रिय",
+  "subscription.store.price": "{price} / माह",
+  "subscription.store.closed": "सदस्यता अभी उपलब्ध नहीं है। बाद में फिर देखें।",
+  "postpaid.status.off": "बंद",
+  "postpaid.status.on": "चालू",
+  "postpaid.status.restricted": "सीमित"
 }

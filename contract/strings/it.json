@@ -198,7 +198,7 @@
   "error.videoNoData": "Registrazione video non completata: nessun dato video.",
   "home.queue.a11yHint": "Apre la coda di caricamento",
   "home.gps.locating": "Localizzazione GPS",
-  "home.stampFeatures": "SHA-256 · GPS · Data e ora",
+  "home.stampFeatures": "Impronta · Luogo · Ora",
   "home.thumb.a11y": "Ultima acquisizione, {n} in questo progetto",
   "home.desktop.waited": "in attesa {t}",
   "home.permission.micHint": "Attivala in Impostazioni → Workdeck → Microfono, poi torna qui.",
@@ -556,5 +556,12 @@
   "settings.billing": "Fatturazione",
   "settings.cloud": "Archiviazione cloud",
   "settings.general": "Generali",
-  "bqt.rechargeInBqt": "Ricarica o rinnova nell'app Baoqingtian"
+  "bqt.rechargeInBqt": "Ricarica o rinnova nell'app Baoqingtian",
+  "subscription.status.none": "Non abbonato",
+  "subscription.status.active": "Attivo",
+  "subscription.store.price": "{price} / mese",
+  "subscription.store.closed": "Gli abbonamenti non sono ancora aperti. Riprova più tardi.",
+  "postpaid.status.off": "Non attivo",
+  "postpaid.status.on": "Attivo",
+  "postpaid.status.restricted": "Limitato"
 }

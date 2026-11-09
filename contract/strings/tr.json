@@ -198,7 +198,7 @@
   "error.videoNoData": "Video kaydı tamamlanmadı: video verisi yok.",
   "home.queue.a11yHint": "Yükleme kuyruğunu açar",
   "home.gps.locating": "GPS konumlandırma",
-  "home.stampFeatures": "SHA-256 · GPS · Zaman damgası",
+  "home.stampFeatures": "Parmak izi · Konum · Zaman",
   "home.thumb.a11y": "En son çekim, bu projede {n} adet",
   "home.desktop.waited": "bekliyor {t}",
   "home.permission.micHint": "Ayarlar → Workdeck → Mikrofon'dan açın, sonra geri dönün.",
@@ -556,5 +556,12 @@
   "settings.billing": "Faturalandırma",
   "settings.cloud": "Bulut depolama",
   "settings.general": "Genel",
-  "bqt.rechargeInBqt": "Baoqingtian uygulamasında yükleme veya yenileme yapın"
+  "bqt.rechargeInBqt": "Baoqingtian uygulamasında yükleme veya yenileme yapın",
+  "subscription.status.none": "Abone değil",
+  "subscription.status.active": "Aktif",
+  "subscription.store.price": "{price} / ay",
+  "subscription.store.closed": "Abonelikler henüz açılmadı. Daha sonra tekrar bakın.",
+  "postpaid.status.off": "Kapalı",
+  "postpaid.status.on": "Açık",
+  "postpaid.status.restricted": "Kısıtlı"
 }

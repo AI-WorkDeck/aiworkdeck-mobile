@@ -198,7 +198,7 @@
   "error.videoNoData": "Запись видео не завершилась: нет видеоданных.",
   "home.queue.a11yHint": "Открывает очередь загрузки",
   "home.gps.locating": "Определение по GPS",
-  "home.stampFeatures": "SHA-256 · GPS · Метка времени",
+  "home.stampFeatures": "Отпечаток · Место · Время",
   "home.thumb.a11y": "Последняя съёмка, {n} в этом проекте",
   "home.desktop.waited": "ожидание {t}",
   "home.permission.micHint": "Включите его в Настройки → Workdeck → Микрофон, затем вернитесь.",
@@ -556,5 +556,12 @@
   "settings.billing": "Оплата",
   "settings.cloud": "Облачное хранилище",
   "settings.general": "Основные",
-  "bqt.rechargeInBqt": "Пополните счёт или продлите в приложении Baoqingtian"
+  "bqt.rechargeInBqt": "Пополните счёт или продлите в приложении Baoqingtian",
+  "subscription.status.none": "Нет подписки",
+  "subscription.status.active": "Активна",
+  "subscription.store.price": "{price} / мес.",
+  "subscription.store.closed": "Подписка пока недоступна. Загляните позже.",
+  "postpaid.status.off": "Не подключено",
+  "postpaid.status.on": "Подключено",
+  "postpaid.status.restricted": "Ограничено"
 }

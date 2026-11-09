@@ -198,7 +198,7 @@
   "error.videoNoData": "Video-opname is niet voltooid: geen videogegevens.",
   "home.queue.a11yHint": "Opent de uploadwachtrij",
   "home.gps.locating": "GPS-locatiebepaling",
-  "home.stampFeatures": "SHA-256 · GPS · Tijdstempel",
+  "home.stampFeatures": "Vingerafdruk · Locatie · Tijd",
   "home.thumb.a11y": "Meest recente opname, {n} in dit project",
   "home.desktop.waited": "wacht {t}",
   "home.permission.micHint": "Zet het aan in Instellingen → Workdeck → Microfoon en kom daarna terug.",
@@ -556,5 +556,12 @@
   "settings.billing": "Facturering",
   "settings.cloud": "Cloudopslag",
   "settings.general": "Algemeen",
-  "bqt.rechargeInBqt": "Opwaarderen of verlengen in de Baoqingtian-app"
+  "bqt.rechargeInBqt": "Opwaarderen of verlengen in de Baoqingtian-app",
+  "subscription.status.none": "Geen abonnement",
+  "subscription.status.active": "Actief",
+  "subscription.store.price": "{price} / maand",
+  "subscription.store.closed": "Abonnementen zijn nog niet beschikbaar. Kom later terug.",
+  "postpaid.status.off": "Uit",
+  "postpaid.status.on": "Aan",
+  "postpaid.status.restricted": "Beperkt"
 }

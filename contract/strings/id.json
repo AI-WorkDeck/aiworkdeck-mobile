@@ -198,7 +198,7 @@
   "error.videoNoData": "Perekaman video tidak selesai: tidak ada data video.",
   "home.queue.a11yHint": "Membuka antrean unggahan",
   "home.gps.locating": "Pencarian GPS",
-  "home.stampFeatures": "SHA-256 · GPS · Stempel waktu",
+  "home.stampFeatures": "Sidik jari · Lokasi · Waktu",
   "home.thumb.a11y": "Tangkapan terbaru, {n} di proyek ini",
   "home.desktop.waited": "menunggu {t}",
   "home.permission.micHint": "Aktifkan di Pengaturan → Workdeck → Mikrofon, lalu kembali.",
@@ -556,5 +556,12 @@
   "settings.billing": "Tagihan",
   "settings.cloud": "Penyimpanan cloud",
   "settings.general": "Umum",
-  "bqt.rechargeInBqt": "Isi ulang atau perpanjang di aplikasi Baoqingtian"
+  "bqt.rechargeInBqt": "Isi ulang atau perpanjang di aplikasi Baoqingtian",
+  "subscription.status.none": "Belum berlangganan",
+  "subscription.status.active": "Aktif",
+  "subscription.store.price": "{price} / bulan",
+  "subscription.store.closed": "Langganan belum dibuka. Coba lagi nanti.",
+  "postpaid.status.off": "Belum aktif",
+  "postpaid.status.on": "Aktif",
+  "postpaid.status.restricted": "Dibatasi"
 }

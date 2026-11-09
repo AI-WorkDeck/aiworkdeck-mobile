@@ -198,7 +198,7 @@
   "error.videoNoData": "录像未完成：没有拿到视频数据",
   "home.queue.a11yHint": "查看上传队列",
   "home.gps.locating": "GPS 定位中",
-  "home.stampFeatures": "SHA-256 · GPS · 时间戳",
+  "home.stampFeatures": "文件指纹 · 定位 · 时间",
   "home.thumb.a11y": "最近影像，本项目共 {n} 张",
   "home.desktop.waited": "已等待 {t}",
   "home.permission.micHint": "去「设置 → Workdeck → 麦克风」打开后再回来。",
@@ -556,5 +556,12 @@
   "settings.billing": "费用",
   "settings.cloud": "云端存储",
   "settings.general": "通用",
-  "bqt.rechargeInBqt": "请在包晴天 App 充值或续费"
+  "bqt.rechargeInBqt": "请在包晴天 App 充值或续费",
+  "subscription.status.none": "未订阅",
+  "subscription.status.active": "已订阅",
+  "subscription.store.price": "{price} / 月",
+  "subscription.store.closed": "订阅暂未开放，请稍后再来",
+  "postpaid.status.off": "未开通",
+  "postpaid.status.on": "已开通",
+  "postpaid.status.restricted": "受限"
 }

@@ -117,9 +117,9 @@ struct SettingsView: View {
                                     .foregroundStyle(T.L.fgMuted)
                                     .accessibilityIdentifier("settings.bqtHint")
                             } else {
-                                PostpaidSection(canRepay: true, repay: { showRecharge = true })
-                                navRow(tr("subscription.store.title")) { showSubscription = true }
+                                navRow(tr("subscription.store.title"), value: subscriptionStatus) { showSubscription = true }
                                     .accessibilityIdentifier("settings.subscription")
+                                PostpaidSection(canRepay: true, repay: { showRecharge = true })
                             }
                         }
                     }
@@ -208,16 +208,24 @@ struct SettingsView: View {
                         HStack {
                             Text(tr("settings.language")).font(T.F.small()).foregroundStyle(T.L.fg)
                             Spacer()
-                            Picker(tr("settings.language"), selection: Binding(
-                                get: { L10n.preference },
-                                set: { L10n.selectLanguage($0) }
-                            )) {
-                                Text(tr("settings.languageFollowSystem")).tag(L10n.systemPreference)
-                                ForEach(L10n.supportedLocales) { loc in
-                                    Text(loc.nativeName).tag(loc.code)
+                            // 系统菜单式 Picker 不认字号，标签会比别的行大一号：包一层 Menu 自己画标签
+                            Menu {
+                                Picker(tr("settings.language"), selection: Binding(
+                                    get: { L10n.preference },
+                                    set: { L10n.selectLanguage($0) }
+                                )) {
+                                    Text(tr("settings.languageFollowSystem")).tag(L10n.systemPreference)
+                                    ForEach(L10n.supportedLocales) { loc in
+                                        Text(loc.nativeName).tag(loc.code)
+                                    }
                                 }
+                            } label: {
+                                HStack(spacing: T.Sp.s1) {
+                                    Text(languageName).font(T.F.small()).foregroundStyle(T.L.fgMuted)
+                                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 11, weight: .semibold)).foregroundStyle(T.L.fgFaint)
+                                }
+                                .frame(minHeight: T.touchMin)
                             }
-                            .pickerStyle(.menu)
                             .accessibilityIdentifier("settings.language")
                         }
                         // 区域登录后固定，这里只读；换区要退出登录后在登录页重选。
@@ -393,6 +401,16 @@ struct SettingsView: View {
             .frame(minHeight: T.touchMin)
     }
 
+    /// 余额没读到时不猜，留空。
+    private var subscriptionStatus: String? {
+        guard case .ok(let b) = balanceState else { return nil }
+        return tr(b.subscription?.active == true ? "subscription.status.active" : "subscription.status.none")
+    }
+
+    private var languageName: String {
+        L10n.supportedLocales.first { $0.code == L10n.preference }?.nativeName ?? tr("settings.languageFollowSystem")
+    }
+
     private var isBqt: Bool {
         if case .ok(let b) = balanceState { return b.billingLine == "bqt" }
         return false
@@ -400,7 +418,9 @@ struct SettingsView: View {
 
     private var accountName: String {
         guard let a = model.account else { return "—" }
-        return a.displayName.isEmpty ? a.username : a.displayName
+        // 手机号注册的账号可能两个都空：名字位不能空着，至少告诉用户「已登录」
+        let name = [a.displayName, a.username].map { $0.trimmingCharacters(in: .whitespaces) }.first { !$0.isEmpty }
+        return name ?? tr("settings.signedIn")
     }
 
     /// 「已用 / 配额」。满了之后上传会被拒并提示去桌面端收件，这行让用户提前有数。

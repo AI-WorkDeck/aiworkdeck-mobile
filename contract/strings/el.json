@@ -198,7 +198,7 @@
   "error.videoNoData": "Η εγγραφή βίντεο δεν ολοκληρώθηκε: δεν υπάρχουν δεδομένα βίντεο.",
   "home.queue.a11yHint": "Ανοίγει την ουρά ανεβάσματος",
   "home.gps.locating": "Εντοπισμός θέσης GPS",
-  "home.stampFeatures": "SHA-256 · GPS · Χρονική σήμανση",
+  "home.stampFeatures": "Αποτύπωμα · Τοποθεσία · Ώρα",
   "home.thumb.a11y": "Τελευταία λήψη, {n} σε αυτό το έργο",
   "home.desktop.waited": "αναμονή {t}",
   "home.permission.micHint": "Ενεργοποιήστε το στις Ρυθμίσεις → Workdeck → Μικρόφωνο και επιστρέψτε.",
@@ -556,5 +556,12 @@
   "settings.billing": "Χρεώσεις",
   "settings.cloud": "Αποθήκευση cloud",
   "settings.general": "Γενικά",
-  "bqt.rechargeInBqt": "Κάντε φόρτιση ή ανανέωση στην εφαρμογή Baoqingtian"
+  "bqt.rechargeInBqt": "Κάντε φόρτιση ή ανανέωση στην εφαρμογή Baoqingtian",
+  "subscription.status.none": "Χωρίς συνδρομή",
+  "subscription.status.active": "Ενεργή",
+  "subscription.store.price": "{price} / μήνα",
+  "subscription.store.closed": "Οι συνδρομές δεν είναι ακόμη διαθέσιμες. Ελέγξτε ξανά αργότερα.",
+  "postpaid.status.off": "Ανενεργό",
+  "postpaid.status.on": "Ενεργό",
+  "postpaid.status.restricted": "Περιορισμένο"
 }
