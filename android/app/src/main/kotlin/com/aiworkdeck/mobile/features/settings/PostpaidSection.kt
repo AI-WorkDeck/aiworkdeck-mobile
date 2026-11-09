@@ -97,6 +97,7 @@ private fun PostpaidDetail(
     var confirm by remember { mutableStateOf(false) }
     var confirmResume by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        LightStatusBar()
         WorkdeckTheme(dark = false) {
             Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()) {
                 Column {
@@ -127,8 +128,9 @@ private fun PostpaidDetail(
                         DetailRow(tr("postpaid.limit"), amount(b.creditLimitCents, b.cashCurrency))
                         DetailRow(tr("postpaid.available"), amount(b.availableCreditCents, b.cashCurrency))
                         DetailRow(tr("postpaid.debt"), amount(b.debtCents, b.cashCurrency), alert = b.debtCents > 0)
-                        b.remindAt?.let { DetailRow(tr("postpaid.remind"), it) }
-                        b.cleanupAt?.let { DetailRow(tr("postpaid.cleanup"), it) }
+                        val locale = java.util.Locale.forLanguageTag(L10n.locale)
+                        b.remindAt?.let { DetailRow(tr("postpaid.remind"), formatDateTime(it, locale)) }
+                        b.cleanupAt?.let { DetailRow(tr("postpaid.cleanup"), formatDateTime(it, locale)) }
                         Hairline(color = Tk.L.rule, modifier = Modifier.padding(vertical = Tk.Sp.s2))
                         Text(tr("postpaid.storageRate", mapOf("amount" to amount(b.storagePrice.cashCentsPerGiBMonth, b.storagePrice.cashCurrency))), style = Fonts.small(), color = Tk.L.fg)
                         b.egressPrice?.let { Text(tr("postpaid.egressRate", mapOf("amount" to amount(it.cashCentsPerGiB, it.cashCurrency))), style = Fonts.small(), color = Tk.L.fg) }
