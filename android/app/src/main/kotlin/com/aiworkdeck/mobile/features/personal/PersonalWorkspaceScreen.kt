@@ -53,10 +53,19 @@ class PersonalWorkspaceState(
     var reporting by mutableStateOf(false)
     var reportSubmitted by mutableStateOf(false)
     var reportError by mutableStateOf<String?>(null)
+    var reportId by mutableStateOf<Long?>(null)
+    var reportProgress by mutableStateOf<AssistantReport?>(null)
+    var reportRefreshing by mutableStateOf(false)
+    var reportProgressError by mutableStateOf<String?>(null)
+    private var reportedConversationId: String? = null
     fun openReport() {
         if (reporting || conversationStore?.isCurrent() != true) return
-        reportConversationId = conversationId ?: return
-        reportDescription = ""; reportSubmitted = false; reportError = null
+        val id = conversationId ?: return
+        if (reportedConversationId != id) {
+            reportId = null; reportProgress = null; reportDescription = ""
+        }
+        reportConversationId = id
+        reportSubmitted = reportId != null; reportError = null; reportProgressError = null
     }
     suspend fun submitReport() {
         val id = reportConversationId ?: return
@@ -64,11 +73,27 @@ class PersonalWorkspaceState(
         if (reporting || reportSubmitted || reportDescription.isBlank() || !store.isCurrent()) return
         reporting = true; reportError = null
         try {
-            backend.reportAssistant(id, reportDescription)
-            if (store.isCurrent() && reportConversationId == id) reportSubmitted = true
+            val submittedId = backend.reportAssistant(id, reportDescription)
+            if (store.isCurrent() && reportConversationId == id) {
+                reportId = submittedId; reportedConversationId = id; reportProgress = null
+                reportProgressError = null; reportSubmitted = true
+            }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { if (store.isCurrent() && reportConversationId == id) reportError = e.message?.takeIf { it.isNotBlank() } ?: tr("error.network") }
         finally { reporting = false }
+    }
+    suspend fun refreshReportProgress() {
+        val id = reportId ?: return
+        val store = conversationStore ?: return
+        if (reportRefreshing || !store.isCurrent()) return
+        reportRefreshing = true; reportProgressError = null
+        try {
+            val progress = backend.assistantReport(id) ?: throw ApiError(1, tr("error.badResponse"))
+            if (store.isCurrent() && reportId == id) reportProgress = progress
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
+            if (store.isCurrent() && reportId == id) reportProgressError = e.message?.takeIf { it.isNotBlank() } ?: tr("error.network")
+        } finally { reportRefreshing = false }
     }
     suspend fun prepareCopy() {
         if (busy || loading || pending != null || conversationId == null) return
@@ -250,6 +275,9 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
         if (reminders) scope.launch { CalendarReminders.replace(context, state.calendar?.events ?: emptyList()) }
     }
     LaunchedEffect(Unit) { state.load(context) }
+    LaunchedEffect(state.reportConversationId, state.reportId) {
+        if (state.reportConversationId != null && state.reportId != null) state.refreshReportProgress()
+    }
     LaunchedEffect(notificationEventId, state.calendar) {
         if (notificationEventId != null) { state.tab = "calendar"; state.selected = state.calendar?.events?.find { it.id == notificationEventId } }
     }
@@ -341,8 +369,23 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
         AlertDialog(onDismissRequest = { if (!state.reporting) state.reportConversationId = null },
             title = { Text(tr("personal.report.conversation")) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (state.reportSubmitted) Text(tr("personal.report.sent"))
-                else {
+                if (state.reportSubmitted) {
+                    Text(tr("personal.report.sent"))
+                    state.reportProgress?.let { progress ->
+                        Text(tr(if (progress.resolved) "personal.report.resolved" else "personal.report.processing"))
+                        val response = progress.reporterResponse?.takeIf { it.isNotBlank() }
+                        if (response == null) Text(tr("personal.report.noResponse"))
+                        else {
+                            Text(tr("personal.report.response"), style = MaterialTheme.typography.titleSmall)
+                            Text(response)
+                            progress.responsePublishedAt?.let { published ->
+                                Text(tr("personal.report.responsePublishedAt", mapOf("time" to personalSourceDate(published).ifBlank { published })))
+                            }
+                        }
+                    }
+                    if (state.reportRefreshing) { Text(tr("common.loading")); LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                    state.reportProgressError?.let { Text(it, color = Tk.S.failed) }
+                } else {
                     Text(tr("personal.report.privacy"))
                     OutlinedTextField(value = state.reportDescription, onValueChange = { state.reportDescription = it.take(2000) },
                         enabled = !state.reporting, label = { Text(tr("personal.report.reason")) }, maxLines = 5)
@@ -351,7 +394,9 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
                 }
             } },
             confirmButton = {
-                if (!state.reportSubmitted) TextButton(onClick = { scope.launch { state.submitReport() } },
+                if (state.reportSubmitted) TextButton(onClick = { scope.launch { state.refreshReportProgress() } },
+                    enabled = !state.reportRefreshing) { Text(tr("personal.report.refreshProgress")) }
+                else TextButton(onClick = { scope.launch { state.submitReport() } },
                     enabled = !state.reporting && state.reportDescription.isNotBlank()) { Text(tr("personal.send")) }
             },
             dismissButton = { TextButton(enabled = !state.reporting, onClick = { state.reportConversationId = null }) {

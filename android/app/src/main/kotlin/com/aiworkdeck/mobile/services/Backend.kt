@@ -130,6 +130,27 @@ class Backend(
         result["data"]?.jsonObject?.get("id")?.jsonPrimitive?.longOrNull?.takeIf { it > 0 }
             ?: throw ApiError(1, tr("error.badResponse"))
     }
+    suspend fun assistantReport(id: Long): AssistantReport? = withContext(Dispatchers.IO) {
+        require(id > 0)
+        val account = session.current() ?: throw Unauthorized()
+        val host = baseUrl
+        check(accountActive()) { tr("files.error.closed") }
+        val request = Request.Builder().url(host + "/api/feedback/mine")
+            .header("X-Session-Id", account).header("X-App-Language", languageProvider()).get().build()
+        val transport = client.newBuilder().followRedirects(false).build()
+        transport.newCall(request).execute().use { response ->
+            val text = response.body?.string() ?: ""
+            check(accountActive() && session.current() == account && baseUrl == host) { tr("files.error.closed") }
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            if (!response.isSuccessful) throw ApiError(response.code, tr("error.network"))
+            val result = envelope(text)
+            val items = result["data"]?.jsonObject?.get("items")?.jsonArray
+                ?: throw ApiError(1, tr("error.badResponse"))
+            val reports = items.map { json.decodeFromJsonElement<AssistantReport>(it) }
+            check(accountActive() && session.current() == account && baseUrl == host) { tr("files.error.closed") }
+            reports.firstOrNull { it.id == id && it.aiContentReport }
+        }
+    }
     suspend fun personalStatus(): PersonalStatus = personal("assistant/status")
     suspend fun personalCalendar(): PersonalCalendar = personal("calendar/events")
     suspend fun personalSettings(feature: String, enabled: Boolean): PersonalSettings = personal(feature + "/settings", "PUT",
