@@ -68,7 +68,7 @@ Page({
       for (const [key, value] of [['postpaid.remind', b.remindAt], ['postpaid.cleanup', b.cleanupAt]]) if (value) rows.push({label: t(key!), value: new Date(value).toLocaleString(), alert: false})
       const rateLines = [t('postpaid.storageRate', {amount: formatMoney(b.storagePrice.cashCentsPerGiBMonth, b.storagePrice.cashCurrency)})]
       if (b.egressPrice) rateLines.push(t('postpaid.egressRate', {amount: formatMoney(b.egressPrice.cashCentsPerGiB, b.egressPrice.cashCurrency)}))
-      this.setData({loaded: true, postpaidRows: rows, rateLines, canResumeCloud: b.accepted && (state.cloudAccess.frozen !== true || b.debtCents === 0), canAcceptPostpaid: !b.accepted && b.acceptEnabled && !!b.egressPrice, hasDebt: b.debtCents > 0, postpaidState: state.cloudAccess.cleanupState === 'complete' ? t('postpaid.cleared') : !state.cloudAccess.canUse ? t('postpaid.restricted') : ''})
+      this.setData({loaded: true, postpaidRows: rows, rateLines, canResumeCloud: b.accepted && (state.cloudAccess.frozen !== true || b.debtCents === 0), canAcceptPostpaid: !b.accepted && b.acceptEnabled && !!b.egressPrice, hasDebt: b.debtCents > 0, postpaidState: state.cloudAccess.cleanupState === 'complete' ? t('postpaid.cleared') : b.accepted && !state.cloudAccess.canUse ? t('postpaid.restricted') : ''})
     } catch { if (session === getSession()) this.setData({postpaidError: t('balance.unavailable')}) }
     finally { if (session === getSession()) this.setData({postpaidBusy: false}) }
   },

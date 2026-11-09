@@ -81,3 +81,13 @@ test('settings shows postpaid as one status word and never mutates billing', asy
   assert.equal(page.data.postpaidStatusFailed, failed)
  }
 })
+
+test('detail page shows the restricted notice only once postpaid is accepted', async () => {
+ const { t } = await import('../miniprogram/utils/i18n.ts')
+ const blocked = structuredClone(state); blocked.cloudAccess.canUse = false
+ let {page} = setup(blocked); await page.loadPostpaid(); assert.equal(page.data.postpaidState, '')
+ blocked.billing.accepted = true
+ ;({page} = setup(blocked)); await page.loadPostpaid(); assert.equal(page.data.postpaidState, t('postpaid.restricted'))
+ blocked.cloudAccess.cleanupState = 'complete'
+ ;({page} = setup(blocked)); await page.loadPostpaid(); assert.equal(page.data.postpaidState, t('postpaid.cleared'))
+})
