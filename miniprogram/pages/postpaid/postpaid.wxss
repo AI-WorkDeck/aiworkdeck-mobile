@@ -1,0 +1,98 @@
+/* 后付费详情页。视觉语汇同设置页：纯白底、发丝线、名称左值右，条款当脚注。 */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--gutter) var(--s10);
+  background: var(--bg);
+}
+
+.notice {
+  display: block;
+  padding-top: var(--s4);
+  font-size: var(--t-small);
+  color: var(--st-failed);
+  line-height: 1.6;
+}
+
+.rows {
+  padding: var(--s2) 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: 64rpx;
+  padding: var(--s1);
+}
+
+.row__label {
+  flex-shrink: 0;
+  font-size: var(--t-small);
+  color: var(--fg);
+}
+
+.row__value {
+  font-size: var(--t-small);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.row__value--alert {
+  color: var(--st-failed);
+}
+
+.rate {
+  display: block;
+  padding: var(--s2) var(--s1) 0;
+  font-size: var(--t-small);
+  color: var(--fg);
+}
+
+/* 条款：小号淡色脚注 */
+.footnote {
+  display: block;
+  padding: var(--s3) var(--s1) 0;
+  font-size: var(--t-nano);
+  color: var(--fg-faint);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding-top: var(--s6);
+}
+
+/* 主按钮：与充值页的支付按钮同一套 */
+.primary {
+  height: 96rpx;
+  border-radius: var(--s2);
+  background: var(--accent);
+}
+
+.primary--busy {
+  background: var(--rule-strong);
+  pointer-events: none;
+}
+
+.primary__text {
+  color: #FFFFFF;
+  font-size: var(--t-body);
+  font-weight: 600;
+}
+
+/* 忙碌态浅灰底上白字读不出来，换 --fg */
+.primary--busy .primary__text {
+  color: var(--fg);
+}
+
+.retry {
+  align-self: flex-start;
+  font-size: var(--t-small);
+  color: var(--accent);
+}

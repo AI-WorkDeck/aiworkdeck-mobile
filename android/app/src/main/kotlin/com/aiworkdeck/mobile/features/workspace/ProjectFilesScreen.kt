@@ -32,6 +32,7 @@ private fun canPreview(context: Context, extension: String): Boolean =
 
 @Composable
 fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
+    LightStatusBar()
     val context = LocalContext.current
     val service = remember(project.id) { runCatching { ServiceLocator.backend.projectFiles(File(context.filesDir, "project-previews")) }.getOrNull() }
     if (service == null) {

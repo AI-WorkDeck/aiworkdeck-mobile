@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.aiworkdeck.mobile.AppModel
+import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Hairline
 import com.aiworkdeck.mobile.design.StatusDot
@@ -81,6 +82,7 @@ fun QueueScreen(model: AppModel, onClose: () -> Unit) {
     val staged = scoped.filter { it.state == TransferState.uploaded }
     val landed = scoped.filter { it.state == TransferState.arrived }
 
+    LightStatusBar()
     WorkdeckTheme(dark = false) {
         Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()) {
             TopBar(

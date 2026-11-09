@@ -15,6 +15,7 @@ import { AccountUser, BillingSnapshot, MediaUsage, SubscriptionBalance, asRecord
 import { ServiceLocator } from '../services/ServiceLocator'
 import { billingAvailableIn, regionLabelKey } from '../model/AccountRegion'
 import { errorText, toast } from './Feedback'
+import { PrimaryButton } from '../design/Components'
 
 const DOMAIN: number = 0x0000
 const TAG: string = 'Settings'
@@ -62,6 +63,7 @@ export struct Settings {
   @State postpaid: Record<string, Object> | null = null
   @State postpaidBusy: boolean = false
   @State postpaidError: string = ''
+  @State postpaidOpen: boolean = false
   private postpaidSession: string = ''
   private token: number = -1
   /** 这一屏还在不在。异步回调回来时组件可能已经销毁，往里写 @State 是错误日志甚至崩溃。 */
@@ -257,7 +259,7 @@ export struct Settings {
     .alignItems(HorizontalAlign.Start)
     .width('100%')
     .margin({ top: Tk.Sp.s4 })
-    .accessibilityText(this.t('settings.signedIn') + ' ' + this.accountName())
+    .accessibilityText(this.accountName() === this.t('settings.signedIn') ? this.accountName() : this.t('settings.signedIn') + ' ' + this.accountName())
   }
 
   /** 费用：余额、充值、后付费放一起；国际区不计费时整组不出现。 */
@@ -310,19 +312,140 @@ export struct Settings {
   }
 
   // 国际站计费未开通（dev-board#664）：国际区不放充值 / 还款入口
+  /** 设置页里只占一行：名称 + 一个词的状态，点开才是授信、费率与条款。 */
   @Builder
   postpaidSection() {
-    Column() {
-      Text(this.t('postpaid.title')).fontColor(Tk.L.fg)
-      Text(this.postpaidText()).fontColor(Tk.L.fg)
-      Text(this.t('postpaid.notice')).fontColor(Tk.L.fgMuted)
-      if (this.canResumeCloud()) { Button(this.t('postpaid.resume')).enabled(!this.postpaidBusy).onClick((): void => this.confirmResumeCloud()) }
-      if (this.canAcceptPostpaid()) { Button(this.t('postpaid.accept')).enabled(!this.postpaidBusy).onClick((): void => this.confirmPostpaid()) }
-      Button(this.t('project.retry')).enabled(!this.postpaidBusy).onClick((): void => { this.loadPostpaid().catch((): void => {}) })
-      if (this.postpaidError.length > 0) { Text(this.postpaidError).fontColor(Tk.S.failed) }
-      if (billingAvailableIn(ServiceLocator.region)) { Button(this.t('postpaid.repay')).onClick((): void => this.openRepayment()) }
-      else { Text(this.t('postpaid.channelUnavailable')).fontColor(Tk.L.fgMuted) }
+    Row({ space: Tk.Sp.s3 }) {
+      Text(this.t('postpaid.title'))
+        .fontSize(Tk.Ty.small)
+        .fontColor(Tk.L.fg)
+      Text(this.postpaidStatus())
+        .fontSize(Tk.Ty.small)
+        .fontColor(this.postpaidStatusAlert() ? Tk.S.failed : Tk.L.fgMuted)
+        .textAlign(TextAlign.End)
+        .layoutWeight(1)
+      Text('›')
+        .fontSize(Tk.Ty.body)
+        .fontColor(Tk.L.fgFaint)
     }
+    .width('100%')
+    .height(Tk.touchMin)
+    .alignItems(VerticalAlign.Center)
+    .onClick((): void => { this.postpaidOpen = true })
+    .bindSheet(this.postpaidOpen, this.postpaidDetail(), {
+      height: SheetSize.LARGE,
+      backgroundColor: Tk.L.bg,
+      title: { title: this.t('postpaid.title') },
+      onDisappear: (): void => {
+        this.postpaidOpen = false
+        this.loadPostpaid().catch((): void => {})
+      },
+    })
+  }
+
+  /** 后付费详情：数字一行一项（名称左、值右），条款放最后当脚注，动作按钮只在能做时出现。 */
+  @Builder
+  postpaidDetail() {
+    Scroll() {
+      Column({ space: Tk.Sp.s3 }) {
+        if (this.postpaidBilling() !== null && this.postpaidAccess() !== null) {
+          if (this.postpaidAccess()!['cleanupState'] === 'complete') {
+            Text(this.t('postpaid.cleared')).fontSize(Tk.Ty.small).fontColor(Tk.S.failed).margin({ top: Tk.Sp.s4 })
+          } else if (this.postpaidBilling()!['accepted'] === true && this.postpaidAccess()!['canUse'] !== true) {
+            Text(this.t('postpaid.restricted')).fontSize(Tk.Ty.small).fontColor(Tk.S.failed).margin({ top: Tk.Sp.s4 })
+          }
+          Column() {
+            this.infoRow(this.t('postpaid.limit'), this.postpaidMoney('creditLimitCents'))
+            this.infoRow(this.t('postpaid.available'), this.postpaidMoney('availableCreditCents'))
+            this.debtRow()
+            if (typeof this.postpaidBilling()!['remindAt'] === 'string') {
+              this.infoRow(this.t('postpaid.remind'), this.postpaidBilling()!['remindAt'] as string)
+            }
+            if (typeof this.postpaidBilling()!['cleanupAt'] === 'string') {
+              this.infoRow(this.t('postpaid.cleanup'), this.postpaidBilling()!['cleanupAt'] as string)
+            }
+          }
+          .width('100%')
+          .margin({ top: Tk.Sp.s2 })
+          Divider().color(Tk.L.rule).margin({ top: Tk.Sp.s2, bottom: Tk.Sp.s2 })
+          if (this.postpaidRate('storagePrice', 'cashCentsPerGiBMonth').length > 0) {
+            Text(this.t('postpaid.storageRate', { 'amount': this.postpaidRate('storagePrice', 'cashCentsPerGiBMonth') }))
+              .fontSize(Tk.Ty.small).fontColor(Tk.L.fg)
+          }
+          if (this.postpaidRate('egressPrice', 'cashCentsPerGiB').length > 0) {
+            Text(this.t('postpaid.egressRate', { 'amount': this.postpaidRate('egressPrice', 'cashCentsPerGiB') }))
+              .fontSize(Tk.Ty.small).fontColor(Tk.L.fg)
+          }
+          Text(this.t('postpaid.notice'))
+            .fontSize(Tk.Ty.nano)
+            .fontColor(Tk.L.fgFaint)
+            .margin({ top: Tk.Sp.s2 })
+          if (!billingAvailableIn(ServiceLocator.region)) {
+            Text(this.t('postpaid.channelUnavailable')).fontSize(Tk.Ty.nano).fontColor(Tk.L.fgFaint)
+          }
+          Column({ space: Tk.Sp.s3 }) {
+            if (billingAvailableIn(ServiceLocator.region) && this.postpaidDebt() > 0) {
+              PrimaryButton({ label: this.t('postpaid.repay'), isEnabled: !this.postpaidBusy,
+                onTap: (): void => this.openRepayment() })
+            }
+            if (this.canAcceptPostpaid()) {
+              PrimaryButton({ label: this.t('postpaid.accept'), isEnabled: !this.postpaidBusy,
+                onTap: (): void => this.confirmPostpaid() })
+            }
+            if (this.canResumeCloud()) {
+              Text(this.t('postpaid.resume'))
+                .fontSize(Tk.Ty.small)
+                .fontColor(Tk.L.accent)
+                .height(Tk.touchMin)
+                .enabled(!this.postpaidBusy)
+                .onClick((): void => this.confirmResumeCloud())
+            }
+          }
+          .width('100%')
+          .margin({ top: Tk.Sp.s4 })
+        } else if (this.postpaidBusy) {
+          LoadingProgress()
+            .width(Tk.touchMin)
+            .height(Tk.touchMin)
+            .color(Tk.L.fgMuted)
+            .margin({ top: Tk.Sp.s10 })
+        }
+        if (this.postpaidError.length > 0) {
+          Text(this.postpaidError).fontSize(Tk.Ty.small).fontColor(Tk.S.failed).margin({ top: Tk.Sp.s4 })
+          Text(this.t('project.retry'))
+            .fontSize(Tk.Ty.small)
+            .fontColor(Tk.L.accent)
+            .height(Tk.touchMin)
+            .enabled(!this.postpaidBusy)
+            .onClick((): void => { this.loadPostpaid().catch((): void => {}) })
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding({ left: Tk.Sp.gutter, right: Tk.Sp.gutter, bottom: Tk.Sp.s10 })
+    }
+    .width('100%')
+    .height('100%')
+    .align(Alignment.TopStart)
+    .scrollBar(BarState.Off)
+  }
+
+  /** 欠费那一行：有欠款时值用失败色。 */
+  @Builder
+  debtRow() {
+    Row({ space: Tk.Sp.s3 }) {
+      Text(this.t('postpaid.debt'))
+        .fontSize(Tk.Ty.small)
+        .fontColor(Tk.L.fg)
+      Text(this.postpaidMoney('debtCents'))
+        .fontSize(Tk.Ty.small)
+        .fontColor(this.postpaidDebt() > 0 ? Tk.S.failed : Tk.L.fgMuted)
+        .textAlign(TextAlign.End)
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 32 })
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -449,14 +572,16 @@ export struct Settings {
   private accountName(): string {
     const a: AccountUser | null = AppModel.shared.account
     if (a === null) return DASH
-    return a.displayName.length > 0 ? a.displayName : a.username
+    // 手机号注册的账号可能两个都空：名字位不能空着，至少告诉用户「已登录」
+    const name: string = a.displayName.trim().length > 0 ? a.displayName.trim() : a.username.trim()
+    return name.length > 0 ? name : this.t('settings.signedIn')
   }
 
   /** 用户名与显示名不同时才多写一行。 */
   private accountUsername(): string {
     const a: AccountUser | null = AppModel.shared.account
-    if (a === null || a.username === this.accountName()) return ''
-    return a.username
+    if (a === null || a.username.trim() === this.accountName()) return ''
+    return a.username.trim()
   }
 
   private syncProject(): void {
@@ -523,27 +648,46 @@ export struct Settings {
     } catch (_) { if (this.alive) this.postpaidError = this.t('balance.unavailable') }
     finally { if (this.alive) this.postpaidBusy = false }
   }
-  private postpaidText(): string {
-    const b: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['billing'])
-    const a: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['cloudAccess'])
+  private postpaidBilling(): Record<string, Object> | null {
+    return this.postpaid === null ? null : asRecord(this.postpaid['billing'])
+  }
+  private postpaidAccess(): Record<string, Object> | null {
+    return this.postpaid === null ? null : asRecord(this.postpaid['cloudAccess'])
+  }
+  private postpaidDebt(): number {
+    const b: Record<string, Object> | null = this.postpaidBilling()
+    return b !== null && typeof b['debtCents'] === 'number' ? b['debtCents'] as number : 0
+  }
+  private formatCash(cents: number, currency: string): string {
+    return currency + ' ' + (cents / 100).toFixed(2)
+  }
+  private postpaidMoney(field: string): string {
+    const b: Record<string, Object> | null = this.postpaidBilling()
+    if (b === null || typeof b[field] !== 'number') return DASH
+    return this.formatCash(b[field] as number, b['cashCurrency'] as string)
+  }
+  /** 费率单价；没有这一档（如出口价未定）返回空串，调用方不渲染。 */
+  private postpaidRate(priceField: string, centsField: string): string {
+    const b: Record<string, Object> | null = this.postpaidBilling()
+    const price: Record<string, Object> | null = b === null ? null : asRecord(b[priceField])
+    if (b === null || price === null || typeof price[centsField] !== 'number') return ''
+    return this.formatCash(price[centsField] as number, b['cashCurrency'] as string)
+  }
+  /** 设置首屏那一行的状态词。读失败给「—」，还在读给空。 */
+  private postpaidStatus(): string {
+    if (this.postpaidError.length > 0) return DASH
+    const b: Record<string, Object> | null = this.postpaidBilling()
+    const a: Record<string, Object> | null = this.postpaidAccess()
     if (b === null || a === null) return ''
-    const currency: string = b['cashCurrency'] as string
-    let text: string = ''
-    const fields: string[] = ['creditLimitCents', 'availableCreditCents', 'debtCents']
-    const keys: string[] = ['postpaid.limit', 'postpaid.available', 'postpaid.debt']
-    for (let i: number = 0; i < fields.length; i++) {
-      const amount: Object = b[fields[i]]
-      if (typeof amount === 'number') text += this.t(keys[i]) + ': ' + currency + ' ' + (amount as number / 100).toFixed(2) + '\n'
-    }
-    const storage: Record<string, Object> | null = asRecord(b['storagePrice'])
-    const egress: Record<string, Object> | null = asRecord(b['egressPrice'])
-    if (storage !== null) text += this.t('postpaid.storageRate', { 'amount': currency + ' ' + (storage['cashCentsPerGiBMonth'] as number / 100).toFixed(2)}) + '\n'
-    if (egress !== null) text += this.t('postpaid.egressRate', { 'amount': currency + ' ' + (egress['cashCentsPerGiB'] as number / 100).toFixed(2)}) + '\n'
-    if (typeof b['remindAt'] === 'string') text += this.t('postpaid.remind') + ': ' + b['remindAt'] + '\n'
-    if (typeof b['cleanupAt'] === 'string') text += this.t('postpaid.cleanup') + ': ' + b['cleanupAt'] + '\n'
-    if (a['cleanupState'] === 'complete') text += this.t('postpaid.cleared')
-    else if (a['canUse'] !== true) text += this.t('postpaid.restricted')
-    return text
+    if (this.postpaidDebt() > 0) return this.postpaidMoney('debtCents')
+    if (b['accepted'] !== true) return this.t('postpaid.status.off')
+    return a['canUse'] === true ? this.t('postpaid.status.on') : this.t('postpaid.status.restricted')
+  }
+  private postpaidStatusAlert(): boolean {
+    const b: Record<string, Object> | null = this.postpaidBilling()
+    const a: Record<string, Object> | null = this.postpaidAccess()
+    if (this.postpaidError.length > 0 || b === null || a === null) return false
+    return this.postpaidDebt() > 0 || (b['accepted'] === true && a['canUse'] !== true)
   }
   private canResumeCloud(): boolean {
     const b: Record<string, Object> | null = this.postpaid === null ? null : asRecord(this.postpaid['billing'])

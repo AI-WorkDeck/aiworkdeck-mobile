@@ -35,6 +35,7 @@ fun BackupConsentScreen(onClose: () -> Unit) {
         finally { busy = false }
     } }
     LaunchedEffect(Unit) { load() }
+    LightStatusBar()
     WorkdeckTheme(dark = false) {
         Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().verticalScroll(rememberScrollState()).padding(Tk.Sp.gutter), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
             Text(tr("backup.title"), style = Fonts.heading())

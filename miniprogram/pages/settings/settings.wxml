@@ -35,15 +35,11 @@
     <text class="row__value">{{item.value}}</text>
   </view>
 
-  <block wx:if="{{!bqt}}">
-  <view class="row"><text class="row__label">{{postpaidTitle}}</text><text class="row__value">{{postpaidState}}</text></view>
-  <view wx:for="{{postpaidRows}}" wx:key="label" class="row"><text class="row__label">{{item.label}}</text><text class="row__value">{{item.value}}</text></view>
-  <text class="hint">{{postpaidNotice}}</text>
-  <button wx:if="{{canAcceptPostpaid}}" loading="{{postpaidBusy}}" disabled="{{postpaidBusy}}" bindtap="onAcceptPostpaid">{{postpaidAccept}}</button>
-  <button wx:if="{{canResumeCloud}}" loading="{{postpaidBusy}}" disabled="{{postpaidBusy}}" bindtap="onResumeCloud">{{postpaidResume}}</button>
-  <button wx:if="{{hasDebt}}" bindtap="onRecharge">{{postpaidRepay}}</button>
-  <button wx:if="{{postpaidError}}" bindtap="onPostpaidRetry">{{postpaidError}}</button>
-  </block>
+  <!-- 后付费只占一行：一个词的状态，点进去才是授信、费率与条款 -->
+  <view wx:if="{{!bqt}}" class="row tappable" bindtap="onPostpaid">
+    <text class="row__label">{{postpaidTitle}}</text>
+    <text class="row__value {{postpaidStatusFailed ? 'row__value--failed' : ''}}">{{postpaidStatus}}</text>
+  </view>
   <view class="rule"></view>
 
   <!-- 云端存储：备份 -->

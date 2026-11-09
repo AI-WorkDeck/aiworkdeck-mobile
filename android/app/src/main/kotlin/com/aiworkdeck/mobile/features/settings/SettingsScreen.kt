@@ -44,6 +44,7 @@ import com.aiworkdeck.mobile.BuildConfig
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Hairline
 import com.aiworkdeck.mobile.design.L10n
+import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.WorkdeckTheme
 import com.aiworkdeck.mobile.design.tr
@@ -52,6 +53,7 @@ import com.aiworkdeck.mobile.features.auth.errorText
 import com.aiworkdeck.mobile.features.queue.TextAction
 import com.aiworkdeck.mobile.features.queue.noRipple
 import com.aiworkdeck.mobile.services.ApiError
+import com.aiworkdeck.mobile.services.EnvelopeKind
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 import com.aiworkdeck.mobile.services.showsExternalRecharge
 import com.aiworkdeck.mobile.services.BillingBalance
@@ -95,6 +97,8 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
     // 再消失（dev-board#425 二轮复审 N6）。只有查到「该显示金额」或「该显示错误文案」两条路径
     // 才会把它翻成 false。
     var hideBalanceRow by remember { mutableStateOf(true) }
+    // NOT_CONNECTED：余额行不渲染，但充值入口下面要补一句「充值后即开通」（dev-board#535）。
+    var balanceNotConnected by remember { mutableStateOf(false) }
     var showRechargeNotice by remember { mutableStateOf(false) }
     var showLanguagePicker by remember { mutableStateOf(false) }
     var confirmingDelete by remember { mutableStateOf(false) }
@@ -115,6 +119,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
             hideBalanceRow = false
         } catch (e: ApiError) {
             val key = balanceFailureKey(e.kind)
+            balanceNotConnected = e.kind == EnvelopeKind.NOT_CONNECTED
             if (key == null) {
                 hideBalanceRow = true
             } else {
@@ -127,6 +132,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
         }
     }
 
+    LightStatusBar()
     WorkdeckTheme(dark = false) {
         Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()) {
             TopBar(onClose)
@@ -137,9 +143,12 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
             ) {
                 // 账号：名字放最上面，一眼知道登的是谁。
                 Column(Modifier.padding(top = Tk.Sp.s4)) {
-                    val name = account?.let { it.displayName.ifEmpty { it.username } } ?: DASH
+                    // 手机号注册的账号可能两个都空：名字位不能空着，至少告诉用户「已登录」
+                    val name = account?.let { a ->
+                        listOf(a.displayName, a.username).map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: tr("settings.signedIn")
+                    } ?: DASH
                     Text(name, style = Fonts.heading(), color = Tk.L.fg)
-                    account?.username?.takeIf { it != name }?.let { Text(it, style = Fonts.nano(), color = Tk.L.fgFaint) }
+                    account?.username?.trim()?.takeIf { it.isNotEmpty() && it != name }?.let { Text(it, style = Fonts.nano(), color = Tk.L.fgFaint) }
                 }
 
                 // 费用：余额、充值、订阅、后付费放一起；国际站计费未开通（dev-board#664）时整组不出现。
@@ -150,8 +159,17 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                         // NOT_CONNECTED/DISABLED/REVIEW_ACCOUNT 与「还没拉完」共用 hideBalanceRow
                         // 默认 true：这三个终态整行不渲染，不给任何误导性的补救指引；未知态借同一
                         // 默认值不闪烁（N6）。
+                        val showRecharge = balance?.billingLine != "bqt" && showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL)
                         if (!hideBalanceRow) {
-                            InfoRow(tr("balance.title"), balanceCaption(balance, balanceErrorKey))
+                            // 充值紧跟在金额右边，像 iOS：一眼看到余额，顺手就能充。
+                            InfoRow(tr("balance.title"), balanceCaption(balance, balanceErrorKey)) {
+                                if (showRecharge) TextAction(tr("recharge.entry"), color = Tk.L.accent) { showRechargeNotice = true }
+                            }
+                        } else if (showRecharge) {
+                            TextAction(tr("recharge.entry"), color = Tk.L.accent) { showRechargeNotice = true }
+                        }
+                        if (showRecharge && balanceNotConnected) {
+                            Text(tr("recharge.openHint"), style = Fonts.nano(), color = Tk.L.fgFaint)
                         }
                         balance?.subscription?.takeIf { it.active }?.let { sub ->
                             InfoRow(tr("subscription.available"), creditsCaption(sub.availableCents))
@@ -168,9 +186,6 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                         if (balance?.billingLine == "bqt") {
                             Text(tr("bqt.rechargeInBqt"), style = Fonts.small(), color = Tk.L.fgMuted)
                         } else {
-                            if (showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL)) {
-                                TextAction(tr("recharge.entry"), color = Tk.L.accent) { showRechargeNotice = true }
-                            }
                             PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { uriHandler.openUri("https://aiworkdeck.com/zh/account#wallet") })
                         }
                     }
@@ -406,7 +421,7 @@ private fun Group(title: String, content: @Composable () -> Unit) {
 
 /** 一行一项：名称在左，值在右，单行。 */
 @Composable
-private fun InfoRow(key: String, value: String, valueColor: Color = Tk.L.fgMuted) {
+private fun InfoRow(key: String, value: String, valueColor: Color = Tk.L.fgMuted, trailing: (@Composable () -> Unit)? = null) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = 32.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -417,6 +432,7 @@ private fun InfoRow(key: String, value: String, valueColor: Color = Tk.L.fgMuted
             value, style = Fonts.small(), color = valueColor, maxLines = 1, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End, modifier = Modifier.weight(1f),
         )
+        trailing?.invoke()
     }
 }
 

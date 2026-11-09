@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import com.aiworkdeck.mobile.BuildConfig
+import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.tr
@@ -25,6 +26,7 @@ import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 /** Shown before restoring a session or requesting device permissions. */
 @Composable
 fun PrivacyConsentScreen(onAccept: () -> Unit, onDecline: () -> Unit) {
+    LightStatusBar()
     val uriHandler = LocalUriHandler.current
     Column(
         modifier = Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()

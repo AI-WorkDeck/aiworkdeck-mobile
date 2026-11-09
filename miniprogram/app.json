@@ -10,6 +10,7 @@
     "pages/queue/queue",
     "pages/recharge/recharge",
     "pages/settings/settings",
+    "pages/postpaid/postpaid",
     "pages/start/start",
     "pages/download/download",
     "pages/account/account"

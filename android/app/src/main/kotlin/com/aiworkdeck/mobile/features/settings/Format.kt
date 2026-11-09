@@ -1,6 +1,10 @@
 package com.aiworkdeck.mobile.features.settings
 
+import com.aiworkdeck.mobile.model.IsoTime
 import com.aiworkdeck.mobile.services.EnvelopeKind
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 private val UNITS = arrayOf("B", "KB", "MB", "GB", "TB")
@@ -53,4 +57,15 @@ fun formatMoney(cents: Long, currency: String): String {
 fun balanceFailureKey(kind: EnvelopeKind?): String? = when (kind) {
     EnvelopeKind.NOT_CONNECTED, EnvelopeKind.DISABLED, EnvelopeKind.REVIEW_ACCOUNT -> null
     else -> "balance.unavailable"
+}
+
+/**
+ * 服务端给的 ISO 时刻（后付费提醒 / 清理时间）按本机时区、界面语言的短格式显示。
+ * 解析不了就原样给出——宁可难看，也不能把日期吞掉。
+ *
+ * 纯函数，不碰 Android，JVM 单测直接调。
+ */
+fun formatDateTime(raw: String, locale: Locale, zone: ZoneId = ZoneId.systemDefault()): String {
+    val instant = IsoTime.parse(raw, zone) ?: return raw
+    return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withLocale(locale).format(instant.atZone(zone))
 }

@@ -3,14 +3,27 @@ package com.aiworkdeck.mobile
 import com.aiworkdeck.mobile.features.queue.expiryDaysLeft
 import com.aiworkdeck.mobile.features.settings.balanceFailureKey
 import com.aiworkdeck.mobile.features.settings.formatBytes
+import com.aiworkdeck.mobile.features.settings.formatDateTime
 import com.aiworkdeck.mobile.features.settings.formatMoney
 import com.aiworkdeck.mobile.services.EnvelopeKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Instant
+import java.time.ZoneId
+import java.util.Locale
 
 class SettingsFormatTest {
+    @Test fun formatsServerTimeInLocalZoneAndFallsBackToRaw() {
+        val utc = ZoneId.of("UTC")
+        val shanghai = ZoneId.of("Asia/Shanghai")
+        // 同一时刻换时区显示不同的钟点：确实按本机时区换算了
+        val a = formatDateTime("2026-11-20T00:00:00Z", Locale.US, utc)
+        val b = formatDateTime("2026-11-20T00:00:00Z", Locale.US, shanghai)
+        assert(a.contains("12:00") && b.contains("8:00")) { "$a / $b" }
+        assertEquals("not a date", formatDateTime("not a date", Locale.US, utc))
+    }
+
     @Test fun formatsBytesWithBinaryStepsAndOneDecimalUnderTen() {
         assertEquals("0 B", formatBytes(0))
         assertEquals("512 B", formatBytes(512))

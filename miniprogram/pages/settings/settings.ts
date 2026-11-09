@@ -1,6 +1,4 @@
-import { pauseCloudUploads } from '../../utils/queue'
-import { cloudBillingState, acceptPostpaid, resumeCloud, reconnectCloud, invalidateCloudEpoch } from '../../utils/api'
-import type { PostpaidState } from '../../utils/cloud-access'
+import { cloudBillingState } from '../../utils/api'
 import { captureOrganizationEnabled, setCaptureOrganizationEnabled, personalAccountScope } from '../../utils/api'
 import { chooseBackupConsent } from '../../utils/backup-consent'
 /**
@@ -72,7 +70,8 @@ function groupLabels() {
 function accountState() {
   const user = getAccountUser()
   const phoneText = maskPhone(getPhone())
-  const accountName = user?.displayName || phoneText || user?.username || t('settings.account')
+  // 手机号注册的账号名字可能全空：名字位不能空着，至少告诉用户「已登录」
+  const accountName = user?.displayName?.trim() || phoneText || user?.username?.trim() || t('settings.signedIn')
   return { accountName, phoneText: phoneText === accountName ? '' : phoneText }
 }
 
@@ -90,11 +89,9 @@ function languageState() {
 }
 
 Page({
-  postpaid: null as PostpaidState | null,
-  postpaidSession: null as string | null,
   organizationScope: null as string | null,
   data: {
-    postpaidResume: '', canResumeCloud: false, postpaidTitle: '', postpaidNotice: '', postpaidRows: [] as {label: string, value: string}[], postpaidAccept: '', postpaidRepay: '', postpaidError: '', postpaidBusy: false, canAcceptPostpaid: false, hasDebt: false, postpaidState: '',
+    postpaidTitle: '', postpaidStatus: '', postpaidStatusFailed: false,
     organizeEnabled: false, organizeTitle: t('organize.title'), organizeHint: t('organize.hint'),
     metrics: {} as Metrics,
     dir: 'ltr',
@@ -254,45 +251,25 @@ Page({
     } finally { this.setData({ backupBusy: false }) }
   },
 
-  async loadPostpaid(accept = false, resume = false) {
-    if (this.data.postpaidBusy) return
+  /** 后付费在设置页只占一行：一个词的状态，详情、条款与操作都在 pages/postpaid。 */
+  async loadPostpaid() {
     const session = getSession()
-    if ((accept || resume) && session !== this.postpaidSession) return
-    this.setData({postpaidBusy: true, postpaidError: '', postpaidResume: t('postpaid.resume'), postpaidTitle: t('postpaid.title'), postpaidNotice: t('postpaid.notice'), postpaidAccept: t('postpaid.accept'), postpaidRepay: t('postpaid.repay')})
+    this.setData({ postpaidTitle: t('postpaid.title') })
     try {
-      if (resume) { invalidateCloudEpoch(); pauseCloudUploads() }
-      const state = resume && this.postpaid?.cloudAccess.frozen ? await resumeCloud(this.postpaid.billing.policyVersion) : accept && this.postpaid ? await acceptPostpaid(this.postpaid.billing.policyVersion) : await cloudBillingState()
+      const state = await cloudBillingState()
       if (session !== getSession()) return
-      if (accept || resume) { await reconnectCloud() }
-      this.postpaid = state
-      this.postpaidSession = session
       const b = state.billing
-      const rows = [
-        {label: t('postpaid.limit'), value: formatMoney(b.creditLimitCents, b.cashCurrency)},
-        {label: t('postpaid.available'), value: formatMoney(b.availableCreditCents, b.cashCurrency)},
-        {label: t('postpaid.debt'), value: formatMoney(b.debtCents, b.cashCurrency)},
-        {label: t('settings.persistent'), value: t('postpaid.storageRate', {amount: formatMoney(b.storagePrice.cashCentsPerGiBMonth, b.storagePrice.cashCurrency)})},
-      ]
-      if (b.egressPrice) rows.push({label: t('postpaid.title'), value: t('postpaid.egressRate', {amount: formatMoney(b.egressPrice.cashCentsPerGiB, b.egressPrice.cashCurrency)})})
-      for (const [key, value] of [['postpaid.remind', b.remindAt], ['postpaid.cleanup', b.cleanupAt]]) if (value) rows.push({label: t(key!), value: new Date(value).toLocaleString()})
-      this.setData({postpaidRows: rows, canResumeCloud: b.accepted && (state.cloudAccess.frozen !== true || b.debtCents === 0), canAcceptPostpaid: !b.accepted && b.acceptEnabled && !!b.egressPrice, hasDebt: b.debtCents > 0, postpaidState: state.cloudAccess.cleanupState === 'complete' ? t('postpaid.cleared') : !state.cloudAccess.canUse ? t('postpaid.restricted') : ''})
-    } catch { if (session === getSession()) this.setData({postpaidError: t('balance.unavailable')}) }
-    finally { if (session === getSession()) this.setData({postpaidBusy: false}) }
+      const restricted = b.accepted && !state.cloudAccess.canUse
+      this.setData({
+        postpaidStatus: b.debtCents > 0 ? formatMoney(b.debtCents, b.cashCurrency)
+          : !b.accepted ? t('postpaid.status.off')
+          : restricted ? t('postpaid.status.restricted') : t('postpaid.status.on'),
+        postpaidStatusFailed: b.debtCents > 0 || restricted,
+      })
+    } catch { if (session === getSession()) this.setData({ postpaidStatus: '—', postpaidStatusFailed: false }) }
   },
-  async onAcceptPostpaid() {
-    if (!this.data.canAcceptPostpaid || this.data.postpaidBusy) return
-    const session = getSession()
-    if (session !== this.postpaidSession) return
-    const result = await wx.showModal({title: t('postpaid.accept'), content: t('postpaid.notice'), confirmText: t('common.on')})
-    if (result.confirm && session === getSession()) await this.loadPostpaid(true)
-  },
-  async onResumeCloud() {
-    if (!this.data.canResumeCloud || this.data.postpaidBusy || getSession() !== this.postpaidSession) return
-    const session = getSession()
-    const result = await wx.showModal({title: t('postpaid.resume'), content: t('postpaid.resumeNotice'), confirmText: t('common.on')})
-    if (result.confirm && session === getSession()) await this.loadPostpaid(false, true)
-  },
-  onPostpaidRetry() { this.loadPostpaid() },
+  onPostpaid() { wx.navigateTo({ url: '/pages/postpaid/postpaid' }) },
+
   onRecharge() {
     if (this.data.bqt) return
     wx.navigateTo({ url: '/pages/recharge/recharge' })
