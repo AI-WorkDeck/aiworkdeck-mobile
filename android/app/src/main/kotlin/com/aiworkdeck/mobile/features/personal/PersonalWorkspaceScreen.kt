@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.aiworkdeck.mobile.Overlay
+import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.model.RelayProject
@@ -252,6 +253,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
     LaunchedEffect(notificationEventId, state.calendar) {
         if (notificationEventId != null) { state.tab = "calendar"; state.selected = state.calendar?.events?.find { it.id == notificationEventId } }
     }
+    LightStatusBar()
     Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(16.dp).imePadding()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(tr("personal." + state.tab), style = MaterialTheme.typography.titleLarge, color = Tk.L.fg)

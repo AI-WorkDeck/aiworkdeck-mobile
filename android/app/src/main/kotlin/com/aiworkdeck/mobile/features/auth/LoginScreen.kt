@@ -62,6 +62,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Hairline
 import com.aiworkdeck.mobile.design.L10n
@@ -114,6 +115,7 @@ fun LoginScreen(model: AppModel) {
         password = ""; error = null; reviewMode = false
         runCatching { uriHandler.openUri(accountFlowUrl(region, method, flow, BuildConfig.FLAVOR)) }.onFailure { error = tr("login.webError") }
     }
+    LightStatusBar()
     Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().imePadding()
         .verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter),
         verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {

@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aiworkdeck.mobile.AppModel
 import com.aiworkdeck.mobile.ScreenshotMode
+import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Hairline
 import com.aiworkdeck.mobile.design.Tk
@@ -92,6 +93,7 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
     } }
     fun choose(p: RelayProject) { ServiceLocator.prefs.useRecentProject(p.id); onSelect(p) }
 
+    LightStatusBar()
     Column(
         Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(horizontal = Tk.Sp.gutter),
     ) {
