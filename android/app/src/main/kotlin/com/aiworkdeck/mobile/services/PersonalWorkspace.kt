@@ -11,6 +11,10 @@ import java.util.UUID
 
 @Serializable data class PersonalStatus(val enabled: Boolean, val subscriptionActive: Boolean, val backupEnabled: Boolean, val summaryCount: Int, val reason: String? = null, val consentEnabled: Boolean? = null, val cloudAccess: CloudAccess? = null) { val canUseCloud: Boolean get() = cloudAccess?.canUse ?: subscriptionActive }
 @Serializable data class PersonalSettings(val enabled: Boolean, val subscriptionActive: Boolean)
+@Serializable data class AssistantReport(val id: Long, val status: String, val aiContentReport: Boolean = false,
+    val reporterResponse: String? = null, val responsePublishedAt: String? = null, val resolvedAt: String? = null) {
+    val resolved: Boolean get() = status == "RESOLVED"
+}
 @Serializable data class PersonalSource(val deviceId: String, val projectKey: String, val projectName: String, val sourceUpdatedAt: String? = null)
 @Serializable data class PersonalReply(val conversationId: String, val requestId: String, val answer: String, val sources: List<PersonalSource> = emptyList(), val status: String = "completed")
 @Serializable data class PersonalHistoryMessage(val role: String, val content: String, val requestId: String? = null, val sources: List<PersonalSource> = emptyList())
