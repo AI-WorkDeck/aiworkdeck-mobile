@@ -259,7 +259,7 @@ export struct Settings {
     .alignItems(HorizontalAlign.Start)
     .width('100%')
     .margin({ top: Tk.Sp.s4 })
-    .accessibilityText(this.t('settings.signedIn') + ' ' + this.accountName())
+    .accessibilityText(this.accountName() === this.t('settings.signedIn') ? this.accountName() : this.t('settings.signedIn') + ' ' + this.accountName())
   }
 
   /** 费用：余额、充值、后付费放一起；国际区不计费时整组不出现。 */
@@ -384,7 +384,7 @@ export struct Settings {
             Text(this.t('postpaid.channelUnavailable')).fontSize(Tk.Ty.nano).fontColor(Tk.L.fgFaint)
           }
           Column({ space: Tk.Sp.s3 }) {
-            if (billingAvailableIn(ServiceLocator.region)) {
+            if (billingAvailableIn(ServiceLocator.region) && this.postpaidDebt() > 0) {
               PrimaryButton({ label: this.t('postpaid.repay'), isEnabled: !this.postpaidBusy,
                 onTap: (): void => this.openRepayment() })
             }
