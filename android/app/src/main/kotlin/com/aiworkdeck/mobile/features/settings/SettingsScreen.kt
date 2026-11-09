@@ -137,9 +137,12 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
             ) {
                 // 账号：名字放最上面，一眼知道登的是谁。
                 Column(Modifier.padding(top = Tk.Sp.s4)) {
-                    val name = account?.let { it.displayName.ifEmpty { it.username } } ?: DASH
+                    // 手机号注册的账号可能两个都空：名字位不能空着，至少告诉用户「已登录」
+                    val name = account?.let { a ->
+                        listOf(a.displayName, a.username).map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: tr("settings.signedIn")
+                    } ?: DASH
                     Text(name, style = Fonts.heading(), color = Tk.L.fg)
-                    account?.username?.takeIf { it != name }?.let { Text(it, style = Fonts.nano(), color = Tk.L.fgFaint) }
+                    account?.username?.trim()?.takeIf { it.isNotEmpty() && it != name }?.let { Text(it, style = Fonts.nano(), color = Tk.L.fgFaint) }
                 }
 
                 // 费用：余额、充值、订阅、后付费放一起；国际站计费未开通（dev-board#664）时整组不出现。
