@@ -6,6 +6,8 @@ let definition: any
 ;(globalThis as any).Page = (value: any) => { definition = value }
 ;(globalThis as any).wx = {getStorageSync: () => undefined}
 await import('../miniprogram/pages/settings/settings.ts')
+const settingsDefinition = definition
+await import('../miniprogram/pages/postpaid/postpaid.ts')
 const state = {
  billing: {policyVersion:'2026-11-04', accepted:false, acceptEnabled:true, unit:'credit_cent', cashCurrency:'CNY', creditLimitCents:14900, debtCents:100, availableCreditCents:14800, reservedCreditCents:0, remindAt:'2026-11-07T00:00:00Z', cleanupAt:'2026-11-09T00:00:00Z', storagePrice:{cashCentsPerGiBMonth:20,cashCurrency:'CNY',periodSeconds:2592000,gibBytes:1073741824},egressPrice:{cashCentsPerGiB:60,cashCurrency:'CNY',gibBytes:1073741824}},
  cloudAccess:{canUse:true,canWrite:true,canRead:true,reason:'ready',epoch:1,includedStorageBytes:0,cleanupEligible:false,notificationStatus:'none',frozen:false,cleanupState:'none'},
@@ -58,4 +60,34 @@ test('resume cannot run with debt or a changed account and partial cleanup is no
  approve(); await page.onResumeCloud(); assert.equal(requests.length, 1)
  frozen.billing.debtCents = 0; await page.loadPostpaid(); assert.equal(page.data.canResumeCloud, true)
  switchAccount(); await page.onResumeCloud(); assert.equal(requests.length, 2)
+})
+
+test('settings shows postpaid as one status word and never mutates billing', async () => {
+ const cases: [(s: typeof state) => void, string, boolean][] = [
+  [() => {}, 'debt', true],
+  [s => { s.billing.debtCents = 0 }, 'postpaid.status.off', false],
+  [s => { s.billing.debtCents = 0; s.billing.accepted = true }, 'postpaid.status.on', false],
+  [s => { s.billing.debtCents = 0; s.billing.accepted = true; s.cloudAccess.canUse = false }, 'postpaid.status.restricted', true],
+ ]
+ const { t } = await import('../miniprogram/utils/i18n.ts')
+ for (const [mutate, expected, failed] of cases) {
+  const response = structuredClone(state); mutate(response)
+  const {requests} = setup(response)
+  const page = {...settingsDefinition, data: structuredClone(settingsDefinition.data), setData(value: any) { Object.assign(this.data, value) }}
+  await page.loadPostpaid()
+  assert.equal(requests.length, 1); assert.equal(requests[0].method, 'GET')
+  if (expected === 'debt') assert.notEqual(page.data.postpaidStatus, t('postpaid.status.off'))
+  else assert.equal(page.data.postpaidStatus, t(expected as any))
+  assert.equal(page.data.postpaidStatusFailed, failed)
+ }
+})
+
+test('detail page shows the restricted notice only once postpaid is accepted', async () => {
+ const { t } = await import('../miniprogram/utils/i18n.ts')
+ const blocked = structuredClone(state); blocked.cloudAccess.canUse = false
+ let {page} = setup(blocked); await page.loadPostpaid(); assert.equal(page.data.postpaidState, '')
+ blocked.billing.accepted = true
+ ;({page} = setup(blocked)); await page.loadPostpaid(); assert.equal(page.data.postpaidState, t('postpaid.restricted'))
+ blocked.cloudAccess.cleanupState = 'complete'
+ ;({page} = setup(blocked)); await page.loadPostpaid(); assert.equal(page.data.postpaidState, t('postpaid.cleared'))
 })
