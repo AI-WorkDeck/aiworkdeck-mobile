@@ -19,6 +19,9 @@ actor UploadQueue {
         self.onChange = onChange
     }
 
+    private var scratchWritableCheck: @Sendable () async -> Bool = { await API.shared.persistentCloudWritable() }
+    func configure(scratchWritable: @escaping @Sendable () async -> Bool) { scratchWritableCheck = scratchWritable }
+
     /// 失败后自动重试的退避：首败 60 秒，逐次翻倍，封顶 15 分钟；一旦传成即复位。
     private var autoRetryBackoff: TimeInterval = 60
     private var lastFailedRoundAt: Date?
@@ -39,10 +42,17 @@ actor UploadQueue {
         }
         if !stale.isEmpty { await onChange?() }
 
+        // 临时项目 is cloud-only: without persistent cloud storage the server refuses it, so those
+        // captures go back to the phone instead of failing. Asked once per round, only when needed.
+        let pending = (try? await EvidenceStore.shared.loadAll()) ?? []
+        let scratchWritable = pending.contains { $0.project?.isScratch == true && ($0.state == .waiting || $0.state == .failed) }
+            ? await scratchWritableCheck() : true
+        if !scratchWritable { await onChange?() }
+
         while true {
             let cloudGeneration = await CloudEpoch.shared.revision()
             // Unassigned captures stay local until the user explicitly moves them.
-            guard let item = try? await EvidenceStore.shared.claimNextUpload(),
+            guard let item = try? await EvidenceStore.shared.claimNextUpload(scratchWritable: scratchWritable),
                   let target = item.project else { break }
             do {
                 await onChange?()

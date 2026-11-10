@@ -25,6 +25,8 @@ data class CaptureManifest(
 data class RelayProject(val deviceId: String, val deviceName: String? = null, val key: String, val name: String,
                         val projectUid: String? = null, val locations: List<ProjectLocation>? = null, val isDefault: Boolean = false, val projectType: String? = null) {
     val id: String get() = projectUid ?: "$deviceId:$key"
+    /** The account's cloud scratch project (临时项目): cloud-only, billed as persistent storage. */
+    val isScratch: Boolean get() = isDefault || projectType == "SCRATCH"
     fun matches(other: RelayProject): Boolean {
         if (projectUid != null && other.projectUid != null) return projectUid == other.projectUid
         val aliases = (locations.orEmpty().map { "${it.deviceId}:${it.key}" } + "$deviceId:$key").toSet()

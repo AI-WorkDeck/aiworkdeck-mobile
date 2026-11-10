@@ -243,7 +243,7 @@ fun LibraryScreen(
         }
 
         assigning?.let { ids ->
-            ProjectPickerScreen(model, onClose = { assigning = null }, markCurrent = false, onSelect = { target ->
+            ProjectPickerScreen(model, onClose = { assigning = null }, markCurrent = false, onNone = { assigning = null }, onSelect = { target ->
                 scope.launch {
                     try { model.assignCaptures(ids, target); assigning = null }
                     catch (e: kotlinx.coroutines.CancellationException) { throw e }

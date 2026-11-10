@@ -33,7 +33,13 @@ data class MediaStatus(
 @Serializable
 data class MediaUsage(val usedBytes: Long, val quotaBytes: Long,
     val persistentUsedBytes: Long? = null, val persistentQuotaBytes: Long? = null,
-    val persistentQuotaAvailable: Boolean? = null)
+    val persistentQuotaAvailable: Boolean? = null) {
+    /** Unknown or unavailable quota answers false: captures then stay on the phone. */
+    val persistentCloudWritable: Boolean get() {
+        val quota = persistentQuotaBytes ?: return false
+        return persistentQuotaAvailable != false && quota > (persistentUsedBytes ?: 0)
+    }
+}
 
 @Serializable
 data class SubscriptionBalance(val active: Boolean, val availableCents: Long,

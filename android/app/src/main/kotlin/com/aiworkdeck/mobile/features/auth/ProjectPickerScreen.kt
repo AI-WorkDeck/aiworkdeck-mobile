@@ -45,7 +45,8 @@ import kotlinx.coroutines.launch
  * 选择后续采集或未归类记录的归档目标；关闭仍可继续采集。
  */
 @Composable
-fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: Boolean = true, onSelect: (RelayProject) -> Unit = { model.selectProject(it) }) {
+fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: Boolean = true, onSelect: (RelayProject) -> Unit = { model.selectProject(it) },
+                        onNone: () -> Unit = { model.captureWithoutProject(); onClose() }) {
     val backend = ServiceLocator.backend
     val current by model.selectedProject.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
@@ -87,7 +88,8 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
     val pickNone: () -> Unit = { scope.launch {
         if (loading) return@launch
         loading = true
-        try { onSelect(backend.defaultProject()); onClose() }
+        // Without persistent cloud storage the cloud scratch project refuses uploads: keep captures local.
+        try { if (backend.persistentCloudWritable()) { onSelect(backend.defaultProject()); onClose() } else onNone() }
         catch (e: Exception) { error = errorText(e) }
         finally { loading = false }
     } }
@@ -120,13 +122,13 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
                     modifier = Modifier.heightIn(min = Tk.touchMin).wrapContentHeight(),
                 )
                 error != null -> Column(verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
-                    PickerRow(tr("project.none"), tr("project.noneHint"), markCurrent && current?.isDefault == true, pickNone)
+                    PickerRow(tr("project.none"), tr("project.noneHint"), markCurrent && (current == null || current?.isDefault == true), pickNone)
                     Text(error.orEmpty(), style = Fonts.small(), color = Tk.S.failed)
                     Action(tr("project.retry")) { scope.launch { load() } }
                 }
                 else -> LazyColumn {
                     if (q.isEmpty()) item(key = "none") {
-                        PickerRow(tr("project.none"), tr("project.noneHint"), markCurrent && current?.isDefault == true, pickNone)
+                        PickerRow(tr("project.none"), tr("project.noneHint"), markCurrent && (current == null || current?.isDefault == true), pickNone)
                     }
                     if (projects.isEmpty()) item(key = "empty") {
                         Column(Modifier.padding(top = Tk.Sp.s4), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {

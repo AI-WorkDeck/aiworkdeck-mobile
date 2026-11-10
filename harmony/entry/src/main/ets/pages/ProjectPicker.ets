@@ -57,10 +57,15 @@ export struct ProjectPicker {
 
         // 临时项目是一行，不是一个孤零零的链接；有搜索词时收起来
         if (!this.assigning && this.query.trim().length === 0) {
-          this.row(tr('project.none'), tr('project.noneHint'), AppModel.shared.selectedProject?.isDefault === true, (): void => {
+          this.row(tr('project.none'), tr('project.noneHint'),
+            AppModel.shared.selectedProject === null || AppModel.shared.selectedProject?.isDefault === true, (): void => {
             if (this.loading) return
             this.loading = true
-            ServiceLocator.backend.defaultProject().then((project: RelayProject): Promise<void> => AppModel.shared.selectProject(project))
+            // Without persistent cloud storage the cloud scratch project refuses uploads: keep captures local.
+            ServiceLocator.backend.persistentCloudWritable()
+              .then((writable: boolean): Promise<void> => writable
+                ? ServiceLocator.backend.defaultProject().then((project: RelayProject): Promise<void> => AppModel.shared.selectProject(project))
+                : AppModel.shared.selectProject(null))
               .then((): void => { if (this.switching) this.stack.pop() })
               .catch((error: Error): void => { this.failure = errorText(error) })
               .finally((): void => { this.loading = false })

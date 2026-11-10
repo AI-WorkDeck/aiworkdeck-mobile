@@ -69,6 +69,7 @@ class UploadQueue(
         else if (!mutex.tryLock()) return@withContext KickResult.alreadyRunning
         try {
             recoverStale()
+            releaseScratchWithoutStorage()
             while (true) {
                 val generation = CloudEpoch.revision()
                 val item = nextPending() ?: break
@@ -152,6 +153,14 @@ class UploadQueue(
         val stale = store.loadAll().filter { it.state == TransferState.uploading }
         for (s in stale) store.updateState(s.id, s.state.recovered())
         if (stale.isNotEmpty()) _changes.tryEmit(Unit)
+    }
+
+    /** 临时项目 is cloud-only: without persistent cloud storage the server refuses it, so those captures
+     * go back to the phone instead of failing. Asked only when such an item is pending (incl. failed). */
+    private suspend fun releaseScratchWithoutStorage() {
+        val pending = store.loadAll().any { it.project?.isScratch == true && (it.state == TransferState.waiting || it.state == TransferState.failed) }
+        if (!pending || uploader.persistentCloudWritable()) return
+        if (store.unassignScratch() > 0) _changes.tryEmit(Unit)
     }
 
     /** 目标项目按件走；没记项目的件跳过（Android 无兜底 project，等旧记录被用户手动归类）。

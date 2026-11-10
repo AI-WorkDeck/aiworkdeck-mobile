@@ -75,6 +75,7 @@ export class UploadQueue {
     this.running = true
     try {
       await this.recoverStale()
+      await this.releaseScratchWithoutStorage()
       while (true) {
         const generation: number = cloudGeneration()
         const item: CaptureItem | null = await this.nextPending()
@@ -175,6 +176,19 @@ export class UploadQueue {
       await this.store.updateState(s.id, TransferStateOps.recovered(s.state, attempts), 0, null)
     }
     if (stale.length > 0) this.emit()
+  }
+
+  /**
+   * 临时项目 is cloud-only: without persistent cloud storage the server refuses it, so those captures
+   * go back to the phone instead of failing. Asked only when such an item is pending (incl. failed).
+   */
+  private async releaseScratchWithoutStorage(): Promise<void> {
+    const items: CaptureItem[] = await this.store.loadAll()
+    const pending: boolean = items.some((i: CaptureItem): boolean =>
+      i.project !== null && (i.project.isDefault === true || i.project.projectType === 'SCRATCH') &&
+      (i.state === TransferState.waiting || i.state === TransferState.failed))
+    if (!pending || await this.backend.persistentCloudWritable()) return
+    if (await this.store.unassignScratch() > 0) this.emit()
   }
 
   /**

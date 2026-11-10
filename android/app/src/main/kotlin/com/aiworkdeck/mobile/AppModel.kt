@@ -198,6 +198,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         queue.kick()
     }
 
+    /** 临时项目 kept on the phone: later captures stay unassigned until the user files them. */
+    fun captureWithoutProject() {
+        prefs.selectedProject = null
+        _selectedProject.value = null
+        _desktopOnline.value = false
+        lastProjectsSeenAt = null
+    }
+
     fun selectProject(project: RelayProject) {
         prefs.selectedProject = project
         _selectedProject.value = project

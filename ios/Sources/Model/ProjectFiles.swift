@@ -96,6 +96,10 @@ protocol ProjectFilesServing: Sendable {
     func backupConsent() async throws -> BackupConsent
     func setBackupConsent(enabled: Bool) async throws -> BackupConsent
     func defaultProject() async throws -> RelayProject
+    /// Whether the account can add bytes to persistent cloud storage right now.
+    /// The cloud scratch project (临时项目) has no desktop behind it, so every upload there
+    /// needs this; without it captures stay on the phone. Any failure answers false.
+    func persistentCloudWritable() async -> Bool
     func projects() async throws -> [RelayProject]
     func files(in project: RelayProject) async throws -> ProjectFileListing
     func quote(for file: RemoteProjectFile, in project: RelayProject) async throws -> ProjectFileQuote
@@ -118,6 +122,7 @@ final class ProjectFilePreview: Sendable {
 }
 
 extension ProjectFilesServing {
+    func persistentCloudWritable() async -> Bool { await API.shared.persistentCloudWritable() }
     func defaultProject() async throws -> RelayProject {
         guard let project = try await projects().first(where: { $0.isDefault == true }) else {
             throw APIError(message: tr("files.error.response"))
