@@ -192,7 +192,7 @@ fun LoginScreen(model: AppModel) {
         Text(tr(if (reviewMode) "login.passwordMode" else "login.review"), style = Fonts.small(), color = Tk.L.fgMuted,
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { reviewMode = !reviewMode; password = ""; error = null })
         Text(tr("login.register"), style = Fonts.small(), color = Tk.L.accent,
-            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("register") })
+            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy && agreementsAccepted) { openFlow("register") })
         Text(tr("login.forgotPassword"), style = Fonts.small(), color = Tk.L.accent,
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("reset") })
         Text(tr(if (region == AccountRegion.cn && method == Method.Email) "login.legacyEmailHint" else "login.webHint"),
