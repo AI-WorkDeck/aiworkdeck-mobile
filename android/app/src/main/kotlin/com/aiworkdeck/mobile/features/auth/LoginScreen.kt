@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.aiworkdeck.mobile.AppModel
 import com.aiworkdeck.mobile.BuildConfig
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
+import com.aiworkdeck.mobile.services.mobileTermsUrl
 import com.aiworkdeck.contract.ContractCapabilities
 import com.aiworkdeck.contract.T
 import androidx.compose.animation.core.animateDpAsState
@@ -108,6 +110,7 @@ fun LoginScreen(model: AppModel) {
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var reviewMode by remember { mutableStateOf(false) }
+    var agreementsAccepted by remember { mutableStateOf(false) }
     var showLanguagePicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val focus = remember { FocusRequester() }
@@ -154,9 +157,25 @@ fun LoginScreen(model: AppModel) {
         Field(password, tr(if (reviewMode) "login.reviewCredential" else "login.passwordPlaceholder"), 20.sp, remember { FocusRequester() }, KeyboardType.Password,
             secret = true) { if (!busy) password = it }
         Hairline(color = Tk.L.rule)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = agreementsAccepted, onCheckedChange = { agreementsAccepted = it }, enabled = !busy)
+            Column {
+                Text(tr("login.consent"), style = Fonts.small(), color = Tk.L.fg)
+                Row(horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
+                    Text(tr("login.terms"), style = Fonts.small(), color = Tk.L.accent,
+                        modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) {
+                            uriHandler.openUri(mobileTermsUrl(BuildConfig.FLAVOR))
+                        })
+                    Text(tr("privacy.policy"), style = Fonts.small(), color = Tk.L.accent,
+                        modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) {
+                            uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR))
+                        })
+                }
+            }
+        }
         error?.let { Text(it, style = Fonts.micro(), color = Tk.L.fgMuted) }
         Text(tr(if (busy) "login.working" else "login.title"), style = Fonts.heading(), color = Tk.L.accent,
-            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy && identity.isNotBlank() && password.isNotEmpty()) {
+            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy && agreementsAccepted && identity.isNotBlank() && password.isNotEmpty()) {
                 if (busy) return@clickable
                 busy = true; error = null
                 scope.launch {
@@ -174,10 +193,6 @@ fun LoginScreen(model: AppModel) {
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { reviewMode = !reviewMode; password = ""; error = null })
         Text(tr("login.register"), style = Fonts.small(), color = Tk.L.accent,
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("register") })
-        Text(tr("privacy.policy"), style = Fonts.small(), color = Tk.L.accent,
-            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) {
-                uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR))
-            })
         Text(tr("login.forgotPassword"), style = Fonts.small(), color = Tk.L.accent,
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("reset") })
         Text(tr(if (region == AccountRegion.cn && method == Method.Email) "login.legacyEmailHint" else "login.webHint"),

@@ -67,3 +67,7 @@ fun showsExternalRecharge(flavor: String, region: AccountRegion, channel: String
 fun mobilePrivacyUrl(flavor: String): String = if (flavor == "intl")
     "https://workdeck.ai/mobile-account/en/privacy?site=intl"
 else "https://www.aiworkdeck.com/zh/legal/mobile-privacy?site=cn"
+
+fun mobileTermsUrl(flavor: String): String = if (flavor == "intl")
+    "https://workdeck.ai/mobile-account/en/terms?site=intl"
+else "https://www.aiworkdeck.com/zh/legal/terms?site=cn"

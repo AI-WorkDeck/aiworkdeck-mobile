@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "お使いの Apple アカウントの地域（{region}）では、このサブスクリプションはまだ購入できません。",
   "postpaid.status.off": "未開始",
   "postpaid.status.on": "利用中",
-  "postpaid.status.restricted": "制限中"
+  "postpaid.status.restricted": "制限中",
+  "login.consent": "読み、同意します：",
+  "login.terms": "利用規約"
 }

@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "Dit abonnement is nog niet beschikbaar voor de regio van je Apple Account ({region}).",
   "postpaid.status.off": "Uit",
   "postpaid.status.on": "Aan",
-  "postpaid.status.restricted": "Beperkt"
+  "postpaid.status.restricted": "Beperkt",
+  "login.consent": "Ik heb gelezen en ga akkoord met de",
+  "login.terms": "Gebruikersovereenkomst"
 }

@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "Bu abonelik, Apple Hesabınızın bölgesi ({region}) için henüz kullanılamıyor.",
   "postpaid.status.off": "Kapalı",
   "postpaid.status.on": "Açık",
-  "postpaid.status.restricted": "Kısıtlı"
+  "postpaid.status.restricted": "Kısıtlı",
+  "login.consent": "Okudum ve kabul ediyorum:",
+  "login.terms": "Kullanıcı Sözleşmesi"
 }

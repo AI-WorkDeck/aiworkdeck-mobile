@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "यह सदस्यता अभी आपके Apple खाते के क्षेत्र ({region}) में उपलब्ध नहीं है।",
   "postpaid.status.off": "बंद",
   "postpaid.status.on": "चालू",
-  "postpaid.status.restricted": "सीमित"
+  "postpaid.status.restricted": "सीमित",
+  "login.consent": "मैंने पढ़ लिया है और सहमत हूँ:",
+  "login.terms": "उपयोगकर्ता अनुबंध"
 }

@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "This subscription isn't available for your Apple Account region ({region}) yet.",
   "postpaid.status.off": "Off",
   "postpaid.status.on": "On",
-  "postpaid.status.restricted": "Restricted"
+  "postpaid.status.restricted": "Restricted",
+  "login.consent": "I have read and agree to the",
+  "login.terms": "User Agreement"
 }

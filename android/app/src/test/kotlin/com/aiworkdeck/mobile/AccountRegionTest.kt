@@ -14,6 +14,7 @@ import com.aiworkdeck.mobile.services.RegionPrefs
 import com.aiworkdeck.mobile.services.switchAccountRegion
 import com.aiworkdeck.mobile.services.showsExternalRecharge
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
+import com.aiworkdeck.mobile.services.mobileTermsUrl
 import com.aiworkdeck.mobile.model.RelayProject
 import org.junit.Assert.assertNull
 import kotlinx.coroutines.test.runTest
@@ -163,6 +164,8 @@ class AccountRegionTest {
     @Test fun privacyPolicyMatchesDistributionPublisher() {
         assertEquals("https://workdeck.ai/mobile-account/en/privacy?site=intl", mobilePrivacyUrl("intl"))
         assertEquals("https://www.aiworkdeck.com/zh/legal/mobile-privacy?site=cn", mobilePrivacyUrl("cn"))
+        assertEquals("https://workdeck.ai/mobile-account/en/terms?site=intl", mobileTermsUrl("intl"))
+        assertEquals("https://www.aiworkdeck.com/zh/legal/terms?site=cn", mobileTermsUrl("cn"))
     }
 
     @Test fun labelKeysExistInContract() {

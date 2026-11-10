@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "Αυτή η συνδρομή δεν είναι ακόμη διαθέσιμη για την περιοχή του λογαριασμού Apple σας ({region}).",
   "postpaid.status.off": "Ανενεργό",
   "postpaid.status.on": "Ενεργό",
-  "postpaid.status.restricted": "Περιορισμένο"
+  "postpaid.status.restricted": "Περιορισμένο",
+  "login.consent": "Έχω διαβάσει και αποδέχομαι:",
+  "login.terms": "Συμφωνία Χρήστη"
 }

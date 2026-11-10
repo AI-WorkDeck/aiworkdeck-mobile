@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "目前 Apple 帳號地區（{region}）暫時買不到這個訂閱",
   "postpaid.status.off": "未開通",
   "postpaid.status.on": "已開通",
-  "postpaid.status.restricted": "受限"
+  "postpaid.status.restricted": "受限",
+  "login.consent": "我已閱讀並同意",
+  "login.terms": "使用者協議"
 }

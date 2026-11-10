@@ -324,7 +324,10 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
             if (state.messages.any { it.first == "assistant" }) TextButton(onClick = { state.openReport() }, enabled = !state.reporting && state.conversationId != null) { Text(tr("personal.report.conversation")) }
             Row {
                 OutlinedTextField(value = state.draft, onValueChange = { state.draft = it }, enabled = !state.busy && !state.loading, placeholder = { Text(tr("personal.ask")) }, modifier = Modifier.weight(1f), maxLines = 5)
-                TextButton(onClick = { scope.launch { state.send() } }, enabled = !state.busy && !state.loading && state.draft.isNotBlank() && state.status?.enabled == true && state.status?.canUseCloud == true) { Text(tr("personal.send")) }
+                TextButton(onClick = {
+                    if (state.status?.enabled != true) consent = "assistant"
+                    else scope.launch { state.send() }
+                }, enabled = !state.busy && !state.loading && state.draft.isNotBlank() && state.status?.canUseCloud == true) { Text(tr("personal.send")) }
             }
             Row {
                 TextButton(onClick = { state.newConversation() }, enabled = !state.busy && !state.loading && state.pending == null) { Text(tr("personal.newChat")) }
