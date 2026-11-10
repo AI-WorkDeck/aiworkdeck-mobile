@@ -7,6 +7,7 @@ import Foundation
 enum SubscriptionUITestSeed {
     static let isOn = ProcessInfo.processInfo.arguments.contains("-AWDSubscriptionUITest")
     static let accountToken = "16730000-0000-4000-8000-000000000001"
+    static let missingProduct = ProcessInfo.processInfo.arguments.contains("-AWDSubscriptionMissingProduct")
 }
 final class SubscriptionUITestProtocol: URLProtocol {
     override class func canInit(with request: URLRequest) -> Bool { true }

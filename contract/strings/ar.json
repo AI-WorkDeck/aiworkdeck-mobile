@@ -567,6 +567,7 @@
   "subscription.status.active": "نشط",
   "subscription.store.price": "{price} / شهر",
   "subscription.store.closed": "الاشتراكات غير متاحة بعد. تحقّق لاحقاً.",
+  "subscription.store.regionUnavailable": "هذا الاشتراك غير متاح بعد لمنطقة حساب Apple الخاص بك ({region}).",
   "postpaid.status.off": "غير مفعّل",
   "postpaid.status.on": "مفعّل",
   "postpaid.status.restricted": "مقيّد"

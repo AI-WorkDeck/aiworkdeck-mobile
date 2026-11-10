@@ -567,6 +567,7 @@
   "subscription.status.active": "已訂閱",
   "subscription.store.price": "{price} / 月",
   "subscription.store.closed": "訂閱暫未開放，請稍後再來",
+  "subscription.store.regionUnavailable": "目前 Apple 帳號地區（{region}）暫時買不到這個訂閱",
   "postpaid.status.off": "未開通",
   "postpaid.status.on": "已開通",
   "postpaid.status.restricted": "受限"

@@ -567,6 +567,7 @@
   "subscription.status.active": "Attivo",
   "subscription.store.price": "{price} / mese",
   "subscription.store.closed": "Gli abbonamenti non sono ancora aperti. Riprova più tardi.",
+  "subscription.store.regionUnavailable": "Questo abbonamento non è ancora disponibile per l'area del tuo Account Apple ({region}).",
   "postpaid.status.off": "Non attivo",
   "postpaid.status.on": "Attivo",
   "postpaid.status.restricted": "Limitato"

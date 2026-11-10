@@ -567,6 +567,7 @@
   "subscription.status.active": "구독 중",
   "subscription.store.price": "{price} / 월",
   "subscription.store.closed": "구독이 아직 열리지 않았습니다. 나중에 다시 확인해 주세요.",
+  "subscription.store.regionUnavailable": "현재 Apple 계정 지역({region})에서는 아직 이 구독을 구매할 수 없습니다.",
   "postpaid.status.off": "사용 안 함",
   "postpaid.status.on": "사용 중",
   "postpaid.status.restricted": "제한됨"

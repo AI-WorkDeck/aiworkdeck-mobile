@@ -567,6 +567,7 @@
   "subscription.status.active": "สมัครแล้ว",
   "subscription.store.price": "{price} / เดือน",
   "subscription.store.closed": "ยังไม่เปิดให้สมัครสมาชิก โปรดกลับมาใหม่ภายหลัง",
+  "subscription.store.regionUnavailable": "ยังไม่สามารถซื้อการสมัครสมาชิกนี้ได้ในภูมิภาคบัญชี Apple ของคุณ ({region})",
   "postpaid.status.off": "ยังไม่เปิด",
   "postpaid.status.on": "เปิดแล้ว",
   "postpaid.status.restricted": "ถูกจำกัด"

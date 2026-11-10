@@ -10,6 +10,8 @@ struct SubscriptionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var product: Product?
     @State private var closed = false
+    /// App Store region when sales are open but StoreKit returned no product (e.g. not sold in that storefront).
+    @State private var missingRegion: String?
     @State private var loading = true
     @State private var busy = false
     @State private var hint = ""
@@ -43,9 +45,12 @@ struct SubscriptionView: View {
                         .padding(.top, T.Sp.s4)
                         .accessibilityIdentifier("subscription.buy")
                     } else {
-                        Text(tr(closed ? "subscription.store.closed" : "recharge.ios.storeUnavailable"))
+                        Text(closed ? tr("subscription.store.closed")
+                             : missingRegion.map { tr("subscription.store.regionUnavailable", ["region": $0]) }
+                             ?? tr("recharge.ios.storeUnavailable"))
                             .font(T.F.body()).foregroundStyle(T.L.fgMuted)
                             .padding(.top, T.Sp.s10)
+                            .accessibilityIdentifier("subscription.unavailable")
                     }
                     if !hint.isEmpty {
                         Text(hint).font(T.F.small()).foregroundStyle(T.L.fg)
@@ -81,8 +86,13 @@ struct SubscriptionView: View {
                 guard let capability = try? await API.shared.subscriptionCapability() else { return }
                 // 服务端没开售：说「暂未开放」，不要甩锅给 App Store
                 guard capability.available, IAP.isSubscription(productId: capability.productId) else { closed = true; return }
-                product = try? await Product.products(for: ContractProducts.appstoreSubscriptions.map(\.productId))
-                    .first(where: { $0.id == capability.productId && $0.type == .autoRenewable && $0.subscription?.subscriptionPeriod.value == 1 && $0.subscription?.subscriptionPeriod.unit == .month })
+                guard var products = try? await Product.products(for: ContractProducts.appstoreSubscriptions.map(\.productId)) else { return }
+#if DEBUG
+                if SubscriptionUITestSeed.missingProduct { products = [] }
+#endif
+                product = products.first(where: { $0.id == capability.productId && $0.type == .autoRenewable && $0.subscription?.subscriptionPeriod.value == 1 && $0.subscription?.subscriptionPeriod.unit == .month })
+                // StoreKit answered but has nothing to sell here: say which App Store region, not "unavailable".
+                if product == nil { missingRegion = await Storefront.current?.countryCode }
             }
         }
     }
