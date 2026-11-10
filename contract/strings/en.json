@@ -567,6 +567,7 @@
   "subscription.status.active": "Active",
   "subscription.store.price": "{price} / month",
   "subscription.store.closed": "Subscriptions aren't open yet. Check back later.",
+  "subscription.store.regionUnavailable": "This subscription isn't available for your Apple Account region ({region}) yet.",
   "postpaid.status.off": "Off",
   "postpaid.status.on": "On",
   "postpaid.status.restricted": "Restricted"

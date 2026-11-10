@@ -567,6 +567,7 @@
   "subscription.status.active": "登録中",
   "subscription.store.price": "{price} / 月",
   "subscription.store.closed": "サブスクリプションはまだ利用できません。後でもう一度ご確認ください。",
+  "subscription.store.regionUnavailable": "お使いの Apple アカウントの地域（{region}）では、このサブスクリプションはまだ購入できません。",
   "postpaid.status.off": "未開始",
   "postpaid.status.on": "利用中",
   "postpaid.status.restricted": "制限中"

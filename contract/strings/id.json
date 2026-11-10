@@ -567,6 +567,7 @@
   "subscription.status.active": "Aktif",
   "subscription.store.price": "{price} / bulan",
   "subscription.store.closed": "Langganan belum dibuka. Coba lagi nanti.",
+  "subscription.store.regionUnavailable": "Langganan ini belum tersedia untuk wilayah Akun Apple Anda ({region}).",
   "postpaid.status.off": "Belum aktif",
   "postpaid.status.on": "Aktif",
   "postpaid.status.restricted": "Dibatasi"

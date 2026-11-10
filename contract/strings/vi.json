@@ -567,6 +567,7 @@
   "subscription.status.active": "Đang hoạt động",
   "subscription.store.price": "{price} / tháng",
   "subscription.store.closed": "Chưa mở đăng ký. Vui lòng quay lại sau.",
+  "subscription.store.regionUnavailable": "Gói đăng ký này chưa có sẵn cho khu vực Tài khoản Apple của bạn ({region}).",
   "postpaid.status.off": "Chưa bật",
   "postpaid.status.on": "Đã bật",
   "postpaid.status.restricted": "Bị hạn chế"

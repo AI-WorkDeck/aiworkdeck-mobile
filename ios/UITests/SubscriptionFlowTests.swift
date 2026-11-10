@@ -5,6 +5,28 @@ import StoreKitTest
 
 /// Real local StoreKit purchases with an explicitly synthetic API transport; no real charge or account.
 final class SubscriptionFlowTests: XCTestCase {
+    /// Sales open but the Apple Account storefront has no product: name the region instead of a generic error.
+    @MainActor
+    func testMissingProductNamesAppStoreRegion() throws {
+        let session = try SKTestSession(configurationFileNamed: "Workdeck")
+        session.resetToDefaultState()
+        session.disableDialogs = true
+        session.storefront = "HKG"
+        session.locale = Locale(identifier: "zh_CN")
+        let app = XCUIApplication()
+        app.launchArguments = ["-AWDSubscriptionUITest", "-AWDSubscriptionMissingProduct"]
+        app.launch()
+        defer { app.terminate() }
+        let message = app.staticTexts["subscription.unavailable"]
+        XCTAssertTrue(message.waitForExistence(timeout: 20))
+        XCTAssertTrue(message.label.contains("HKG"), message.label)
+        XCTAssertFalse(app.buttons["subscription.buy"].exists)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "Subscription unavailable in App Store region"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     @MainActor
     func testMonthlyPurchaseAndRestore() throws {
         let session = try SKTestSession(configurationFileNamed: "Workdeck")

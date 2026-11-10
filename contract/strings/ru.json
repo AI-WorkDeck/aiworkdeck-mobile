@@ -567,6 +567,7 @@
   "subscription.status.active": "Активна",
   "subscription.store.price": "{price} / мес.",
   "subscription.store.closed": "Подписка пока недоступна. Загляните позже.",
+  "subscription.store.regionUnavailable": "Эта подписка пока недоступна для региона вашего Apple Аккаунта ({region}).",
   "postpaid.status.off": "Не подключено",
   "postpaid.status.on": "Подключено",
   "postpaid.status.restricted": "Ограничено"

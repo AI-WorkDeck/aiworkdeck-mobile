@@ -567,6 +567,7 @@
   "subscription.status.active": "Actief",
   "subscription.store.price": "{price} / maand",
   "subscription.store.closed": "Abonnementen zijn nog niet beschikbaar. Kom later terug.",
+  "subscription.store.regionUnavailable": "Dit abonnement is nog niet beschikbaar voor de regio van je Apple Account ({region}).",
   "postpaid.status.off": "Uit",
   "postpaid.status.on": "Aan",
   "postpaid.status.restricted": "Beperkt"

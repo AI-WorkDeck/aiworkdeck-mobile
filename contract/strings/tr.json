@@ -567,6 +567,7 @@
   "subscription.status.active": "Aktif",
   "subscription.store.price": "{price} / ay",
   "subscription.store.closed": "Abonelikler henüz açılmadı. Daha sonra tekrar bakın.",
+  "subscription.store.regionUnavailable": "Bu abonelik, Apple Hesabınızın bölgesi ({region}) için henüz kullanılamıyor.",
   "postpaid.status.off": "Kapalı",
   "postpaid.status.on": "Açık",
   "postpaid.status.restricted": "Kısıtlı"

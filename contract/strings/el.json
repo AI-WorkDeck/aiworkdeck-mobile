@@ -567,6 +567,7 @@
   "subscription.status.active": "Ενεργή",
   "subscription.store.price": "{price} / μήνα",
   "subscription.store.closed": "Οι συνδρομές δεν είναι ακόμη διαθέσιμες. Ελέγξτε ξανά αργότερα.",
+  "subscription.store.regionUnavailable": "Αυτή η συνδρομή δεν είναι ακόμη διαθέσιμη για την περιοχή του λογαριασμού Apple σας ({region}).",
   "postpaid.status.off": "Ανενεργό",
   "postpaid.status.on": "Ενεργό",
   "postpaid.status.restricted": "Περιορισμένο"

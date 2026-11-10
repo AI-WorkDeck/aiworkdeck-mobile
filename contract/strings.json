@@ -12495,6 +12495,28 @@
     "hi": "सदस्यता अभी उपलब्ध नहीं है। बाद में फिर देखें।",
     "ar": "الاشتراكات غير متاحة بعد. تحقّق لاحقاً."
   },
+  "subscription.store.regionUnavailable": {
+    "zh-Hans": "当前 Apple 账户地区（{region}）暂时买不到这个订阅",
+    "zh-Hant": "目前 Apple 帳號地區（{region}）暫時買不到這個訂閱",
+    "en": "This subscription isn't available for your Apple Account region ({region}) yet.",
+    "ja": "お使いの Apple アカウントの地域（{region}）では、このサブスクリプションはまだ購入できません。",
+    "ko": "현재 Apple 계정 지역({region})에서는 아직 이 구독을 구매할 수 없습니다.",
+    "th": "ยังไม่สามารถซื้อการสมัครสมาชิกนี้ได้ในภูมิภาคบัญชี Apple ของคุณ ({region})",
+    "ms": "Langganan ini belum tersedia untuk rantau Akaun Apple anda ({region}).",
+    "id": "Langganan ini belum tersedia untuk wilayah Akun Apple Anda ({region}).",
+    "vi": "Gói đăng ký này chưa có sẵn cho khu vực Tài khoản Apple của bạn ({region}).",
+    "fr": "Cet abonnement n'est pas encore disponible pour la région de votre compte Apple ({region}).",
+    "de": "Dieses Abo ist für die Region deines Apple Accounts ({region}) noch nicht verfügbar.",
+    "es": "Esta suscripción aún no está disponible para la región de tu cuenta de Apple ({region}).",
+    "pt-BR": "Esta assinatura ainda não está disponível para a região da sua Conta Apple ({region}).",
+    "it": "Questo abbonamento non è ancora disponibile per l'area del tuo Account Apple ({region}).",
+    "ru": "Эта подписка пока недоступна для региона вашего Apple Аккаунта ({region}).",
+    "el": "Αυτή η συνδρομή δεν είναι ακόμη διαθέσιμη για την περιοχή του λογαριασμού Apple σας ({region}).",
+    "tr": "Bu abonelik, Apple Hesabınızın bölgesi ({region}) için henüz kullanılamıyor.",
+    "nl": "Dit abonnement is nog niet beschikbaar voor de regio van je Apple Account ({region}).",
+    "hi": "यह सदस्यता अभी आपके Apple खाते के क्षेत्र ({region}) में उपलब्ध नहीं है।",
+    "ar": "هذا الاشتراك غير متاح بعد لمنطقة حساب Apple الخاص بك ({region})."
+  },
   "postpaid.status.off": {
     "zh-Hans": "未开通",
     "zh-Hant": "未開通",
