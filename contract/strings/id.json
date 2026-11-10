@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "Langganan ini belum tersedia untuk wilayah Akun Apple Anda ({region}).",
   "postpaid.status.off": "Belum aktif",
   "postpaid.status.on": "Aktif",
-  "postpaid.status.restricted": "Dibatasi"
+  "postpaid.status.restricted": "Dibatasi",
+  "login.consent": "Saya telah membaca dan menyetujui",
+  "login.terms": "Perjanjian Pengguna"
 }

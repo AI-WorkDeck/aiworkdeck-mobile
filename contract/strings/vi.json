@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "Gói đăng ký này chưa có sẵn cho khu vực Tài khoản Apple của bạn ({region}).",
   "postpaid.status.off": "Chưa bật",
   "postpaid.status.on": "Đã bật",
-  "postpaid.status.restricted": "Bị hạn chế"
+  "postpaid.status.restricted": "Bị hạn chế",
+  "login.consent": "Tôi đã đọc và đồng ý với",
+  "login.terms": "Thỏa thuận ngưới dùng"
 }

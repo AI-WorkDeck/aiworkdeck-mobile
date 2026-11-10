@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "현재 Apple 계정 지역({region})에서는 아직 이 구독을 구매할 수 없습니다.",
   "postpaid.status.off": "사용 안 함",
   "postpaid.status.on": "사용 중",
-  "postpaid.status.restricted": "제한됨"
+  "postpaid.status.restricted": "제한됨",
+  "login.consent": "읽고 동의합니다:",
+  "login.terms": "이용약관"
 }

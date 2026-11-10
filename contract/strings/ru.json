@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "Эта подписка пока недоступна для региона вашего Apple Аккаунта ({region}).",
   "postpaid.status.off": "Не подключено",
   "postpaid.status.on": "Подключено",
-  "postpaid.status.restricted": "Ограничено"
+  "postpaid.status.restricted": "Ограничено",
+  "login.consent": "Я прочитал(а) и принимаю:",
+  "login.terms": "Пользовательское соглашение"
 }

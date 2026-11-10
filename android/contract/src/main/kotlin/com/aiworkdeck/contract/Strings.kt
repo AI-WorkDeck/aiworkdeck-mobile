@@ -32,7 +32,7 @@ object ContractStrings {
         ContractLocale("hi", "hi-IN", "हिन्दी", "Hindi", "ltr"),
         ContractLocale("ar", "ar-SA", "العربية", "Arabic", "rtl"),
     )
-    val table: Map<String, Map<String, String>> = buildMap(572) {
+    val table: Map<String, Map<String, String>> = buildMap(574) {
         fillChunk0(this)
         fillChunk1(this)
         fillChunk2(this)
@@ -641,5 +641,7 @@ object ContractStrings {
         m["postpaid.status.off"] = mapOf("zh-Hans" to "未开通", "zh-Hant" to "未開通", "en" to "Off", "ja" to "未開始", "ko" to "사용 안 함", "th" to "ยังไม่เปิด", "ms" to "Tidak aktif", "id" to "Belum aktif", "vi" to "Chưa bật", "fr" to "Désactivé", "de" to "Aus", "es" to "Desactivado", "pt-BR" to "Desativado", "it" to "Non attivo", "ru" to "Не подключено", "el" to "Ανενεργό", "tr" to "Kapalı", "nl" to "Uit", "hi" to "बंद", "ar" to "غير مفعّل")
         m["postpaid.status.on"] = mapOf("zh-Hans" to "已开通", "zh-Hant" to "已開通", "en" to "On", "ja" to "利用中", "ko" to "사용 중", "th" to "เปิดแล้ว", "ms" to "Aktif", "id" to "Aktif", "vi" to "Đã bật", "fr" to "Activé", "de" to "An", "es" to "Activado", "pt-BR" to "Ativado", "it" to "Attivo", "ru" to "Подключено", "el" to "Ενεργό", "tr" to "Açık", "nl" to "Aan", "hi" to "चालू", "ar" to "مفعّل")
         m["postpaid.status.restricted"] = mapOf("zh-Hans" to "受限", "zh-Hant" to "受限", "en" to "Restricted", "ja" to "制限中", "ko" to "제한됨", "th" to "ถูกจำกัด", "ms" to "Terhad", "id" to "Dibatasi", "vi" to "Bị hạn chế", "fr" to "Restreint", "de" to "Eingeschränkt", "es" to "Restringido", "pt-BR" to "Restrito", "it" to "Limitato", "ru" to "Ограничено", "el" to "Περιορισμένο", "tr" to "Kısıtlı", "nl" to "Beperkt", "hi" to "सीमित", "ar" to "مقيّد")
+        m["login.consent"] = mapOf("zh-Hans" to "我已阅读并同意", "zh-Hant" to "我已閱讀並同意", "en" to "I have read and agree to the", "ja" to "読み、同意します：", "ko" to "읽고 동의합니다:", "th" to "ฉันได้อ่านและยอมรับ", "ms" to "Saya telah membaca dan bersetuju dengan", "id" to "Saya telah membaca dan menyetujui", "vi" to "Tôi đã đọc và đồng ý với", "fr" to "J’ai lu et j’accepte les", "de" to "Ich habe gelesen und stimme zu:", "es" to "He leído y acepto el", "pt-BR" to "Li e concordo com o", "it" to "Ho letto e accetto il", "ru" to "Я прочитал(а) и принимаю:", "el" to "Έχω διαβάσει και αποδέχομαι:", "tr" to "Okudum ve kabul ediyorum:", "nl" to "Ik heb gelezen en ga akkoord met de", "hi" to "मैंने पढ़ लिया है और सहमत हूँ:", "ar" to "لقد قرأت و أوافق على")
+        m["login.terms"] = mapOf("zh-Hans" to "用户协议", "zh-Hant" to "使用者協議", "en" to "User Agreement", "ja" to "利用規約", "ko" to "이용약관", "th" to "ข้อตกลงผู้ใช้", "ms" to "Perjanjian Pengguna", "id" to "Perjanjian Pengguna", "vi" to "Thỏa thuận ngưới dùng", "fr" to "Conditions d’utilisation", "de" to "Nutzervereinbarung", "es" to "Acuerdo de usuario", "pt-BR" to "Contrato do Usuário", "it" to "Contratto utente", "ru" to "Пользовательское соглашение", "el" to "Συμφωνία Χρήστη", "tr" to "Kullanıcı Sözleşmesi", "nl" to "Gebruikersovereenkomst", "hi" to "उपयोगकर्ता अनुबंध", "ar" to "اتفاقية المستخدم")
     }
 }

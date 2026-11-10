@@ -570,5 +570,7 @@
   "subscription.store.regionUnavailable": "ยังไม่สามารถซื้อการสมัครสมาชิกนี้ได้ในภูมิภาคบัญชี Apple ของคุณ ({region})",
   "postpaid.status.off": "ยังไม่เปิด",
   "postpaid.status.on": "เปิดแล้ว",
-  "postpaid.status.restricted": "ถูกจำกัด"
+  "postpaid.status.restricted": "ถูกจำกัด",
+  "login.consent": "ฉันได้อ่านและยอมรับ",
+  "login.terms": "ข้อตกลงผู้ใช้"
 }

@@ -22,6 +22,7 @@ import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
+import com.aiworkdeck.mobile.services.mobileTermsUrl
 
 /** Shown before restoring a session or requesting device permissions. */
 @Composable
@@ -35,6 +36,9 @@ fun PrivacyConsentScreen(onAccept: () -> Unit, onDecline: () -> Unit) {
     ) {
         Text(tr("privacy.title"), style = Fonts.display(), color = Tk.L.fg)
         Text(tr("privacy.summary"), style = Fonts.body(), color = Tk.L.fg)
+        TextButton(onClick = { uriHandler.openUri(mobileTermsUrl(BuildConfig.FLAVOR)) }) {
+            Text(tr("login.terms"), color = Tk.L.accent)
+        }
         TextButton(onClick = { uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR)) }) {
             Text(tr("privacy.policy"), color = Tk.L.accent)
         }
