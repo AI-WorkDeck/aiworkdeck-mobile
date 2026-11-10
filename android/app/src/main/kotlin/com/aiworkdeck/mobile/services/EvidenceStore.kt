@@ -77,6 +77,23 @@ class EvidenceStore(private val root: File, private val facts: DeviceFacts) {
         }
     }
 
+    /**
+     * 临时项目 without persistent cloud storage: hand its captures back to the phone as unassigned
+     * (no error, no failure badge) so the user can file them later. Returns how many changed.
+     */
+    suspend fun unassignScratch(): Int = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            var n = 0
+            for (item in loadAllLocked()) {
+                if (item.project?.isScratch != true || item.state !in setOf(TransferState.waiting, TransferState.failed)) continue
+                val row = readRowLocked(item.id) ?: continue
+                writeRowLocked(item.id, row.copy(project = null, state = TransferState.waiting.raw, progress = 0.0, lastError = null, cloudResumeRequired = false))
+                n++
+            }
+            n
+        }
+    }
+
     /** 旧记录上传时补记实际去向。只在 project 为空时写，不覆盖已有归属（镜像 iOS setProject）。 */
     suspend fun setProject(id: String, project: RelayProject) = withContext(Dispatchers.IO) {
         mutex.withLock {

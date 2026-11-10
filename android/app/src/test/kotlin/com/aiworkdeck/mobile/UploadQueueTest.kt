@@ -52,6 +52,64 @@ class UploadQueueTest {
         }
 
         override suspend fun mediaStatus(ids: List<String>): List<MediaStatus> = statusResponses
+        var cloudWritable = true
+        var writableChecks = 0
+        override suspend fun persistentCloudWritable(): Boolean { writableChecks++; return cloudWritable }
+    }
+
+    private fun scratch() = RelayProject(deviceId = "cloud", key = "41", name = "临时项目", projectUid = "scratch", isDefault = true, projectType = "SCRATCH")
+
+    // 临时项目 without persistent cloud storage: captures return to the phone, desktop uploads untouched.
+    @Test fun scratchCapturesStayLocalWithoutCloudStorage() = runTest {
+        val store = newStore()
+        val local = store.save(MediaKind.photo, tempFile("s.jpg"), Instant.parse("2026-01-01T00:00:00Z"), null, scratch())
+        val desk = store.save(MediaKind.audio, tempFile("d.m4a"), Instant.parse("2026-01-02T00:00:00Z"), null, project())
+        val uploader = FakeUploader().apply { cloudWritable = false }
+
+        UploadQueue(store, uploader).kick()
+
+        assertEquals(listOf(desk.id), uploader.calls.map { it.itemId })
+        val kept = store.loadAll().first { it.id == local.id }
+        assertNull(kept.project)
+        assertEquals(TransferState.waiting, kept.state)
+        assertNull(kept.lastError)
+    }
+
+    // The 1.12.0 failure: a failed scratch upload becomes a normal unassigned capture on the next round.
+    @Test fun failedScratchUploadIsReleasedOnRetry() = runTest {
+        val store = newStore()
+        val item = store.save(MediaKind.photo, tempFile("f.jpg"), Instant.now(), null, scratch())
+        store.updateState(item.id, TransferState.failed, error = "云端写入暂不可用或已达到空间安全上限")
+        val uploader = FakeUploader().apply { cloudWritable = false }
+
+        UploadQueue(store, uploader).retryFailed()
+
+        val kept = store.loadAll().single()
+        assertNull(kept.project)
+        assertEquals(TransferState.waiting, kept.state)
+        assertNull(kept.lastError)
+        assertTrue(uploader.calls.isEmpty())
+    }
+
+    @Test fun subscribersStillUploadToScratchAndDesktopOnlyQueuesSkipTheCheck() = runTest {
+        val store = newStore()
+        store.save(MediaKind.photo, tempFile("p.jpg"), Instant.now(), null, project())
+        val uploader = FakeUploader()
+        UploadQueue(store, uploader).kick()
+        assertEquals(0, uploader.writableChecks)
+
+        val item = store.save(MediaKind.photo, tempFile("q.jpg"), Instant.now(), null, scratch())
+        UploadQueue(store, uploader).kick()
+        assertEquals(TransferState.uploaded, store.loadAll().first { it.id == item.id }.state)
+    }
+
+    @Test fun persistentWritableNeedsKnownFreeQuota() {
+        fun u(used: Long?, quota: Long?, available: Boolean? = null) =
+            com.aiworkdeck.mobile.services.MediaUsage(0, 200, used, quota, available).persistentCloudWritable
+        assertFalse(u(9_000, 0))
+        assertFalse(u(0, null))
+        assertFalse(u(0, 3_000, false))
+        assertTrue(u(9_000, 3_221_225_472))
     }
 
     // ① 两个 waiting 件按拍摄时间顺序上传、都变 uploaded、fileName 前缀/扩展名正确

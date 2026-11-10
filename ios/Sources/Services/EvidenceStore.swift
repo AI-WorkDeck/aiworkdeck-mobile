@@ -124,7 +124,22 @@ actor EvidenceStore {
 
     /// Claim and project edits run in one actor without suspension, so an upload
     /// cannot send a stale destination while the user moves the item.
-    func claimNextUpload(currentWatchBinding: String? = WatchAccountScope.current) throws -> CaptureItem? {
+    /// `scratchWritable == false`: items headed for the cloud scratch project are handed back to the
+    /// phone as unassigned captures (no error, no failure badge) instead of being claimed. An attempted
+    /// item keeps `uploadAttempted`, so filing it later goes through an independent copy.
+    func claimNextUpload(currentWatchBinding: String? = WatchAccountScope.current,
+                         scratchWritable: Bool = true) throws -> CaptureItem? {
+        if !scratchWritable {
+            for var item in try loadAll() where !item.moveBlocksMutation && item.project?.isScratch == true
+                && (item.state == .waiting || item.state == .failed) {
+                item.project = nil
+                item.state = .waiting
+                item.progress = 0
+                item.lastError = nil
+                item.cloudResumeRequired = false
+                try writeManifest(item)
+            }
+        }
         for var item in try loadAll() where !item.moveBlocksMutation && item.state == .waiting && item.project != nil &&
             item.watchAccountBinding != nil && item.watchAccountBinding != currentWatchBinding {
             item.state = .failed

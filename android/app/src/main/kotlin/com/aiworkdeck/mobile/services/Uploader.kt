@@ -7,6 +7,8 @@ import com.aiworkdeck.mobile.model.RelayProject
 interface Uploader {
     suspend fun upload(item: CaptureItem, project: RelayProject, fileName: String, onProgress: (Double) -> Unit): UploadResult
     suspend fun mediaStatus(ids: List<String>): List<MediaStatus>
+    /** Whether the cloud scratch project (临时项目) may receive uploads right now. */
+    suspend fun persistentCloudWritable(): Boolean = true
 }
 
 /**
@@ -14,6 +16,7 @@ interface Uploader {
  * 要的六个字段。deviceId 现取现拿（不缓存），跟 iOS 一样不假设设备身份在队列生命周期内不变。
  */
 class BackendUploader(private val backend: Backend, private val organizationPrefs: Prefs? = null, private val deviceIdProvider: () -> String) : Uploader {
+    override suspend fun persistentCloudWritable(): Boolean = backend.persistentCloudWritable()
     override suspend fun upload(item: CaptureItem, project: RelayProject, fileName: String, onProgress: (Double) -> Unit): UploadResult {
         val active = backend.accountSnapshot()
         val scope = active.personalAccountScope()

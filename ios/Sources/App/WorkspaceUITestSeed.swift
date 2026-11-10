@@ -13,6 +13,7 @@ actor WorkspaceUITestSeed: ProjectFilesServing {
         consent = BackupConsent(enabled: enabled, decided: true, subscriptionActive: true, consentVersion: "2026-10-11")
         return consent
     }
+    func persistentCloudWritable() async -> Bool { !ProcessInfo.processInfo.arguments.contains("-AWDNoCloudStorageUITest") }
     func defaultProject() async throws -> RelayProject {
         RelayProject(deviceId: "cloud", deviceName: nil, key: "temporary", name: "Temporary project", projectUid: "temporary-uid", isDefault: true)
     }

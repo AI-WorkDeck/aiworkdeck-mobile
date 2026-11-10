@@ -9,7 +9,7 @@
  * pollStatus() 单次查询。
  */
 
-import { ApiError, getSession, mediaStatus, uploadMedia, uuid, type RelayProject, type CaptureOrganization, personalAccountScope } from './api'
+import { ApiError, getSession, mediaStatus, uploadMedia, uuid, type RelayProject, type CaptureOrganization, personalAccountScope, persistentCloudWritable, isScratchProject } from './api'
 import { projectId, tallyOf, type Tally } from './phase'
 import { recover, applyStatus } from './transition'
 import { t } from './i18n'
@@ -35,6 +35,8 @@ export interface QueueItem {
   projectKey: string
   projectUid?: string
   projectName: string
+  /** Destination is the cloud scratch project (临时项目), which needs persistent cloud storage. */
+  projectScratch?: boolean
   /** ISO8601 */
   capturedAt: string
   state: QueueState
@@ -134,7 +136,7 @@ export function assignCapture(id: string, project: RelayProject): boolean {
   const item = items.find(it => it.clientMediaId === id)
   if (!item || !canAssign(item)) return false
   Object.assign(item, { deviceId: project.deviceId, projectKey: project.key,
-    projectUid: project.projectUid, projectName: project.name })
+    projectUid: project.projectUid, projectName: project.name, projectScratch: isScratchProject(project) || undefined })
   writeItems(items)
   processQueue()
   return true
@@ -185,6 +187,7 @@ export function enqueueCapture(
     projectKey: project?.key ?? '',
     projectUid: project?.projectUid,
     projectName: project?.name ?? t('library.unknownProject'),
+    projectScratch: isScratchProject(project) || undefined,
     capturedAt: now.toISOString(),
     state: 'waiting',
     segmentIndex,
@@ -271,10 +274,40 @@ export function recoverOnLaunch(): void {
   if (getSession()) processQueue()
 }
 
+// 临时项目 is cloud-only: without persistent cloud storage the server refuses it, so those captures
+// go back to the phone as unassigned instead of failing. Checked only when such an item is pending.
+let scratchAllowedUntil = 0
+let scratchChecking = false
+function pendingScratch(it: QueueItem): boolean {
+  return !!it.projectScratch && (it.state === 'waiting' || it.state === 'failed') && !savingIds.has(it.clientMediaId)
+}
+/** No copy flow here, so a released item is fully reset and can be filed again from the gallery. */
+function releaseScratch(): void {
+  const items = readItems()
+  let changed = false
+  for (const it of items) if (pendingScratch(it)) {
+    Object.assign(it, { deviceId: '', projectKey: '', projectUid: undefined, projectName: t('library.unknownProject'),
+      projectScratch: undefined, state: 'waiting', errorMessage: undefined, attempts: 0, cloudResumeRequired: undefined })
+    changed = true
+  }
+  if (changed) writeItems(items)
+}
+
 /** 逐个（单飞）把 waiting → uploading → uploaded；失败 → failed，继续下一个。 */
 export function processQueue(): void {
-  if (uploading) return
-  const next = readItems().find((it) => !it.cloudResumeRequired && it.state === 'waiting' && isAssigned(it) && !savingIds.has(it.clientMediaId))
+  if (uploading || scratchChecking) return
+  const all = readItems()
+  if (Date.now() >= scratchAllowedUntil && all.some(pendingScratch)) {
+    scratchChecking = true
+    persistentCloudWritable().then((ok) => {
+      scratchChecking = false
+      if (ok) scratchAllowedUntil = Date.now() + 60_000
+      else releaseScratch()
+      processQueue()
+    })
+    return
+  }
+  const next = all.find((it) => !it.cloudResumeRequired && it.state === 'waiting' && isAssigned(it) && !savingIds.has(it.clientMediaId))
   if (!next) return
 
   uploading = true

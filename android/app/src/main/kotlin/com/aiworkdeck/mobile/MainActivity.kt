@@ -178,7 +178,8 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
                         SettingsScreen(model, onClose = { overlay = returnOverlay }, onOpen = { overlay = it })
                     }
                     if (overlay == Overlay.Projects) {
-                        ProjectPickerScreen(model, onClose = { overlay = returnOverlay }, onSelect = { model.selectProject(it); overlay = returnOverlay })
+                        ProjectPickerScreen(model, onClose = { overlay = returnOverlay }, onSelect = { model.selectProject(it); overlay = returnOverlay },
+                            onNone = { model.captureWithoutProject(); overlay = returnOverlay })
                     }
                     if (overlay == Overlay.Files) {
                         (personalFileProject ?: project)?.let { ProjectFilesScreen(it, onClose = { overlay = returnOverlay }) }

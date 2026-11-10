@@ -116,15 +116,15 @@ struct ProjectPickerView: View {
                 Task {
                     choosing = true
                     do {
-                        try await model.selectDefaultProject()
-                        if let onBrowse { onBrowse() } else { onClose() }
+                        let cloud = try await model.selectDefaultProject()
+                        if cloud, let onBrowse { onBrowse() } else { onClose() }
                     }
                     catch { self.error = error.localizedDescription }
                     choosing = false
                 }
             } label: {
                 rowLabel(title: tr("project.none"), subtitle: tr("project.noneHint"),
-                         icon: "tray", current: model.selectedProject?.isDefault == true)
+                         icon: "tray", current: model.selectedProject == nil || model.selectedProject?.isDefault == true)
             }
             .buttonStyle(.plain)
             .disabled(captureInProgress)

@@ -227,6 +227,9 @@ struct RelayProject: Codable, Identifiable, Hashable, Sendable {
         }
     }
 
+    /// The account's cloud scratch project (临时项目): cloud-only, billed as persistent storage.
+    var isScratch: Bool { isDefault == true || projectType == "SCRATCH" }
+
     var id: String { projectUid ?? legacyID }
     var legacyID: String { deviceId + ":" + key }
     var isCloud: Bool { deviceId == "cloud" }
@@ -506,11 +509,21 @@ actor API: ArchiveMoveServing {
         var persistentUsedBytes: Int64? = nil
         var persistentQuotaBytes: Int64? = nil
         var persistentQuotaAvailable: Bool? = nil
+        var persistentCloudWritable: Bool {
+            guard persistentQuotaAvailable != false, let quota = persistentQuotaBytes else { return false }
+            return quota > (persistentUsedBytes ?? 0)
+        }
     }
 
     /// 云端中转区用量（GET /api/mobile/media/usage）。裸对象，无信封。
     func mediaUsage() async throws -> MediaUsage {
         try await getRaw("/api/mobile/media/usage", as: MediaUsage.self)
+    }
+
+    /// Fail safe: an unreachable or unknown quota means "keep it on the phone".
+    func persistentCloudWritable() async -> Bool {
+        guard let usage = try? await mediaUsage() else { return false }
+        return usage.persistentCloudWritable
     }
 
     /// 影像投递状态：delivered = 桌面端已确认落盘（中转区已删）。裸数组。

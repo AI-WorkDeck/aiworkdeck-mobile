@@ -714,6 +714,21 @@ export function takePersonalPreview(): RelayProject | null {
   return value?.session === getSession() ? value?.project ?? null : null
 }
 
+export interface MediaUsage { usedBytes: number; quotaBytes: number; persistentUsedBytes?: number; persistentQuotaBytes?: number; persistentQuotaAvailable?: boolean }
+/** Unknown or unavailable quota answers false: captures then stay on the phone. */
+export function usageAllowsPersistentWrite(u: MediaUsage): boolean {
+  if (u.persistentQuotaAvailable === false || typeof u.persistentQuotaBytes !== 'number') return false
+  return u.persistentQuotaBytes > (u.persistentUsedBytes ?? 0)
+}
+/** 临时项目 has no desktop behind it: uploading there needs persistent cloud storage. Fails safe. */
+export function persistentCloudWritable(): Promise<boolean> {
+  return request<MediaUsage>('/api/mobile/media/usage', 'GET', undefined, { bare: true })
+    .then(usageAllowsPersistentWrite, () => false)
+}
+export function isScratchProject(p: Pick<RelayProject, 'isDefault' | 'projectType'> | null | undefined): boolean {
+  return !!p && (p.isDefault === true || p.projectType === 'SCRATCH')
+}
+
 export function cloudBillingState(): Promise<import('./cloud-access').PostpaidState> {
   return request('/api/mobile/billing/cloud-state', 'GET', undefined, { bare: true })
 }

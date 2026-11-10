@@ -10,7 +10,7 @@ import { AccountRegion, baseUrlOf, currentAppLanguage } from '../model/AccountRe
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import {
   LoginResult, MediaStatus, MediaUsage, SubscriptionBalance, decodeSubscriptionBalance, BillingSnapshot, decodeBillingLine,
-  asRecord, decodeLoginResult, decodeMediaStatuses, decodeMediaUsage, decodeCatalog,
+  asRecord, decodeLoginResult, decodeMediaStatuses, decodeMediaUsage, decodeCatalog, persistentCloudWritable
 } from './ApiTypes'
 
 const CONNECT_TIMEOUT_MS: number = 15000
@@ -106,6 +106,11 @@ export class Backend {
 
   async mediaUsage(): Promise<MediaUsage> {
     return decodeMediaUsage(await this.bare('/api/mobile/media/usage'))
+  }
+
+  /** 临时项目 has no desktop behind it: uploading there needs persistent cloud storage. Fails safe. */
+  async persistentCloudWritable(): Promise<boolean> {
+    try { return persistentCloudWritable(await this.mediaUsage()) } catch (_) { return false }
   }
 
   async mediaStatus(ids: string[]): Promise<MediaStatus[]> {

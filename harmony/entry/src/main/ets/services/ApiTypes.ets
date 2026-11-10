@@ -42,6 +42,12 @@ export interface MediaUsage {
   persistentQuotaAvailable?: boolean
 }
 
+/** Unknown or unavailable quota answers false: captures then stay on the phone. */
+export function persistentCloudWritable(u: MediaUsage): boolean {
+  if (u.persistentQuotaAvailable === false || u.persistentQuotaBytes === undefined) return false
+  return u.persistentQuotaBytes > (u.persistentUsedBytes ?? 0)
+}
+
 export interface SubscriptionBalance {
   active: boolean
   availableCents: number

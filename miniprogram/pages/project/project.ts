@@ -1,4 +1,4 @@
-import { defaultProject, getSelectedProject, myProjects, setSelectedProject } from '../../utils/api'
+import { defaultProject, getSelectedProject, myProjects, persistentCloudWritable, setSelectedProject } from '../../utils/api'
 import type { ApiError, RelayProject } from '../../utils/api'
 import type { Metrics } from '../../utils/layout'
 import { Icon } from '../../utils/icons'
@@ -123,7 +123,7 @@ Page({
       noneHint: t('project.noneHint'),
       searchText: t('workspace.searchProjects'),
       noMatchText: t('project.noMatch'),
-      defaultCurrent: !this.assignmentId && getSelectedProject()?.isDefault === true,
+      defaultCurrent: !this.assignmentId && (getSelectedProject() === null || getSelectedProject()?.isDefault === true),
     })
     this.loadProjects()
   },
@@ -165,8 +165,8 @@ Page({
     if (this.data.loading) return
     this.setData({ loading: true, errorMessage: '' })
     try {
-      const project = await defaultProject()
-      setSelectedProject(project)
+      // Without persistent cloud storage the cloud scratch project refuses uploads: keep captures local.
+      setSelectedProject(await persistentCloudWritable() ? await defaultProject() : null)
       wx.reLaunch({ url: '/pages/index/index' })
     } catch (err) { this.setData({ errorMessage: (err as ApiError).message }) }
     finally { this.setData({ loading: false }) }

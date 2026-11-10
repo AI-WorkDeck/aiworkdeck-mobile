@@ -62,6 +62,9 @@ class Backend(
 
     suspend fun myProjects(): List<RelayProject> = bare<List<CatalogProject>>("/api/mobile/catalog").map { it.toRelayProject() }
     suspend fun mediaUsage(): MediaUsage = bare("/api/mobile/media/usage")
+    /** 临时项目 has no desktop behind it: uploading there needs persistent cloud storage. Fails safe. */
+    suspend fun persistentCloudWritable(): Boolean = try { mediaUsage().persistentCloudWritable }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
     /** 统一账户余额。成功回裸对象、失败回信封，两者都是 JsonObject，靠 bare() 里探 code 字段区分。 */
     suspend fun cloudBillingState(): PostpaidState = bare("/api/mobile/billing/cloud-state")
     suspend fun acceptPostpaid(policyVersion: String, resume: Boolean = false): PostpaidState {

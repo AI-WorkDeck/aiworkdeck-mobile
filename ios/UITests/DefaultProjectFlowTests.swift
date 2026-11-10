@@ -23,6 +23,22 @@ final class DefaultProjectFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["capture.project"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["capture.destination"].label, "Temporary project")
     }
+    /// Without persistent cloud storage 临时项目 keeps captures on the phone: no cloud workspace opens.
+    @MainActor func testTemporaryProjectWithoutCloudStorageStaysOnPhone() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-AWDWorkspaceUITest", "-AWDPersonalUITest", "-AWDNoCloudStorageUITest"]
+        app.launch()
+        defer { app.terminate() }
+        dismissEarlierRecordingNotice(in: app)
+        XCTAssertTrue(app.buttons["capture.project"].waitForExistence(timeout: 15))
+        app.buttons["capture.project"].tap()
+        XCTAssertTrue(app.buttons["projectPicker.none"].waitForExistence(timeout: 10))
+        app.buttons["projectPicker.none"].tap()
+        XCTAssertTrue(app.buttons["capture.project"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["workspace.close"].exists)
+        XCTAssertEqual(app.staticTexts["capture.destination"].label, "Temporary project")
+    }
     @MainActor func testCopyConversationFiltersDesktopTargetsAndKeepsOriginalMessages() {
         continueAfterFailure = false
         let app = XCUIApplication()

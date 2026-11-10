@@ -167,6 +167,30 @@ export class EvidenceStore {
     })
   }
 
+  /**
+   * 临时项目 without persistent cloud storage: hand its captures back to the phone as unassigned
+   * (no error, no failure badge) so the user can file them later. Returns how many changed.
+   */
+  async unassignScratch(): Promise<number> {
+    return await this.run<number>(async (): Promise<number> => {
+      let changed: number = 0
+      for (const item of this.loadAllLocked()) {
+        const p: RelayProject | undefined = item.project ?? undefined
+        if (p === undefined || !(p.isDefault === true || p.projectType === 'SCRATCH')) continue
+        if (item.state !== TransferState.waiting && item.state !== TransferState.failed) continue
+        const row: StoredRow | null = this.readRow(item.id)
+        if (row === null) continue
+        const updated: StoredRow = {
+          cloudResumeRequired: false, kind: row.kind, state: TransferState.waiting, progress: 0, manifest: row.manifest,
+          lastError: undefined, savedToAlbum: row.savedToAlbum, project: undefined,
+        }
+        this.writeRow(item.id, updated)
+        changed++
+      }
+      return changed
+    })
+  }
+
   /** 旧记录上传时补记实际去向。只在 project 为空时写，不覆盖已有归属。 */
   async setProject(id: string, p: RelayProject): Promise<void> {
     await this.run<void>(async (): Promise<void> => {

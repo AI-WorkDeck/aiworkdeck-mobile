@@ -170,11 +170,19 @@ final class AppModel {
         }
     }
 
-    func selectDefaultProject() async throws {
+    /// 临时项目. Returns false when captures stay on the phone instead: without persistent cloud
+    /// storage the cloud scratch project refuses every upload, so it must not become a target.
+    @discardableResult
+    func selectDefaultProject() async throws -> Bool {
         let generation = accountGeneration
-        let target = try await workspaceFiles().defaultProject()
+        let files = workspaceFiles()
+        let writable = await files.persistentCloudWritable()
+        guard generation == accountGeneration else { throw APIError(message: tr("error.unauthorized")) }
+        guard writable else { captureWithoutProject(); return false }
+        let target = try await files.defaultProject()
         guard generation == accountGeneration else { throw APIError(message: tr("error.unauthorized")) }
         await selectProject(target)
+        return true
     }
 
     func captureWithoutProject() {
