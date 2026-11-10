@@ -1,3 +1,2 @@
-1. Subscribe to Pro right in the app (¥149 per month, billed through your Apple Account, cancel anytime). The redesigned subscription page shows the price and benefits at a glance.
-2. Cleaner Settings: subscription and pay-as-you-go billing each fit on one row with their current status; credit limits, rates and terms move to a details page.
-3. The home screen's evidence line now reads "Fingerprint · Location · Time", and the account header shows "Signed in" when no name is set.
+1. Fixed: captures filed to "Temporary project" failed to upload on accounts without cloud storage. They now stay on your phone until you file them to a project, and items already stuck as failed recover automatically.
+2. The subscription is now offered in App Store regions worldwide; if it is not available for your Apple Account region, the subscription page says so.
