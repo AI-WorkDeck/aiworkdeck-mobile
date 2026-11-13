@@ -53,13 +53,38 @@ data class CatalogProject(val projectUid: String, val name: String, val location
 data class StoredRow(
     val kind: MediaKind, val state: String, val progress: Double, val manifest: CaptureManifest,
     val cloudResumeRequired: Boolean = false, val lastError: String? = null, val savedToAlbum: Boolean? = null, val project: RelayProject? = null,
+    /** 旧记录没有这一项：按 iOS 规则「有项目即视为已尝试过上传」。 */
+    val uploadAttempted: Boolean? = null, val archiveMove: ArchiveMove? = null, val remoteClientMediaId: String? = null,
+    /** 移动完成后，新的远端回执归属的账号绑定（iOS watchAccountBinding 的对应）。 */
+    val accountBinding: String? = null,
 )
 
 data class CaptureItem(
     val id: String, val kind: MediaKind, val state: TransferState, val manifest: CaptureManifest, val localFile: File,
     val progress: Double, val lastError: String?, val savedToAlbum: Boolean, val project: RelayProject?, val cloudResumeRequired: Boolean = false,
+    /** 一旦尝试过上传，服务端可能已收到；之后改项目只能走独立副本或远端移动，不能悄悄改幂等键的去向。 */
+    val uploadAttempted: Boolean = false,
+    val archiveMove: ArchiveMove? = null,
+    val remoteClientMediaId: String? = null,
+    val accountBinding: String? = null,
 ) {
     val capturedAt: Instant get() = IsoTime.parse(manifest.capturedAt) ?: Instant.EPOCH
+    /** 远端认的那个 clientMediaId：移动完成后换成目标回执，本机证据身份（[id]）不变。 */
+    val effectiveClientMediaId: String get() = remoteClientMediaId ?: manifest.clientMediaId
+    val moveBlocksMutation: Boolean get() = archiveMove?.blocksMutation == true
+    val canMoveToProject: Boolean get() = !moveBlocksMutation && !uploadAttempted && (state == TransferState.waiting || state == TransferState.failed)
+    val canRequestArchiveMove: Boolean get() = !moveBlocksMutation && project != null && uploadAttempted && state != TransferState.uploading
+    /** 队列里显示的状态：移动未完成时，等待算「上传中」、失败算「失败」。 */
+    val queueState: TransferState get() {
+        val move = archiveMove ?: return state
+        if (move.status == ArchiveMoveStatus.done) return state
+        return if (move.status == ArchiveMoveStatus.failed) TransferState.failed else TransferState.uploading
+    }
+    val queueCaption: String get() = archiveMove?.takeIf { it.status != ArchiveMoveStatus.done }?.status?.caption ?: state.caption
+    val queueError: String? get() {
+        val move = archiveMove
+        return if (move != null && move.status != ArchiveMoveStatus.done) move.lastError else lastError
+    }
 }
 
 object IsoTime {

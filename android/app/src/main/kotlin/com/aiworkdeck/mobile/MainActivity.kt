@@ -188,12 +188,14 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
 
     // 系统栏图标颜色跟着当前屏走：取景器深色要白图标，其余浅色屏要深图标
     val darkChrome = didRestore && isSignedIn && tab == MainTab.capture && overlay == Overlay.None
+    // 资料库与查看器是深色全屏浮层，系统栏也要白图标
+    val darkBars = darkChrome || (didRestore && isSignedIn && overlay == Overlay.Library)
     val view = androidx.compose.ui.platform.LocalView.current
     androidx.compose.runtime.SideEffect {
         val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
         androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
-            isAppearanceLightStatusBars = !darkChrome
-            isAppearanceLightNavigationBars = !darkChrome
+            isAppearanceLightStatusBars = !darkBars
+            isAppearanceLightNavigationBars = !darkBars
         }
     }
     val layoutDir = if (L10n.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr

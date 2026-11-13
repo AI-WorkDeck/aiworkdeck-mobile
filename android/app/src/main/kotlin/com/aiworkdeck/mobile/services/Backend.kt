@@ -1,6 +1,12 @@
 package com.aiworkdeck.mobile.services
 
 import com.aiworkdeck.mobile.design.tr
+import com.aiworkdeck.mobile.model.ArchiveMove
+import com.aiworkdeck.mobile.model.ArchiveMoveAccount
+import com.aiworkdeck.mobile.model.ArchiveMoveRegistrationRejected
+import com.aiworkdeck.mobile.model.ArchiveMoveReply
+import com.aiworkdeck.mobile.model.ArchiveMoveService
+import com.aiworkdeck.mobile.model.CaptureItem
 import com.aiworkdeck.mobile.model.RelayProject
 import com.aiworkdeck.mobile.model.CatalogProject
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +37,7 @@ class Backend(
     /** 请求头 X-App-Language 的值（zh-CN / en-US），同样每次现取，跟着区域走。 */
     private val languageProvider: () -> String = { AccountRegion.cn.appLanguage },
     private val accountActive: () -> Boolean = { true },
-) {
+) : ArchiveMoveService {
     /** 固定主机，测试用。 */
     constructor(baseUrl: String, session: SessionStore, client: OkHttpClient = OkHttpClient()) : this({ baseUrl }, session, client)
 
@@ -90,6 +96,79 @@ class Backend(
         val el = json.parseToJsonElement(text).jsonObject
         checkEnvelopeCode(el)
         json.decodeFromJsonElement<UploadResult>(el)
+    }
+
+    // MARK: - 已上传件改投项目（镜像 iOS API.registerMove / moveStatus / retryMove / uploadMoveTarget）
+
+    /** 当前主机与会话；没登录为 null。 */
+    fun identity(): Pair<String, String>? = session.current()?.let { baseUrl to it }
+
+    /** 向服务端核实当前会话属于哪个用户（/api/auth/me）。移动事务要按用户而不是按会话绑定。 */
+    suspend fun verifiedUserId(): Long {
+        val result = envelope(execute(Request.Builder().url(baseUrl + "/api/auth/me").get()))
+        val id = result["data"]?.jsonObject?.get("id")?.jsonPrimitive?.longOrNull
+        if (id == null || id <= 0) throw Unauthorized()
+        return id
+    }
+
+    override suspend fun registerMove(move: ArchiveMove, account: ArchiveMoveAccount): ArchiveMoveReply =
+        moveRequest(account, "", buildJsonObject {
+            put("requestId", move.requestId); put("sourceClientMediaId", move.sourceClientMediaId)
+            put("targetClientMediaId", move.targetClientMediaId)
+            put("sourceDeviceId", move.source.deviceId); put("sourceProjectKey", move.source.key)
+            put("targetDeviceId", move.target.deviceId); put("targetProjectKey", move.target.key)
+            put("sha256", move.sha256); put("fileSize", move.fileSize)
+        }, registration = true)
+
+    override suspend fun moveStatus(move: ArchiveMove, account: ArchiveMoveAccount): ArchiveMoveReply =
+        moveRequest(account, "/" + move.requestId.lowercase(), null)
+
+    override suspend fun retryMove(move: ArchiveMove, account: ArchiveMoveAccount): ArchiveMoveReply =
+        moveRequest(account, "/" + move.requestId.lowercase() + "/retry", buildJsonObject {})
+
+    /** 目标那一份按目标回执的 clientMediaId 上传；用冻结的账号凭据，不跟着界面上换的账号走。 */
+    override suspend fun uploadMoveTarget(item: CaptureItem, move: ArchiveMove, account: ArchiveMoveAccount) {
+        val frozen = MemorySessionStore().also { it.save(account.sessionId) }
+        Backend({ account.baseUrl }, frozen, client, languageProvider).upload(
+            file = item.localFile, deviceId = move.target.deviceId, projectKey = move.target.key,
+            clientMediaId = move.targetClientMediaId, fileName = UploadNaming.fileName(item),
+            mediaType = item.kind.mediaType, capturedAt = item.manifest.capturedAt, organize = false,
+        ) {}
+    }
+
+    /** body 为 null 时发 GET，否则 POST。 */
+    private suspend fun moveRequest(account: ArchiveMoveAccount, path: String, body: JsonObject?,
+                                    registration: Boolean = false): ArchiveMoveReply = withContext(Dispatchers.IO) {
+        val builder = Request.Builder().url(account.baseUrl + "/api/mobile/media/moves" + path)
+            .header("X-Session-Id", account.sessionId).header("X-App-Language", languageProvider())
+        if (body != null) builder.post(body.toString().toRequestBody(jsonType)) else builder.get()
+        val request = CloudEpoch.authorize(builder.build(), client)
+        client.newCall(request).execute().use { resp ->
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            decodeMoveResponse(resp.body?.string() ?: "", resp.code, registration)
+        }
+    }
+
+    companion object {
+        private val moveJson = Json { ignoreUnknownKeys = true; explicitNulls = false }
+
+        /**
+         * 超时、5xx、回包坏、笼统的 code=1 都**不**解锁一次不确定的登记：事务可能已在服务端提交。
+         * 只有 2xx–4xx 且信封 kind 明确为 MOVE_NOT_REGISTERED 才算被拒。纯函数，JVM 单测直接调。
+         */
+        fun decodeMoveResponse(text: String, statusCode: Int, registration: Boolean): ArchiveMoveReply {
+            val envelope = runCatching { moveJson.parseToJsonElement(text).jsonObject }.getOrNull()
+            val code = envelope?.get("code")?.jsonPrimitive?.intOrNull
+            val message = envelope?.get("message")?.jsonPrimitive?.contentOrNull
+            val kind = envelope?.get("kind")?.jsonPrimitive?.contentOrNull
+            if (registration && statusCode in 200..499 && code != null && code != 0 && kind == "MOVE_NOT_REGISTERED") {
+                throw ArchiveMoveRegistrationRejected(message ?: tr("queue.moveUnavailable"))
+            }
+            val data = envelope?.get("data")
+            val reply = if (statusCode in 200..299 && code == 0 && data != null && data !is JsonNull)
+                runCatching { moveJson.decodeFromJsonElement<ArchiveMoveReply>(data) }.getOrNull() else null
+            return reply ?: throw ApiError(1, message ?: tr("queue.moveUnavailable"))
+        }
     }
 
     fun accountSnapshot(): Backend {

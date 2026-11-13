@@ -44,7 +44,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import android.view.View
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.core.view.AccessibilityDelegateCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import com.aiworkdeck.mobile.R
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
@@ -92,6 +103,14 @@ fun ViewerScreen(items: List<CaptureItem>, start: Int, onClose: () -> Unit) {
 }
 
 @Composable
+private fun BarIcon(icon: Int, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(Tk.touchMin).clickable(onClick = onClick).semantics { contentDescription = label; role = Role.Button },
+        contentAlignment = Alignment.Center,
+    ) { Icon(painterResource(icon), contentDescription = null, tint = Tk.D.fg, modifier = Modifier.size(20.dp)) }
+}
+
+@Composable
 private fun TopBar(item: CaptureItem, index: Int, total: Int, onDetails: () -> Unit, onClose: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.55f)).safeDrawingPadding()
@@ -99,31 +118,19 @@ private fun TopBar(item: CaptureItem, index: Int, total: Int, onDetails: () -> U
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2),
     ) {
-        Box(
-            Modifier.size(Tk.touchMin).clickable(onClick = onClose)
-                .semantics { contentDescription = tr("common.close") },
-            contentAlignment = Alignment.Center,
-        ) { Text("✕", style = Fonts.body(), color = Color.White) }
+        BarIcon(R.drawable.ic_close, tr("common.close"), onClose)
 
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
                 StatusDot(item.state, onDark = true)
-                // 录音没有画面，播放器是一整片黑；这里点一句它是声音
-                if (item.kind == MediaKind.audio) Text("♪", style = Fonts.small(), color = Color.White.copy(alpha = 0.6f))
-                Text(item.state.caption, style = Fonts.small(), color = Color.White)
-                Text(LibraryTime.precise(item.capturedAt), style = Fonts.mono(Tk.Ty.micro), color = Color.White.copy(alpha = 0.6f))
+                Text(item.state.caption, style = Fonts.small(), color = Tk.D.fg)
+                Text(LibraryTime.precise(item.capturedAt), style = Fonts.mono(Tk.Ty.micro), color = Tk.D.fgMuted)
             }
-            Text(
-                LibraryTime.day(item.capturedAt) + " · " + kindLabel(item.kind), style = Fonts.nano(),
-                color = Color.White.copy(alpha = 0.6f),
-            )
+            // 第二行写明类型（照片 / 录像 / 录音）：录音没有画面，播放器是一整片黑，靠这里说清它是声音
+            Text(LibraryTime.day(item.capturedAt) + " · " + kindLabel(item.kind), style = Fonts.nano(), color = Tk.D.fgMuted)
         }
-        Box(
-            Modifier.size(Tk.touchMin).clickable(onClick = onDetails)
-                .semantics { contentDescription = tr("viewer.details") },
-            contentAlignment = Alignment.Center,
-        ) { Text("ⓘ", style = Fonts.body(), color = Color.White) }
-        Text("$index / $total", style = Fonts.mono(Tk.Ty.micro), color = Color.White.copy(alpha = 0.6f))
+        BarIcon(R.drawable.ic_info, tr("viewer.details"), onDetails)
+        Text("$index / $total", style = Fonts.mono(Tk.Ty.micro), color = Tk.D.fgMuted)
     }
 }
 
@@ -132,12 +139,12 @@ private fun TopBar(item: CaptureItem, index: Int, total: Int, onDetails: () -> U
 private fun Details(item: CaptureItem) {
     SelectionContainer {
         Column(
-            Modifier.fillMaxWidth().heightIn(max = 260.dp).background(Color.Black.copy(alpha = 0.8f))
+            Modifier.fillMaxWidth().heightIn(max = 260.dp).background(Tk.D.bg)
                 .verticalScroll(rememberScrollState()).padding(Tk.Sp.gutter),
             verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2),
         ) {
-            Text(item.project?.name ?: tr("library.unknownProject"), style = Fonts.heading(), color = Color.White)
-            Text(item.state.detail + " · " + item.state.whereItIs, style = Fonts.small(), color = Color.White.copy(alpha = 0.6f))
+            Text(item.project?.name ?: tr("library.unknownProject"), style = Fonts.heading(), color = Tk.D.fg)
+            Text(item.state.detail + " · " + item.state.whereItIs, style = Fonts.small(), color = Tk.D.fgMuted)
             DetailRow(tr("details.capturedAt"), LibraryTime.full(item.capturedAt))
             val m = item.manifest
             if (m.latitude != null && m.longitude != null) {
@@ -153,10 +160,10 @@ private fun Details(item: CaptureItem) {
 @Composable
 private fun DetailRow(label: String, value: String, ltr: Boolean = false, mono: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(label, style = Fonts.nano(), color = Color.White.copy(alpha = 0.5f))
+        Text(label, style = Fonts.nano(), color = Tk.D.fgMuted)
         // 哈希、坐标保持 LTR（RTL 语言下也不翻转）
         CompositionLocalProvider(LocalLayoutDirection provides if (ltr) LayoutDirection.Ltr else LocalLayoutDirection.current) {
-            Text(value, style = if (mono) Fonts.mono(Tk.Ty.nano) else Fonts.small(), color = Color.White)
+            Text(value, style = if (mono) Fonts.mono(Tk.Ty.nano) else Fonts.small(), color = Tk.D.fg)
         }
     }
 }
@@ -201,15 +208,22 @@ internal fun ZoomablePhoto(file: File) {
 @OptIn(UnstableApi::class)
 @Composable
 internal fun PlayerPage(file: File, active: Boolean, audio: Boolean) {
+    // 原件不在或解不开：照实说「无法播放」，不留一块黑屏让人以为在加载
+    var unavailable by remember(file) { mutableStateOf(!file.exists()) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (active && com.aiworkdeck.mobile.services.RecordingState.isRecording) {
-            Text(tr("player.stopRecordingFirst"), color = Color.White)
+            Text(tr("player.stopRecordingFirst"), style = Fonts.body(), color = Tk.D.fg, modifier = Modifier.padding(Tk.Sp.gutter))
+        } else if (active && unavailable) {
+            Text(tr("player.unavailable"), style = Fonts.body(), color = Tk.D.fg, modifier = Modifier.padding(Tk.Sp.gutter))
         } else if (active) {
             val context = LocalContext.current
             val player = remember(file) {
                 // 快退 / 快进按钮一次 15 秒，与 iOS 录音页的 ±15s 一致；进度条（已播 / 总长）是 PlayerView 自带的
                 ExoPlayer.Builder(context).setSeekBackIncrementMs(15_000).setSeekForwardIncrementMs(15_000).build().apply {
                     setMediaItem(MediaItem.fromUri(file.toURI().toString()))
+                    addListener(object : Player.Listener {
+                        override fun onPlayerError(error: PlaybackException) { unavailable = true }
+                    })
                     prepare()
                 }
             }
@@ -220,9 +234,23 @@ internal fun PlayerPage(file: File, active: Boolean, audio: Boolean) {
                     this.player = player; setShowNextButton(false); setShowPreviousButton(false)
                     // 录音没有画面，控件就是整个界面：常驻，不随点按或超时藏起来
                     if (audio) { controllerShowTimeoutMs = 0; controllerHideOnTouch = false }
+                    // 快退 / 快进按钮上只写着「15」，读屏会念成「十五」：换成契约里的说法。
+                    // 用无障碍代理而不是 contentDescription——播放器每次刷新控件都会把后者改回自己的文案。
+                    relabel(findViewById(androidx.media3.ui.R.id.exo_rew_with_amount), tr("player.back15"))
+                    relabel(findViewById(androidx.media3.ui.R.id.exo_ffwd_with_amount), tr("player.forward15"))
                 } },
                 modifier = Modifier.fillMaxSize().safeDrawingPadding(),
             )
         }
     }
+}
+
+private fun relabel(view: View?, label: String) {
+    view ?: return
+    ViewCompat.setAccessibilityDelegate(view, object : AccessibilityDelegateCompat() {
+        override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+            super.onInitializeAccessibilityNodeInfo(host, info)
+            info.contentDescription = label
+        }
+    })
 }

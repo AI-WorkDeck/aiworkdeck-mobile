@@ -87,13 +87,13 @@ class UploadQueue(
 
     /** 还有没有等着退避到期自动重排的失败件——对 Worker 来说同样算「这一轮没干完」。 */
     suspend fun hasRetryableFailed(): Boolean = withContext(Dispatchers.IO) {
-        store.loadAll().any { it.state == TransferState.failed && it.project != null }
+        owned().any { it.state == TransferState.failed && it.project != null }
     }
 
     /** 周期性自愈：滞留/待传直接续跑；失败按退避到期才自动重排，不到期就什么也不做。 */
     suspend fun autoKick() = withContext(Dispatchers.IO) {
         if (mutex.isLocked) return@withContext
-        val items = store.loadAll()
+        val items = owned()
         val hasFailed = items.any { it.state == TransferState.failed }
         val hasWork = items.any { it.state == TransferState.waiting || it.state == TransferState.uploading }
         if (hasFailed && clock() >= nextAutoKickAt) {
@@ -105,13 +105,13 @@ class UploadQueue(
 
     /** 把失败的重新排回待传。用户手动点「重试」时调用，不看退避、不看次数。 */
     suspend fun pauseCloudUploads() {
-        for (item in store.loadAll().filter { it.state in setOf(TransferState.waiting, TransferState.uploading, TransferState.failed) })
+        for (item in owned().filter { it.state in setOf(TransferState.waiting, TransferState.uploading, TransferState.failed) })
             store.updateState(item.id, TransferState.failed, cloudResumeRequired = true)
         _changes.tryEmit(Unit)
     }
 
     suspend fun retryFailed() = withContext(Dispatchers.IO) {
-        val failed = store.loadAll().filter { it.state == TransferState.failed }
+        val failed = owned().filter { it.state == TransferState.failed }
         for (f in failed) store.updateState(f.id, TransferState.waiting, progress = 0.0, cloudResumeRequired = false)
         if (failed.isNotEmpty()) _changes.tryEmit(Unit)
         kick()
@@ -123,16 +123,16 @@ class UploadQueue(
      * 返回未投递件的中转区到期时刻（键 clientMediaId 小写），队列页拿去做到期提醒。
      */
     suspend fun checkDelivered(): Map<String, String> = withContext(Dispatchers.IO) {
-        val uploaded = store.loadAll().filter { it.state == TransferState.uploaded }
+        val uploaded = owned().filter { it.state == TransferState.uploaded }
         if (uploaded.isEmpty()) return@withContext emptyMap()
         val expiry = mutableMapOf<String, String>()
         var changed = false
         for (batch in uploaded.chunked(50)) {
-            val ids = batch.map { it.manifest.clientMediaId }
+            val ids = batch.map { it.effectiveClientMediaId }
             val statuses = try { uploader.mediaStatus(ids) } catch (_: Exception) { continue }
             val byId = statuses.associateBy { it.clientMediaId.lowercase() }
             for (item in batch) {
-                val key = item.manifest.clientMediaId.lowercase()
+                val key = item.effectiveClientMediaId.lowercase()
                 val st = byId[key] ?: continue
                 val merged = item.state.applyingStatus(st.delivered, st.waitingSeconds, st.expiresAt)
                 if (merged.state != item.state) {
@@ -150,7 +150,7 @@ class UploadQueue(
      * 所以此刻所有 uploading 都是尸体——复位回 waiting 重传，幂等键（clientMediaId）
      * 保证服务端不产生重复件（dev-board#241 的 Android 对应）。 */
     private suspend fun recoverStale() {
-        val stale = store.loadAll().filter { it.state == TransferState.uploading }
+        val stale = owned().filter { it.state == TransferState.uploading }
         for (s in stale) store.updateState(s.id, s.state.recovered())
         if (stale.isNotEmpty()) _changes.tryEmit(Unit)
     }
@@ -158,7 +158,7 @@ class UploadQueue(
     /** 临时项目 is cloud-only: without persistent cloud storage the server refuses it, so those captures
      * go back to the phone instead of failing. Asked only when such an item is pending (incl. failed). */
     private suspend fun releaseScratchWithoutStorage() {
-        val pending = store.loadAll().any { it.project?.isScratch == true && (it.state == TransferState.waiting || it.state == TransferState.failed) }
+        val pending = owned().any { it.project?.isScratch == true && (it.state == TransferState.waiting || it.state == TransferState.failed) }
         if (!pending || uploader.persistentCloudWritable()) return
         if (store.unassignScratch() > 0) _changes.tryEmit(Unit)
     }
@@ -166,10 +166,10 @@ class UploadQueue(
     /** 目标项目按件走；没记项目的件跳过（Android 无兜底 project，等旧记录被用户手动归类）。
      * 先传最早拍的：loadAll 按拍摄时间降序，取最后一个即最早。 */
     private suspend fun nextPending(): CaptureItem? =
-        store.loadAll().filter { !it.cloudResumeRequired && it.state == TransferState.waiting && it.project != null }.lastOrNull()
+        owned().filter { !it.cloudResumeRequired && it.state == TransferState.waiting && it.project != null }.lastOrNull()
 
     private suspend fun hasActionableWaiting(): Boolean =
-        store.loadAll().any { !it.cloudResumeRequired && it.state == TransferState.waiting && it.project != null }
+        owned().any { !it.cloudResumeRequired && it.state == TransferState.waiting && it.project != null }
 
     /** 一件的上传。成功 true；失败/未授权 false——调用方据此 break，弱网下不把后面几条也挤掉。 */
     private suspend fun uploadOne(item: CaptureItem): Boolean {
@@ -215,7 +215,7 @@ class UploadQueue(
     /** 自动重排：走契约的 retry_auto 事件与 guard（attempts <= maxAutoRetries），
      * 超过次数的件留在 failed，等用户手动 retryFailed()。 */
     private suspend fun autoRetryFailed() {
-        val failed = store.loadAll().filter { !it.cloudResumeRequired && it.state == TransferState.failed }
+        val failed = owned().filter { !it.cloudResumeRequired && it.state == TransferState.failed }
         var any = false
         for (f in failed) {
             val n = attempts[f.id] ?: 0
@@ -227,6 +227,9 @@ class UploadQueue(
         if (any) _changes.tryEmit(Unit)
         kick()
     }
+
+    /** 远端移动进行中的件归 [ArchiveMoveQueue] 管，上传链一概不碰（镜像 iOS 的 moveBlocksMutation 过滤）。 */
+    private suspend fun owned(): List<CaptureItem> = store.loadAll().filter { !it.moveBlocksMutation }
 
     private fun setProgress(id: String, value: Double) { _progress.value = _progress.value + (id to value) }
     private fun clearProgress(id: String) { _progress.value = _progress.value - id }

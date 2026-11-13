@@ -2,6 +2,7 @@ package com.aiworkdeck.mobile.services
 
 import android.content.Context
 import com.aiworkdeck.contract.ContractCapabilities
+import com.aiworkdeck.mobile.model.ArchiveMoveAccount
 import com.aiworkdeck.mobile.model.RelayProject
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -33,6 +34,21 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
     }
     fun saveOrganization(scope: String?, id: String, result: CaptureOrganization) {
         if (scope != null) prefs.edit().putString("captureOrganize.result.$scope.$id", json.encodeToString(result)).apply()
+    }
+
+    /** 记下「这个会话核实过是哪个用户」。移动事务按用户绑定，跨会话轮换稳定（镜像 iOS WatchAccountScope）。 */
+    fun rememberVerifiedUser(userId: Long, sessionId: String, baseUrl: String) {
+        if (userId <= 0 || sessionId.isEmpty()) return
+        prefs.edit()
+            .putString("archiveMoveAccount.session", ArchiveMoveAccount.sessionFingerprint(baseUrl, sessionId))
+            .putString("archiveMoveAccount.binding", ArchiveMoveAccount.binding(baseUrl, userId))
+            .apply()
+    }
+
+    /** 没核实过当前会话就是 null——长事务不用按会话的兜底绑定。 */
+    fun stableAccountBinding(sessionId: String, baseUrl: String): String? {
+        if (prefs.getString("archiveMoveAccount.session", null) != ArchiveMoveAccount.sessionFingerprint(baseUrl, sessionId)) return null
+        return prefs.getString("archiveMoveAccount.binding", null)
     }
 
     var notificationPermissionAsked: Boolean

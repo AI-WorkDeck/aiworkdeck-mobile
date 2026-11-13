@@ -27,7 +27,7 @@ class BackendUploader(private val backend: Backend, private val organizationPref
             // 曾误传本机安装 ID，服务端按它入箱，桌面端永远取不到（2026-11-12 修）。
             deviceId = project.deviceId,
             projectKey = project.key,
-            clientMediaId = item.manifest.clientMediaId,
+            clientMediaId = item.effectiveClientMediaId,
             fileName = fileName,
             mediaType = item.kind.mediaType,
             capturedAt = item.manifest.capturedAt,
@@ -38,7 +38,7 @@ class BackendUploader(private val backend: Backend, private val organizationPref
             organizationPrefs?.let { prefs ->
                 synchronized(prefs) {
                     if (scope != null && scope == backend.personalAccountScope())
-                        prefs.saveOrganization(scope, item.manifest.clientMediaId, result.organization ?: CaptureOrganization("unknown"))
+                        prefs.saveOrganization(scope, item.effectiveClientMediaId, result.organization ?: CaptureOrganization("unknown"))
                 }
             }
         }

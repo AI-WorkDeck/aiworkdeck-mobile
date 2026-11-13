@@ -13,7 +13,14 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import com.aiworkdeck.mobile.R
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,12 +51,16 @@ import kotlinx.coroutines.launch
 
 /**
  * 选择后续采集或未归类记录的归档目标；关闭仍可继续采集。
+ *
+ * 给出 [titleKey] 时是「为某件资料选目标」（移动/复制）：标题与说明换成 [titleKey]/[hintKey]，
+ * 关闭写「取消」，不显示退出登录（镜像 iOS ProjectPickerView 的 titleKey/hintKey）。
  */
 @Composable
 fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: Boolean = true, onSelect: (RelayProject) -> Unit = { model.selectProject(it) },
                         onNone: () -> Unit = { model.captureWithoutProject(); onClose() },
                         /** 进项目工作区浏览文件（iOS `onBrowse`）；选了云端临时项目后也直接进去看。 */
-                        onBrowse: (() -> Unit)? = null) {
+                        onBrowse: (() -> Unit)? = null,
+                        titleKey: String? = null, hintKey: String? = null) {
     val backend = ServiceLocator.backend
     val current by model.selectedProject.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
@@ -103,12 +114,12 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
         Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(horizontal = Tk.Sp.gutter),
     ) {
         Row(Modifier.padding(top = Tk.Sp.s2), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("project.title"), style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, modifier = Modifier.weight(1f))
+            Text(tr(titleKey ?: "project.title"), style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, modifier = Modifier.weight(1f))
             onBrowse?.let { Action(tr("project.files"), modifier = Modifier.padding(end = Tk.Sp.s4), onClick = it) }
-            Action(tr("workspace.quickCapture"), onClick = onClose)
+            Action(if (titleKey != null) tr("common.cancel") else tr("workspace.quickCapture"), onClick = onClose)
         }
         Text(
-            text = tr("project.hint", mapOf("date" to ScreenshotMode.archiveDate())),
+            text = hintKey?.let { tr(it) } ?: tr("project.hint", mapOf("date" to ScreenshotMode.archiveDate())),
             style = Fonts.micro(), color = Tk.L.fgFaint, modifier = Modifier.padding(bottom = Tk.Sp.s2),
         )
         OutlinedTextField(
@@ -160,12 +171,14 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
             }
         }
 
-        Hairline(color = Tk.L.rule)
-        Action(
-            text = tr("common.signOut"),
-            modifier = Modifier.padding(bottom = Tk.Sp.s4),
-            color = Tk.L.fgMuted,
-        ) { model.signOut() }
+        if (titleKey == null) {
+            Hairline(color = Tk.L.rule)
+            Action(
+                text = tr("common.signOut"),
+                modifier = Modifier.padding(bottom = Tk.Sp.s4),
+                color = Tk.L.fgMuted,
+            ) { model.signOut() }
+        }
     }
 }
 
@@ -174,7 +187,8 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
 private fun PickerRow(title: String, subtitle: String?, current: Boolean, onClick: () -> Unit) {
     Column {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).clickable(onClick = onClick),
+            Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).clickable(onClick = onClick)
+                .semantics { selected = current },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -183,7 +197,8 @@ private fun PickerRow(title: String, subtitle: String?, current: Boolean, onClic
                     Text(it, style = Fonts.nano(), color = Tk.L.fgFaint, maxLines = 1)
                 }
             }
-            if (current) Text("✓", style = Fonts.body(), color = Tk.L.accent)
+            // 勾选只是图形；读屏靠上面的 selected 语义，不念「对勾」
+            if (current) Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = Tk.L.accent, modifier = Modifier.size(20.dp))
         }
         Hairline(color = Tk.L.rule)
     }

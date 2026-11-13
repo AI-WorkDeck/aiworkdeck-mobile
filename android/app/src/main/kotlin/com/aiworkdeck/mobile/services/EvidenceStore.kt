@@ -1,6 +1,9 @@
 package com.aiworkdeck.mobile.services
 
 import com.aiworkdeck.mobile.design.tr
+import com.aiworkdeck.mobile.model.ArchiveMove
+import com.aiworkdeck.mobile.model.ArchiveMoveReply
+import com.aiworkdeck.mobile.model.ArchiveMoveStatus
 import com.aiworkdeck.mobile.model.CaptureItem
 import com.aiworkdeck.mobile.model.CaptureManifest
 import com.aiworkdeck.mobile.model.IsoTime
@@ -56,7 +59,7 @@ class EvidenceStore(private val root: File, private val facts: DeviceFacts) {
             )
             val row = StoredRow(
                 kind = kind, state = TransferState.waiting.raw, progress = 0.0, manifest = manifest,
-                lastError = null, savedToAlbum = false, project = project,
+                lastError = null, savedToAlbum = false, project = project, uploadAttempted = false,
             )
             // 3. manifest 最后写：存在即完整
             writeRowLocked(id, row)
@@ -70,9 +73,14 @@ class EvidenceStore(private val root: File, private val facts: DeviceFacts) {
     suspend fun updateState(id: String, to: TransferState, progress: Double = 0.0, error: String? = null, cloudResumeRequired: Boolean? = null) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val row = readRowLocked(id) ?: return@withLock
+            // 远端移动进行中：这件归移动事务管，上传链与暂停都不许改它
+            if (row.archiveMove?.blocksMutation == true) return@withLock
             // 成功时清掉旧的失败原因，否则界面会一直挂着上次那条已经不成立的错
             val paused = cloudResumeRequired ?: row.cloudResumeRequired
-            val updated = row.copy(cloudResumeRequired = paused, state = if (paused) TransferState.failed.raw else to.raw, progress = if (paused) 0.0 else progress, lastError = if (paused) tr("postpaid.uploadPaused") else if (to == TransferState.failed) error else null)
+            // 一旦进了「上传中」，服务端就可能已经收到——之后改项目只能走副本或远端移动
+            val attempted = row.uploadAttempted ?: (row.project != null)
+            val updated = row.copy(cloudResumeRequired = paused, state = if (paused) TransferState.failed.raw else to.raw, progress = if (paused) 0.0 else progress, lastError = if (paused) tr("postpaid.uploadPaused") else if (to == TransferState.failed) error else null,
+                uploadAttempted = attempted || (!paused && to == TransferState.uploading))
             writeRowLocked(id, updated)
         }
     }
@@ -85,7 +93,7 @@ class EvidenceStore(private val root: File, private val facts: DeviceFacts) {
         mutex.withLock {
             var n = 0
             for (item in loadAllLocked()) {
-                if (item.project?.isScratch != true || item.state !in setOf(TransferState.waiting, TransferState.failed)) continue
+                if (item.moveBlocksMutation || item.project?.isScratch != true || item.state !in setOf(TransferState.waiting, TransferState.failed)) continue
                 val row = readRowLocked(item.id) ?: continue
                 writeRowLocked(item.id, row.copy(project = null, state = TransferState.waiting.raw, progress = 0.0, lastError = null, cloudResumeRequired = false))
                 n++
@@ -110,13 +118,129 @@ class EvidenceStore(private val root: File, private val facts: DeviceFacts) {
         }
     }
 
-    /** 用户主动删除：原件与 manifest 一起删。记录留着而原件没了，图集里会出现永远打不开的空格。 */
-    suspend fun delete(ids: Set<String>) = withContext(Dispatchers.IO) {
+    /**
+     * 用户主动删除：原件与 manifest 一起删。记录留着而原件没了，图集里会出现永远打不开的空格。
+     * 任一件还在远端移动中就整批不删，返回 false（镜像 iOS）。
+     */
+    suspend fun delete(ids: Set<String>): Boolean = withContext(Dispatchers.IO) {
         mutex.withLock {
+            if (ids.any { readRowLocked(it)?.archiveMove?.blocksMutation == true }) return@withLock false
             for (id in ids) {
                 media.listFiles { f -> f.nameWithoutExtension == id }?.forEach { it.delete() }
                 File(manifests, "$id.json").delete()
             }
+            true
+        }
+    }
+
+    // MARK: - 改投项目（镜像 iOS EvidenceStore.moveToProject / copyToProject / ArchiveMove）
+
+    /** 从没尝试过上传的件：直接改目标项目，重新排队。 */
+    suspend fun moveToProject(id: String, project: RelayProject) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val row = readRowLocked(id) ?: throw ApiError(1, tr("library.moveMissing"))
+            if (!toItem(id, row).canMoveToProject) throw ApiError(1, tr("library.moveSynced"))
+            writeRowLocked(id, row.copy(project = project, state = TransferState.waiting.raw, progress = 0.0,
+                lastError = null, cloudResumeRequired = false))
+        }
+    }
+
+    /** 已发出的件保留原回执；字节复制成一件独立的新传输，服务端的幂等键不会被悄悄改道。 */
+    suspend fun copyToProject(id: String, project: RelayProject): CaptureItem = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val row = readRowLocked(id) ?: throw ApiError(1, tr("library.moveMissing"))
+            val item = toItem(id, row)
+            if (item.moveBlocksMutation) throw ApiError(1, tr("queue.moveInProgress"))
+            if (!item.localFile.exists()) throw ApiError(1, tr("queue.copyMissing"))
+            val copyId = UUID.randomUUID().toString().lowercase()
+            val dst = File(media, "$copyId.${row.kind.ext}")
+            var saved = false
+            try {
+                item.localFile.copyTo(dst, overwrite = true)
+                if (sha256(dst) != row.manifest.sha256) throw ApiError(1, tr("queue.copyCorrupt"))
+                val copy = StoredRow(kind = row.kind, state = TransferState.waiting.raw, progress = 0.0,
+                    manifest = row.manifest.copy(clientMediaId = copyId, serverReceivedAt = null),
+                    lastError = null, savedToAlbum = false, project = project, uploadAttempted = false)
+                writeRowLocked(copyId, copy)
+                saved = true
+                toItem(copyId, copy)
+            } finally {
+                if (!saved) dst.delete()
+            }
+        }
+    }
+
+    suspend fun beginArchiveMove(id: String, target: RelayProject, accountBinding: String,
+                                 accountIsCurrent: () -> Boolean = { true }): ArchiveMove = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            if (!accountIsCurrent()) throw ApiError(1, tr("queue.moveAccountChanged"))
+            val row = readRowLocked(id) ?: throw ApiError(1, tr("library.moveMissing"))
+            val item = toItem(id, row)
+            if (item.moveBlocksMutation) throw ApiError(1, tr("queue.moveInProgress"))
+            val source = item.project
+            if (!item.canRequestArchiveMove || source == null) throw ApiError(1, tr("queue.moveUnavailable"))
+            if (source.matches(target)) throw ApiError(1, tr("queue.moveSameProject"))
+            if (row.accountBinding != null && row.accountBinding != accountBinding) throw ApiError(1, tr("queue.moveAccountChanged"))
+            if (!item.localFile.exists()) throw ApiError(1, tr("queue.copyMissing"))
+            if (sha256(item.localFile) != row.manifest.sha256) throw ApiError(1, tr("queue.copyCorrupt"))
+            val move = ArchiveMove(
+                requestId = UUID.randomUUID().toString().lowercase(),
+                sourceClientMediaId = item.effectiveClientMediaId,
+                targetClientMediaId = UUID.randomUUID().toString().lowercase(),
+                source = source, target = target, sha256 = row.manifest.sha256,
+                fileSize = item.localFile.length(), accountBinding = accountBinding,
+            )
+            writeRowLocked(id, row.copy(archiveMove = move))
+            move
+        }
+    }
+
+    suspend fun archiveMoveItem(id: String): CaptureItem? = withContext(Dispatchers.IO) {
+        mutex.withLock { readRowLocked(id)?.let { toItem(id, it) } }
+    }
+
+    suspend fun applyArchiveMoveReply(id: String, requestId: String, reply: ArchiveMoveReply,
+                                      accountIsCurrent: () -> Boolean = { true }) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            if (!accountIsCurrent()) return@withLock
+            val row = readRowLocked(id) ?: return@withLock
+            val move = row.archiveMove ?: return@withLock
+            if (move.requestId != requestId) return@withLock
+            if (!reply.requestId.equals(move.requestId, ignoreCase = true) ||
+                !reply.targetClientMediaId.equals(move.targetClientMediaId, ignoreCase = true)) {
+                throw ApiError(1, tr("error.badResponse"))
+            }
+            // 迟到的轮询回复不能撤销已完成的事务
+            if (move.status == ArchiveMoveStatus.done) return@withLock
+            // 手动重试后，中转过期可能要求把同一份目标再传一次
+            val reupload = move.retryRequested && reply.status == ArchiveMoveStatus.waitingTarget
+            val next = move.copy(
+                registered = true, registrationRejected = false, status = reply.status,
+                lastError = reply.error?.takeIf { it.isNotBlank() }, retryRequested = false,
+                targetUploaded = when {
+                    reply.status == ArchiveMoveStatus.waitingSource || reply.status == ArchiveMoveStatus.done -> true
+                    reupload -> false
+                    else -> move.targetUploaded
+                },
+            )
+            val updated = if (reply.status == ArchiveMoveStatus.done) row.copy(
+                archiveMove = next, project = next.target, remoteClientMediaId = next.targetClientMediaId,
+                state = TransferState.arrived.raw, progress = 1.0, lastError = null,
+                // 新回执归属当前账号：之后的移动只能由同一账号发起
+                accountBinding = next.accountBinding,
+            ) else row.copy(archiveMove = next)
+            writeRowLocked(id, updated)
+        }
+    }
+
+    suspend fun updateArchiveMove(id: String, requestId: String, accountIsCurrent: () -> Boolean = { true },
+                                  change: (ArchiveMove) -> ArchiveMove) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            if (!accountIsCurrent()) return@withLock
+            val row = readRowLocked(id) ?: return@withLock
+            val move = row.archiveMove ?: return@withLock
+            if (move.requestId != requestId || move.status == ArchiveMoveStatus.done) return@withLock
+            writeRowLocked(id, row.copy(archiveMove = change(move)))
         }
     }
 
@@ -176,11 +300,13 @@ class EvidenceStore(private val root: File, private val facts: DeviceFacts) {
             localFile = File(media, "$id.${row.kind.ext}"), progress = row.progress,
             lastError = if (state == null) tr("queue.unknownState", mapOf("state" to row.state)) else row.lastError,
             savedToAlbum = row.savedToAlbum ?: false, project = row.project, cloudResumeRequired = row.cloudResumeRequired,
+            uploadAttempted = row.uploadAttempted ?: (row.project != null), archiveMove = row.archiveMove,
+            remoteClientMediaId = row.remoteClientMediaId, accountBinding = row.accountBinding,
         )
     }
 
     /** 流式分块算哈希：现场录像可以到几百 MB，整份读进内存不划算。 */
-    private fun sha256(f: File): String {
+    fun sha256(f: File): String {
         val md = MessageDigest.getInstance("SHA-256")
         f.inputStream().use { i ->
             val b = ByteArray(1 shl 20)
