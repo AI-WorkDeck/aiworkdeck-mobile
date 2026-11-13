@@ -2,8 +2,10 @@
 # 这份文本会原样进 App Store Connect 的「审核备注」。
 
 本应用需要账号才能使用，普通用户通过手机号或邮箱及密码登录；注册、找回密码在官网完成。
-审核时，请在登录页直接输入 demo_user.txt / demo_password.txt 提供的审核专用账号与密码，
-勾选同意用户协议与隐私政策后点「登录」，无需请求验证码。
+审核时，请在登录页保持「大陆版」（Mainland China）与「手机号」（Phone），直接输入
+demo_user.txt / demo_password.txt 提供的审核专用手机号与密码，勾选同意用户协议与隐私政策后点「登录」，
+无需请求验证码。The demo account is a phone number: keep "Mainland China" and "Phone" on the
+sign-in page, enter the number and password, accept the agreement and tap Sign in. No code is needed.
 
 配套说明：影像最终归档到桌面端（macOS / Windows）的项目目录，
 桌面端下载：https://www.aiworkdeck.com/zh
