@@ -1,4 +1,5 @@
-1. Redesigned: opens straight to the camera, with Capture / Calendar / Assistant tabs; sign-in, settings, library and upload queue now match the iOS app.
-2. Fixed: captures sent to a desktop project could stay "Staged" and never reach the computer.
-3. The upload queue shows all projects, file fingerprints and expiry dates, and can move or copy items to another project. New project workspace to browse and preview project files.
-4. Clearer error messages; unreadable recordings can be discarded.
+1. Redesigned: opens to camera with Capture / Calendar / Assistant tabs; sign-in, settings, library and queue match iOS.
+2. In-app credit top-up via Google Play.
+3. Fixed: desktop-project captures staying "Staged" without reaching the computer.
+4. Queue shows all projects, file hashes and expiry, with move/copy; new workspace to browse and preview project files.
+5. Clearer errors; unreadable recordings can be discarded.

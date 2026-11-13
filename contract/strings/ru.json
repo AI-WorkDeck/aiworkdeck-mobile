@@ -165,6 +165,7 @@
   "recharge.openHint": "Пополнение открывает ваш единый аккаунт",
   "recharge.ios.priceLoading": "Загрузка цен…",
   "recharge.ios.storeUnavailable": "App Store недоступен. Попробуйте позже.",
+  "recharge.play.storeUnavailable": "Google Play недоступен. Попробуйте позже.",
   "recharge.ios.pending": "Покупка отправлена, подтверждение…",
   "recharge.ios.restore": "Восстановить незавершённые покупки",
   "recharge.ios.restoreNone": "Нет незавершённых покупок",

@@ -13,6 +13,7 @@ import com.aiworkdeck.mobile.services.MemorySessionStore
 import com.aiworkdeck.mobile.services.RegionPrefs
 import com.aiworkdeck.mobile.services.switchAccountRegion
 import com.aiworkdeck.mobile.services.showsExternalRecharge
+import com.aiworkdeck.mobile.services.showsPlayRecharge
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 import com.aiworkdeck.mobile.services.mobileTermsUrl
 import com.aiworkdeck.mobile.model.RelayProject
@@ -147,18 +148,23 @@ class AccountRegionTest {
         assertEquals(Method.Email, defaultMethod(AccountRegion.intl))
     }
 
-    @Test fun billingOnlyInMainland() {
+    @Test fun billingAvailableInBothRegions() {
         assertTrue(AccountRegion.cn.showsBilling)
-        assertFalse(AccountRegion.intl.showsBilling)
+        assertTrue(AccountRegion.intl.showsBilling)
     }
 
-    @Test fun playRechargeStaysHiddenAfterSwitchingToMainlandAccount() {
-        for (region in AccountRegion.entries) {
-            assertFalse(showsExternalRecharge("intl", region, "external"))
-        }
+    @Test fun rechargeRoutingRespectsFlavorAndRegion() {
+        assertFalse(showsExternalRecharge("intl", AccountRegion.cn, "external"))
+        assertFalse(showsExternalRecharge("intl", AccountRegion.intl, "external"))
         assertTrue(showsExternalRecharge("cn", AccountRegion.cn, "external"))
         assertFalse(showsExternalRecharge("cn", AccountRegion.intl, "external"))
         assertFalse(showsExternalRecharge("cn", AccountRegion.cn, "false"))
+
+        assertTrue(showsPlayRecharge("intl", AccountRegion.intl, true))
+        assertFalse(showsPlayRecharge("intl", AccountRegion.cn, true))
+        assertFalse(showsPlayRecharge("cn", AccountRegion.intl, true))
+        assertFalse(showsPlayRecharge("cn", AccountRegion.cn, true))
+        assertFalse(showsPlayRecharge("intl", AccountRegion.intl, false))
     }
 
     @Test fun privacyPolicyMatchesDistributionPublisher() {

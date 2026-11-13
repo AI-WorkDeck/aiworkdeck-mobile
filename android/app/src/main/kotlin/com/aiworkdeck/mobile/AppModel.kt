@@ -152,7 +152,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 kickArchiveMoves()
                 refresh()
             }
+            if (_isSignedIn.value) replayPendingPlayPurchases()
             startHeartbeat()
+        }
+    }
+
+    private fun replayPendingPlayPurchases() {
+        if (ScreenshotMode.enabled) return
+        if (!com.aiworkdeck.mobile.services.showsPlayRecharge(BuildConfig.FLAVOR, prefs.accountRegion)) return
+        viewModelScope.launch {
+            try {
+                ServiceLocator.playRecharge.replayUnconsumed(backend.personalAccountScope())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.warning("恢复未消耗 Google Play 订单出错: ${e.message}")
+            }
         }
     }
 
@@ -201,6 +216,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         backend.identity()?.let { (url, session) -> prefs.rememberVerifiedUser(result.user.id, session, url) }
         _account.value = result.user
         _isSignedIn.value = true
+        replayPendingPlayPurchases()
         startHeartbeat()
         viewModelScope.launch { refresh() }
     }

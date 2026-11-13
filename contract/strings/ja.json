@@ -165,6 +165,7 @@
   "recharge.openHint": "チャージすると統一アカウントが開設されます",
   "recharge.ios.priceLoading": "価格を読み込み中…",
   "recharge.ios.storeUnavailable": "App Storeを利用できません。後でもう一度お試しください。",
+  "recharge.play.storeUnavailable": "Google Playを利用できません。後でもう一度お試しください。",
   "recharge.ios.pending": "購入を受け付けました。確認中…",
   "recharge.ios.restore": "未完了の購入を復元",
   "recharge.ios.restoreNone": "未完了の購入はありません",

@@ -165,6 +165,7 @@
   "recharge.openHint": "Το ανεβάσμα υπόλοιπου ενεργοποιεί τον ενιαίο λογαριασμό σας",
   "recharge.ios.priceLoading": "Φόρτωση τιμών…",
   "recharge.ios.storeUnavailable": "Το App Store δεν είναι διαθέσιμο. Δοκιμάστε ξανά αργότερα.",
+  "recharge.play.storeUnavailable": "Το Google Play δεν είναι διαθέσιμο. Δοκιμάστε ξανά αργότερα.",
   "recharge.ios.pending": "Η αγορά υποβλήθηκε, επιβεβαίωση…",
   "recharge.ios.restore": "Επαναφορά εκκρεμών αγορών",
   "recharge.ios.restoreNone": "Δεν υπάρχουν εκκρεμείς αγορές",

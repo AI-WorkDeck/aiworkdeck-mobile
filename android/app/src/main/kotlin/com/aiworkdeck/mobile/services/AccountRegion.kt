@@ -20,8 +20,8 @@ enum class AccountRegion(val raw: String, val baseUrl: String, val locale: Strin
     /** 国际站没有短信通道（阿里云只有大陆签名），只能邮箱验证码登录。 */
     val allowsPhoneLogin: Boolean get() = this == cn
 
-    /** 国际站计费未开通（dev-board#664）：余额行与充值入口都不出现。 */
-    val showsBilling: Boolean get() = this == cn
+    /** 余额与计费区块：大陆/国际两区均展示（国际版登大陆号只读展示 CNY 余额，不放充值入口）。 */
+    val showsBilling: Boolean get() = true
 
     /** 开关翻到的另一边。 */
     val other: AccountRegion get() = if (this == cn) intl else cn
@@ -60,9 +60,16 @@ fun switchAccountRegion(prefs: RegionPrefs): AccountRegion {
     return next
 }
 
-/** Play distribution never changes its payment policy when the account region changes. */
+/** 站外引导（大陆 flavor + 大陆账号区域）。 */
 fun showsExternalRecharge(flavor: String, region: AccountRegion, channel: String): Boolean =
-    (flavor != "intl" || ContractCapabilities.androidPlayRecharge) && region.showsBilling && channel != "false"
+    flavor != "intl" && region == AccountRegion.cn && channel != "false"
+
+/** Google Play 消耗型内购仅在 intl flavor + 国际区账号下开放（dev-board#665）。 */
+fun showsPlayRecharge(
+    flavor: String,
+    region: AccountRegion,
+    playEnabled: Boolean = ContractCapabilities.androidPlayRecharge,
+): Boolean = flavor == "intl" && region == AccountRegion.intl && playEnabled
 
 fun mobilePrivacyUrl(flavor: String): String = if (flavor == "intl")
     "https://workdeck.ai/mobile-account/en/privacy?site=intl"

@@ -165,6 +165,7 @@
   "recharge.openHint": "Beim Aufladen wird Ihr einheitliches Konto geöffnet",
   "recharge.ios.priceLoading": "Preise werden geladen…",
   "recharge.ios.storeUnavailable": "App Store nicht verfügbar. Bitte später erneut versuchen.",
+  "recharge.play.storeUnavailable": "Google Play nicht verfügbar. Bitte später erneut versuchen.",
   "recharge.ios.pending": "Kauf übermittelt, wird bestätigt…",
   "recharge.ios.restore": "Ausstehende Käufe wiederherstellen",
   "recharge.ios.restoreNone": "Keine ausstehenden Käufe",

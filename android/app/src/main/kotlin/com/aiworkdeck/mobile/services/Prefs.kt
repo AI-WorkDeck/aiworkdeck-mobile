@@ -130,6 +130,19 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
             editor.apply()
         }
 
+    fun playIdempotencyStore(): PlayIdempotencyStore = object : PlayIdempotencyStore {
+        override fun take(scope: String?, productId: String): String {
+            val key = "playRecharge.idem.${scope.orEmpty()}.$productId"
+            prefs.getString(key, null)?.takeIf { it.isNotBlank() }?.let { return it }
+            val created = java.util.UUID.randomUUID().toString()
+            prefs.edit().putString(key, created).apply()
+            return created
+        }
+        override fun clear(scope: String?, productId: String) {
+            prefs.edit().remove("playRecharge.idem.${scope.orEmpty()}.$productId").apply()
+        }
+    }
+
     private companion object {
         const val KEY_SAVE_TO_ALBUM = "saveToAlbum"
         const val KEY_ACCOUNT_REGION = "accountRegion"

@@ -165,6 +165,7 @@
   "recharge.openHint": "الشحن يفتح حسابك الموحد",
   "recharge.ios.priceLoading": "جارٍ تحميل الأسعار…",
   "recharge.ios.storeUnavailable": "App Store غير متاح. حاول مجدداً لاحقاً.",
+  "recharge.play.storeUnavailable": "Google Play غير متاح. حاول مجدداً لاحقاً.",
   "recharge.ios.pending": "تم إرسال عملية الشراء، جارٍ التأكيد…",
   "recharge.ios.restore": "استعادة المشتريات المعلّقة",
   "recharge.ios.restoreNone": "لا توجد مشتريات معلّقة",

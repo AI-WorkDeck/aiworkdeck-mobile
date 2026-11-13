@@ -18,6 +18,10 @@ import com.aiworkdeck.mobile.services.SessionStores
 import com.aiworkdeck.mobile.services.UploadQueue
 import com.aiworkdeck.mobile.services.UploadWorker
 import com.aiworkdeck.mobile.services.deviceFacts
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -28,6 +32,8 @@ import java.io.File
  * 根本没起来，队列却必须能用。
  */
 class App : Application() {
+    private val billingScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
         val prefs = Prefs(this, AccountRegion.ofDefault(BuildConfig.DEFAULT_REGION))
@@ -55,6 +61,17 @@ class App : Application() {
                 prefs.stableAccountBinding(session, url)?.let { ArchiveMoveAccount(it, url, session) }
             }
         }
+        ServiceLocator.playRecharge = com.aiworkdeck.mobile.services.PlayRechargeCoordinator(
+            backend = backend,
+            gateway = com.aiworkdeck.mobile.services.createPlayBillingGateway(this) {
+                if (com.aiworkdeck.mobile.services.showsPlayRecharge(BuildConfig.FLAVOR, prefs.accountRegion)) {
+                    billingScope.launch {
+                        runCatching { ServiceLocator.playRecharge.replayUnconsumed(backend.personalAccountScope()) }
+                    }
+                }
+            },
+            idempotency = prefs.playIdempotencyStore(),
+        )
         // 通知渠道先建好：Worker 要举前台通知，渠道不存在时通知不显示，任务会被系统当作
         // 无前台的长任务掐掉。
         UploadWorker.ensureChannel(this)

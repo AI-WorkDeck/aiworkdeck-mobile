@@ -165,6 +165,7 @@
   "recharge.openHint": "Topping up opens your unified account",
   "recharge.ios.priceLoading": "Loading prices…",
   "recharge.ios.storeUnavailable": "App Store unavailable. Try again later.",
+  "recharge.play.storeUnavailable": "Google Play unavailable. Try again later.",
   "recharge.ios.pending": "Purchase submitted, confirming…",
   "recharge.ios.restore": "Restore pending purchases",
   "recharge.ios.restoreNone": "No pending purchases",

@@ -165,6 +165,7 @@
   "recharge.openHint": "การเติมเงินจะเปิดใช้บัญชีรวมของคุณ",
   "recharge.ios.priceLoading": "กำลังโหลดราคา…",
   "recharge.ios.storeUnavailable": "App Store ไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้งในภายหลัง",
+  "recharge.play.storeUnavailable": "Google Play ไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้งในภายหลัง",
   "recharge.ios.pending": "ส่งคำขอซื้อแล้ว กำลังยืนยัน…",
   "recharge.ios.restore": "กู้คืนรายการซื้อที่รอดำเนินการ",
   "recharge.ios.restoreNone": "ไม่มีรายการซื้อที่รอดำเนินการ",
