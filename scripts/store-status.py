@@ -50,6 +50,15 @@ def play(pkg="com.aiworkdeck.mobile"):
                 print(f"| {t['track']} | {rel.get('status')} | {','.join(rel.get('versionCodes', []))} | {rel.get('name', '')} |")
     finally:
         req("DELETE", f"{base}/{edit}")  # read-only: discard the edit
+    try:
+        prods = req("GET", f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{pkg}/inappproducts").get("inappproduct", [])
+        print(f"\n| in-app product | status | default price |\n|---|---|---|")
+        for pr in prods:
+            dp = pr.get("defaultPrice", {})
+            print(f"| {pr.get('sku')} | {pr.get('status')} | {dp.get('priceMicros', '')} {dp.get('currency', '')} |")
+        if not prods: print("| (none) | | |")
+    except Exception as e:
+        print(f"\nin-app products query failed: {type(e).__name__}: {e}")
 
 if __name__ == "__main__":
     appstore()
