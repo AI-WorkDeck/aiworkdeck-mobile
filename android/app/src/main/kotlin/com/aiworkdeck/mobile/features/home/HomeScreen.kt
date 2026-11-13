@@ -76,6 +76,7 @@ import com.aiworkdeck.mobile.services.Loc
 import com.aiworkdeck.mobile.services.LocationStamper
 import com.aiworkdeck.mobile.services.RecordingService
 import com.aiworkdeck.mobile.services.RecordingState
+import com.aiworkdeck.mobile.services.userFacingMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -263,7 +264,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
                 flash = true
                 storeScope.launch {
                     val photo = try { camera.takePhoto() } catch (e: CancellationException) { throw e } catch (_: Exception) { captureError = tr("capture.photoFailed"); return@launch }
-                    try { model.store(MediaKind.photo, photo, at, loc, target) } catch (e: CancellationException) { throw e } catch (_: Exception) { captureError = tr("capture.saveFailed") }
+                    try { model.store(MediaKind.photo, photo, at, loc, target) } catch (e: CancellationException) { throw e } catch (e: Exception) { captureError = tr("error.saveFailed", mapOf("reason" to userFacingMessage(e))) }
                 }
                 scope.launch { delay(120); flash = false }
             }
@@ -272,7 +273,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
                 val at = Instant.now(); val target = project; val location = loc
                 camera.startVideo { file ->
                     storeScope.launch {
-                        try { model.store(MediaKind.video, file, at, location, target) } catch (e: CancellationException) { throw e } catch (_: Exception) { captureError = tr("capture.saveFailed") }
+                        try { model.store(MediaKind.video, file, at, location, target) } catch (e: CancellationException) { throw e } catch (e: Exception) { captureError = tr("error.saveFailed", mapOf("reason" to userFacingMessage(e))) }
                     }
                 }
             }
