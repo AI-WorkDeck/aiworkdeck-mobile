@@ -165,6 +165,7 @@
   "recharge.openHint": "Bakiye yükleme birleşik hesabınızı açar",
   "recharge.ios.priceLoading": "Fiyatlar yükleniyor…",
   "recharge.ios.storeUnavailable": "App Store kullanılamıyor. Daha sonra tekrar deneyin.",
+  "recharge.play.storeUnavailable": "Google Play kullanılamıyor. Daha sonra tekrar deneyin.",
   "recharge.ios.pending": "Satın alma gönderildi, onaylanıyor…",
   "recharge.ios.restore": "Bekleyen satın almaları geri yükle",
   "recharge.ios.restoreNone": "Bekleyen satın alma yok",

@@ -165,6 +165,7 @@
   "recharge.openHint": "Recargar abre tu cuenta unificada",
   "recharge.ios.priceLoading": "Cargando precios…",
   "recharge.ios.storeUnavailable": "App Store no disponible. Inténtalo de nuevo más tarde.",
+  "recharge.play.storeUnavailable": "Google Play no disponible. Inténtalo de nuevo más tarde.",
   "recharge.ios.pending": "Compra enviada, confirmando…",
   "recharge.ios.restore": "Restaurar compras pendientes",
   "recharge.ios.restoreNone": "No hay compras pendientes",

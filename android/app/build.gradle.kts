@@ -110,8 +110,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil.compose); implementation(libs.coil.video)
-    // 微信 OpenSDK 只进大陆版（APP 支付，dev-board#428）；国际版不带这个包
+    // 微信 OpenSDK 只进大陆版（APP 支付，dev-board#428）；Google Play Billing 只进国际版（dev-board#665）
     "cnImplementation"(libs.wechat.opensdk)
+    "intlImplementation"(libs.play.billing)
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))

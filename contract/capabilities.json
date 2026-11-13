@@ -24,6 +24,6 @@
   "personalConsentVersion": "2026-10-27",
   "backupConsentVersion": "2026-10-11",
   "privacyPolicyVersion": "2026-10-29",
-  "androidPlayRecharge": false,
+  "androidPlayRecharge": true,
   "androidAppFiling": "京ICP备2024096997号-13A"
 }

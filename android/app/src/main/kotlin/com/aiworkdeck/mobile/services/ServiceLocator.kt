@@ -10,6 +10,7 @@ object ServiceLocator {
     lateinit var queue: UploadQueue
     lateinit var prefs: Prefs
     lateinit var archiveMoves: ArchiveMoveQueue
+    lateinit var playRecharge: PlayRechargeCoordinator
 
     fun queueOrNull(): UploadQueue? = if (::queue.isInitialized) queue else null
 }

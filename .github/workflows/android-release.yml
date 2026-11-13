@@ -10,6 +10,15 @@ on:
         description: "覆盖 versionName（留空则用 android/version.properties 里的默认值）"
         required: false
         type: string
+      playTrack:
+        description: "自动上传国际版 AAB 到 Google Play（留空仅构建产物）"
+        required: false
+        default: ""
+        type: choice
+        options:
+          - ""
+          - internal
+          - production
 permissions:
   contents: read
 jobs:
@@ -99,3 +108,19 @@ jobs:
           name: cn-release-apk
           path: android/cn-release.apk
           retention-days: 30
+
+      - name: 上传国际版 AAB 到 Google Play（可选）
+        if: inputs.playTrack != ''
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PLAY_TRACK: ${{ inputs.playTrack }}
+        run: |
+          set +x
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::Missing repository secret PLAY_SERVICE_ACCOUNT_JSON" >&2
+            exit 1
+          fi
+          python3 ../scripts/play-publish.py upload \
+            --aab intl-release.aab \
+            --track "$PLAY_TRACK" \
+            --notes-file ../android/store/listing/en-US/release_notes.txt

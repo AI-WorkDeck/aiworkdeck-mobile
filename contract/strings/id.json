@@ -165,6 +165,7 @@
   "recharge.openHint": "Pengisian saldo membuka akun terpadu Anda",
   "recharge.ios.priceLoading": "Memuat harga…",
   "recharge.ios.storeUnavailable": "App Store tidak tersedia. Coba lagi nanti.",
+  "recharge.play.storeUnavailable": "Google Play tidak tersedia. Coba lagi nanti.",
   "recharge.ios.pending": "Pembelian dikirim, mengonfirmasi…",
   "recharge.ios.restore": "Pulihkan pembelian tertunda",
   "recharge.ios.restoreNone": "Tidak ada pembelian tertunda",

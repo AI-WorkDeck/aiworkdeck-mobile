@@ -165,6 +165,7 @@
   "recharge.openHint": "रिचार्ज करने पर आपका यूनिफाइड खाता खुलता है",
   "recharge.ios.priceLoading": "कीमतें लोड हो रही हैं…",
   "recharge.ios.storeUnavailable": "App Store उपलब्ध नहीं है। बाद में फिर कोशिश करें।",
+  "recharge.play.storeUnavailable": "Google Play उपलब्ध नहीं है। बाद में फिर कोशिश करें।",
   "recharge.ios.pending": "खरीद सबमिट हो गई, पुष्टि हो रही है…",
   "recharge.ios.restore": "लंबित खरीदारियाँ पुनर्स्थापित करें",
   "recharge.ios.restoreNone": "कोई लंबित खरीदारी नहीं",

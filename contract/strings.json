@@ -3651,6 +3651,28 @@
     "hi": "App Store उपलब्ध नहीं है। बाद में फिर कोशिश करें।",
     "ar": "App Store غير متاح. حاول مجدداً لاحقاً."
   },
+  "recharge.play.storeUnavailable": {
+    "zh-Hans": "暂时无法连接 Google Play，请稍后再试",
+    "zh-Hant": "暫時無法連線 Google Play，請稍後再試",
+    "en": "Google Play unavailable. Try again later.",
+    "ja": "Google Playを利用できません。後でもう一度お試しください。",
+    "ko": "Google Play를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+    "th": "Google Play ไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้งในภายหลัง",
+    "ms": "Google Play tidak tersedia. Cuba lagi nanti.",
+    "id": "Google Play tidak tersedia. Coba lagi nanti.",
+    "vi": "Google Play không khả dụng. Vui lòng thử lại sau.",
+    "fr": "Google Play indisponible. Réessayez plus tard.",
+    "de": "Google Play nicht verfügbar. Bitte später erneut versuchen.",
+    "es": "Google Play no disponible. Inténtalo de nuevo más tarde.",
+    "pt-BR": "Google Play indisponível. Tente novamente mais tarde.",
+    "it": "Google Play non disponibile. Riprova più tardi.",
+    "ru": "Google Play недоступен. Попробуйте позже.",
+    "el": "Το Google Play δεν είναι διαθέσιμο. Δοκιμάστε ξανά αργότερα.",
+    "tr": "Google Play kullanılamıyor. Daha sonra tekrar deneyin.",
+    "nl": "Google Play niet beschikbaar. Probeer het later opnieuw.",
+    "hi": "Google Play उपलब्ध नहीं है। बाद में फिर कोशिश करें।",
+    "ar": "Google Play غير متاح. حاول مجدداً لاحقاً."
+  },
   "recharge.ios.pending": {
     "zh-Hans": "购买已提交，正在确认到账…",
     "zh-Hant": "購買已提交，正在確認到帳…",

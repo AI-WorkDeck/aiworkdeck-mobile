@@ -165,6 +165,7 @@
   "recharge.openHint": "Tambah nilai akan membuka akaun menyeluruh anda",
   "recharge.ios.priceLoading": "Sedang memuatkan harga…",
   "recharge.ios.storeUnavailable": "App Store tidak tersedia. Cuba lagi nanti.",
+  "recharge.play.storeUnavailable": "Google Play tidak tersedia. Cuba lagi nanti.",
   "recharge.ios.pending": "Pembelian dihantar, sedang mengesahkan…",
   "recharge.ios.restore": "Pulihkan pembelian yang belum selesai",
   "recharge.ios.restoreNone": "Tiada pembelian yang belum selesai",

@@ -165,6 +165,7 @@
   "recharge.openHint": "Nạp tiền sẽ mở tài khoản hợp nhất của bạn",
   "recharge.ios.priceLoading": "Đang tải giá…",
   "recharge.ios.storeUnavailable": "App Store không khả dụng. Vui lòng thử lại sau.",
+  "recharge.play.storeUnavailable": "Google Play không khả dụng. Vui lòng thử lại sau.",
   "recharge.ios.pending": "Đã gửi yêu cầu mua hàng, đang xác nhận…",
   "recharge.ios.restore": "Khôi phục các giao dịch đang chờ",
   "recharge.ios.restoreNone": "Không có giao dịch nào đang chờ",

@@ -432,15 +432,23 @@ ${tr}
 `
 }
 /**
- * 安卓档位：只出 wxpayApp 段（见 renderTsProducts 的说明）。微信 APP 支付下单只传金额 +
- * channel=wxpay-app，没有商品 id，所以只有面值（整数分，CNY）。
+ * 安卓档位：大陆版 wxpayApp（无商品 id）+ 国际版 googleplay（Play 消耗型商品）。
  */
 function renderKtProducts(c) {
+  const gpRows = (c.products.googleplay ?? [])
+    .map((p) => `        ContractProduct(productId = ${kq(p.productId)}, amountCents = ${p.amountCents}),`)
+    .join('\n')
   return H('//') + `package com.aiworkdeck.contract
+
+data class ContractProduct(val productId: String, val amountCents: Int)
 
 object ContractProducts {
     /** 微信支付 APP 支付的充值档位，整数分（CNY） */
     val wxpayApp: List<Long> = listOf(${(c.products.wxpayApp ?? []).map((p) => `${p.amountCents}L`).join(', ')})
+    /** Google Play 消耗型充值的档位（国际版 USD），整数分 */
+    val googleplay: List<ContractProduct> = listOf(
+${gpRows}
+    )
 }
 `
 }

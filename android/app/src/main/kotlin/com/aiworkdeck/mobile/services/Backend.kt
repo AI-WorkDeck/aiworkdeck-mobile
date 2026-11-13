@@ -81,10 +81,32 @@ class Backend(
         CloudEpoch.reconnect(request, client)
     }
     suspend fun billingBalance(): BillingBalance = bare("/api/mobile/billing/balance")
-    /** 微信 APP 支付建单（dev-board#428）：只传金额 + 幂等键 + channel=wxpay-app。成功是裸对象，失败是信封（code 1 + kind）。 */
-    suspend fun billingRecharge(amountCents: Long, idempotencyKey: String): RechargeOrder {
+    /** 充值建单：大陆默认 channel=wxpay-app，Play 传 channel=googleplay + productId。成功是裸对象，失败是信封（code 1 + kind）。 */
+    suspend fun billingRecharge(
+        amountCents: Long,
+        idempotencyKey: String,
+        channel: String = "wxpay-app",
+        productId: String? = null,
+    ): RechargeOrder {
         val result = json.parseToJsonElement(post("/api/mobile/billing/recharge", buildJsonObject {
-            put("amountCents", amountCents); put("idempotencyKey", idempotencyKey); put("channel", "wxpay-app")
+            put("amountCents", amountCents)
+            put("idempotencyKey", idempotencyKey)
+            put("channel", channel)
+            if (!productId.isNullOrBlank()) put("productId", productId)
+        })).jsonObject
+        checkEnvelopeCode(result)
+        return json.decodeFromJsonElement(result)
+    }
+    /** Google Play 验单入账（dev-board#665）。只有 paid=true 端上才 consumeAsync。 */
+    suspend fun billingConfirmGooglePlay(
+        productId: String,
+        purchaseToken: String,
+        outTradeNo: String? = null,
+    ): RechargeStatus {
+        val result = json.parseToJsonElement(post("/api/mobile/billing/recharge/confirm-googleplay", buildJsonObject {
+            if (!outTradeNo.isNullOrBlank()) put("outTradeNo", outTradeNo.trim())
+            put("productId", productId)
+            put("purchaseToken", purchaseToken)
         })).jsonObject
         checkEnvelopeCode(result)
         return json.decodeFromJsonElement(result)

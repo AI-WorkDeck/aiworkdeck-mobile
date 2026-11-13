@@ -57,6 +57,7 @@ import com.aiworkdeck.mobile.services.ApiError
 import com.aiworkdeck.mobile.services.EnvelopeKind
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 import com.aiworkdeck.mobile.services.showsExternalRecharge
+import com.aiworkdeck.mobile.services.showsPlayRecharge
 import com.aiworkdeck.mobile.services.WxPayChannel
 import com.aiworkdeck.mobile.services.wxpayAppEnabled
 import com.aiworkdeck.mobile.services.BillingBalance
@@ -106,14 +107,27 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
     var showRechargeNotice by remember { mutableStateOf(false) }
     // 微信 APP 支付（dev-board#428）：运行时开关见 wxpayAppEnabled；关着时入口行为与今天完全一样（只弹说明）
     var rechargeOpen by remember { mutableStateOf(false) }
+    // Google Play 消耗型内购（dev-board#665）：仅 intl flavor + 国际区账号
+    var playRechargeOpen by remember { mutableStateOf(false) }
     var balanceKind by remember { mutableStateOf<EnvelopeKind?>(null) }
     // 充值确认到账后 +1：重拉余额、重建后付费段（欠款随之刷新）
     var billingReload by remember { mutableStateOf(0) }
+    val canPlayRecharge = showsPlayRecharge(BuildConfig.FLAVOR, region) &&
+        balance?.billingLine != "bqt" &&
+        balanceKind != EnvelopeKind.DISABLED &&
+        balanceKind != EnvelopeKind.REVIEW_ACCOUNT
     val openRecharge = {
-        // 余额没拉到时不知道是不是包晴天律师（只能在包晴天 App 充值），宁可只给说明也不放真实扣款入口
-        if (balance != null && balance?.billingLine != "bqt" &&
-            wxpayAppEnabled(BuildConfig.FLAVOR, region, BuildConfig.WXPAY_APP_ID, WxPayChannel.serverUnavailable, balanceKind)) rechargeOpen = true
-        else showRechargeNotice = true
+        if (canPlayRecharge) {
+            playRechargeOpen = true
+        } else if (BuildConfig.FLAVOR != "intl") {
+            // 余额没拉到时不知道是不是包晴天律师（只能在包晴天 App 充值），宁可只给说明也不放真实扣款入口
+            if (balance != null && balance?.billingLine != "bqt" &&
+                wxpayAppEnabled(BuildConfig.FLAVOR, region, BuildConfig.WXPAY_APP_ID, WxPayChannel.serverUnavailable, balanceKind)) {
+                rechargeOpen = true
+            } else {
+                showRechargeNotice = true
+            }
+        }
     }
     var showLanguagePicker by remember { mutableStateOf(false) }
     var confirmingDelete by remember { mutableStateOf(false) }
@@ -176,7 +190,9 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                         // NOT_CONNECTED/DISABLED/REVIEW_ACCOUNT 与「还没拉完」共用 hideBalanceRow
                         // 默认 true：这三个终态整行不渲染，不给任何误导性的补救指引；未知态借同一
                         // 默认值不闪烁（N6）。
-                        val showRecharge = balance?.billingLine != "bqt" && showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL)
+                        val showRecharge = canPlayRecharge || (
+                            balance?.billingLine != "bqt" && showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL)
+                        )
                         if (!hideBalanceRow) {
                             // 充值紧跟在金额右边，像 iOS：一眼看到余额，顺手就能充。
                             InfoRow(tr("balance.title"), balanceCaption(balance, balanceErrorKey)) {
@@ -206,7 +222,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                             Text(tr("bqt.rechargeInBqt"), style = Fonts.small(), color = Tk.L.fgMuted)
                         } else {
                             androidx.compose.runtime.key(billingReload) {
-                                PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = openRecharge)
+                                PostpaidSection(canRepay = showRecharge, repay = openRecharge)
                             }
                         }
                     }
@@ -304,6 +320,12 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
             RechargeScreen(
                 onClose = { paid -> rechargeOpen = false; if (paid) billingReload++ },
                 onChannelUnavailable = { WxPayChannel.serverUnavailable = true; rechargeOpen = false; showRechargeNotice = true },
+            )
+        }
+
+        if (playRechargeOpen) {
+            PlayRechargeScreen(
+                onClose = { playRechargeOpen = false; billingReload++ },
             )
         }
 

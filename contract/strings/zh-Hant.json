@@ -165,6 +165,7 @@
   "recharge.openHint": "儲值後即開通統一帳戶",
   "recharge.ios.priceLoading": "正在取得價格…",
   "recharge.ios.storeUnavailable": "暫時無法連線 App Store，請稍後再試",
+  "recharge.play.storeUnavailable": "暫時無法連線 Google Play，請稍後再試",
   "recharge.ios.pending": "購買已提交，正在確認到帳…",
   "recharge.ios.restore": "恢復未完成的購買",
   "recharge.ios.restoreNone": "沒有未完成的購買",
