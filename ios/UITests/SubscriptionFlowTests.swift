@@ -42,6 +42,7 @@ final class SubscriptionFlowTests: XCTestCase {
         defer { app.terminate() }
         let buy = app.buttons["subscription.buy"]
         XCTAssertTrue(buy.waitForExistence(timeout: 20))
+        XCTAssertTrue(buy.label.contains("9.90"), "Eligible accounts must see ¥9.90 intro offer price: \(buy.label)")
         XCTAssertTrue(buy.isHittable)
         XCTAssertFalse(app.alerts.firstMatch.exists, "subscription fixture must not recover recording alerts")
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -55,7 +56,9 @@ final class SubscriptionFlowTests: XCTestCase {
         XCTAssertEqual(session.allTransactions().count, 1)
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["subscription.buy"].waitForExistence(timeout: 20))
+        let relaunchedBuy = app.buttons["subscription.buy"]
+        XCTAssertTrue(relaunchedBuy.waitForExistence(timeout: 20))
+        XCTAssertTrue(relaunchedBuy.label.contains("149.00"), "Consumed intro offer must fall back to ¥149.00: \(relaunchedBuy.label)")
         let restore = app.buttons["subscription.restore"]
         XCTAssertTrue(restore.isHittable)
         restore.tap()
@@ -86,9 +89,6 @@ final class SubscriptionFlowTests: XCTestCase {
             return
         }
         XCTAssertGreaterThanOrEqual(session.allTransactions().count, 2)
-        let renewal = try XCTUnwrap(session.allTransactions().filter {
-            $0.productIdentifier == transaction.productIdentifier && $0.identifier != originalIdentifier
-        }.max { $0.purchaseDate < $1.purchaseDate })
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["subscription.buy"].waitForExistence(timeout: 20))
         app.buttons["subscription.restore"].tap()
@@ -96,9 +96,20 @@ final class SubscriptionFlowTests: XCTestCase {
         let restoredRenewalResult = XCTWaiter.wait(for: [restoredRenewal], timeout: 20)
         XCTAssertEqual(restoredRenewalResult, .completed)
         guard restoredRenewalResult == .completed else { return }
-        try session.disableAutoRenewForTransaction(identifier: renewal.identifier)
+        // Advance past the 3-month payAsYouGo intro offer before disabling auto-renew on the regular renewal.
+        for _ in 0..<2 {
+            try session.forceRenewalOfSubscription(productIdentifier: "pro.monthly.cny.149")
+        }
+        let postIntroRenewed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            session.allTransactions().filter { $0.productIdentifier == transaction.productIdentifier }.count >= 4
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [postIntroRenewed], timeout: 20), .completed)
+        let latestRenewal = try XCTUnwrap(session.allTransactions().filter {
+            $0.productIdentifier == transaction.productIdentifier && $0.identifier != originalIdentifier
+        }.max { $0.identifier < $1.identifier })
+        try session.disableAutoRenewForTransaction(identifier: latestRenewal.identifier)
         XCTAssertFalse(try XCTUnwrap(session.allTransactions().first {
-            $0.identifier == renewal.identifier
+            $0.identifier == latestRenewal.identifier
         }).autoRenewingEnabled)
         try session.expireSubscription(productIdentifier: "pro.monthly.cny.149")
         app.terminate(); app.launch()
