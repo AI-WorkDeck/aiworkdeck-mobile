@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -147,7 +149,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     // 手机号注册的账号可能两个都空：名字位不能空着，至少告诉用户「已登录」
                     val name = account?.let { a ->
                         listOf(a.displayName, a.username).map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: tr("settings.signedIn")
-                    } ?: DASH
+                    } ?: tr("settings.signedIn")
                     Text(name, style = Fonts.heading(), color = Tk.L.fg)
                     account?.username?.trim()?.takeIf { it.isNotEmpty() && it != name }?.let { Text(it, style = Fonts.nano(), color = Tk.L.fgFaint) }
                 }
@@ -172,6 +174,8 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                         if (showRecharge && balanceNotConnected) {
                             Text(tr("recharge.openHint"), style = Fonts.nano(), color = Tk.L.fgFaint)
                         }
+                        // 订阅状态与 iOS 同一行；安卓尚无商店内购通道，只读、不放购买入口（《上架和渠道》）。
+                        if (balance != null) InfoRow(tr("subscription.store.title"), tr(if (balance?.subscription?.active == true) "subscription.status.active" else "subscription.status.none"))
                         balance?.subscription?.takeIf { it.active }?.let { sub ->
                             InfoRow(tr("subscription.available"), creditsCaption(sub.availableCents))
                             InfoRow(tr("subscription.weekly"), "${creditsCaption(sub.weeklyUsedCents)} / ${creditsCaption(sub.weeklyLimitCents)}")
@@ -187,7 +191,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                         if (balance?.billingLine == "bqt") {
                             Text(tr("bqt.rechargeInBqt"), style = Fonts.small(), color = Tk.L.fgMuted)
                         } else {
-                            PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { uriHandler.openUri("https://aiworkdeck.com/zh/account#wallet") })
+                            PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { showRechargeNotice = true })
                         }
                     }
                 }
@@ -208,7 +212,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     }
                     // 不计费区域也照旧渲染后付费段（它自己决定显示什么），参数不变。
                     if (!region.showsBilling) {
-                        PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { uriHandler.openUri("https://aiworkdeck.com/zh/account#wallet") })
+                        PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = { showRechargeNotice = true })
                     }
                 }
 
@@ -284,7 +288,6 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     modifier = Modifier.heightIn(min = Tk.touchMin).noRipple { confirmingDelete = true }
                         .wrapContentHeight(),
                 )
-                deleteError?.let { Text(it, style = Fonts.nano(), color = Tk.S.failed) }
             }
         }
 
@@ -331,6 +334,17 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
             )
         }
 
+        // 注销进行中：整屏遮住，免得在等服务端时又点了别的（与 iOS 同）
+        if (deleting) Box(Modifier.fillMaxSize().background(Tk.L.bg.copy(alpha = 0.92f)).clickable(enabled = true, onClick = {}), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
+                CircularProgressIndicator(color = Tk.L.accent)
+                Text(tr("settings.deleteAccount.deleting"), style = Fonts.body(), color = Tk.L.fg)
+            }
+        }
+        deleteError?.let { message ->
+            AlertDialog(onDismissRequest = { deleteError = null }, title = { Text(tr("settings.deleteAccount.failed")) }, text = { Text(message) },
+                confirmButton = { TextButton(onClick = { deleteError = null }) { Text(tr("common.ok")) } })
+        }
         // 不可逆，所以走二次确认；文案把「删什么、不删什么」都说全——
         // 只写「无法恢复」等于没说清代价。
         if (confirmingDelete) {
@@ -345,12 +359,12 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                             deleting = true
                             scope.launch {
                                 try {
-                                    model.deleteAccount()
                                     confirmingDelete = false
+                                    model.deleteAccount()
                                     onClose()
                                 } catch (e: Exception) {
-                                    deleteError = userFacingMessage(e)
                                     confirmingDelete = false
+                                    deleteError = userFacingMessage(e)
                                 }
                                 deleting = false
                             }
