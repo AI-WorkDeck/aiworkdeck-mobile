@@ -1,0 +1,23 @@
+name: store-status
+# Read-only: prints App Store Connect versions/builds and Google Play tracks to the job summary.
+# Never builds, uploads, edits or submits anything.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet "pyjwt[crypto]"
+      - name: Query stores
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set +x
+          echo "$ASC_KEY_P8_B64" | base64 --decode > "$RUNNER_TEMP/asc.p8"
+          ASC_KEY_PATH="$RUNNER_TEMP/asc.p8" python3 scripts/store-status.py | tee -a "$GITHUB_STEP_SUMMARY"
