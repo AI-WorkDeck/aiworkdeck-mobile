@@ -102,12 +102,12 @@ class BackendTest {
         assertNull(session.current())
     }
 
-    @Test fun verifyLoginCodeDecodesEnvelopeAndSavesSession() = runTest {
+    @Test fun loginDecodesEnvelopeAndSavesSession() = runTest {
         server.enqueue(MockResponse().setBody(
             """{"code":0,"data":{"sessionId":"sess-1","isNewUser":true,"user":{"id":1,"username":"u","displayName":"U"}}}"""
         ))
 
-        val result = backend.verifyLoginCode("13800000000", "1234")
+        val result = backend.accountLogin("13800000000", "synthetic")
 
         assertEquals("sess-1", result.sessionId)
         assertEquals(true, result.isNewUser)

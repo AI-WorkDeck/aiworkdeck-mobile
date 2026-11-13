@@ -378,9 +378,6 @@
   "login.accountWeb": "إعداد الحساب",
   "login.phoneTitle": "الدخول برقم الهاتف",
   "login.working": "جارٍ تسجيل الدخول…",
-  "login.review": "مراجعة التطبيق",
-  "login.reviewCredential": "مراجعة بيانات الاعتماد",
-  "login.passwordMode": "العودة إلى الدخول بكلمة المرور",
   "login.copyWebAddress": "نسخ عنوان الموقع الإلكتروني",
   "login.webFallback": "انسخ هذا العنوان وافتحه في متصفحك. أكمل الإعداد، ثم عد لتسجيل الدخول بكلمة المرور.",
   "rec.pause.video.segmentNote": "الإيقاف المؤقت يحفظ هذا المقطع. الاستئناف يبدأ مقطعًا جديدًا.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "مفعّل",
   "postpaid.status.restricted": "مقيّد",
   "login.consent": "لقد قرأت و أوافق على",
-  "login.terms": "اتفاقية المستخدم"
+  "login.terms": "اتفاقية المستخدم",
+  "login.consentRequired": "يرجى قراءة شروط الاستخدام وسياسة الخصوصية والموافقة عليهما أولاً"
 }

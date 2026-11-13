@@ -378,9 +378,6 @@
   "login.accountWeb": "Persediaan akaun",
   "login.phoneTitle": "Log masuk telefon",
   "login.working": "Sedang log masuk…",
-  "login.review": "Ulasan aplikasi",
-  "login.reviewCredential": "Semak kelayakan",
-  "login.passwordMode": "Kembali ke log masuk kata laluan",
   "login.copyWebAddress": "Salin alamat laman web",
   "login.webFallback": "Salin alamat ini dan bukanya dalam pelayar anda. Selesaikan persediaan, kemudian kembali untuk log masuk dengan kata laluan anda.",
   "rec.pause.video.segmentNote": "Jeda akan menyimpan klip ini. Sambungan semula akan memulakan klip baharu.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "Aktif",
   "postpaid.status.restricted": "Terhad",
   "login.consent": "Saya telah membaca dan bersetuju dengan",
-  "login.terms": "Perjanjian Pengguna"
+  "login.terms": "Perjanjian Pengguna",
+  "login.consentRequired": "Sila baca dan terima Terma Penggunaan dan Dasar Privasi terlebih dahulu"
 }

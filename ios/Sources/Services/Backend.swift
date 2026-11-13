@@ -290,30 +290,12 @@ actor API: ArchiveMoveServing {
                            body: ["phone": phone], as: Empty.self)
     }
 
-    func verifyLoginCode(phone: String, code: String) async throws -> LoginResult {
-        let r = try await post("/api/auth/sms-login/verify",
-                               body: ["phone": phone, "code": code], as: LoginResult.self)
-        guard let r else { throw APIError(message: tr("error.loginNoData")) }
-        try await CloudEpoch.shared.accountChanged()
-        SessionStore.current = r.sessionId
-        return r
-    }
-
     /// 邮箱验证码登录发码。**只对已注册且已验证邮箱的账号发信**——后端对未注册地址
     /// 同样返回成功（不发信），免得这个匿名端点变成账号枚举器。所以「点了没收到」
     /// 既可能是没注册，也可能是投递慢，界面上不能替后端断言是哪一种。
     func sendMailLoginCode(email: String) async throws {
         _ = try await post("/api/auth/mail-login/send-code",
                            body: ["email": email], as: Empty.self)
-    }
-
-    func verifyMailLoginCode(email: String, code: String) async throws -> LoginResult {
-        let r = try await post("/api/auth/mail-login/verify",
-                               body: ["email": email, "code": code], as: LoginResult.self)
-        guard let r else { throw APIError(message: tr("error.loginNoData")) }
-        try await CloudEpoch.shared.accountChanged()
-        SessionStore.current = r.sessionId
-        return r
     }
 
     /// 注销账号：删掉云端这个账号及其全部数据。

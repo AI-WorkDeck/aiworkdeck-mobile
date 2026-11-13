@@ -378,9 +378,6 @@
   "login.accountWeb": "账户设置",
   "login.phoneTitle": "手机号登录",
   "login.working": "登录中…",
-  "login.review": "应用商店审核",
-  "login.reviewCredential": "审核凭证",
-  "login.passwordMode": "返回密码登录",
   "login.copyWebAddress": "复制官网地址",
   "login.webFallback": "请复制地址，在浏览器中打开并完成设置，然后返回密码登录。",
   "rec.pause.video.segmentNote": "暂停会保存当前片段，继续后开始新片段。",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "已开通",
   "postpaid.status.restricted": "受限",
   "login.consent": "我已阅读并同意",
-  "login.terms": "用户协议"
+  "login.terms": "用户协议",
+  "login.consentRequired": "请先阅读并勾选同意用户协议和隐私政策"
 }

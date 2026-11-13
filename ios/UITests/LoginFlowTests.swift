@@ -26,11 +26,7 @@ final class LoginFlowTests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         password.typeText("synthetic-password")
         app.swipeUp()
-        let review = app.buttons["login.review"]
-        XCTAssertTrue(review.isHittable)
-        review.tap()
-        XCTAssertFalse(app.buttons["login.submit"].isEnabled)
-        review.tap()
+        XCTAssertFalse(app.buttons["login.review"].exists)
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "Password login and account setup entries"
         attachment.lifetime = .keepAlways

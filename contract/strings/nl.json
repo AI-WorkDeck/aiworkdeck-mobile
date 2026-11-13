@@ -378,9 +378,6 @@
   "login.accountWeb": "Account instellen",
   "login.phoneTitle": "Aanmelden met telefoon",
   "login.working": "Aanmelden…",
-  "login.review": "App-review",
-  "login.reviewCredential": "Referentie beoordelen",
-  "login.passwordMode": "Terug naar aanmelden met wachtwoord",
   "login.copyWebAddress": "Websiteadres kopiëren",
   "login.webFallback": "Kopieer dit adres en open het in je browser. Voltooi de instellingen en kom daarna terug om je aan te melden met je wachtwoord.",
   "rec.pause.video.segmentNote": "Pauzeren slaat deze clip op. Hervatten start een nieuwe clip.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "Aan",
   "postpaid.status.restricted": "Beperkt",
   "login.consent": "Ik heb gelezen en ga akkoord met de",
-  "login.terms": "Gebruikersovereenkomst"
+  "login.terms": "Gebruikersovereenkomst",
+  "login.consentRequired": "Lees en accepteer eerst de Gebruiksvoorwaarden en het Privacybeleid"
 }

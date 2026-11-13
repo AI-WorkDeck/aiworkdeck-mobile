@@ -378,9 +378,6 @@
   "login.accountWeb": "アカウント設定",
   "login.phoneTitle": "電話番号でサインイン",
   "login.working": "サインイン中…",
-  "login.review": "アプリ審査",
-  "login.reviewCredential": "資格情報の確認",
-  "login.passwordMode": "パスワードでのサインインに戻る",
   "login.copyWebAddress": "ウェブサイトのアドレスをコピー",
   "login.webFallback": "このアドレスをコピーしてブラウザで開いてください。設定を完了したら、アプリに戻ってパスワードでサインインしてください。",
   "rec.pause.video.segmentNote": "一時停止するとこのクリップが保存されます。再開すると新しいクリップが開始されます。",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "利用中",
   "postpaid.status.restricted": "制限中",
   "login.consent": "読み、同意します：",
-  "login.terms": "利用規約"
+  "login.terms": "利用規約",
+  "login.consentRequired": "先に利用規約とプライバシーポリシーを読み、同意してください"
 }

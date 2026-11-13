@@ -378,9 +378,6 @@
   "login.accountWeb": "Account setup",
   "login.phoneTitle": "Phone sign-in",
   "login.working": "Signing in…",
-  "login.review": "App review",
-  "login.reviewCredential": "Review credential",
-  "login.passwordMode": "Back to password sign-in",
   "login.copyWebAddress": "Copy website address",
   "login.webFallback": "Copy this address and open it in your browser. Finish setup, then return to sign in with your password.",
   "rec.pause.video.segmentNote": "Pausing saves this clip. Resuming starts a new clip.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "On",
   "postpaid.status.restricted": "Restricted",
   "login.consent": "I have read and agree to the",
-  "login.terms": "User Agreement"
+  "login.terms": "User Agreement",
+  "login.consentRequired": "Please read and accept the User Agreement and Privacy Policy first"
 }

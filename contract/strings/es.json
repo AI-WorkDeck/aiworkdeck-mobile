@@ -378,9 +378,6 @@
   "login.accountWeb": "Configuración de la cuenta",
   "login.phoneTitle": "Inicio de sesión con teléfono",
   "login.working": "Iniciando sesión…",
-  "login.review": "Revisión de la app",
-  "login.reviewCredential": "Revisar credenciales",
-  "login.passwordMode": "Volver al inicio de sesión con contraseña",
   "login.copyWebAddress": "Copiar dirección del sitio web",
   "login.webFallback": "Copie esta dirección y ábrala en su navegador. Finalice la configuración y luego vuelva para iniciar sesión con su contraseña.",
   "rec.pause.video.segmentNote": "Pausar guarda este clip. Reanudar inicia un nuevo clip.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "Activado",
   "postpaid.status.restricted": "Restringido",
   "login.consent": "He leído y acepto el",
-  "login.terms": "Acuerdo de usuario"
+  "login.terms": "Acuerdo de usuario",
+  "login.consentRequired": "Primero lee y acepta las Condiciones de uso y la Política de privacidad"
 }

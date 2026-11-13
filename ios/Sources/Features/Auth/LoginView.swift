@@ -37,7 +37,6 @@ struct LoginView: View {
     @State private var identity = ""
     @State private var password = ""
     @State private var busy = false
-    @State private var reviewMode = false
     @State private var error: String?
 
     var body: some View {
@@ -76,7 +75,7 @@ struct LoginView: View {
                     .textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .disabled(busy).accessibilityIdentifier("login.identity")
                 Hairline()
-                SecureField(tr(reviewMode ? "login.reviewCredential" : "login.passwordPlaceholder"), text: $password)
+                SecureField(tr("login.passwordPlaceholder"), text: $password)
                     .textContentType(.password).disabled(busy).accessibilityIdentifier("login.password")
                 Hairline()
                 if let error { Text(error).font(T.F.micro()).foregroundStyle(T.S.failed) }
@@ -85,7 +84,6 @@ struct LoginView: View {
                         .frame(minHeight: T.touchMin)
                 }.disabled(busy || identity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
                     .accessibilityIdentifier("login.submit")
-                Button(tr(reviewMode ? "login.passwordMode" : "login.review")) { reviewMode.toggle(); password = ""; error = nil }.frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.review")
                 Button(tr("login.register")) { openAccountFlow("register") }.frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.register")
                 Button(tr("login.forgotPassword")) { openAccountFlow("reset") }.frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.reset")
                 Text(tr(region == .cn && method == .email ? "login.legacyEmailHint" : "login.webHint"))
@@ -104,10 +102,10 @@ struct LoginView: View {
         .onChange(of: method) { _, _ in clearInputs() }
     }
 
-    private func clearInputs() { identity = ""; password = ""; error = nil; reviewMode = false }
+    private func clearInputs() { identity = ""; password = ""; error = nil }
 
     private func openAccountFlow(_ flow: String) {
-        password = ""; error = nil; reviewMode = false
+        password = ""; error = nil
         let url = accountFlowURL(region: region, method: method, flow: flow)
         openURL(url) { accepted in if !accepted { error = tr("login.webError") } }
     }
@@ -118,14 +116,7 @@ struct LoginView: View {
         defer { busy = false }
         do {
             let account = identity.trimmingCharacters(in: .whitespacesAndNewlines)
-            let result: LoginResult
-            if reviewMode {
-                result = method == .phone
-                    ? try await API.shared.verifyLoginCode(phone: account, code: password)
-                    : try await API.shared.verifyMailLoginCode(email: account, code: password)
-            } else {
-                result = try await API.shared.accountLogin(account: account, password: password)
-            }
+            let result = try await API.shared.accountLogin(account: account, password: password)
             password = ""
             await model.didLogin(result)
         } catch { self.error = error.localizedDescription }

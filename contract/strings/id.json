@@ -378,9 +378,6 @@
   "login.accountWeb": "Pengaturan akun",
   "login.phoneTitle": "Masuk dengan telepon",
   "login.working": "Sedang masuk…",
-  "login.review": "Tinjauan aplikasi",
-  "login.reviewCredential": "Tinjau kredensial",
-  "login.passwordMode": "Kembali ke masuk dengan kata sandi",
   "login.copyWebAddress": "Salin alamat situs web",
   "login.webFallback": "Salin alamat ini dan buka di browser Anda. Selesaikan pengaturan, lalu kembali untuk masuk dengan kata sandi Anda.",
   "rec.pause.video.segmentNote": "Jeda akan menyimpan klip ini. Melanjutkan akan memulai klip baru.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "Aktif",
   "postpaid.status.restricted": "Dibatasi",
   "login.consent": "Saya telah membaca dan menyetujui",
-  "login.terms": "Perjanjian Pengguna"
+  "login.terms": "Perjanjian Pengguna",
+  "login.consentRequired": "Harap baca dan setujui Ketentuan Penggunaan dan Kebijakan Privasi terlebih dahulu"
 }

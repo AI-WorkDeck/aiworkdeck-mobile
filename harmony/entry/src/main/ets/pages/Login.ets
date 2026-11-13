@@ -24,7 +24,6 @@ export struct Login {
   @State identity: string = ''
   @State password: string = ''
   @State busy: boolean = false
-  @State reviewMode: boolean = false
   @State showLanguagePicker: boolean = false
 
   build() {
@@ -85,14 +84,12 @@ export struct Login {
             .type(this.method === LoginMethod.phone ? InputType.PhoneNumber : InputType.Email)
             .fontColor(Tk.L.fg).backgroundColor(Tk.L.bg).caretColor(Tk.L.accent)
             .enabled(!this.busy).onChange((value: string): void => { this.identity = value.trim() })
-          TextInput({ text: this.password, placeholder: this.t(this.reviewMode ? 'login.reviewCredential' : 'login.passwordPlaceholder') })
+          TextInput({ text: this.password, placeholder: this.t('login.passwordPlaceholder') })
             .type(InputType.Password).fontColor(Tk.L.fg).backgroundColor(Tk.L.bg).caretColor(Tk.L.accent).enabled(!this.busy)
             .onChange((value: string): void => { this.password = value })
           PrimaryButton({ label: this.t(this.busy ? 'login.working' : 'login.title'),
             isEnabled: !this.busy && this.identity.trim().length > 0 && this.password.length > 0,
             onTap: (): void => this.signIn() })
-          Text(this.t(this.reviewMode ? 'login.passwordMode' : 'login.review')).fontColor(Tk.L.fgMuted).height(Tk.touchMin)
-            .onClick((): void => { if (!this.busy) { this.reviewMode = !this.reviewMode; this.password = '' } })
           Text(this.t('login.register')).fontColor(Tk.L.accent).height(Tk.touchMin)
             .onClick((): void => this.openFlow('register'))
           Text(this.t('login.forgotPassword')).fontColor(Tk.L.accent).height(Tk.touchMin)
@@ -114,17 +111,17 @@ export struct Login {
   }
   private pick(method: LoginMethod): void {
     if (this.busy || this.method === method) return
-    this.method = method; this.identity = ''; this.password = ''; this.reviewMode = false
+    this.method = method; this.identity = ''; this.password = ''
   }
   private switchRegion(): void {
     if (this.busy) return
     this.region = this.region === AccountRegion.cn ? AccountRegion.intl : AccountRegion.cn
-    this.method = defaultLoginMethodOf(this.region); this.identity = ''; this.password = ''; this.reviewMode = false
+    this.method = defaultLoginMethodOf(this.region); this.identity = ''; this.password = ''
     ServiceLocator.setRegion(this.region).catch((e: Object): void => { toast(this.getUIContext(), errorText(e)) })
   }
   private openFlow(flow: string): void {
     if (this.busy) return
-    this.password = ''; this.reviewMode = false
+    this.password = ''
     const want: Want = { action: 'ohos.want.action.viewData', entities: ['entity.system.browsable'], uri: accountFlowUrl(this.region, this.method, flow) }
     const ctx: common.UIAbilityContext = ServiceLocator.ctx as common.UIAbilityContext
     ctx.startAbility(want).catch((): void => { toast(this.getUIContext(), this.t('login.webError')) })
@@ -132,11 +129,7 @@ export struct Login {
   private signIn(): void {
     if (this.busy || this.identity.trim().length === 0 || this.password.length === 0) return
     this.busy = true
-    const request: Promise<LoginResult> = !this.reviewMode
-      ? ServiceLocator.backend.accountLogin(this.identity.trim(), this.password)
-      : this.method === LoginMethod.phone
-        ? ServiceLocator.backend.verifyLoginCode(this.identity.trim(), this.password)
-        : ServiceLocator.backend.verifyMailLoginCode(this.identity.trim(), this.password)
+    const request: Promise<LoginResult> = ServiceLocator.backend.accountLogin(this.identity.trim(), this.password)
     request.then(async (result: LoginResult): Promise<void> => {
       this.password = ''
       await AppModel.shared.didLogin(result.user)

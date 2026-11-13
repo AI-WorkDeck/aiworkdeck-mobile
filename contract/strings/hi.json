@@ -378,9 +378,6 @@
   "login.accountWeb": "खाता सेटअप",
   "login.phoneTitle": "फ़ोन से साइन इन",
   "login.working": "साइन इन हो रहा है…",
-  "login.review": "ऐप समीक्षा",
-  "login.reviewCredential": "क्रेडेंशियल समीक्षा",
-  "login.passwordMode": "पासवर्ड साइन-इन पर वापस जाएँ",
   "login.copyWebAddress": "वेबसाइट पता कॉपी करें",
   "login.webFallback": "यह पता कॉपी करें और अपने ब्राउज़र में खोलें। सेटअप पूरा करें, फिर वापस आकर अपने पासवर्ड से साइन इन करें।",
   "rec.pause.video.segmentNote": "रोकने पर यह क्लिप सहेज ली जाती है। फिर से शुरू करने पर नई क्लिप बनती है।",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "चालू",
   "postpaid.status.restricted": "सीमित",
   "login.consent": "मैंने पढ़ लिया है और सहमत हूँ:",
-  "login.terms": "उपयोगकर्ता अनुबंध"
+  "login.terms": "उपयोगकर्ता अनुबंध",
+  "login.consentRequired": "कृपया पहले उपयोग की शर्तें और गोपनीयता नीति पढ़ें और स्वीकार करें"
 }

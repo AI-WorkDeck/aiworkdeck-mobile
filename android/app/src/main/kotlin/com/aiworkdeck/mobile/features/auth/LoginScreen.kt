@@ -30,39 +30,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import com.aiworkdeck.mobile.design.PrimaryButton
+import com.aiworkdeck.mobile.design.Segmented
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.aiworkdeck.mobile.AppModel
 import com.aiworkdeck.mobile.BuildConfig
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 import com.aiworkdeck.mobile.services.mobileTermsUrl
 import com.aiworkdeck.contract.ContractCapabilities
-import com.aiworkdeck.contract.T
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Fonts
@@ -73,11 +62,9 @@ import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.services.AccountRegion
 import com.aiworkdeck.mobile.services.ServiceLocator
 import com.aiworkdeck.mobile.services.userFacingMessage
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 internal enum class Method { Phone, Email }
-private enum class Step { Identity, Code }
 
 /** 这个区域能用哪几种登录方式。国际站没有短信通道，只剩邮箱（dev-board#837）。 */
 internal fun loginMethods(region: AccountRegion): List<Method> =
@@ -96,7 +83,12 @@ internal fun accountFlowUrl(region: AccountRegion, method: Method, flow: String,
     return "$host?flow=$selectedFlow$migration&site=${region.raw}"
 }
 
-/** Password login; verification and password creation use the regional website. */
+/**
+ * 密码登录（与桌面端、官网同一个账号体系）。版式对齐 iOS `LoginView`：
+ * 区域分段 + 语言 → 标题与说明 → 登录方式分段 → 账号/密码 → 协议勾选（国内商店要求，未勾选不能登录或注册）
+ * → 登录按钮 → 首次使用、忘记密码 → 说明。
+ * 审核员与普通用户一样用账号密码登录，不再有单独的「应用商店审核」入口（2026-11-12）。
+ */
 @Composable
 fun LoginScreen(model: AppModel) {
     val backend = ServiceLocator.backend
@@ -107,92 +99,86 @@ fun LoginScreen(model: AppModel) {
     var identity by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var reviewMode by remember { mutableStateOf(false) }
     var agreementsAccepted by remember { mutableStateOf(false) }
     var showLanguagePicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val focus = remember { FocusRequester() }
+    fun clearInputs() { identity = ""; password = ""; error = null }
     fun openFlow(flow: String) {
-        password = ""; error = null; reviewMode = false
+        if (!agreementsAccepted) { error = tr("login.consentRequired"); return }
+        password = ""; error = null
         runCatching { uriHandler.openUri(accountFlowUrl(region, method, flow, BuildConfig.FLAVOR)) }.onFailure { error = tr("login.webError") }
+    }
+    fun signIn() {
+        if (busy) return
+        if (!agreementsAccepted) { error = tr("login.consentRequired"); return }
+        busy = true; error = null
+        scope.launch {
+            try { val result = backend.accountLogin(identity.trim(), password); password = ""; model.didLogin(result) }
+            catch (e: Exception) { error = userFacingMessage(e) }
+            finally { busy = false }
+        }
     }
     LightStatusBar()
     Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().imePadding()
-        .verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter),
+        .verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s4),
         verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
             if (ContractCapabilities.intlAccount) {
-                RegionToggle(region, !busy) {
-                    val next = model.switchAccountRegion()
-                    region = next; method = defaultMethod(next); identity = ""; password = ""; error = null; reviewMode = false
+                Segmented(AccountRegion.entries.map { it to tr(it.labelKey) }, region, enabled = !busy,
+                    a11yLabel = tr("login.region.a11y"), modifier = Modifier.weight(1f)) {
+                    region = model.switchAccountRegion(); method = defaultMethod(region); clearInputs()
                 }
-            } else {
-                Spacer(Modifier.width(1.dp))
-            }
+            } else Spacer(Modifier.weight(1f))
+            val languageLabel = tr("settings.language")
             Text(
-                text = L10n.currentDisplayName,
-                style = Fonts.small(),
-                color = Tk.L.fgMuted,
+                text = L10n.currentDisplayName + "  ⌄",
+                style = Fonts.body(),
+                color = Tk.L.accent,
                 modifier = Modifier.heightIn(min = Tk.touchMin)
                     .clickable(enabled = !busy) { showLanguagePicker = true }
-                    .padding(horizontal = Tk.Sp.s3, vertical = Tk.Sp.s2),
+                    .semantics { contentDescription = languageLabel + " " + L10n.currentDisplayName }
+                    .padding(horizontal = Tk.Sp.s2, vertical = Tk.Sp.s2),
             )
         }
         Text(tr("login.title"), style = Fonts.display(), color = Tk.L.fg)
         Text(tr("login.passwordHint"), style = Fonts.micro(), color = Tk.L.fgMuted)
         if (loginMethods(region).size > 1) {
-            MethodPicker(method) { if (!busy) { method = it; identity = ""; password = ""; error = null; reviewMode = false } }
+            Segmented(loginMethods(region).map { it to tr(if (it == Method.Phone) "login.phone" else "login.email") }, method,
+                enabled = !busy, modifier = Modifier.fillMaxWidth()) { method = it; clearInputs() }
         }
-        Field(identity, tr(if (method == Method.Phone) "login.phonePlaceholder" else "login.emailPlaceholder"), 20.sp,
-            focus, if (method == Method.Phone) KeyboardType.Phone else KeyboardType.Email) {
-            if (!busy) identity = it.trim()
-        }
-        Hairline(color = Tk.L.rule)
-        Field(password, tr(if (reviewMode) "login.reviewCredential" else "login.passwordPlaceholder"), 20.sp, remember { FocusRequester() }, KeyboardType.Password,
-            secret = true) { if (!busy) password = it }
-        Hairline(color = Tk.L.rule)
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = agreementsAccepted, onCheckedChange = { agreementsAccepted = it }, enabled = !busy)
-            Column {
-                Text(tr("login.consent"), style = Fonts.small(), color = Tk.L.fg)
-                Row(horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
-                    Text(tr("login.terms"), style = Fonts.small(), color = Tk.L.accent,
-                        modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) {
-                            uriHandler.openUri(mobileTermsUrl(BuildConfig.FLAVOR))
-                        })
-                    Text(tr("privacy.policy"), style = Fonts.small(), color = Tk.L.accent,
-                        modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) {
-                            uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR))
-                        })
-                }
+        Column {
+            Field(identity, tr(if (method == Method.Phone) "login.phonePlaceholder" else "login.emailPlaceholder"),
+                focus, if (method == Method.Phone) KeyboardType.Phone else KeyboardType.Email) {
+                if (!busy) identity = it.trim()
             }
+            Hairline(color = Tk.L.rule)
+            Field(password, tr("login.passwordPlaceholder"), remember { FocusRequester() }, KeyboardType.Password,
+                secret = true) { if (!busy) password = it }
+            Hairline(color = Tk.L.rule)
         }
-        error?.let { Text(it, style = Fonts.micro(), color = Tk.L.fgMuted) }
-        Text(tr(if (busy) "login.working" else "login.title"), style = Fonts.heading(), color = Tk.L.accent,
-            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy && agreementsAccepted && identity.isNotBlank() && password.isNotEmpty()) {
-                if (busy) return@clickable
-                busy = true; error = null
-                scope.launch {
-                    try {
-                        val result = if (!reviewMode) backend.accountLogin(identity.trim(), password)
-                            else if (method == Method.Phone) backend.verifyLoginCode(identity.trim(), password)
-                            else backend.verifyMailLoginCode(identity.trim(), password)
-                        password = ""; model.didLogin(result)
-                    }
-                    catch (e: Exception) { error = userFacingMessage(e) }
-                    finally { busy = false }
-                }
-            })
-        Text(tr(if (reviewMode) "login.passwordMode" else "login.review"), style = Fonts.small(), color = Tk.L.fgMuted,
-            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { reviewMode = !reviewMode; password = ""; error = null })
-        Text(tr("login.register"), style = Fonts.small(), color = Tk.L.accent,
-            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy && agreementsAccepted) { openFlow("register") })
-        Text(tr("login.forgotPassword"), style = Fonts.small(), color = Tk.L.accent,
-            modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { openFlow("reset") })
+        Row(Modifier.fillMaxWidth().toggleable(agreementsAccepted, enabled = !busy, role = Role.Checkbox) { agreementsAccepted = it; if (it) error = null },
+            verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = agreementsAccepted, onCheckedChange = null, enabled = !busy)
+            Spacer(Modifier.width(Tk.Sp.s2))
+            Text(tr("login.consent"), style = Fonts.small(), color = Tk.L.fgMuted)
+            Text(tr("login.terms"), style = Fonts.small(), color = Tk.L.accent,
+                modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { uriHandler.openUri(mobileTermsUrl(BuildConfig.FLAVOR)) }
+                    .padding(horizontal = Tk.Sp.s1).wrapContentHeight(Alignment.CenterVertically))
+            Text(tr("privacy.policy"), style = Fonts.small(), color = Tk.L.accent,
+                modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR)) }
+                    .padding(horizontal = Tk.Sp.s1).wrapContentHeight(Alignment.CenterVertically))
+        }
+        error?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+        Box(contentAlignment = Alignment.Center) {
+            PrimaryButton(text = tr(if (busy) "login.working" else "login.title"), onClick = ::signIn,
+                enabled = !busy && identity.isNotBlank() && password.isNotEmpty())
+            if (busy) CircularProgressIndicator(Modifier.align(Alignment.CenterEnd).padding(end = Tk.Sp.s4).size(18.dp), color = Tk.D.fg, strokeWidth = 2.dp)
+        }
+        Column {
+            LinkRow(tr("login.register"), !busy) { openFlow("register") }
+            LinkRow(tr("login.forgotPassword"), !busy) { openFlow("reset") }
+        }
         Text(tr(if (region == AccountRegion.cn && method == Method.Email) "login.legacyEmailHint" else "login.webHint"),
             style = Fonts.micro(), color = Tk.L.fgMuted)
     }
@@ -235,89 +221,24 @@ internal fun Eyebrow(text: String, modifier: Modifier = Modifier) {
     Text(text.uppercase(), style = Fonts.nano(), color = Tk.L.fgMuted, modifier = modifier)
 }
 
-/**
- * 区域开关：一条圆角轨道里并排两个短标签，滑块垫在当前那一个下面，点胶囊任意处翻到另一边，
- * 滑块按动画令牌滑过去。整个胶囊是一个可点目标（外层撑到 touchMin 高），读屏念 login.region.a11y + 当前标签。
- * 颜色全用现有令牌：轨道 sunken + rule 描边，滑块 accent，选中字反白（bg）。
- */
 @Composable
-private fun RegionToggle(current: AccountRegion, enabled: Boolean, onToggle: () -> Unit) {
-    val density = LocalDensity.current
-    // 两个标签各自量出来的位置与宽度：中英文标签长短不一，不能假设两格等宽
-    val slots = remember { mutableStateMapOf<AccountRegion, Pair<Dp, Dp>>() }
-    val shape = RoundedCornerShape(percent = 50)
-    val a11y = tr("login.region.a11y")
-    val valueLabel = tr(current.labelKey)
-    Box(
-        Modifier.heightIn(min = Tk.touchMin)
-            .clickable(enabled = enabled, role = Role.Switch) { onToggle() }
-            // 读屏只念一句「切换…」+ 当前标签，不把轨道里两个标签再各念一遍
-            .clearAndSetSemantics {
-                contentDescription = a11y
-                stateDescription = valueLabel
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(Modifier.clip(shape).background(Tk.L.sunken).border(1.dp, Tk.L.rule, shape).padding(Tk.Sp.s1 / 2)) {
-            slots[current]?.let { (x, w) ->
-                val spec = tween<Dp>(T.Motion.baseMs)
-                val thumbX by animateDpAsState(x, spec, label = "regionThumbX")
-                val thumbW by animateDpAsState(w, spec, label = "regionThumbW")
-                Box(Modifier.matchParentSize()) {
-                    Box(Modifier.offset(x = thumbX).width(thumbW).fillMaxHeight().clip(shape).background(Tk.L.accent))
-                }
-            }
-            Row {
-                for (r in AccountRegion.entries) {
-                    Text(
-                        text = tr(r.labelKey),
-                        style = Fonts.small(), color = if (r == current) Tk.L.bg else Tk.L.fgMuted,
-                        modifier = Modifier
-                            .onGloballyPositioned { c ->
-                                slots[r] = with(density) { c.positionInParent().x.toDp() to c.size.width.toDp() }
-                            }
-                            .padding(horizontal = Tk.Sp.s3, vertical = Tk.Sp.s1),
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * 两个方式之间切换。切换要清掉验证码与报错，否则会出现「填了邮箱、报的是手机号那条的错」
- * 这种对不上号的状态。
- */
-@Composable
-private fun MethodPicker(current: Method, modifier: Modifier = Modifier, onPick: (Method) -> Unit) {
-    Row(
-        modifier.heightIn(min = Tk.touchMin),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s5),
-    ) {
-        for (m in Method.entries) {
-            Text(
-                text = tr(if (m == Method.Phone) "login.phone" else "login.email"),
-                style = Fonts.small(), color = if (m == current) Tk.L.accent else Tk.L.fgMuted,
-                modifier = Modifier.clickable { onPick(m) },
-            )
-        }
-    }
+private fun LinkRow(text: String, enabled: Boolean, onClick: () -> Unit) {
+    Text(text, style = Fonts.body(), color = if (enabled) Tk.L.accent else Tk.L.fgMuted,
+        modifier = Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .wrapContentHeight(Alignment.CenterVertically))
 }
 
 @Composable
 private fun Field(
     value: String,
     placeholder: String,
-    mono: TextUnit,
     focus: FocusRequester,
     keyboard: KeyboardType,
-    letterSpacing: Boolean = false,
     secret: Boolean = false,
     onChange: (String) -> Unit,
 ) {
-    val style = Fonts.mono(mono, FontWeight.Light).copy(
-        color = Tk.L.fg, letterSpacing = if (letterSpacing) 0.3.em else TextStyle.Default.letterSpacing,
+    val style = Fonts.body().copy(fontSize = 18.sp,
+        color = Tk.L.fg,
     )
     BasicTextField(
         value = value,
@@ -327,7 +248,7 @@ private fun Field(
         textStyle = style,
         cursorBrush = SolidColor(Tk.L.accent),
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
-        modifier = Modifier.fillMaxWidth().focusRequester(focus),
+        modifier = Modifier.fillMaxWidth().heightIn(min = Tk.touchMin + Tk.Sp.s2).wrapContentHeight(Alignment.CenterVertically).focusRequester(focus),
         decorationBox = { inner ->
             Box {
                 if (value.isEmpty()) Text(placeholder, style = style.copy(color = Tk.L.fgFaint))
@@ -337,22 +258,3 @@ private fun Field(
     )
 }
 
-/** 只做「明显不是邮箱」的拦截，不做 RFC 校验——真正的判定在后端，客户端把合法地址挡下来更糟。 */
-internal fun looksLikeEmail(email: String): Boolean {
-    val at = email.indexOf('@')
-    if (at <= 0) return false
-    val domain = email.substring(at + 1)
-    return domain.contains('.') && !domain.startsWith('.') && !domain.endsWith('.')
-}
-
-/** 回显发到哪去了，但不把标识完整重复一遍——旁边有人时那是一次不必要的泄露。 */
-private fun mask(method: Method, value: String): String = when (method) {
-    Method.Phone -> if (value.length < 7) value else value.take(3) + "****" + value.takeLast(4)
-    Method.Email -> {
-        val at = value.indexOf('@')
-        if (at < 0) value else {
-            val name = value.substring(0, at)
-            (if (name.length <= 1) "***" else name.take(1) + "***") + value.substring(at)
-        }
-    }
-}

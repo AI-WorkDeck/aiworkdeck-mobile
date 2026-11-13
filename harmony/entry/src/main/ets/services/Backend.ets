@@ -50,19 +50,9 @@ export class Backend {
     await this.envelope('/api/auth/sms-login/send-code', body)
   }
 
-  async verifyLoginCode(phone: string, code: string): Promise<LoginResult> {
-    const body: Record<string, string> = { 'phone': phone, 'code': code }
-    return await this.login('/api/auth/sms-login/verify', body)
-  }
-
   async sendMailLoginCode(email: string): Promise<void> {
     const body: Record<string, string> = { 'email': email }
     await this.envelope('/api/auth/mail-login/send-code', body)
-  }
-
-  async verifyMailLoginCode(email: string, code: string): Promise<LoginResult> {
-    const body: Record<string, string> = { 'email': email, 'code': code }
-    return await this.login('/api/auth/mail-login/verify', body)
   }
 
   async deleteAccount(): Promise<void> {

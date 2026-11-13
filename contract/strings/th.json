@@ -378,9 +378,6 @@
   "login.accountWeb": "ตั้งค่าบัญชี",
   "login.phoneTitle": "เข้าสู่ระบบด้วยโทรศัพท์",
   "login.working": "กำลังเข้าสู่ระบบ…",
-  "login.review": "ตรวจสอบแอป",
-  "login.reviewCredential": "ตรวจสอบข้อมูลรับรอง",
-  "login.passwordMode": "กลับไปเข้าสู่ระบบด้วยรหัสผ่าน",
   "login.copyWebAddress": "คัดลอกที่อยู่เว็บไซต์",
   "login.webFallback": "คัดลอกที่อยู่นี้และเปิดในเบราว์เซอร์ของคุณ ตั้งค่าให้เสร็จแล้วกลับมาเข้าสู่ระบบด้วยรหัสผ่าน",
   "rec.pause.video.segmentNote": "การหยุดชั่วคราวจะบันทึกคลิปนี้ การกลับมาบันทึกต่อจะเริ่มคลิปใหม่",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "เปิดแล้ว",
   "postpaid.status.restricted": "ถูกจำกัด",
   "login.consent": "ฉันได้อ่านและยอมรับ",
-  "login.terms": "ข้อตกลงผู้ใช้"
+  "login.terms": "ข้อตกลงผู้ใช้",
+  "login.consentRequired": "โปรดอ่านและยอมรับข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัวก่อน"
 }

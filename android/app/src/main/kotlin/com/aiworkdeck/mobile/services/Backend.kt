@@ -43,11 +43,7 @@ class Backend(
         login(post("/api/auth/account-login", buildJsonObject { put("account", account); put("password", password) }))
 
     suspend fun sendLoginCode(phone: String) { envelope(post("/api/auth/sms-login/send-code", buildJsonObject { put("phone", phone) })) }
-    suspend fun verifyLoginCode(phone: String, code: String): LoginResult =
-        login(post("/api/auth/sms-login/verify", buildJsonObject { put("phone", phone); put("code", code) }))
     suspend fun sendMailLoginCode(email: String) { envelope(post("/api/auth/mail-login/send-code", buildJsonObject { put("email", email) })) }
-    suspend fun verifyMailLoginCode(email: String, code: String): LoginResult =
-        login(post("/api/auth/mail-login/verify", buildJsonObject { put("email", email); put("code", code) }))
     suspend fun deleteAccount() { envelope(post("/api/auth/account/delete", buildJsonObject {})) }
     fun logout() { CloudEpoch.accountChanged(); session.clear() }
     /** 本机有没有会话。只判断「有没有」，是否还有效由第一次真实请求的 401 发现。 */

@@ -1,4 +1,4 @@
-import { accountLogin, verifyLoginCode } from '../../utils/api'
+import { accountLogin } from '../../utils/api'
 import type { ApiError } from '../../utils/api'
 import type { Metrics } from '../../utils/layout'
 import {
@@ -26,7 +26,6 @@ function boundTexts(region: LoginRegion) {
     navTitle: t('login.title'), phoneLabel: t('login.phone'), phonePlaceholder: t('login.phonePlaceholder'),
     passwordLabel: t('login.password'), passwordPlaceholder: t('login.passwordPlaceholder'),
     submitText: t('login.title'), workingText: t('login.working'), hintText: t('login.passwordHint'),
-    reviewText: t('login.review'), passwordModeText: t('login.passwordMode'), reviewCredential: t('login.reviewCredential'),
     registerText: t('login.register'), resetText: t('login.forgotPassword'), webHint: t('login.webHint'),
     regionCnText: t('login.region.cn'), regionIntlText: t('login.region.intl'),
     regionA11y: `${t('login.region.a11y')}: ${t(region === 'intl' ? 'login.region.intl' : 'login.region.cn')}`,
@@ -35,7 +34,7 @@ function boundTexts(region: LoginRegion) {
 }
 Page({
   data: {
-    reviewMode: false, metrics: {} as Metrics, phone: '', password: '', loggingIn: false, submitDisabled: true,
+    metrics: {} as Metrics, phone: '', password: '', loggingIn: false, submitDisabled: true,
     region: 'cn' as LoginRegion, ...boundTexts('cn'), ...regionView('cn', CAPS.intlAccount),
   },
   onLoad() {
@@ -50,7 +49,7 @@ Page({
     if (this.data.loggingIn) return
     const region: LoginRegion = this.data.region === 'cn' ? 'intl' : 'cn'
     applyRegionLocale(localeFor(region))
-    this.setData({ region, reviewMode: false, phone: '', password: '', ...boundTexts(region), ...regionView(region, CAPS.intlAccount) }, () => this.refreshButtons())
+    this.setData({ region, phone: '', password: '', ...boundTexts(region), ...regionView(region, CAPS.intlAccount) }, () => this.refreshButtons())
   },
   onLanguageChange(e: { detail: { value: string | number } }) {
     if (this.data.loggingIn) return
@@ -70,23 +69,18 @@ Page({
     if (this.data.loggingIn) return
     this.setData({ password: e.detail.value }, () => this.refreshButtons())
   },
-  onReview() {
-    if (this.data.loggingIn) return
-    this.setData({ reviewMode: !this.data.reviewMode, password: '' }, () => this.refreshButtons())
-  },
   onRegister() { this.openFlow('register') },
   onReset() { this.openFlow('reset') },
   openFlow(flow: 'register' | 'reset') {
     if (this.data.loggingIn) return
-    this.setData({ password: '', reviewMode: false }, () => this.refreshButtons())
+    this.setData({ password: '' }, () => this.refreshButtons())
     wx.navigateTo({ url: `/pages/account/account?flow=${flow}` })
   },
   async onLogin() {
     if (this.data.submitDisabled || !this.data.showLogin) return
     this.setData({ loggingIn: true }, () => this.refreshButtons())
     try {
-      if (this.data.reviewMode) await verifyLoginCode(this.data.phone, this.data.password)
-      else await accountLogin(this.data.phone, this.data.password)
+      await accountLogin(this.data.phone, this.data.password)
       this.setData({ password: '' })
       wx.reLaunch({ url: '/pages/personal/personal' })
     } catch (error) {
