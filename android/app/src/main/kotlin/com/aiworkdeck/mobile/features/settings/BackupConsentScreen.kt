@@ -45,7 +45,7 @@ fun BackupConsentScreen(onClose: () -> Unit) {
             Text(tr("backup.message"), style = Fonts.body(), color = Tk.L.fg)
             consent?.let { state ->
                 Text(tr(if (state.enabled) "backup.enabled" else "backup.disabled"), style = Fonts.small(), color = Tk.L.fgMuted)
-                if (!state.canWriteCloud) Text(tr("postpaid.restricted"), style = Fonts.small(), color = Tk.S.failed)
+                if (!state.canWriteCloud) Text(tr(if (state.cloudAccess?.frozen == true) "postpaid.restricted" else "backup.subscriptionRequired"), style = Fonts.small(), color = if (state.cloudAccess?.frozen == true) Tk.S.failed else Tk.L.fgMuted)
                 if (state.enabled) TextButton(onClick = { disable = true }, enabled = !busy) { Text(tr("backup.disable"), color = Tk.S.failed) }
                 else if (state.canWriteCloud) com.aiworkdeck.mobile.design.PrimaryButton(tr("backup.enable"), onClick = { save(true) }, enabled = !busy)
                 if (!state.decided) TextButton(onClick = { save(false) }, enabled = !busy) { Text(tr("backup.decline"), color = Tk.L.accent) }

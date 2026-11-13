@@ -131,6 +131,8 @@ test('consent decline is persisted, non-subscribers cannot enable, failed writes
   assert.equal(mock.consent.enabled, false)
   assert.equal(mock.consent.decided, true)
   mock = fakeWx(); mock.setConsent({ subscriptionActive: false })
+  await promptBackupOnFirstUse()
+  assert.equal(mock.modals, 0)
   await chooseBackupConsent(mock.consent)
   assert.equal(mock.consent.enabled, false)
   mock = fakeWx(); mock.setFailPut(true)

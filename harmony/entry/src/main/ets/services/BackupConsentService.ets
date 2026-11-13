@@ -14,7 +14,7 @@ export class BackupConsentService {
       const session: string | null = await ServiceLocator.session.current()
       if (session === null) return
       const current: BackupConsent = await ServiceLocator.backend.backupConsent()
-      if (!alive() || session !== await ServiceLocator.session.current() || current.decided) return
+      if (!alive() || session !== await ServiceLocator.session.current() || current.decided || !current.canWriteCloud) return
       await BackupConsentService.choose(ui, current, session, alive)
     } catch (_) {
       if (alive()) ui.getPromptAction().showToast({ message: tr('backup.error') })
@@ -25,7 +25,7 @@ export class BackupConsentService {
     const decision: boolean | null = await new Promise<boolean | null>((resolve: (value: boolean | null) => void): void => {
       ui.showAlertDialog({ title: tr('backup.title'),
         message: current.enabled ? tr('backup.disableMessage') : tr('backup.message') +
-          (current.canWriteCloud ? '' : '\n\n' + tr('postpaid.restricted')),
+          (current.canWriteCloud ? '' : '\n\n' + tr(current.cloudFrozen === true ? 'postpaid.restricted' : 'backup.subscriptionRequired')),
         autoCancel: true, cancel: (): void => resolve(null),
         primaryButton: { value: tr(current.enabled ? 'common.cancel' : 'backup.decline'), action: (): void => resolve(current.enabled ? null : false) },
         secondaryButton: { value: tr(current.enabled ? 'backup.disable' : current.canWriteCloud ? 'backup.enable' : 'backup.decline'),

@@ -305,7 +305,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
         }
         if (state.tab == "assistant") {
             state.status?.let { status ->
-                if (!status.enabled || !status.canUseCloud) Notice(tr(if (status.canUseCloud) "personal.assistantConsent" else "postpaid.restricted")) {
+                if (!status.enabled || !status.canUseCloud) Notice(tr(if (status.canUseCloud) "personal.assistantConsent" else if (status.cloudAccess?.frozen == true) "postpaid.restricted" else "personal.subscription")) {
                     if (status.canUseCloud && !status.backupEnabled) Link(tr("backup.title")) { onOpen(Overlay.Backup) }
                     if (!status.canUseCloud) Link(tr("settings.account")) { onOpen(Overlay.Settings) }
                     if (status.canUseCloud && status.backupEnabled) Link(tr("common.on")) { consent = "assistant" }
@@ -363,7 +363,8 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
             }
         } else {
             val calendar = state.calendar
-            if (calendar != null && (!calendar.enabled || !calendar.canReadCloud)) Notice(tr(if (calendar.canReadCloud) "personal.calendarConsent" else "postpaid.restricted")) {
+            if (calendar != null && (!calendar.enabled || !calendar.canReadCloud)) Notice(tr(if (calendar.canReadCloud) "personal.calendarConsent" else if (calendar.cloudAccess?.frozen == true) "postpaid.restricted" else "personal.subscription")) {
+                if (!calendar.canReadCloud) Link(tr("settings.account")) { onOpen(Overlay.Settings) }
                 if (calendar.canWriteCloud) Link(tr("common.on")) { consent = "calendar" }
             }
             Row(Modifier.fillMaxWidth().padding(top = Tk.Sp.s2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {

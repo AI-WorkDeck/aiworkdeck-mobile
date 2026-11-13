@@ -57,6 +57,7 @@ export struct Settings {
   @State projectName: string = DASH
   @State usage: MediaUsage | null = null
   @State subscription: SubscriptionBalance | null = null
+  @State billingLoaded: boolean = false
   /** 包晴天律师（billingLine = bqt）只在包晴天 App 充值 */
   @State bqt: boolean = false
   @State backup: BackupConsent | null = null
@@ -93,7 +94,8 @@ export struct Settings {
         if (!this.alive) return
         this.subscription = b.subscription
         this.bqt = b.billingLine === 'bqt'
-      }).catch((): void => { if (this.alive) this.subscription = null })
+        this.billingLoaded = true
+      }).catch((): void => { if (this.alive) { this.subscription = null; this.billingLoaded = false } })
     }
     // 进页面拉一次用量。读不到就留占位「—」，比一条报错更符合这行信息的分量；
     // 但会话失效是另一回事——和选项目页同口径，回登录页，别让人对着一屏死数据点
@@ -266,6 +268,9 @@ export struct Settings {
   @Builder
   billingGroup() {
     this.eyebrow(this.t('settings.billing'))
+    if (this.billingLoaded && !this.bqt) {
+      this.infoRow(this.t('subscription.store.title'), this.t(this.subscription?.active === true ? 'subscription.status.active' : 'subscription.status.none'))
+    }
     if (this.subscription?.active === true) {
       this.infoRow(this.t('subscription.available'), this.credits(this.subscription.availableCents))
       this.infoRow(this.t('subscription.weekly'), `${this.credits(this.subscription.weeklyUsedCents)} / ${this.credits(this.subscription.weeklyLimitCents)}`)

@@ -9,6 +9,7 @@ import SwiftUI
 struct SubscriptionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var product: Product?
+    @State private var introOffer: Product.SubscriptionOffer?
     @State private var closed = false
     /// App Store region when sales are open but StoreKit returned no product (e.g. not sold in that storefront).
     @State private var missingRegion: String?
@@ -25,16 +26,25 @@ struct SubscriptionView: View {
                         ProgressView().frame(maxWidth: .infinity).padding(.top, T.Sp.s16)
                     } else if let product {
                         Eyebrow(text: product.displayName).padding(.top, T.Sp.s6)
-                        Text(tr("subscription.store.price", ["price": product.displayPrice]))
-                            .font(T.F.display()).foregroundStyle(T.L.fg)
-                            .monospacedDigit()
+                        if let introOffer, introOffer.paymentMode == .payAsYouGo {
+                            Text(tr("subscription.store.price", ["price": introOffer.displayPrice]))
+                                .font(T.F.display()).foregroundStyle(T.L.fg)
+                                .monospacedDigit()
+                            Text(tr("subscription.store.price", ["price": product.displayPrice]))
+                                .font(T.F.small()).strikethrough().foregroundStyle(T.L.fgMuted)
+                                .monospacedDigit()
+                        } else {
+                            Text(tr("subscription.store.price", ["price": product.displayPrice]))
+                                .font(T.F.display()).foregroundStyle(T.L.fg)
+                                .monospacedDigit()
+                        }
                         Text(product.description)
                             .font(T.F.body()).foregroundStyle(T.L.fgMuted)
                             .fixedSize(horizontal: false, vertical: true)
                         Button { Task { await buy(product) } } label: {
                             Group {
                                 if busy { ProgressView().tint(.white) }
-                                else { Text(tr("subscription.store.buy", ["price": product.displayPrice])) }
+                                else { Text(tr("subscription.store.buy", ["price": introOffer?.displayPrice ?? product.displayPrice])) }
                             }
                             .font(T.F.body().weight(.semibold))
                             .frame(maxWidth: .infinity, minHeight: 50)
@@ -91,6 +101,11 @@ struct SubscriptionView: View {
                 if SubscriptionUITestSeed.missingProduct { products = [] }
 #endif
                 product = products.first(where: { $0.id == capability.productId && $0.type == .autoRenewable && $0.subscription?.subscriptionPeriod.value == 1 && $0.subscription?.subscriptionPeriod.unit == .month })
+                if let sub = product?.subscription, await sub.isEligibleForIntroOffer {
+                    introOffer = sub.introductoryOffer
+                } else {
+                    introOffer = nil
+                }
                 // StoreKit answered but has nothing to sell here: say which App Store region, not "unavailable".
                 if product == nil { missingRegion = await Storefront.current?.countryCode }
             }

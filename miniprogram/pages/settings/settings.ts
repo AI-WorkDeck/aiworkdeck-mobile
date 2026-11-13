@@ -201,11 +201,14 @@ Page({
         this.setData({
           balanceVisible: true,
           balanceText: formatBalance(b),
-          subscriptionRows: b.subscription?.active ? [
-            { label: t('subscription.available'), value: credits(b.subscription.availableCents) },
-            { label: t('subscription.weekly'), value: `${credits(b.subscription.weeklyUsedCents)} / ${credits(b.subscription.weeklyLimitCents)}` },
-            { label: t('subscription.monthly'), value: `${credits(b.subscription.monthlyUsedCents)} / ${credits(b.subscription.monthlyLimitCents)}` },
-          ] : [],
+          subscriptionRows: b.billingLine === 'bqt' ? [] : [
+            { label: t('subscription.store.title'), value: t(b.subscription?.active ? 'subscription.status.active' : 'subscription.status.none') },
+            ...(b.subscription?.active ? [
+              { label: t('subscription.available'), value: credits(b.subscription.availableCents) },
+              { label: t('subscription.weekly'), value: `${credits(b.subscription.weeklyUsedCents)} / ${credits(b.subscription.weeklyLimitCents)}` },
+              { label: t('subscription.monthly'), value: `${credits(b.subscription.monthlyUsedCents)} / ${credits(b.subscription.monthlyLimitCents)}` },
+            ] : []),
+          ],
           // 包晴天律师只在包晴天 App 充值：本站充值会被服务端以 bqt_recharge_via_bqt 拒绝，
           // 而虚拟支付是先扣钱后到账，所以充值、后付费还款一律收起
           bqt: b.billingLine === 'bqt',
