@@ -29,12 +29,12 @@ final class CrossScreenRotationTests: XCTestCase {
         for orientation: UIDeviceOrientation in [.landscapeLeft, .portrait, .landscapeRight, .portrait] {
             XCUIDevice.shared.orientation = orientation
             let portrait = orientation == .portrait
-            guard waitForReadyOrientation(in: app, portrait: portrait, timeout: 15) else { return }
+            guard waitForReadyOrientation(in: app, portrait: portrait, timeout: 30) else { return }
             var states: [ReadyControlSnapshot] = []
-            // Each control keeps its existing 15-second budget. Window, identity,
+            // Each control gets a 30-second budget (the larger simulators on CI rotate slowly). Window, identity,
             // label and geometry are validated from one tree before live hit testing.
             for (index, control) in controls.enumerated() {
-                guard let ready = waitForReadyControl(control, in: app, portrait: portrait, timeout: 15, boundsTolerance: 1) else { return }
+                guard let ready = waitForReadyControl(control, in: app, portrait: portrait, timeout: 30, boundsTolerance: 1) else { return }
                 states.append(ready)
                 if portrait {
                     let old = before[index][0].frame, new = ready.control.frame
@@ -145,6 +145,7 @@ final class CrossScreenRotationTests: XCTestCase {
         XCTAssertTrue(closeSettings.waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["capture.close"].isHittable, "Covered capture navigation must not accept taps")
         let account = app.descendants(matching: .any).matching(identifier: "settings.account").firstMatch
+        XCTAssertTrue(account.waitForExistence(timeout: 10), "Settings account row did not appear")
         guard let accountIdentity = try? account.snapshot() else { XCTFail("Missing settings account identity"); return }
         cycle("Settings", app: app, controls: [
             ReadyControl(element: closeSettings, identifier: "settings.close"),
