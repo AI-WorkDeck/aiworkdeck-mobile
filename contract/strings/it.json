@@ -378,9 +378,6 @@
   "login.accountWeb": "Configurazione account",
   "login.phoneTitle": "Accesso con telefono",
   "login.working": "Accesso in corso…",
-  "login.review": "Revisione app",
-  "login.reviewCredential": "Verifica credenziali",
-  "login.passwordMode": "Torna all'accesso con password",
   "login.copyWebAddress": "Copia indirizzo del sito",
   "login.webFallback": "Copia questo indirizzo e aprilo nel browser. Completa la configurazione, poi torna per accedere con la tua password.",
   "rec.pause.video.segmentNote": "La pausa salva questa clip. La ripresa avvia una nuova clip.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "Attivo",
   "postpaid.status.restricted": "Limitato",
   "login.consent": "Ho letto e accetto il",
-  "login.terms": "Contratto utente"
+  "login.terms": "Contratto utente",
+  "login.consentRequired": "Leggi e accetta prima i Termini di utilizzo e l’Informativa sulla privacy"
 }

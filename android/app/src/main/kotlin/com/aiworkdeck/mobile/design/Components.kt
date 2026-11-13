@@ -1,7 +1,13 @@
 package com.aiworkdeck.mobile.design
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -145,5 +151,45 @@ fun RowItem(
         leading?.invoke()
         Box(Modifier.weight(1f)) { content() }
         trailing?.invoke(this)
+    }
+}
+
+/**
+ * 分段选择（iOS segmented picker 的对应物）：浅灰轨道里等宽几格，选中格垫一块白色圆角滑块。
+ * 用于登录页的区域与登录方式。整条至少 [Tk.touchMin] 高，每格都是独立可点目标。
+ */
+@Composable
+fun <T> Segmented(
+    options: List<Pair<T, String>>,
+    selected: T,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    a11yLabel: String? = null,
+    onSelect: (T) -> Unit,
+) {
+    Row(
+        modifier
+            .heightIn(min = Tk.touchMin)
+            .clip(CircleShape)
+            .background(Tk.L.sunken)
+            .padding(3.dp)
+            .then(if (a11yLabel != null) Modifier.semantics { contentDescription = a11yLabel } else Modifier),
+    ) {
+        for ((value, label) in options) {
+            val on = value == selected
+            Box(
+                Modifier.weight(1f)
+                    .heightIn(min = Tk.touchMin - 6.dp)
+                    .clip(CircleShape)
+                    .background(if (on) Tk.L.bg else Color.Transparent)
+                    .then(if (on) Modifier.border(0.5.dp, Tk.L.rule, CircleShape) else Modifier)
+                    .selectable(selected = on, enabled = enabled, role = Role.Tab) { if (!on) onSelect(value) }
+                    .padding(horizontal = Tk.Sp.s3),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, style = Fonts.body().copy(fontWeight = if (on) FontWeight.Medium else FontWeight.Normal),
+                    color = if (enabled) Tk.L.fg else Tk.L.fgMuted, maxLines = 1)
+            }
+        }
     }
 }

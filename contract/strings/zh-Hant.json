@@ -378,9 +378,6 @@
   "login.accountWeb": "帳戶設定",
   "login.phoneTitle": "手機號碼登入",
   "login.working": "登入中…",
-  "login.review": "應用程式商店審核",
-  "login.reviewCredential": "審核憑證",
-  "login.passwordMode": "返回密碼登入",
   "login.copyWebAddress": "複製官網地址",
   "login.webFallback": "請複製地址，在瀏覽器中開啟並完成設定，然後返回密碼登入。",
   "rec.pause.video.segmentNote": "暫停會儲存目前片段，繼續後開始新片段。",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "已開通",
   "postpaid.status.restricted": "受限",
   "login.consent": "我已閱讀並同意",
-  "login.terms": "使用者協議"
+  "login.terms": "使用者協議",
+  "login.consentRequired": "請先閱讀並勾選同意使用者協議和隱私權政策"
 }

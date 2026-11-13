@@ -378,9 +378,6 @@
   "login.accountWeb": "계정 설정",
   "login.phoneTitle": "휴대폰 로그인",
   "login.working": "로그인 중…",
-  "login.review": "앱 심사",
-  "login.reviewCredential": "자격 증명 검토",
-  "login.passwordMode": "비밀번호 로그인으로 돌아가기",
   "login.copyWebAddress": "웹사이트 주소 복사",
   "login.webFallback": "이 주소를 복사하여 브라우저에서 여세요. 설정을 완료한 후 돌아와 비밀번호로 로그인하세요.",
   "rec.pause.video.segmentNote": "일시정지하면 이 클립이 저장됩니다. 재개하면 새 클립이 시작됩니다.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "사용 중",
   "postpaid.status.restricted": "제한됨",
   "login.consent": "읽고 동의합니다:",
-  "login.terms": "이용약관"
+  "login.terms": "이용약관",
+  "login.consentRequired": "먼저 이용약관과 개인정보 처리방침을 읽고 동의해 주세요"
 }

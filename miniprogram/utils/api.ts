@@ -195,7 +195,7 @@ export function setSelectedProject(p: RelayProject | null): void {
  *    code，一个没有 code 的对象体更可能是网关 interstitial / 代理注入 / 后端改了形状，
  *    不是合法响应。只有调用点显式传 `{ bare: true }`（当前只有 /billing/balance 这一条
  *    裸对象端点）才把它当成功直接返回。**不要为了让某个端点跑通而放宽这条判读**——
- *    放宽是全局的，会让 verifyLoginCode 把网关异常响应当登录成功、myProjects/mediaStatus
+ *    放宽是全局的，会让登录接口把网关异常响应当登录成功、myProjects/mediaStatus
  *    把非数组交给 groupByDevice 变成运行时 TypeError（dev-board#425 二轮复审 N5）。
  * 5. 都不匹配（HTTP 层正常但体既非数组也非对象，如 null/字符串/数字）→ 解析失败。
  * 网络层失败（wx.request/wx.uploadFile 的 fail 回调）不在这里处理，由调用方分开说。
@@ -334,21 +334,12 @@ export function sendLoginCode(phone: string): Promise<void> {
   return request<void>('/api/auth/sms-login/send-code', 'POST', { phone })
 }
 
-export function verifyLoginCode(phone: string, code: string): Promise<LoginResult> {
-  return request<LoginResult>('/api/auth/sms-login/verify', 'POST', { phone, code }).then((result) => {
-    setSession(result.sessionId)
-    setUser(result.user)
-    rememberPhone(phone)
-    return result
-  })
-}
-
 /**
  * 微信手机号一键登录（dev-board#534）。
  *
  * 入参是 button open-type="getPhoneNumber" 回调里的 e.detail.code，服务端拿它去官网
  * 换手机号再发会话；**响应与 sms-login/verify 完全同形**（LoginResult），所以成功路径
- * 与 verifyLoginCode 逐字相同：存会话、存用户、记手机号。
+ * 与 accountLogin 相同：存会话、存用户、记手机号。
  *
  * 手机号明文不回传，这里只能退而求其次：服务端把手机号当用户名时（findOrCreateByPhone
  * 的既有口径）rememberPhone 会认出来，认不出就不记，「我的」页少显示一行号码而已。

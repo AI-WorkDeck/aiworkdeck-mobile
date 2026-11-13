@@ -378,9 +378,6 @@
   "login.accountWeb": "Thiết lập tài khoản",
   "login.phoneTitle": "Đăng nhập bằng số điện thoại",
   "login.working": "Đang đăng nhập…",
-  "login.review": "Đánh giá ứng dụng",
-  "login.reviewCredential": "Xem xét thông tin xác thực",
-  "login.passwordMode": "Quay lại đăng nhập bằng mật khẩu",
   "login.copyWebAddress": "Sao chép địa chỉ trang web",
   "login.webFallback": "Sao chép địa chỉ này và mở trong trình duyệt của bạn. Hoàn tất thiết lập, sau đó quay lại đăng nhập bằng mật khẩu.",
   "rec.pause.video.segmentNote": "Tạm dừng sẽ lưu đoạn này. Tiếp tục sẽ bắt đầu một đoạn mới.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "Đã bật",
   "postpaid.status.restricted": "Bị hạn chế",
   "login.consent": "Tôi đã đọc và đồng ý với",
-  "login.terms": "Thỏa thuận ngưới dùng"
+  "login.terms": "Thỏa thuận ngưới dùng",
+  "login.consentRequired": "Vui lòng đọc và đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư trước"
 }

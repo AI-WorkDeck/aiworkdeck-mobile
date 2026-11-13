@@ -378,9 +378,6 @@
   "login.accountWeb": "Configuration du compte",
   "login.phoneTitle": "Connexion par téléphone",
   "login.working": "Connexion en cours…",
-  "login.review": "Évaluation de l'application",
-  "login.reviewCredential": "Vérification des identifiants",
-  "login.passwordMode": "Retour à la connexion par mot de passe",
   "login.copyWebAddress": "Copier l'adresse du site web",
   "login.webFallback": "Copiez cette adresse et ouvrez-la dans votre navigateur. Terminez la configuration, puis revenez vous connecter avec votre mot de passe.",
   "rec.pause.video.segmentNote": "La mise en pause sauvegarde ce clip. La reprise démarre un nouveau clip.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "Activé",
   "postpaid.status.restricted": "Restreint",
   "login.consent": "J’ai lu et j’accepte les",
-  "login.terms": "Conditions d’utilisation"
+  "login.terms": "Conditions d’utilisation",
+  "login.consentRequired": "Veuillez d’abord lire et accepter les Conditions d’utilisation et la Politique de confidentialité"
 }

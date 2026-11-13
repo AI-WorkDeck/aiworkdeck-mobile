@@ -378,9 +378,6 @@
   "login.accountWeb": "Kontoeinrichtung",
   "login.phoneTitle": "Anmeldung per Telefonnummer",
   "login.working": "Anmeldung läuft…",
-  "login.review": "App-Überprüfung",
-  "login.reviewCredential": "Nachweis prüfen",
-  "login.passwordMode": "Zurück zur Passwortanmeldung",
   "login.copyWebAddress": "Website-Adresse kopieren",
   "login.webFallback": "Kopieren Sie diese Adresse und öffnen Sie sie in Ihrem Browser. Schließen Sie die Einrichtung ab und kehren Sie dann zurück, um sich mit Ihrem Passwort anzumelden.",
   "rec.pause.video.segmentNote": "Beim Anhalten wird dieser Clip gespeichert. Beim Fortsetzen beginnt ein neuer Clip.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "An",
   "postpaid.status.restricted": "Eingeschränkt",
   "login.consent": "Ich habe gelesen und stimme zu:",
-  "login.terms": "Nutzervereinbarung"
+  "login.terms": "Nutzervereinbarung",
+  "login.consentRequired": "Bitte lesen und akzeptieren Sie zuerst die Nutzungsbedingungen und die Datenschutzerklärung"
 }

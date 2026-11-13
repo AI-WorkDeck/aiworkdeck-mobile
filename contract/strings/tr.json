@@ -378,9 +378,6 @@
   "login.accountWeb": "Hesap kurulumu",
   "login.phoneTitle": "Telefonla oturum açma",
   "login.working": "Oturum açılıyor…",
-  "login.review": "Uygulama incelemesi",
-  "login.reviewCredential": "Kimlik bilgisi incele",
-  "login.passwordMode": "Şifreyle oturum açmaya dön",
   "login.copyWebAddress": "Web sitesi adresini kopyala",
   "login.webFallback": "Bu adresi kopyalayıp tarayıcınızda açın. Kurulumu tamamlayın, ardından dönüp şifrenizle oturum açın.",
   "rec.pause.video.segmentNote": "Duraklatmak bu kaydı kaydeder. Devam etmek yeni bir kayıt başlatır.",
@@ -575,5 +572,6 @@
   "postpaid.status.on": "Açık",
   "postpaid.status.restricted": "Kısıtlı",
   "login.consent": "Okudum ve kabul ediyorum:",
-  "login.terms": "Kullanıcı Sözleşmesi"
+  "login.terms": "Kullanıcı Sözleşmesi",
+  "login.consentRequired": "Lütfen önce Kullanım Koşulları’nı ve Gizlilik Politikası’nı okuyup kabul edin"
 }

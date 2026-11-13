@@ -22,11 +22,10 @@
         <input class="field__input mono" type="number" maxlength="11" placeholder="{{phonePlaceholder}}" value="{{phone}}" disabled="{{loggingIn}}" bindinput="onPhoneInput" />
       </view><view class="rule"></view>
       <view class="field"><text class="field__label">{{passwordLabel}}</text>
-        <input class="field__input" password="{{true}}" maxlength="128" placeholder="{{reviewMode ? reviewCredential : passwordPlaceholder}}" value="{{password}}" disabled="{{loggingIn}}" bindinput="onPasswordInput" />
+        <input class="field__input" password="{{true}}" maxlength="128" placeholder="{{passwordPlaceholder}}" value="{{password}}" disabled="{{loggingIn}}" bindinput="onPasswordInput" />
       </view><view class="rule"></view>
     </view>
     <view class="submit tappable {{submitDisabled ? 'submit--disabled' : ''}}" bindtap="onLogin"><text class="submit__text">{{loggingIn ? workingText : submitText}}</text></view>
-    <view class="alt tappable" bindtap="onReview"><text class="alt__text">{{reviewMode ? passwordModeText : reviewText}}</text></view>
     <view class="alt tappable" bindtap="onRegister"><text class="alt__text">{{registerText}}</text></view>
     <view class="alt tappable" bindtap="onReset"><text class="alt__text">{{resetText}}</text></view>
     <view class="footer"><text class="footer__text">{{webHint}}</text></view>
