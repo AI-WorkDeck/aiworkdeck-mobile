@@ -1,0 +1,40 @@
+name: play-promote
+# Promote an existing Google Play release between tracks (e.g. internal -> production).
+# No build, no upload: it moves a versionCode that Play already has.
+on:
+  workflow_dispatch:
+    inputs:
+      versionCode:
+        description: "versionCode to promote (must already be on the source track)"
+        required: true
+        type: string
+      fromTrack:
+        description: "Source track"
+        required: true
+        default: internal
+        type: choice
+        options: [internal, alpha, beta]
+      toTrack:
+        description: "Destination track"
+        required: true
+        default: production
+        type: choice
+        options: [production, beta, alpha]
+permissions:
+  contents: read
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Promote
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set +x
+          python3 scripts/play-publish.py promote \
+            --from-track "${{ inputs.fromTrack }}" --to-track "${{ inputs.toTrack }}" \
+            --version-code "${{ inputs.versionCode }}" \
+            --notes-file android/store/listing/en-US/release_notes.txt | tee -a "$GITHUB_STEP_SUMMARY"
