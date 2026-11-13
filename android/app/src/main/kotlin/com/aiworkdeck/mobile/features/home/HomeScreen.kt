@@ -1,9 +1,6 @@
 package com.aiworkdeck.mobile.features.home
 
-import androidx.browser.customtabs.CustomTabsIntent
-import com.aiworkdeck.contract.ContractCapabilities
 import com.aiworkdeck.mobile.services.ServiceLocator
-import com.aiworkdeck.mobile.services.AccountRegion
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -15,6 +12,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import com.aiworkdeck.mobile.R
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,18 +62,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.aiworkdeck.mobile.AppModel
-import com.aiworkdeck.mobile.BuildConfig
 import com.aiworkdeck.mobile.Overlay
 import com.aiworkdeck.mobile.ScreenshotMode
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Hairline
 import com.aiworkdeck.mobile.design.StatusDot
-import com.aiworkdeck.mobile.design.TallyRow
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.model.CaptureItem
 import com.aiworkdeck.mobile.model.MediaKind
-import com.aiworkdeck.mobile.model.TransferTally
 import com.aiworkdeck.mobile.services.CameraService
 import com.aiworkdeck.mobile.services.Loc
 import com.aiworkdeck.mobile.services.LocationStamper
@@ -285,7 +285,9 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
         }
     }
 
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
     fun shootWithNotificationPermission() {
+        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
         val needsNotification = !RecordingState.isRecording && !camera.isRecording &&
             (mode == CapMode.audio || project != null)
         if (needsNotification && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -337,40 +339,34 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
         )
     }
 
+    val capturing = camera.isRecording || RecordingState.isRecording
     Column(Modifier.fillMaxSize().background(Tk.D.bg).safeDrawingPadding()) {
-        Row {
-            androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Projects) }, enabled = !camera.isRecording) { Text(project?.name ?: tr("library.unknownProject"), color = Tk.D.fg) }
-            if (project != null) androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Files) }, enabled = !camera.isRecording) { Text(tr("workspace.files"), color = Tk.D.fg) }
-            if (BuildConfig.FLAVOR == "cn" && ServiceLocator.prefs.accountRegion == AccountRegion.cn) androidx.compose.material3.TextButton(
-                onClick = { CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, android.net.Uri.parse(ContractCapabilities.ddClientPortalUrl)) },
-                enabled = !camera.isRecording && !RecordingState.isRecording,
-            ) { Text(tr("dd.title"), color = Tk.D.fg) }
-            if (landscape) androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("home.settings"), color = Tk.D.fg) }
-        }
-        if (!landscape) Header(
-            projectName = project?.name.orEmpty(),
-            loc = loc,
-            hasLocation = hasLocation,
-            locUnavailable = locUnavailable,
-            tally = tally,
-            onOpenQueue = { onOpen(Overlay.Queue) },
-            onOpenSettings = { onOpen(Overlay.Settings) },
-            onRequestLocation = ::requestLocation,
+        TopBar(
+            projectName = project?.name ?: tr("project.none"),
+            enabled = !camera.isRecording,
+            hasProject = project != null,
+            onProjects = { onOpen(Overlay.Projects) },
+            onFiles = { onOpen(Overlay.Files) },
+            onQueue = { onOpen(Overlay.Queue) },
+            onSettings = { onOpen(Overlay.Settings) },
         )
 
         Box(
             Modifier.weight(1f).fillMaxWidth().padding(horizontal = Tk.Sp.s2)
-                .background(Color.Black).border(1.dp, Tk.D.rule),
+                .clip(RoundedCornerShape(2.dp)).background(Color.Black).border(1.dp, Tk.D.rule, RoundedCornerShape(2.dp)),
             contentAlignment = Alignment.Center,
         ) {
+            val coordLine = if (!hasLocation) tr("home.location.enable") else if (loc == null && locUnavailable) tr("home.gps.unavailable") else null
+            val watermarkModifier = Modifier.align(Alignment.BottomStart).padding(Tk.Sp.s3)
+                .then(if (!hasLocation) Modifier.clickable(onClick = ::requestLocation) else Modifier)
             when {
                 mode == CapMode.audio -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AudioStage(hasMic, RecordingState.isRecording, RecordingState.isPaused, elapsed, context)
                     if (RecordingState.isRecording && RecordingState.backgroundAlertsUnavailable) Text(tr("rec.silence.backgroundUnavailable"), color = Color.White, modifier = Modifier.padding(Tk.Sp.s3))
                     if (RecordingState.analysisUnavailable) Text(tr("rec.silence.unavailable"), color = Color.White, modifier = Modifier.padding(Tk.Sp.s3))
                     RecordingState.message?.let { message ->
-                        Text(message, color = Color.White, modifier = Modifier.padding(Tk.Sp.s3)
-                            .clickable { onOpen(Overlay.Library) })
+                        Text(message, style = Fonts.small(), color = Color.White, textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(Tk.Sp.s3).heightIn(min = Tk.touchMin).clickable { onOpen(Overlay.Library) }.wrapContentHeight())
                     }
                     // 只有真失败过才给重试；保存成功的提示旁边不该挂着「重试保存」
                     if (RecordingState.canRetrySave && !RecordingState.isRecording) androidx.compose.material3.TextButton(onClick = { model.retryRecordingDrafts() }, enabled = !RecordingState.isSaving) {
@@ -393,109 +389,88 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
-                    Watermark(
-                        now = ScreenshotMode.stamp(now), projectName = project?.name.orEmpty(), loc = loc,
-                        modifier = Modifier.align(Alignment.BottomStart).padding(Tk.Sp.s3),
-                    )
+                    Watermark(now = ScreenshotMode.stamp(now), projectName = project?.name ?: tr("project.none"), loc = loc, modifier = watermarkModifier, coordOverride = coordLine)
                 }
                 else -> {
                     CameraPreview(previewView, Modifier.fillMaxSize())
-                    Watermark(
-                        now = now, projectName = project?.name.orEmpty(), loc = loc,
-                        modifier = Modifier.align(Alignment.BottomStart).padding(Tk.Sp.s3),
-                    )
+                    Watermark(now = now, projectName = project?.name ?: tr("project.none"), loc = loc, modifier = watermarkModifier, coordOverride = coordLine)
                 }
             }
+            if (recording && paused) Text(tr("rec.pause.remember"), color = Color.White, textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.Center).padding(Tk.Sp.s4).background(Color.Black.copy(alpha = 0.85f)).padding(Tk.Sp.s4))
             // 快门白闪：唯一的「拍到了」即时反馈，比任何提示都快
             if (flash) Box(Modifier.fillMaxSize().background(Color.White))
         }
 
-        if (recording) {
-            if (paused) Text(tr("rec.pause.remember"), color = Color.White, modifier = Modifier.fillMaxWidth().background(Tk.S.failed).padding(Tk.Sp.s2), textAlign = TextAlign.Center)
-            pauseError?.let { Text(it, color = Color.White, modifier = Modifier.padding(Tk.Sp.s2)) }
-            Row(Modifier.fillMaxWidth()) {
-            androidx.compose.material3.TextButton(
-                onClick = {
-                    pauseError = null
-                    if (camera.isRecording) {
-                        val success = if (paused) camera.resumeVideo() else camera.pauseVideo()
-                        if (!success) pauseError = tr(if (paused) "rec.resume.videoFailed" else "rec.pause.failed")
-                    } else if (paused) RecordingService.resume(context) else RecordingService.pause(context)
-                },
-                enabled = !camera.transitionPending,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(tr(if (paused) { if (camera.isRecording) "rec.resume.video" else "rec.resume.audio" } else { if (camera.isRecording) "rec.pause.video" else "rec.pause.audio" }), color = Color.White)
-            }
-            androidx.compose.material3.TextButton(onClick = ::shoot, modifier = Modifier.weight(1f)) { Text(tr("rec.silence.stop"), color = Color.White) }
-            }
-        }
+        pauseError?.let { Text(it, color = Tk.S.failed, style = Fonts.small(), modifier = Modifier.padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s1)) }
         Controls(
             mode = mode,
             onMode = { mode = it },
             recording = recording,
             paused = paused,
             recordingVideo = camera.isRecording,
+            canPause = !camera.transitionPending,
             elapsed = elapsed,
             recent = items.firstOrNull(),
-            total = tally.total,
             desktopOnline = desktopOnline,
             assigned = project != null,
             onShoot = ::shootWithNotificationPermission,
+            onRecordAudio = { if (!capturing) { mode = CapMode.audio; shootWithNotificationPermission() } },
+            onTogglePause = {
+                pauseError = null
+                if (camera.isRecording) {
+                    val success = if (paused) camera.resumeVideo() else camera.pauseVideo()
+                    if (!success) pauseError = tr(if (paused) "rec.resume.videoFailed" else "rec.pause.failed")
+                } else if (paused) RecordingService.resume(context) else RecordingService.pause(context)
+            },
+            onStop = ::shoot,
             onOpenLibrary = { onOpen(Overlay.Library) },
-            onOpenQueue = { onOpen(Overlay.Queue) },
         )
+        if (!landscape) RecentStrip(items.take(8), onOpenLibrary = { onOpen(Overlay.Library) })
     }
 }
 
-// MARK: - 顶部信息
+// MARK: - 顶栏（与 iOS 同：项目下拉 · 项目文件 · 上传队列 · 账号）
 
 @Composable
-private fun Header(
+private fun TopBar(
     projectName: String,
-    loc: Loc?,
-    hasLocation: Boolean,
-    locUnavailable: Boolean,
-    tally: TransferTally,
-    onOpenQueue: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onRequestLocation: () -> Unit,
+    enabled: Boolean,
+    hasProject: Boolean,
+    onProjects: () -> Unit,
+    onFiles: () -> Unit,
+    onQueue: () -> Unit,
+    onSettings: () -> Unit,
 ) {
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s2),
-        verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1),
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = Tk.Sp.gutter - Tk.Sp.s2, vertical = Tk.Sp.s1),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                tr("home.eyebrow").uppercase(), style = Fonts.nano(),
-                color = Color.White.copy(alpha = 0.45f), modifier = Modifier.weight(1f),
-            )
-            // 位置精度：没有精度的坐标在质证时说明不了问题，所以直接显示出来
-            Row(modifier = Modifier.heightIn(min = Tk.touchMin).clickable(onClick = onRequestLocation), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Box(
-                    Modifier.size(5.dp).clip(CircleShape)
-                        .background(if (loc == null) Color.White.copy(alpha = 0.3f) else Tk.S.arrivedOnDark),
-                )
-                Text(if (!hasLocation) tr("home.location.enable") else if (loc == null && locUnavailable) tr("home.gps.unavailable") else WatermarkFormat.chip(loc), style = Fonts.mono(Tk.Ty.nano), color = Color.White.copy(alpha = 0.6f))
+        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            Row(
+                Modifier.heightIn(min = Tk.touchMin).clip(RoundedCornerShape(8.dp))
+                    .clickable(enabled = enabled, role = Role.Button, onClick = onProjects).padding(horizontal = Tk.Sp.s2),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s1),
+            ) {
+                Text(projectName, style = Fonts.body(), color = Tk.D.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                Icon(painterResource(R.drawable.ic_expand), contentDescription = null, tint = Tk.D.fg, modifier = Modifier.size(20.dp))
             }
-            Text(
-                tr("home.settings").uppercase(), style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f),
-                modifier = Modifier.padding(start = Tk.Sp.s3).heightIn(min = Tk.touchMin)
-                    .clickable(onClick = onOpenSettings).wrapContentHeight(),
-            )
         }
+        if (hasProject) IconAction(R.drawable.ic_folder, tr("workspace.files"), enabled, onFiles)
+        IconAction(R.drawable.ic_queue, tr("queue.title"), true, onQueue)
+        IconAction(R.drawable.ic_account, tr("home.settings"), true, onSettings)
+    }
+}
 
-        Text(projectName.ifEmpty { tr("library.unknownProject") }, style = Fonts.title(), color = Tk.D.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(
-            if (projectName.isEmpty()) tr("workspace.unassignedHint") else tr(
-                "home.archiveTo",
-                mapOf("path" to tr("archive.path", mapOf("date" to ScreenshotMode.archiveDate()))),
-            ),
-            style = Fonts.nano(), color = Color.White.copy(alpha = 0.4f),
-        )
-        Box(Modifier.fillMaxWidth().heightIn(min = 28.dp).clickable(onClick = onOpenQueue), contentAlignment = Alignment.CenterStart) {
-            TallyRow(tally, onDark = true)
-        }
+@Composable
+private fun IconAction(icon: Int, label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.size(Tk.touchMin).clip(CircleShape).clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(painterResource(icon), contentDescription = null, tint = if (enabled) Tk.D.fg else Tk.D.fgMuted, modifier = Modifier.size(26.dp))
     }
 }
 
@@ -518,7 +493,7 @@ private fun AudioStage(hasMic: Boolean, recording: Boolean, paused: Boolean, ela
             )
         }
         // 录音中说一句「退后台也在录」：用户开会时最怕的就是切出去一下就断了
-        if (recording && !paused) Text(tr("home.audio.backgroundOk"), style = Fonts.nano(), color = Color.White.copy(alpha = 0.35f))
+        if (recording && !paused) Text(tr("home.audio.backgroundOk"), style = Fonts.nano(), color = Color.White.copy(alpha = 0.45f))
     }
 }
 
@@ -538,7 +513,7 @@ private fun PermissionStage(title: String, context: Context) {
     }
 }
 
-// MARK: - 底部控制
+// MARK: - 底部控制（与 iOS 同：照片/录像切换；资料库 · 快门 · 一键录音；桌面连接与取证要素）
 
 @Composable
 private fun Controls(
@@ -547,14 +522,16 @@ private fun Controls(
     recording: Boolean,
     paused: Boolean,
     recordingVideo: Boolean,
+    canPause: Boolean,
     elapsed: Long,
     recent: CaptureItem?,
-    total: Int,
     desktopOnline: Boolean,
     assigned: Boolean,
     onShoot: () -> Unit,
+    onRecordAudio: () -> Unit,
+    onTogglePause: () -> Unit,
+    onStop: () -> Unit,
     onOpenLibrary: () -> Unit,
-    onOpenQueue: () -> Unit,
 ) {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = Tk.Sp.gutter).padding(top = Tk.Sp.s3, bottom = Tk.Sp.s2),
@@ -562,41 +539,42 @@ private fun Controls(
     ) {
         if (recording) {
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 28.dp),
+                Modifier.fillMaxWidth().heightIn(min = Tk.touchMin),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s1, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2, Alignment.CenterHorizontally),
             ) {
-                Box(Modifier.size(7.dp).clip(CircleShape).background(Tk.S.failed))
+                if (!paused) Box(Modifier.size(7.dp).clip(CircleShape).background(Tk.S.failed))
                 Text(WatermarkFormat.duration(elapsed), style = Fonts.mono(Tk.Ty.small), color = Color.White)
                 Text(
-                    (if (paused) tr("rec.pause.status") else if (recordingVideo) tr("home.recording.video") else tr("home.recording.audio")).uppercase(),
+                    if (paused) tr("rec.pause.status") else if (recordingVideo) tr("home.recording.video") else tr("home.recording.audio"),
                     style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f),
+                )
+                if (paused) Text(tr("rec.silence.stop"), style = Fonts.small(), color = Tk.S.failed,
+                    modifier = Modifier.padding(start = Tk.Sp.s3).heightIn(min = Tk.touchMin).clickable(role = Role.Button, onClick = onStop).wrapContentHeight())
+                Text(
+                    tr(if (paused) { if (recordingVideo) "rec.resume.video" else "rec.resume.audio" } else { if (recordingVideo) "rec.pause.video" else "rec.pause.audio" }),
+                    style = Fonts.small(), color = if (canPause) Color.White else Color.White.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(start = Tk.Sp.s3).heightIn(min = Tk.touchMin).clickable(enabled = canPause, role = Role.Button, onClick = onTogglePause).wrapContentHeight(),
                 )
             }
         } else {
-            // 三档并排、点选切换。取证的模式必须显式可预期，不做横滑模式条，也不做快门手势
-            // 切换——手滑录错模式是取证事故。
+            // 照片与录像显式切换，录音是右下独立一键按钮。不做横滑模式条——手滑录错模式是取证事故。
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s8, Alignment.CenterHorizontally),
             ) {
                 ModeButton(tr("home.mode.photo"), mode == CapMode.photo) { onMode(CapMode.photo) }
                 ModeButton(tr("home.mode.video"), mode == CapMode.video) { onMode(CapMode.video) }
-                ModeButton(tr("home.mode.audio"), mode == CapMode.audio) { onMode(CapMode.audio) }
             }
         }
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                RecentThumb(recent, onOpenLibrary)
+                LibraryEntry(recent, onOpenLibrary)
             }
             Shutter(mode, recording, onShoot)
-            Column(
-                Modifier.weight(1f).clickable(onClick = onOpenQueue),
-                horizontalAlignment = Alignment.End,
-            ) {
-                Text(total.toString(), style = Fonts.mono(Tk.Ty.heading), color = Color.White)
-                Text(tr("home.counter.project").uppercase(), style = Fonts.nano(), color = Color.White.copy(alpha = 0.5f))
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                if (!recording) AudioEntry(onRecordAudio)
             }
         }
 
@@ -608,9 +586,41 @@ private fun Controls(
                     .background(if (desktopOnline) Tk.S.arrivedOnDark else Color.White.copy(alpha = 0.3f)),
             )
             Text(
-                (if (!assigned) tr("workspace.unassignedHint") else if (desktopOnline) tr("home.desktop.online") else tr("home.desktop.offline")).uppercase(),
-                style = Fonts.nano(), color = Color.White.copy(alpha = 0.5f),
+                if (!assigned) tr("project.noneHint") else if (desktopOnline) tr("home.desktop.online") else tr("home.desktop.offline"),
+                style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
+            Text(tr("home.stampFeatures"), style = Fonts.nano(), color = Color.White.copy(alpha = 0.4f), maxLines = 1)
+        }
+    }
+}
+
+/** 一键录音：点了就开始录，不用先切档。录制中隐藏（停止在中间的快门上）。 */
+@Composable
+private fun AudioEntry(onClick: () -> Unit) {
+    val label = tr("home.shutter.startAudio")
+    Column(
+        Modifier.heightIn(min = Tk.touchMin).clickable(role = Role.Button, onClickLabel = label, onClick = onClick).semantics(mergeDescendants = true) {},
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1),
+    ) {
+        Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+            Icon(painterResource(R.drawable.ic_mic), contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+        }
+        Text(label, style = Fonts.nano(), color = Color.White)
+    }
+}
+
+/** 近期记录：当前项目最近 8 件的缩略图，点开资料库。 */
+@Composable
+private fun RecentStrip(items: List<CaptureItem>, onOpenLibrary: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = Tk.Sp.gutter).padding(bottom = Tk.Sp.s3), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
+        Text(tr("home.recent"), style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f))
+        if (items.isEmpty()) Text(tr("home.recent.empty"), style = Fonts.micro(), color = Color.White.copy(alpha = 0.55f))
+        else Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
+            for (item in items) Box(Modifier.size(56.dp).clip(RoundedCornerShape(2.dp)).clickable(role = Role.Button, onClickLabel = tr("library.open"), onClick = onOpenLibrary)) {
+                Thumb(item)
+                StatusDot(item.state, onDark = true, size = 5.dp, modifier = Modifier.align(Alignment.BottomEnd).padding(Tk.Sp.s1))
+            }
         }
     }
 }
@@ -659,25 +669,32 @@ private fun Shutter(mode: CapMode, recording: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** 最近一件的真缩略图，也是影像浏览的入口。 */
+/** 最近一件的真缩略图 +「资料库」字样，是影像浏览的入口。 */
 @Composable
-private fun RecentThumb(item: CaptureItem?, onClick: () -> Unit) {
-    Box(Modifier.size(Tk.touchMin).clickable(onClick = onClick)) {
-        when {
-            item == null -> Box(Modifier.fillMaxSize().border(1.dp, Tk.D.rule))
-            item.kind == MediaKind.audio -> Box(
-                Modifier.fillMaxSize().background(Tk.D.surface),
-                contentAlignment = Alignment.Center,
-            ) { Text("♪", style = Fonts.body(), color = Color.White.copy(alpha = 0.6f)) }
-            else -> AsyncImage(
-                model = item.localFile,
-                contentDescription = tr("home.thumb"),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
+private fun LibraryEntry(item: CaptureItem?, onClick: () -> Unit) {
+    val label = tr("library.open")
+    Column(
+        Modifier.clickable(role = Role.Button, onClickLabel = label, onClick = onClick).semantics(mergeDescendants = true) {},
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Box(Modifier.size(Tk.touchMin)) {
+            if (item == null) Box(Modifier.fillMaxSize().border(1.dp, Tk.D.rule), contentAlignment = Alignment.Center) {
+                Icon(painterResource(R.drawable.ic_photo), contentDescription = null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(16.dp))
+            } else {
+                Thumb(item)
+                StatusDot(item.state, onDark = true, size = 4.dp, modifier = Modifier.align(Alignment.TopStart).padding(3.dp))
+            }
         }
-        item?.let { StatusDot(it.state, onDark = true, size = 4.dp, modifier = Modifier.align(Alignment.TopStart).padding(3.dp)) }
+        Text(label, style = Fonts.nano(), color = Color.White.copy(alpha = 0.75f))
     }
+}
+
+@Composable
+private fun Thumb(item: CaptureItem) {
+    if (item.kind == MediaKind.audio) Box(Modifier.fillMaxSize().background(Tk.D.surface), contentAlignment = Alignment.Center) {
+        Icon(painterResource(R.drawable.ic_mic), contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+    } else AsyncImage(model = item.localFile, contentDescription = tr("home.thumb"), contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
 }
 
 private fun granted(context: Context, permission: String): Boolean =
