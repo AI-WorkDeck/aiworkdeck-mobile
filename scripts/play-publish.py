@@ -209,7 +209,30 @@ def read_release_notes(notes_file: str | None) -> list[dict[str, str]] | None:
     text = path.read_text(encoding="utf-8").strip()
     if not text:
         return None
-    return [{"language": "en-US", "text": text}]
+    return [
+        {"language": "en-GB", "text": text},
+        {"language": "en-US", "text": text},
+    ]
+
+
+def fetch_default_language(client: PlayClient) -> str:
+    """Read the app's configured Play Store defaultLanguage via a temporary edit."""
+    edit = client.request_json("POST", f"{API_BASE}/{client.package_name}/edits", {})
+    edit_id = edit["id"]
+    try:
+        details = client.request_json(
+            "GET",
+            f"{API_BASE}/{client.package_name}/edits/{edit_id}/details",
+        )
+        return (details.get("defaultLanguage") or "en-GB").strip() or "en-GB"
+    finally:
+        try:
+            client.request_json(
+                "DELETE",
+                f"{API_BASE}/{client.package_name}/edits/{edit_id}",
+            )
+        except Exception:
+            pass
 
 
 def cmd_upload(client: PlayClient, args: argparse.Namespace) -> None:
@@ -332,12 +355,46 @@ def cmd_sync_skus(client: PlayClient, args: argparse.Namespace) -> None:
     if not gp_skus:
         raise RuntimeError(f"No 'googleplay' products found in {products_path}")
 
+    default_lang = fetch_default_language(client)
     summary: list[dict[str, Any]] = []
     for item in gp_skus:
         product_id = item["productId"]
         amount_cents = int(item["amountCents"])
         base_price = _format_usd_money(amount_cents)
         usd_text = _usd_label(amount_cents)
+        en_title = f"Credits ({usd_text})"
+        en_desc = (
+            f"Adds {usd_text} USD of Credits to your AI WorkDeck unified account. "
+            "Balance is shared across all your devices."
+        )
+        listings: list[dict[str, str]] = [
+            {
+                "languageCode": "en-GB",
+                "title": en_title,
+                "description": en_desc,
+            },
+            {
+                "languageCode": "en-US",
+                "title": en_title,
+                "description": en_desc,
+            },
+            {
+                "languageCode": "zh-CN",
+                "title": f"充值 {usd_text} Credits",
+                "description": (
+                    f"为 AI WorkDeck 统一账户充值 {usd_text.lstrip('$')} 美元 Credits，余额各端通用。"
+                ),
+            },
+        ]
+        if default_lang not in {"en-GB", "en-US", "zh-CN"}:
+            listings.insert(
+                0,
+                {
+                    "languageCode": default_lang,
+                    "title": en_title,
+                    "description": en_desc,
+                },
+            )
 
         conv = client.request_json(
             "POST",
@@ -374,15 +431,7 @@ def cmd_sync_skus(client: PlayClient, args: argparse.Namespace) -> None:
         patch_body = {
             "packageName": client.package_name,
             "productId": product_id,
-            "listings": [
-                {
-                    "languageCode": "en-US",
-                    "title": f"{usd_text} AI WorkDeck Credits",
-                    "description": (
-                        f"Add {usd_text} USD of AI WorkDeck compute credits to your account."
-                    ),
-                }
-            ],
+            "listings": listings,
             "purchaseOptions": [
                 {
                     "purchaseOptionId": "buy",
