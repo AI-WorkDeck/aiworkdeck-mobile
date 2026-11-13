@@ -1,2 +1,5 @@
-1. Fixed: captures filed to "Temporary project" failed to upload on accounts without cloud storage. They now stay on your phone until you file them to a project, and items already stuck as failed recover automatically.
-2. The subscription is now offered in App Store regions worldwide; if it is not available for your Apple Account region, the subscription page says so.
+1. Fixed: the first screen after sign-in could freeze when Location Services responded slowly.
+2. If your sign-in can't be saved, the app now says so instead of appearing signed in and then asking you to sign in again.
+3. Unreadable recordings can be discarded instead of being reported at every launch, and the recording notice no longer appears over the sign-in screen.
+4. Network problems are explained in plain language instead of raw system errors.
+5. Assistant replies no longer include emoji.
