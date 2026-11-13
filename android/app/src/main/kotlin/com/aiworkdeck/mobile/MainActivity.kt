@@ -8,10 +8,26 @@ import com.aiworkdeck.mobile.services.CalendarReminders
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Text
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.dp
+import com.aiworkdeck.mobile.design.Fonts
+import com.aiworkdeck.mobile.design.tr
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -70,6 +86,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 内容画到系统栏下面：底部系统导航栏不再是一条灰带，各屏自己按 safeDrawing 让位。
+        enableEdgeToEdge()
+        // 三键导航时系统默认给导航栏垫一层半透明浅色，压在深色底部栏下面成了一条灰带
+        if (android.os.Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
         // 相册挂钩装在这里而不是 AppModel 里：AppModel 不认识 MediaStore，
         // 相册与上传是两条互不影响的链（是否要存由 Prefs.saveToAlbum 在 AppModel 里判定）。
         model.albumSaver = { item ->
@@ -110,11 +130,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** 登录后的三栏，与 iOS `PersonalWorkspaceView` 的 TabView 同序：采集为首页。 */
+enum class MainTab(val labelKey: String, val icon: Int) {
+    capture("workspace.capture", R.drawable.ic_tab_capture),
+    calendar("personal.calendar", R.drawable.ic_tab_calendar),
+    assistant("personal.assistant", R.drawable.ic_tab_assistant),
+}
+
 /**
- * 根路由：恢复会话 → 登录 → 直接采集；项目选择作为可关闭的浮层。
+ * 根路由：恢复会话 → 登录 → 底部三栏（采集 / 日程 / 助理），采集为首页；
+ * 资料库、队列、设置、选项目等是盖在三栏之上的全屏浮层。
  *
  * 深色不是主题跟随而是功能性的：取景器与影像浏览要深色（现场看屏、不干扰夜视），
- * 登录与选项目是普通表单屏，走浅色。
+ * 登录、日程、助理等普通表单屏走浅色。
  */
 @Composable
 fun Root(model: AppModel, notificationEventId: String? = null) {
@@ -123,12 +151,13 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
     val isSignedIn by model.isSignedIn.collectAsStateWithLifecycle()
     val project by model.selectedProject.collectAsStateWithLifecycle()
 
-    var overlay by remember { mutableStateOf(if (ScreenshotMode.enabled) Overlay.None else Overlay.Personal) }
-    var returnOverlay by remember { mutableStateOf(Overlay.Personal) }
+    var tab by remember { mutableStateOf(MainTab.capture) }
+    var overlay by remember { mutableStateOf(Overlay.None) }
+    var returnOverlay by remember { mutableStateOf(Overlay.None) }
     var personalFileProject by remember { mutableStateOf<com.aiworkdeck.mobile.model.RelayProject?>(null) }
-    var captureStarted by remember { mutableStateOf(ScreenshotMode.enabled) }
+    var captureBusy by remember { mutableStateOf(false) }
     val personal = remember(isSignedIn) { if (isSignedIn) PersonalWorkspaceState() else null }
-    LaunchedEffect(notificationEventId) { if (notificationEventId != null) overlay = Overlay.Personal }
+    LaunchedEffect(notificationEventId) { if (notificationEventId != null && !captureBusy) { overlay = Overlay.None; tab = MainTab.calendar } }
     // 全屏看大图的目标：同一天的件 + 起始下标。它盖在图集之上，图集盖在取景器之上。
     var viewer by remember { mutableStateOf<Pair<List<CaptureItem>, Int>?>(null) }
 
@@ -148,7 +177,7 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
     }
 
     LaunchedEffect(isSignedIn) {
-        if (!isSignedIn) { overlay = Overlay.Personal; viewer = null; captureStarted = false; CalendarReminders.clear(context) }
+        if (!isSignedIn) { tab = MainTab.capture; overlay = Overlay.None; viewer = null; CalendarReminders.clear(context) }
         else if (!ScreenshotMode.enabled) {
             val consent = try { ServiceLocator.backend.backupConsent() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
             consent?.let {
@@ -157,20 +186,38 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
         }
     }
 
-    val dark = didRestore && isSignedIn
+    // 系统栏图标颜色跟着当前屏走：取景器深色要白图标，其余浅色屏要深图标
+    val darkChrome = didRestore && isSignedIn && tab == MainTab.capture && overlay == Overlay.None
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.SideEffect {
+        val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
+        androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !darkChrome
+            isAppearanceLightNavigationBars = !darkChrome
+        }
+    }
     val layoutDir = if (L10n.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
     CompositionLocalProvider(LocalLayoutDirection provides layoutDir) {
-        WorkdeckTheme(dark = dark) {
+        WorkdeckTheme(dark = darkChrome) {
             when {
                 // 恢复会话前先给一张与主界面同色的空屏，避免登录页闪一下再跳走
                 !didRestore -> Column(Modifier.fillMaxSize().background(Tk.L.bg)) {}
                 !isSignedIn -> LoginScreen(model)
-                else -> {
-                    // 取景器一直在下面：图集是盖上去的一层，退回来时镜头还在原处，不用重新绑定
-                    if (captureStarted) HomeScreen(model, onOpen = { returnOverlay = Overlay.None; personalFileProject = null; overlay = it })
-                    if (overlay == Overlay.Personal && personal != null) PersonalWorkspaceScreen(personal, notificationEventId,
-                        onOpen = { returnOverlay = Overlay.Personal; if (it == Overlay.None) captureStarted = true; overlay = it },
-                        onProject = { returnOverlay = Overlay.Personal; personalFileProject = it; overlay = Overlay.Files })
+                else -> Box(Modifier.fillMaxSize()) {
+                    Column(Modifier.fillMaxSize()) {
+                        Box(Modifier.weight(1f).consumeWindowInsets(WindowInsets.navigationBars)) {
+                            // 取景器一直留在组合里：切到日程/助理或盖上浮层时只放掉相机，切回来模式与计时都在
+                            val captureActive = tab == MainTab.capture && overlay == Overlay.None
+                            Box(if (captureActive) Modifier else Modifier.clearAndSetSemantics {}) {
+                                HomeScreen(model, active = captureActive, onBusy = { captureBusy = it },
+                                    onOpen = { returnOverlay = Overlay.None; personalFileProject = null; overlay = it })
+                            }
+                            if (tab != MainTab.capture && personal != null) PersonalWorkspaceScreen(personal, tab.name, notificationEventId,
+                                onOpen = { returnOverlay = Overlay.None; overlay = it },
+                                onProject = { returnOverlay = Overlay.None; personalFileProject = it; overlay = Overlay.Files })
+                        }
+                        MainTabBar(tab, dark = tab == MainTab.capture, enabled = !captureBusy) { tab = it }
+                    }
                     if (overlay == Overlay.Queue) {
                         QueueScreen(model, onClose = { overlay = returnOverlay })
                     }
@@ -200,8 +247,40 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
         }
     }
 
-    // 系统返回键按浮层的层序逐层收回，不是一下退出应用
-    BackHandler(enabled = overlay != Overlay.None && overlay != Overlay.Personal) {
-        if (viewer != null) viewer = null else overlay = returnOverlay
+    // 系统返回键按浮层的层序逐层收回；没有浮层时从日程/助理回到采集，再按才退出应用
+    BackHandler(enabled = isSignedIn && (overlay != Overlay.None || tab != MainTab.capture)) {
+        when {
+            viewer != null -> viewer = null
+            overlay != Overlay.None -> overlay = returnOverlay
+            !captureBusy -> tab = MainTab.capture
+        }
+    }
+}
+
+/** 底部三栏。采集栏选中时用深色（与取景器连成一片），其余用浅色。 */
+@Composable
+private fun MainTabBar(selected: MainTab, dark: Boolean, enabled: Boolean, onSelect: (MainTab) -> Unit) {
+    val bg = if (dark) Tk.D.bg else Tk.L.bg
+    val on = if (dark) Tk.D.fg else Tk.L.accent
+    val off = if (dark) Tk.D.fgMuted else Tk.L.fgMuted
+    Column(Modifier.background(bg)) {
+        HorizontalDivider(color = if (dark) Tk.D.rule else Tk.L.rule)
+        NavigationBar(containerColor = bg, tonalElevation = 0.dp) {
+            for (t in MainTab.entries) {
+                NavigationBarItem(
+                    selected = t == selected,
+                    enabled = enabled || t == selected,
+                    onClick = { onSelect(t) },
+                    icon = { Icon(painterResource(t.icon), contentDescription = null) },
+                    label = { Text(tr(t.labelKey), style = Fonts.small()) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = on, selectedTextColor = on,
+                        unselectedIconColor = off, unselectedTextColor = off,
+                        indicatorColor = if (dark) Tk.D.surface else Tk.L.accentWash,
+                        disabledIconColor = off.copy(alpha = 0.4f), disabledTextColor = off.copy(alpha = 0.4f),
+                    ),
+                )
+            }
+        }
     }
 }

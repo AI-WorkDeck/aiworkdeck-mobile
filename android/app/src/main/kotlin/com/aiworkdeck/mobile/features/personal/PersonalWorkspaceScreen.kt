@@ -12,10 +12,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.aiworkdeck.mobile.Overlay
+import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.tr
@@ -262,7 +264,9 @@ class PersonalWorkspaceState(
 }
 
 @Composable
-fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: String?, onOpen: (Overlay) -> Unit, onProject: (RelayProject) -> Unit) {
+/** 日程 / 助理两栏的内容；切哪一栏由外壳的底部栏决定（[tab] = "calendar" | "assistant"）。 */
+fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notificationEventId: String?, onOpen: (Overlay) -> Unit, onProject: (RelayProject) -> Unit) {
+    state.tab = tab
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var consent by remember { mutableStateOf<String?>(null) }
@@ -279,19 +283,13 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, notificationEventId: 
         if (state.reportConversationId != null && state.reportId != null) state.refreshReportProgress()
     }
     LaunchedEffect(notificationEventId, state.calendar) {
-        if (notificationEventId != null) { state.tab = "calendar"; state.selected = state.calendar?.events?.find { it.id == notificationEventId } }
+        if (notificationEventId != null) { state.selected = state.calendar?.events?.find { it.id == notificationEventId } }
     }
     LightStatusBar()
-    Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(16.dp).imePadding()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(tr("personal." + state.tab), style = MaterialTheme.typography.titleLarge, color = Tk.L.fg)
-            TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("home.settings")) }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = { state.tab = "assistant" }) { Text(tr("personal.assistant")) }
-            TextButton(onClick = { state.tab = "calendar" }) { Text(tr("personal.calendar")) }
-            TextButton(onClick = { onOpen(Overlay.Projects) }) { Text(tr("workspace.title")) }
-            TextButton(onClick = { onOpen(Overlay.None) }) { Text(tr("workspace.capture")) }
+    Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(horizontal = Tk.Sp.gutter).imePadding()) {
+        Row(Modifier.fillMaxWidth().heightIn(min = Tk.touchMin), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("personal." + state.tab), style = Fonts.title(), color = Tk.L.fg)
+            TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("home.settings"), style = Fonts.body()) }
         }
         if (state.tab == "assistant") {
             state.status?.let { status ->

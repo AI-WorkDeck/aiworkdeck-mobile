@@ -26,10 +26,31 @@ val LocalOnDark = staticCompositionLocalOf { false }
  */
 @Composable
 fun WorkdeckTheme(dark: Boolean, content: @Composable () -> Unit) {
+    // 每个 Material 槽位都接到令牌上：漏接的槽会回落到 Material 默认的紫色（11-12 实测满屏淡紫）。
     val scheme = if (dark) {
-        darkColorScheme(background = Tk.D.bg, onBackground = Tk.D.fg)
+        darkColorScheme(
+            primary = Tk.D.fg, onPrimary = Tk.D.bg, primaryContainer = Tk.D.surface, onPrimaryContainer = Tk.D.fg,
+            secondary = Tk.D.fgMuted, onSecondary = Tk.D.bg, secondaryContainer = Tk.D.surface, onSecondaryContainer = Tk.D.fg,
+            tertiary = Tk.D.fgMuted, onTertiary = Tk.D.bg,
+            background = Tk.D.bg, onBackground = Tk.D.fg,
+            surface = Tk.D.surface, onSurface = Tk.D.fg, surfaceVariant = Tk.D.surface, onSurfaceVariant = Tk.D.fgMuted,
+            surfaceContainer = Tk.D.surface, surfaceContainerHigh = Tk.D.surface, surfaceContainerHighest = Tk.D.surface,
+            surfaceContainerLow = Tk.D.bg, surfaceContainerLowest = Tk.D.bg,
+            outline = Tk.D.rule, outlineVariant = Tk.D.rule,
+            error = Tk.S.failed, onError = Tk.D.fg,
+        )
     } else {
-        lightColorScheme(background = Tk.L.bg, onBackground = Tk.L.fg)
+        lightColorScheme(
+            primary = Tk.L.accent, onPrimary = Tk.L.bg, primaryContainer = Tk.L.accentWash, onPrimaryContainer = Tk.L.accent,
+            secondary = Tk.L.accent, onSecondary = Tk.L.bg, secondaryContainer = Tk.L.accentWash, onSecondaryContainer = Tk.L.accent,
+            tertiary = Tk.L.fgMuted, onTertiary = Tk.L.bg,
+            background = Tk.L.bg, onBackground = Tk.L.fg,
+            surface = Tk.L.bg, onSurface = Tk.L.fg, surfaceVariant = Tk.L.sunken, onSurfaceVariant = Tk.L.fgMuted,
+            surfaceContainer = Tk.L.bg, surfaceContainerHigh = Tk.L.bg, surfaceContainerHighest = Tk.L.sunken,
+            surfaceContainerLow = Tk.L.bg, surfaceContainerLowest = Tk.L.bg,
+            outline = Tk.L.ruleStrong, outlineVariant = Tk.L.rule,
+            error = Tk.S.failed, onError = Tk.L.bg,
+        )
     }
     CompositionLocalProvider(LocalOnDark provides dark) {
         MaterialTheme(colorScheme = scheme, content = content)
