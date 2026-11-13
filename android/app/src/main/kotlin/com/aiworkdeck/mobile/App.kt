@@ -5,7 +5,9 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.video.VideoFrameDecoder
 import com.aiworkdeck.mobile.design.L10n
+import com.aiworkdeck.mobile.model.ArchiveMoveAccount
 import com.aiworkdeck.mobile.services.AccountRegion
+import com.aiworkdeck.mobile.services.ArchiveMoveQueue
 import com.aiworkdeck.mobile.services.Backend
 import com.aiworkdeck.mobile.services.BackendUploader
 import com.aiworkdeck.mobile.services.EvidenceStore
@@ -47,6 +49,12 @@ class App : Application() {
             store = store,
             uploader = BackendUploader(backend, prefs),
         )
+        // 移动事务每一步都现取账号：会话或区域一换，绑定对不上就停手
+        ServiceLocator.archiveMoves = ArchiveMoveQueue(store, backend) {
+            backend.identity()?.let { (url, session) ->
+                prefs.stableAccountBinding(session, url)?.let { ArchiveMoveAccount(it, url, session) }
+            }
+        }
         // 通知渠道先建好：Worker 要举前台通知，渠道不存在时通知不显示，任务会被系统当作
         // 无前台的长任务掐掉。
         UploadWorker.ensureChannel(this)

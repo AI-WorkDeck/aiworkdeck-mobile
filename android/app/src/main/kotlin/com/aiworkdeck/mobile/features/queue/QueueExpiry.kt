@@ -17,3 +17,9 @@ fun expiryDaysLeft(expiresAt: String?, now: Instant): Long? {
     if (seconds <= 0L) return 0L
     return ceil(seconds / 86_400.0).toLong()
 }
+
+/** 队列行只在还剩不到 [EXPIRY_WARN_DAYS] 天时提醒（与 iOS 同口径：按秒算，不按向上取整的天数）。 */
+fun expiresSoon(expiresAt: String?, now: Instant): Boolean {
+    val at = expiresAt?.let { IsoTime.parse(it) } ?: return false
+    return at.epochSecond - now.epochSecond < EXPIRY_WARN_DAYS * 86_400
+}

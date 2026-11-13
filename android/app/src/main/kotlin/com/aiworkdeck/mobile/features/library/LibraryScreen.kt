@@ -29,7 +29,17 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import com.aiworkdeck.mobile.R
+import com.aiworkdeck.mobile.services.userFacingMessage
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
@@ -45,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
@@ -53,7 +62,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.aiworkdeck.mobile.AppModel
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.GlassBar
@@ -104,6 +112,9 @@ fun LibraryScreen(
     var confirming by remember { mutableStateOf(false) }
     var assigning by remember { mutableStateOf<Set<String>?>(null) }
     var assignError by remember { mutableStateOf(false) }
+    var movingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var moveError by remember { mutableStateOf<String?>(null) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     var barHeight by remember { mutableStateOf(0.dp) }
 
@@ -125,6 +136,7 @@ fun LibraryScreen(
                     verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2),
                 ) {
                     Text(tr("library.empty"), style = Fonts.body(), color = Tk.D.fg)
+                    Text(tr("library.emptyHint"), style = Fonts.micro(), color = Tk.D.fgMuted)
                     if (otherPending > 0) OtherPending(otherPending)
                 }
             } else if (isGrid) {
@@ -146,7 +158,7 @@ fun LibraryScreen(
                                 item = item,
                                 selecting = selecting,
                                 checked = selected.contains(item.id),
-                                onAssign = { if (item.project == null && item.state == TransferState.waiting) assigning = setOf(item.id) },
+                                onMove = { movingId = item.id },
                                 onTap = {
                                     if (selecting) {
                                         selected = if (selected.contains(item.id)) selected - item.id else selected + item.id
@@ -180,7 +192,8 @@ fun LibraryScreen(
                                 item = item,
                                 selecting = selecting,
                                 checked = selected.contains(item.id),
-                                onAssign = { if (item.project == null && item.state == TransferState.waiting) assigning = setOf(item.id) },
+                                onMove = { movingId = item.id },
+                                onAssign = { assigning = setOf(item.id) },
                                 onTap = {
                                     if (selecting) {
                                         selected = if (selected.contains(item.id)) selected - item.id else selected + item.id
@@ -206,14 +219,6 @@ fun LibraryScreen(
                 barHeight = with(density) { it.height.toDp() }
             }) {
                 Column {
-                    Row {
-                        TextButton(onClick = { audioOnly = false; selected = emptySet() }) {
-                            Text(tr("library.all"), color = if (!audioOnly) Color.White else Tk.D.fgMuted)
-                        }
-                        TextButton(onClick = { audioOnly = true; selected = emptySet() }) {
-                            Text(tr("library.audio"), color = if (audioOnly) Color.White else Tk.D.fgMuted)
-                        }
-                    }
                     TopBar(
                         viewingName = viewing?.name.orEmpty(),
                         projects = projects.map { it.id to it.name },
@@ -235,6 +240,11 @@ fun LibraryScreen(
                         onClose = onClose,
                         embedded = fixedProject != null,
                     )
+                    FilterSegments(
+                        audioOnly, onChange = { audioOnly = it; selected = emptySet() },
+                        modifier = Modifier.padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s2),
+                    )
+                    Hairline(color = Tk.D.rule)
                 }
             }
 
@@ -242,7 +252,8 @@ fun LibraryScreen(
                 DeleteDock(
                     count = selected.size,
                     modifier = Modifier.align(Alignment.BottomCenter),
-                    onDelete = { confirming = true },
+                    // 移动中的件不能删：先说清楚，不弹一个注定失败的确认框
+                    onDelete = { if (selectedItems.any { it.moveBlocksMutation }) deleteError = tr("queue.moveInProgress") else confirming = true },
                 )
             }
         }
@@ -256,6 +267,32 @@ fun LibraryScreen(
                 }
             })
         }
+        all.firstOrNull { it.id == movingId }?.let { item ->
+            BackHandler { movingId = null }
+            ProjectPickerScreen(
+                model, onClose = { movingId = null }, markCurrent = false, onNone = { movingId = null },
+                titleKey = "library.move", hintKey = if (item.canMoveToProject) "library.moveHint" else "queue.moveHint",
+                onSelect = { target ->
+                    scope.launch {
+                        try {
+                            model.move(item, target)
+                            movingId = null
+                            selected = emptySet(); selecting = false
+                            if (fixedProject == null) { viewingId = target.id; prefs.libraryViewingProject = target.id }
+                        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                        catch (e: Exception) { movingId = null; moveError = userFacingMessage(e) }
+                    }
+                },
+            )
+        }
+        (moveError ?: deleteError)?.let { message ->
+            AlertDialog(
+                onDismissRequest = { moveError = null; deleteError = null },
+                title = if (deleteError != null) { { Text(tr("library.delete")) } } else null,
+                text = { Text(message) },
+                confirmButton = { TextButton(onClick = { moveError = null; deleteError = null }) { Text(tr("common.ok")) } },
+            )
+        }
         if (assignError) AlertDialog(onDismissRequest = { assignError = false },
             text = { Text(tr("library.assignFailed")) }, confirmButton = { TextButton(onClick = { assignError = false }) { Text(tr("common.close")) } })
         if (confirming) {
@@ -265,7 +302,7 @@ fun LibraryScreen(
                 text = { Text(LibraryGrouping.deleteWarning(selectedItems)) },
                 confirmButton = {
                     TextButton(onClick = {
-                        model.delete(selected)
+                        model.delete(selected) { deleteError = tr("queue.moveInProgress") }
                         selected = emptySet()
                         selecting = false
                         confirming = false
@@ -305,55 +342,54 @@ private fun TopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2),
         ) {
-            if (!embedded) Box(
-                Modifier.size(Tk.touchMin).clickable(onClick = onClose)
-                    .semantics { contentDescription = tr("common.close") },
-                contentAlignment = Alignment.Center,
-            ) { Text("✕", style = Fonts.body(), color = Tk.D.fg) }
+            if (!embedded) ToolIcon(R.drawable.ic_chevron_left, tr("common.back"), onClose)
 
+            // 项目名就是切换入口。只切看的对象，不动拍摄目标。
             Box(Modifier.weight(1f)) {
                 Row(
-                    Modifier.heightIn(min = 28.dp).clickable(enabled = !embedded) { menuOpen = true },
+                    Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !embedded) { menuOpen = true }
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = if (embedded) viewingName else tr("library.viewing.a11y", mapOf("name" to viewingName))
+                            if (!embedded) role = Role.Button
+                        },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
                         viewingName, style = Fonts.heading(), color = Tk.D.fg,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
+                        modifier = Modifier.weight(1f, fill = false).clearAndSetSemantics {},
                     )
-                    if (!embedded) Text("▾", style = Fonts.small(), color = Tk.D.fgMuted)
+                    if (!embedded) Icon(painterResource(R.drawable.ic_expand), contentDescription = null, tint = Tk.D.fgMuted, modifier = Modifier.size(16.dp))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     for ((id, name) in projects) {
+                        val current = name == viewingName
                         DropdownMenuItem(
                             text = { Text(name, style = Fonts.body()) },
+                            trailingIcon = if (current) {
+                                { Icon(painterResource(R.drawable.ic_check), contentDescription = null, modifier = Modifier.size(18.dp)) }
+                            } else null,
+                            modifier = Modifier.semantics { selected = current },
                             onClick = { onPick(id); menuOpen = false },
                         )
                     }
                 }
             }
 
-            // 列数只在网格下有意义；列表下只留视图切换
+            // 列数只在网格下有意义；列表下只留视图切换。图标按钮，读屏念契约里的 a11y 文案
             if (!selecting && isGrid) {
-                Box(
-                    Modifier.heightIn(min = Tk.touchMin).clickable(onClick = onColumns)
-                        .padding(horizontal = Tk.Sp.s1).wrapContentHeight(),
-                ) {
-                    Text(tr("library.columns", mapOf("n" to columns)), style = Fonts.mono(Tk.Ty.small), color = Tk.D.fg)
-                }
+                ToolIcon(
+                    if (columns == 2) R.drawable.ic_grid_view else R.drawable.ic_grid_on,
+                    tr("library.columns.a11y", mapOf("n" to columns)), onColumns,
+                )
             }
             if (!selecting) {
-                // 按钮写的是**切过去**的那一档，和列数按钮写当前档不同：这个是二选一的开关
-                Box(
-                    Modifier.heightIn(min = Tk.touchMin).clickable(onClick = onToggleView)
-                        .padding(horizontal = Tk.Sp.s1).wrapContentHeight(),
-                ) {
-                    Text(
-                        if (isGrid) tr("library.viewList") else tr("library.viewGrid"),
-                        style = Fonts.small(), color = Tk.D.fg,
-                    )
-                }
+                // 图标画的是**切过去**的那一档：这个是二选一的开关
+                ToolIcon(
+                    if (isGrid) R.drawable.ic_list else R.drawable.ic_grid_view,
+                    if (isGrid) tr("library.toList.a11y") else tr("library.toGrid.a11y"), onToggleView,
+                )
             }
             Box(
                 Modifier.heightIn(min = Tk.touchMin).clickable(enabled = canSelect, onClick = onToggleSelect)
@@ -369,6 +405,32 @@ private fun TopBar(
         // 计数单独一行：它会因为「含 N 失败」后缀变长，和右侧工具挤在一行会把顶栏撑成三行
         TallyRow(tally, onDark = true, modifier = Modifier.padding(start = Tk.Sp.gutter, bottom = Tk.Sp.s2), hideZero = true)
         Hairline(color = Tk.D.rule)
+    }
+}
+
+@Composable
+private fun ToolIcon(icon: Int, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(Tk.touchMin).clickable(onClick = onClick).semantics { contentDescription = label; role = Role.Button },
+        contentAlignment = Alignment.Center,
+    ) { Icon(painterResource(icon), contentDescription = null, tint = Tk.D.fg, modifier = Modifier.size(20.dp)) }
+}
+
+/** 全部 / 录音 两档（iOS 的分段选择器）。选中档垫一块 surface，读屏念「已选中」。 */
+@Composable
+private fun FilterSegments(audioOnly: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(Tk.D.bg)
+            .border(1.dp, Tk.D.rule, RoundedCornerShape(4.dp)),
+    ) {
+        for ((value, label) in listOf(false to tr("library.all"), true to tr("library.audio"))) {
+            val on = value == audioOnly
+            Box(
+                Modifier.weight(1f).heightIn(min = 32.dp).background(if (on) Tk.D.surface else Color.Transparent)
+                    .clickable { onChange(value) }.semantics { selected = on; role = Role.Tab },
+                contentAlignment = Alignment.Center,
+            ) { Text(label, style = Fonts.small(), color = if (on) Tk.D.fg else Tk.D.fgMuted) }
+        }
     }
 }
 
@@ -390,12 +452,18 @@ private fun DayHeader(day: DaySection) {
  */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun Cell(item: CaptureItem, selecting: Boolean, checked: Boolean, onAssign: () -> Unit, onTap: () -> Unit) {
+private fun Cell(item: CaptureItem, selecting: Boolean, checked: Boolean, onMove: () -> Unit, onTap: () -> Unit) {
+    var menuOpen by remember { mutableStateOf(false) }
     Box(
-        Modifier.aspectRatio(1f).background(Tk.D.surface).combinedClickable(onClick = onTap, onLongClick = onAssign)
-            .semantics { contentDescription = "${item.state.caption} ${LibraryTime.clock(item.capturedAt)}" },
+        Modifier.aspectRatio(1f).background(Tk.D.surface)
+            .combinedClickable(onClick = onTap, onLongClick = { if (!selecting && canMove(item)) menuOpen = true })
+            .clearAndSetSemantics {
+                contentDescription = cellLabel(item); role = Role.Button
+                if (selecting) selected = checked
+            },
     ) {
-        Thumb(item, Modifier.fillMaxSize())
+        MoveMenu(menuOpen, onDismiss = { menuOpen = false }, onMove = { menuOpen = false; onMove() })
+        EvidenceThumb(item, onDark = true, modifier = Modifier.fillMaxSize(), iconSize = 28.dp)
         StatusDot(item.state, onDark = true, modifier = Modifier.align(Alignment.TopEnd).padding(6.dp))
         Text(
             LibraryTime.clock(item.capturedAt), style = Fonts.mono(Tk.Ty.nano),
@@ -416,23 +484,6 @@ private fun Cell(item: CaptureItem, selecting: Boolean, checked: Boolean, onAssi
     }
 }
 
-/** 缩略图。录像由全局 ImageLoader 的 `VideoFrameDecoder` 取首帧；录音没有画面，用音符占位。 */
-@Composable
-private fun Thumb(item: CaptureItem, modifier: Modifier = Modifier) {
-    Box(modifier.background(Tk.D.surface), contentAlignment = Alignment.Center) {
-        if (item.kind == MediaKind.audio) {
-            Text("♪", style = Fonts.heading(), color = Color.White.copy(alpha = 0.5f))
-        } else {
-            AsyncImage(
-                model = item.localFile,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-    }
-}
-
 @Composable
 private fun SelectionTick(checked: Boolean, modifier: Modifier = Modifier) {
     Box(
@@ -446,16 +497,19 @@ private fun SelectionTick(checked: Boolean, modifier: Modifier = Modifier) {
  * 列表一行。格子上时刻只到分，这里到秒：切到列表就是为了核对，取证核对的是那一下。
  */
 @Composable
-private fun ListRow(item: CaptureItem, selecting: Boolean, checked: Boolean, onAssign: () -> Unit, onTap: () -> Unit) {
+private fun ListRow(item: CaptureItem, selecting: Boolean, checked: Boolean, onMove: () -> Unit, onAssign: () -> Unit, onTap: () -> Unit) {
+    var menuOpen by remember { mutableStateOf(false) }
+    MoveMenu(menuOpen, onDismiss = { menuOpen = false }, onMove = { menuOpen = false; onMove() })
     RowItem(
-        onClick = onTap,
+        modifier = Modifier.combinedClickable(onClick = onTap, onLongClick = { if (!selecting && canMove(item)) menuOpen = true })
+            .semantics { if (selecting) selected = checked },
         leading = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2),
             ) {
                 if (selecting) SelectionTick(checked)
-                Thumb(item, Modifier.size(72.dp))
+                EvidenceThumb(item, onDark = true, modifier = Modifier.size(72.dp))
             }
         },
     ) {
@@ -472,15 +526,29 @@ private fun ListRow(item: CaptureItem, selecting: Boolean, checked: Boolean, onA
                 )
             }
             Text(kindLabel(item.kind), style = Fonts.nano(), color = Tk.D.fgMuted)
+            if (item.state == TransferState.failed) item.lastError?.takeIf { it.isNotEmpty() }?.let {
+                Text(it, style = Fonts.nano(), color = Tk.S.failed)
+            }
             if (item.project == null && item.state == TransferState.waiting) TextButton(onClick = onAssign) { Text(tr("library.assign")) }
         }
     }
 }
 
-internal fun kindLabel(kind: MediaKind): String = when (kind) {
-    MediaKind.photo -> tr("home.mode.photo")
-    MediaKind.video -> tr("home.mode.video")
-    MediaKind.audio -> tr("home.mode.audio")
+/** 只在真能移动时给（规则同队列页：未上传的直接改目标，已发出的走远端移动）。 */
+private fun canMove(item: CaptureItem) = item.canMoveToProject || item.canRequestArchiveMove
+
+/** 读屏标签：类型、时刻、状态（同 iOS 的 accessibilityLabel 顺序）。 */
+private fun cellLabel(item: CaptureItem) = listOf(kindLabel(item.kind), LibraryTime.clock(item.capturedAt), item.state.caption).joinToString(", ")
+
+@Composable
+private fun MoveMenu(expanded: Boolean, onDismiss: () -> Unit, onMove: () -> Unit) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        DropdownMenuItem(
+            text = { Text(tr("library.move"), style = Fonts.body()) },
+            leadingIcon = { Icon(painterResource(R.drawable.ic_folder), contentDescription = null) },
+            onClick = onMove,
+        )
+    }
 }
 
 // MARK: - 底座与末尾提示

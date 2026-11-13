@@ -4,7 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
+import com.aiworkdeck.mobile.model.ArchiveMoveStatus
 import com.aiworkdeck.mobile.model.CaptureItem
+import com.aiworkdeck.mobile.services.CaptureOrganization
+import com.aiworkdeck.mobile.services.userFacingMessage
 import com.aiworkdeck.mobile.model.MediaKind
 import com.aiworkdeck.mobile.model.RelayProject
 import com.aiworkdeck.mobile.model.TransferState
@@ -48,6 +51,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private val backend = ServiceLocator.backend
     private val queue = ServiceLocator.queue
     private val prefs = ServiceLocator.prefs
+    private val archiveMoves = ServiceLocator.archiveMoves
 
     private val _didRestore = MutableStateFlow(false)
     /** 恢复会话与项目之前不画任何一屏，免得登录页闪一下再跳走。 */
@@ -86,6 +90,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     val uploadProgress: StateFlow<Map<String, Double>> = queue.progress
 
+    private val _organizations = MutableStateFlow<Map<String, CaptureOrganization>>(emptyMap())
+    /** 自动整理结果（键为本机 id）。refresh 时一次读好，队列行不在组合期间算账号范围哈希、读偏好。 */
+    val organizations: StateFlow<Map<String, CaptureOrganization>> = _organizations.asStateFlow()
+
     /**
      * 存相册的挂钩，由相机层（Task 8）装上。AppModel 不直接依赖 MediaStore：
      * 相册与上传是两条互不影响的链，任何一条断了另一条都要继续走。
@@ -98,6 +106,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     init {
         // 录音由前台服务落库（用户可能从通知栏按停，界面未必活着），库变了这里跟着重读
         viewModelScope.launch { RecordingState.stored.collect { refresh() } }
+        archiveMoves.onChange = { refresh() }
+    }
+
+    override fun onCleared() {
+        archiveMoves.onChange = null
+    }
+
+    private fun kickArchiveMoves() {
+        if (ScreenshotMode.enabled) return
+        viewModelScope.launch {
+            try { archiveMoves.kick() } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { logger.warning("移动事务出错: ${e.message}") }
+        }
     }
 
     // MARK: - 启动
@@ -128,6 +149,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (_selectedProject.value != null) {
                 UploadWorker.enqueue(getApplication<Application>())
                 _cloudExpiry.value = queue.checkDelivered()
+                kickArchiveMoves()
                 refresh()
             }
             startHeartbeat()
@@ -146,6 +168,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (!_isSignedIn.value) continue
                 queue.autoKick()
                 _cloudExpiry.value = queue.checkDelivered()
+                kickArchiveMoves()
                 refreshDesktopOnline()
                 refresh()
                 if (queue.consumeUnauthorized()) signOut()
@@ -175,6 +198,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** 登录接口成功但本机没存住会话（[Backend] 已在 save 时抛过；这里兜底）就不算登录成功。 */
     fun didLogin(result: LoginResult) {
         if (!backend.hasSession()) throw SessionSaveFailed()
+        backend.identity()?.let { (url, session) -> prefs.rememberVerifiedUser(result.user.id, session, url) }
         _account.value = result.user
         _isSignedIn.value = true
         startHeartbeat()
@@ -201,6 +225,44 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (!ScreenshotMode.enabled) UploadWorker.enqueue(getApplication<Application>())
             } finally { RecordingState.isSaving = false }
         }
+    }
+
+    /**
+     * 改投项目。镜像 iOS `AppModel.move`：没尝试过上传的直接改目标；已发出的走远端移动事务
+     * （先核实账号，再登记、传目标、等服务端 DONE）。
+     */
+    suspend fun move(item: CaptureItem, target: RelayProject) {
+        if (item.canMoveToProject) {
+            evidence.moveToProject(item.id, target)
+        } else {
+            verifyArchiveMoveAccount()
+            archiveMoves.begin(item.id, target)
+        }
+        refresh()
+        UploadWorker.enqueue(getApplication<Application>())
+        viewModelScope.launch { queue.kick() }
+        kickArchiveMoves()
+    }
+
+    /** 复制到另一个项目：独立的新传输，原件与原回执不动。返回新件。 */
+    suspend fun copy(item: CaptureItem, target: RelayProject): CaptureItem {
+        val copy = evidence.copyToProject(item.id, target)
+        refresh()
+        UploadWorker.enqueue(getApplication<Application>())
+        viewModelScope.launch { queue.kick() }
+        return copy
+    }
+
+    /** 当前账号的移动事务绑定；没核实过为 null。队列详情据此判断「账号已换、不能重试」。 */
+    fun archiveMoveBinding(): String? = backend.identity()?.let { (url, session) -> prefs.stableAccountBinding(session, url) }
+
+    /** 冷启动只恢复会话不恢复账号：第一次移动前向服务端核实一次是谁，按用户绑定事务。 */
+    private suspend fun verifyArchiveMoveAccount() {
+        val (url, session) = backend.identity() ?: throw com.aiworkdeck.mobile.services.Unauthorized()
+        if (prefs.stableAccountBinding(session, url) != null) return
+        val userId = backend.verifiedUserId()
+        if (backend.identity() != (url to session)) throw com.aiworkdeck.mobile.services.ApiError(1, com.aiworkdeck.mobile.design.tr("queue.moveAccountChanged"))
+        prefs.rememberVerifiedUser(userId, session, url)
     }
 
     suspend fun assignCaptures(ids: Set<String>, project: RelayProject) {
@@ -317,7 +379,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** 单件重试。队列页每行都有，不用为了一条失败去点「全部重试」。 */
-    fun retry(id: String) {
+    fun retry(id: String, onError: (String) -> Unit = {}) {
+        val move = _items.value.firstOrNull { it.id == id }?.archiveMove
+        if (move != null && move.status != ArchiveMoveStatus.done) {
+            viewModelScope.launch {
+                try {
+                    archiveMoves.retry(id)
+                    refresh()
+                    archiveMoves.kick()
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (e: Exception) { onError(userFacingMessage(e)) }
+            }
+            return
+        }
         viewModelScope.launch {
             try {
                 evidence.updateState(id, TransferState.waiting, progress = 0.0)
@@ -344,15 +418,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun checkDelivered() {
         viewModelScope.launch {
             _cloudExpiry.value = queue.checkDelivered()
+            kickArchiveMoves()
             refresh()
         }
     }
 
-    fun delete(ids: Set<String>) {
+    /** 有件还在远端移动中时整批不删，回调 [onRefused]（界面提示 queue.moveInProgress）。 */
+    fun delete(ids: Set<String>, onRefused: () -> Unit = {}) {
+        val remoteIds = _items.value.filter { it.id in ids }.map { it.effectiveClientMediaId }
         viewModelScope.launch {
             try {
-                evidence.delete(ids)
-                prefs.removeOrganizationResults(ids)
+                if (!evidence.delete(ids)) { onRefused(); return@launch }
+                prefs.removeOrganizationResults(ids + remoteIds)
                 refresh()
             } catch (e: Exception) {
                 logger.warning("删除出错: ${e.message}")
@@ -368,5 +445,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         _currentItems.value = all.filter { if (selected == null) it.project == null else it.project?.matches(selected) == true }
         _tally.value = TransferTally.of(_currentItems.value)
         _otherPendingCount.value = otherPendingCount(all, selected)
+        val scope = backend.personalAccountScope()
+        _organizations.value = if (scope == null) emptyMap() else all.mapNotNull { item ->
+            prefs.organizationResult(scope, item.effectiveClientMediaId)?.let { item.id to it }
+        }.toMap()
     }
 }

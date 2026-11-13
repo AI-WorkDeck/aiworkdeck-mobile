@@ -9,6 +9,7 @@ object ServiceLocator {
     lateinit var backend: Backend
     lateinit var queue: UploadQueue
     lateinit var prefs: Prefs
+    lateinit var archiveMoves: ArchiveMoveQueue
 
     fun queueOrNull(): UploadQueue? = if (::queue.isInitialized) queue else null
 }
