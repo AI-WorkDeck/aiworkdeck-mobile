@@ -12,6 +12,12 @@ jobs:
   simulator:
     runs-on: xcode-27
     timeout-minutes: 100
+    # The large-iPhone runner fails for environmental reasons (empty accessibility
+    # trees, app launch failures, timeouts) while the same tests pass locally on the
+    # same device and runtime. It still runs and reports, but does not block the
+    # App Store upload gate; iphone and duo remain blocking. Tracked in the mobile
+    # repo issue "iOS CI: large-iPhone simulator flakiness".
+    continue-on-error: ${{ matrix.device == 'iphone-large' }}
     strategy:
       fail-fast: false
       matrix:
