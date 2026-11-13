@@ -233,6 +233,7 @@ fun LibraryScreen(
                         },
                         onToggleSelect = { selecting = !selecting; selected = emptySet() },
                         onClose = onClose,
+                        embedded = fixedProject != null,
                     )
                 }
             }
@@ -294,6 +295,8 @@ private fun TopBar(
     onToggleView: () -> Unit,
     onToggleSelect: () -> Unit,
     onClose: () -> Unit,
+    // 嵌在项目工作区「现场记录」里：项目已定，不给关闭和切项目
+    embedded: Boolean = false,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Column {
@@ -302,7 +305,7 @@ private fun TopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2),
         ) {
-            Box(
+            if (!embedded) Box(
                 Modifier.size(Tk.touchMin).clickable(onClick = onClose)
                     .semantics { contentDescription = tr("common.close") },
                 contentAlignment = Alignment.Center,
@@ -310,7 +313,7 @@ private fun TopBar(
 
             Box(Modifier.weight(1f)) {
                 Row(
-                    Modifier.heightIn(min = 28.dp).clickable { menuOpen = true },
+                    Modifier.heightIn(min = 28.dp).clickable(enabled = !embedded) { menuOpen = true },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
@@ -319,7 +322,7 @@ private fun TopBar(
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    Text("▾", style = Fonts.small(), color = Tk.D.fgMuted)
+                    if (!embedded) Text("▾", style = Fonts.small(), color = Tk.D.fgMuted)
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     for ((id, name) in projects) {
