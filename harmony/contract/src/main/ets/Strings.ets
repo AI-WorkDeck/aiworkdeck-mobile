@@ -7103,6 +7103,28 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "hi": "कोई इंस्टॉल किया ऐप इस फ़ॉर्मैट का प्रीव्यू नहीं दिखा सकता। कोई ट्रांसफ़र शुरू नहीं हुआ।",
     "ar": "لا يوجد تطبيق مثبّت يمكنه معاينة هذا التنسيق. لم يبدأ أي نقل."
   },
+  "files.openWith": {
+    "zh-Hans": "用其他应用打开",
+    "zh-Hant": "用其他應用程式開啟",
+    "en": "Open in another app",
+    "ja": "他のアプリで開く",
+    "ko": "다른 앱에서 열기",
+    "th": "เปิดในแอปอื่น",
+    "ms": "Buka dalam apl lain",
+    "id": "Buka di aplikasi lain",
+    "vi": "Mở bằng ứng dụng khác",
+    "fr": "Ouvrir dans une autre app",
+    "de": "In anderer App öffnen",
+    "es": "Abrir en otra app",
+    "pt-BR": "Abrir em outro app",
+    "it": "Apri in un'altra app",
+    "ru": "Открыть в другом приложении",
+    "el": "Άνοιγμα σε άλλη εφαρμογή",
+    "tr": "Başka bir uygulamada aç",
+    "nl": "Openen in andere app",
+    "hi": "दूसरे ऐप में खोलें",
+    "ar": "فتح في تطبيق آخر"
+  },
   "files.platformUnsupported": {
     "zh-Hans": "当前微信版本无法预览此格式，未发起传输，请使用 iOS App 或桌面端",
     "zh-Hant": "目前微信版本無法預覽此格式，未發起傳輸，請使用 iOS App 或桌面端",

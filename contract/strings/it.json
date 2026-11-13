@@ -315,6 +315,7 @@
   "capture.saveFailed": "Impossibile salvare questa acquisizione localmente. Il suo file temporaneo potrebbe andare perso dopo l'uscita. Assegnala a un progetto e completa presto il caricamento, oppure acquisiscila di nuovo.",
   "camera.error.start": "La fotocamera non è disponibile. Riprova.",
   "files.noPreviewApp": "Nessuna app installata può visualizzare in anteprima questo formato. Nessun trasferimento avviato.",
+  "files.openWith": "Apri in un'altra app",
   "files.platformUnsupported": "Questo formato non può essere visualizzato in anteprima su WeChat. Nessun trasferimento avviato. Usa l'app iOS o il desktop.",
   "backup.title": "Backup dei file nel cloud",
   "backup.message": "Abilitare il backup dei file nel cloud? Il tuo desktop caricherà le immagini dei progetti, DOCX, PPTX, XLSX, PDF, audio e video supportati nell'archiviazione cloud del tuo account. Con l’accesso al cloud disponibile, i file di cui è già stato eseguito il backup restano disponibili mentre il tuo desktop è offline. Il backup è disattivato per impostazione predefinita e può essere disattivato nelle Impostazioni.",

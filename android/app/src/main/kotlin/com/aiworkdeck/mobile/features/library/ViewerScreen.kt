@@ -166,7 +166,7 @@ private fun DetailRow(label: String, value: String, ltr: Boolean = false, mono: 
  * 单指拖只在放大后才接管（`canPan`），否则会把翻页手势抢走。
  */
 @Composable
-private fun ZoomablePhoto(file: File) {
+internal fun ZoomablePhoto(file: File) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val state = rememberTransformableState { _, zoomChange, panChange, _ ->
@@ -200,7 +200,7 @@ private fun ZoomablePhoto(file: File) {
  */
 @OptIn(UnstableApi::class)
 @Composable
-private fun PlayerPage(file: File, active: Boolean, audio: Boolean) {
+internal fun PlayerPage(file: File, active: Boolean, audio: Boolean) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (active && com.aiworkdeck.mobile.services.RecordingState.isRecording) {
             Text(tr("player.stopRecordingFirst"), color = Color.White)

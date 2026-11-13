@@ -68,6 +68,8 @@ import com.aiworkdeck.mobile.model.CaptureItem
 import com.aiworkdeck.mobile.model.DaySection
 import com.aiworkdeck.mobile.model.LibraryGrouping
 import com.aiworkdeck.mobile.model.MediaKind
+import com.aiworkdeck.mobile.model.ProjectChoice
+import com.aiworkdeck.mobile.model.RelayProject
 import com.aiworkdeck.mobile.model.TransferState
 import com.aiworkdeck.mobile.model.TransferTally
 import com.aiworkdeck.mobile.services.ServiceLocator
@@ -84,6 +86,8 @@ fun LibraryScreen(
     model: AppModel,
     onOpenViewer: (List<CaptureItem>, Int) -> Unit,
     onClose: () -> Unit,
+    /** 项目工作区「现场记录」页：只看这个项目，不能切换。 */
+    fixedProject: RelayProject? = null,
 ) {
     val all by model.items.collectAsStateWithLifecycle()
     val current by model.selectedProject.collectAsStateWithLifecycle()
@@ -103,10 +107,10 @@ fun LibraryScreen(
     val scope = rememberCoroutineScope()
     var barHeight by remember { mutableStateOf(0.dp) }
 
-    val projects = LibraryGrouping.projectsIn(all, current)
+    val projects = fixedProject?.let { listOf(ProjectChoice(it.id, it.name)) } ?: LibraryGrouping.projectsIn(all, current)
     // 正在看的项目：优先用手动切过的那个；它若已经没有记录了（比如刚被删空）就退回第一项
     val viewing = projects.firstOrNull { it.id == viewingId } ?: projects.firstOrNull()
-    val items = LibraryGrouping.itemsIn(all, viewing?.id, current).filter { !audioOnly || it.kind == MediaKind.audio }
+    val items = LibraryGrouping.itemsIn(all, viewing?.id, fixedProject ?: current).filter { !audioOnly || it.kind == MediaKind.audio }
     val days = LibraryGrouping.groupByDay(items)
     val selectedItems = items.filter { selected.contains(it.id) }
     val isGrid = viewMode == VIEW_GRID
@@ -218,7 +222,7 @@ fun LibraryScreen(
                         isGrid = isGrid,
                         selecting = selecting,
                         canSelect = items.isNotEmpty(),
-                        onPick = { id -> viewingId = id; prefs.libraryViewingProject = id; selected = emptySet() },
+                        onPick = { id -> if (fixedProject != null) return@TopBar; viewingId = id; prefs.libraryViewingProject = id; selected = emptySet() },
                         onColumns = {
                             columns = if (columns >= 4) 2 else columns + 1
                             prefs.libraryColumns = columns

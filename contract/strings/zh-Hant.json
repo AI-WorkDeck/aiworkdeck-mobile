@@ -315,6 +315,7 @@
   "capture.saveFailed": "影像未能儲存到本機，退出後可能遺失。請盡快歸類到專案完成上傳，或重新拍攝。",
   "camera.error.start": "相機暫不可用，請重試",
   "files.noPreviewApp": "未安裝可預覽此格式的應用程式，未發起傳輸",
+  "files.openWith": "用其他應用程式開啟",
   "files.platformUnsupported": "目前微信版本無法預覽此格式，未發起傳輸，請使用 iOS App 或桌面端",
   "backup.title": "檔案雲端備份",
   "backup.message": "是否開啟檔案雲端備份？開啟後，桌面端會將專案中支援手機預覽的圖片、DOCX、PPTX、XLSX、PDF、音訊和影片上傳到你的帳戶雲空間。雲端服務可用期間，即使桌面端離線，也能調取已完成備份的檔案。預設關閉，你可以隨時在設定中關閉。",

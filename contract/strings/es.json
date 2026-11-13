@@ -315,6 +315,7 @@
   "capture.saveFailed": "No se pudo guardar esta captura localmente. Su archivo temporal puede perderse después de salir. Asígnela a un proyecto y termine de subirla pronto, o captúrela de nuevo.",
   "camera.error.start": "La cámara no está disponible. Inténtalo de nuevo.",
   "files.noPreviewApp": "Ninguna aplicación instalada puede previsualizar este formato. No se inició ninguna transferencia.",
+  "files.openWith": "Abrir en otra app",
   "files.platformUnsupported": "Este formato no se puede previsualizar en WeChat. No se inició ninguna transferencia. Usa la app de iOS o la de escritorio.",
   "backup.title": "Copia de seguridad de archivos en la nube",
   "backup.message": "¿Activar la copia de seguridad de archivos en la nube? Tu escritorio subirá las imágenes de proyecto compatibles, DOCX, PPTX, XLSX, PDF, audio y vídeo al almacenamiento en la nube de tu cuenta. Con acceso a la nube, los archivos ya respaldados siguen disponibles aunque tu escritorio esté sin conexión. La copia de seguridad está desactivada por defecto y puede desactivarse en Ajustes.",
