@@ -38,6 +38,10 @@ final class AudioRecorderService: NSObject {
     private(set) var lastSavedID: UUID?
     private(set) var notice: String?
     private(set) var canRetrySave = false
+    /// 读不出有效音频的草稿（录音中被强杀、文件没写完）。重试永远不会成功，
+    /// 必须给用户一个丢弃的出口，否则每次启动都弹同一条提醒（QA 2026-11-13 B4）。
+    private var unreadableDrafts: [UUID: RecordingDraft] = [:]
+    var canDiscardUnreadable: Bool { !unreadableDrafts.isEmpty }
 
     private(set) var silence = RecordingSilence()
     private var voiceMonitor: VoiceActivityMonitor?
@@ -131,12 +135,14 @@ final class AudioRecorderService: NSObject {
 
     private func save(_ draft: RecordingDraft) async -> SaveResult {
         attemptedDrafts.insert(draft.id)
+        unreadableDrafts[draft.id] = draft
         do {
             let duration = try await AVURLAsset(url: draft.audioURL).load(.duration)
             guard duration.seconds.isFinite, duration.seconds > 0 else {
                 return .noAudio
             }
         } catch { return .noAudio }
+        unreadableDrafts[draft.id] = nil
         do {
             let item = try await store.saveRecording(draft)
             draft.remove() // Only remove the source after the manifest has committed.
@@ -151,6 +157,15 @@ final class AudioRecorderService: NSObject {
 
     func dismissNotice() { notice = nil }
 
+    /// 用户确认丢弃读不出音频的草稿；其余（可播放但没存进资料库的）原样保留并重试。
+    func discardUnreadable() async {
+        guard !isBusy, !isRecording else { return }
+        for draft in unreadableDrafts.values { draft.remove() }
+        unreadableDrafts.removeAll()
+        notice = nil
+        await recoverPending(retry: true)
+    }
+
     func recoverPending(retry: Bool = false) async {
         guard !isBusy, !isRecording else { return }
         isBusy = true
@@ -158,7 +173,11 @@ final class AudioRecorderService: NSObject {
         if retry { attemptedDrafts.removeAll() }
         do {
             let pending = try pendingDrafts().filter { !attemptedDrafts.contains($0.id) }
-            guard !pending.isEmpty else { return }
+            guard !pending.isEmpty else {
+                // 重试时已无草稿：之前的失败都已解决，别留着过期的报错和按钮。
+                if retry { lastError = nil; canRetrySave = false }
+                return
+            }
             lastSavedID = nil
             var saved = 0, invalid = 0, failed = 0
             for draft in pending {

@@ -103,7 +103,7 @@ actor ArchiveMoveQueue {
             await onChange?()
         } catch {
             guard isCurrent() else { return }
-            let message = error.localizedDescription
+            let message = userFacingMessage(for: error)
             let rejected = !move.registered && error is ArchiveMoveRegistrationRejected
             try? await store.updateArchiveMove(item.id, requestID: move.requestID, accountIsCurrent: isCurrent) {
                 $0.lastError = message

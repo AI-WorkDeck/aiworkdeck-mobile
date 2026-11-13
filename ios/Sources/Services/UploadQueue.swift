@@ -73,7 +73,7 @@ actor UploadQueue {
                 // 原因照实落盘——队列页要显示「为什么失败」，光一个红点用户没法自救。
                 try? await EvidenceStore.shared.updateState(
                     item.id, to: .failed, progress: 0,
-                    error: (error as? APIError)?.message ?? error.localizedDescription)
+                    error: userFacingMessage(for: error))
                 lastFailedRoundAt = Date()
                 autoRetryBackoff = min(autoRetryBackoff * 2, 15 * 60)
                 await onChange?()

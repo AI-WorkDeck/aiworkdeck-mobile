@@ -63,12 +63,16 @@ private struct RootView: View {
         .sheet(isPresented: Binding(get: { model.showBackupPrompt }, set: { model.showBackupPrompt = $0 })) {
             BackupConsentView().environment(model)
         }
+        // 未登录时不弹：恢复照常在后台做，提醒留到登录后，别盖在登录页上。
         .alert(tr("rec.notice.title"), isPresented: Binding(
-            get: { runsRecordingLifecycle && recorder.notice != nil },
+            get: { runsRecordingLifecycle && model.isSignedIn && recorder.notice != nil },
             set: { if !$0 { recorder.dismissNotice() } }
         )) {
             if recorder.canRetrySave {
                 Button(tr("rec.retrySave")) { Task { await recorder.recoverPending(retry: true) } }
+            }
+            if recorder.canDiscardUnreadable {
+                Button(tr("rec.discardUnreadable"), role: .destructive) { Task { await recorder.discardUnreadable() } }
             }
             Button(tr("common.close"), role: .cancel) { recorder.dismissNotice() }
         } message: { Text(recorder.notice ?? "") }

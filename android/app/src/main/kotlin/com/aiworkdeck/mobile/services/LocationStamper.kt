@@ -8,7 +8,9 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.CancellationSignal
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
@@ -23,8 +25,14 @@ class LocationStamper(private val context: Context) {
     /**
      * 取一次当前位置。超时后退回最后已知位置（室内常见：拿不到新定位，但十分钟前的定位
      * 仍然说明「在这栋楼」），再拿不到返回 null。
+     *
+     * 整段放到 IO 线程：isProviderEnabled / getLastKnownLocation / getCurrentLocation 都是到
+     * system_server 的同步 Binder 调用，调用方是首页的 LaunchedEffect（主线程）。定位服务一卡
+     * 首页就跟着卡——iOS 端 2026-11-13 QA 正是这样卡死在登录后首屏（B1）。
      */
-    suspend fun current(timeoutMs: Long = 4_000): Loc? {
+    suspend fun current(timeoutMs: Long = 4_000): Loc? = withContext(Dispatchers.IO) { currentBlocking(timeoutMs) }
+
+    private suspend fun currentBlocking(timeoutMs: Long): Loc? {
         if (!granted()) return null
         val lm = context.getSystemService(LocationManager::class.java) ?: return null
         val provider = pickProvider(lm) ?: return null
