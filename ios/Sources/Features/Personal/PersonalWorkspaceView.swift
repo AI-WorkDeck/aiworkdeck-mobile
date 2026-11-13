@@ -230,7 +230,7 @@ private struct AssistantView: View {
                             if let status = model.status { Text(tr("personal.summaries", ["count": String(status.summaryCount)])).font(.caption).foregroundStyle(.secondary) }
                         }
                         ForEach(model.messages) { message in
-                            Text(message.content).textSelection(.enabled).frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
+                            Text(message.role == "assistant" ? ReplyText.stripEmoji(message.content) : message.content).textSelection(.enabled).frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
                                 .padding(12).background(message.role == "user" ? T.L.accent.opacity(0.08) : Color.clear).clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         if !model.sources.isEmpty {
