@@ -1,3 +1,4 @@
-1. With a China-region account, open invited due diligence projects, upload checklist materials, view verification feedback, and request manual review while keeping your app account.
-2. Submit replacement materials and view submission history.
-3. Get a voice inactivity reminder, pause and resume audio or video, and see clearly when recording is paused.
+1. Redesigned: opens straight to the camera, with Capture / Calendar / Assistant tabs; sign-in, settings, library and upload queue now match the iOS app.
+2. Fixed: captures sent to a desktop project could stay "Staged" and never reach the computer.
+3. The upload queue shows all projects, file fingerprints and expiry dates, and can move or copy items to another project. New project workspace to browse and preview project files.
+4. Clearer error messages; unreadable recordings can be discarded.
