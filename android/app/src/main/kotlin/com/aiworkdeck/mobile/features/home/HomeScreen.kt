@@ -91,7 +91,12 @@ private enum class CapMode { photo, video, audio }
  * 水印只叠加在取景与展示层，**不烧录进照片字节**（决策 D3，见 [Watermark]）。
  */
 @Composable
-fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
+/**
+ * [active]：采集页当前可见（采集栏选中且没有浮层盖着）。不可见时放掉相机、停定位轮询，
+ * 但这一屏留在组合里——模式、录制计时等状态切回来还在。
+ * [onBusy]：正在录像或拍照时为 true，外壳据此锁住底部栏，免得切走把录像切断。
+ */
+fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Unit = {}, onOpen: (Overlay) -> Unit) {
     val context = LocalContext.current
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val landscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -152,11 +157,11 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
 
     // 定位每 10 秒续一次，按快门时直接取最近一次的结果：现场按下快门到落库不能等 GPS。
     // 拿不到新定位就留着上一次的，不清空——上一次的坐标仍然说明「在这栋楼」。
-    LaunchedEffect(hasLocation) {
+    LaunchedEffect(hasLocation, active) {
         if (ScreenshotMode.enabled) return@LaunchedEffect
         if (!hasLocation) loc = null
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            while (hasLocation) {
+            while (hasLocation && active) {
                 stamper.current()?.let { loc = it }
                 delay(10_000)
             }
@@ -185,11 +190,12 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(mode, hasCamera, cameraRetry) {
+    LaunchedEffect(camera.isRecording) { onBusy(camera.isRecording) }
+    LaunchedEffect(mode, hasCamera, cameraRetry, active) {
         // 截图模式下取景区贴的是静态照，PreviewView 根本没挂进树，绑相机只会白烧一次会话
         if (ScreenshotMode.stage != null) return@LaunchedEffect
         if (!hasCamera) return@LaunchedEffect
-        if (mode == CapMode.audio) camera.unbind()
+        if (mode == CapMode.audio || !active) camera.unbind()
         else {
             cameraError = false
             try { camera.bind(previewView, if (mode == CapMode.photo) CameraService.Mode.photo else CameraService.Mode.video) }
@@ -293,7 +299,6 @@ fun HomeScreen(model: AppModel, onOpen: (Overlay) -> Unit) {
     Column(Modifier.fillMaxSize().background(Tk.D.bg).safeDrawingPadding()) {
         Row {
             androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Projects) }, enabled = !camera.isRecording) { Text(project?.name ?: tr("library.unknownProject"), color = Tk.D.fg) }
-            androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Personal) }, enabled = !camera.isRecording) { Text(tr("personal.assistant"), color = Tk.D.fg) }
             if (project != null) androidx.compose.material3.TextButton(onClick = { onOpen(Overlay.Files) }, enabled = !camera.isRecording) { Text(tr("workspace.files"), color = Tk.D.fg) }
             if (BuildConfig.FLAVOR == "cn" && ServiceLocator.prefs.accountRegion == AccountRegion.cn) androidx.compose.material3.TextButton(
                 onClick = { CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, android.net.Uri.parse(ContractCapabilities.ddClientPortalUrl)) },

@@ -32,7 +32,7 @@ import java.time.Instant
 import java.util.logging.Logger
 
 /** 主界面之上盖着的整屏。None = 只有取景器。 */
-enum class Overlay { Personal, None, Library, Queue, Settings, Projects, Files, Backup }
+enum class Overlay { None, Library, Queue, Settings, Projects, Files, Backup }
 
 /**
  * 全局状态。界面只读它，写入一律经过这里，保证磁盘上的库与屏幕上的画面不会各说各话。
