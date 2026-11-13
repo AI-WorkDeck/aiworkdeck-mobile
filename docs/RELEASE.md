@@ -120,9 +120,15 @@ ASC → App 信息 →「App Store 法规和许可 / 中国大陆 ICP 备案号�
 `fastlane/metadata/review_information/` 下有三个 `.example`，
 复制成同名 `.txt` 填写（实文件已 gitignore，公开仓不收个人信息与凭据）。
 
-必须填：登录只有验证码一条路，而审核员既收不到中国短信，也打不开
-我们的邮箱。内核仓已经加了固定验证码旁路（`config/ReviewAccountGate`，
-aiworkdeck#680），服务器上按下面三步启用：
+**2026-11-12 起 App 内不再有「应用商店审核」入口**（mobile#112）：审核员与普通用户一样，
+在登录页用**审核专用账号 + 密码**登录。因此每次提审前确认：
+
+- 审核专用账号已设密码（官网「忘记密码 / 首次使用」流程设置，需能收该邮箱或手机号的验证码）；
+  `demo_user.txt` 填账号、`demo_password.txt` 填**密码**（不再是固定码）。
+- 审核权益（`grant-review-access`）仍有效；给已有授权的审核号加密码不影响已记录的授权。
+
+服务端的固定验证码旁路（`config/ReviewAccountGate`，aiworkdeck#680）**保留**：Office 插件的
+Microsoft 审核只能走验证码登录，`grant-review-access` 也靠它登录审核号。它的启用方式如下（历史说明）：
 
 1. 选一个审核专用标识（邮箱或手机号）。**不要用真人账号的邮箱/手机号**——那 6 位码
    是写在 ASC 审核备注里给外部人看的，绑到真人账号上就等于把真账号的钥匙给出去。
