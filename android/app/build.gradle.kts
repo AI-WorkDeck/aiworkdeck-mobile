@@ -18,10 +18,12 @@ fun prop(name: String): String? = localProps.getProperty(name) ?: System.getenv(
 val versionProps = Properties().apply {
     rootProject.file("version.properties").inputStream().use { load(it) }
 }
-// 微信开放平台「移动应用」AppID（dev-board#428）。只给大陆版用；缺省空串 = 微信 APP 支付关闭，
-// 充值入口保持今天的行为（只弹「去小程序充值」说明）。来源：-Pwxpay.appId= / local.properties 的
-// wxpay.appId / 环境变量 WXPAY_APPID。
-val wxpayAppId: String = ((project.findProperty("wxpay.appId") as String?) ?: prop("wxpay.appId") ?: "").trim().also {
+// 微信开放平台「移动应用」AppID（dev-board#428），已在商户号 1111407785 下关联（2026-11-13 用户确认开启）。
+// 只给大陆版用。可用 -Pwxpay.appId= / local.properties 的 wxpay.appId / 环境变量 WXPAY_APPID 覆盖；
+// 传空串（-Pwxpay.appId=）= 关闭微信 APP 支付，充值入口退回只弹「去小程序充值」说明。
+// AppID 是公开标识，不是密钥。
+private val DEFAULT_WXPAY_APP_ID = "wx1dcd3c3bc2db3fe1"
+val wxpayAppId: String = ((project.findProperty("wxpay.appId") as String?) ?: prop("wxpay.appId") ?: DEFAULT_WXPAY_APP_ID).trim().also {
     require(it.isEmpty() || Regex("^wx[0-9A-Za-z]{16}$").matches(it)) { "wxpay.appId 形状不对（应为 wx + 16 位）：$it" }
 }
 

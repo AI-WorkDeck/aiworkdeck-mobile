@@ -137,8 +137,10 @@ class WxPayRechargeTest {
         assertFalse(isChannelUnavailable(IllegalStateException()))
     }
 
-    @Test fun buildConfigDefaultsToDisabled() {
-        assertEquals("", BuildConfig.WXPAY_APP_ID)
+    @Test fun buildConfigCarriesTheLinkedAppIdForCn() {
+        // 大陆版默认带已关联商户号的移动应用 AppID；国际版不带（不出现微信支付）
+        if (BuildConfig.FLAVOR == "cn") assertEquals("wx1dcd3c3bc2db3fe1", BuildConfig.WXPAY_APP_ID)
+        else assertEquals("", BuildConfig.WXPAY_APP_ID)
     }
 
     @Test fun tiersComeFromContract() {
