@@ -1,5 +1,6 @@
 package com.aiworkdeck.mobile
 
+import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.model.RelayProject
 import com.aiworkdeck.mobile.services.*
 import kotlinx.coroutines.test.runTest
@@ -129,4 +130,39 @@ class ProjectFilesServiceTest {
         assertEquals(0, server.requestCount)
     }
 
+    @Test fun failedCloudAttemptNeedsNewQuoteAndEachConfirmedAttemptGetsNewUuid() = runTest {
+        val cloud = project.copy(deviceId = "cloud", projectUid = "uid")
+        val target = file.copy(uid = "fid")
+        val consent = """{"enabled":true,"decided":true,"subscriptionActive":true}"""
+        val quote = """{"quoteCents":1,"cashCurrency":"CNY","estimated":true,"resourceHash":"${"b".repeat(64)}"}"""
+        val s = service()
+        body(consent); body(quote); s.cloudQuote(cloud, target)
+        body(consent); server.enqueue(MockResponse().setResponseCode(500))
+        rejected { s.download(cloud, target) }
+        assertFalse(s.hasPending(cloud, target))
+        // The consumed quote cannot be replayed: no byte request is sent without a fresh quote.
+        body(consent)
+        rejected { s.download(cloud, target) }
+        repeat(3) { server.takeRequest() }
+        val first = server.takeRequest().requestUrl!!.queryParameter("requestId")
+        assertEquals("/api/mobile/backup-consent", server.takeRequest().path)
+        assertEquals(5, server.requestCount)
+        body(consent); body(quote); s.cloudQuote(cloud, target)
+        body(consent); content()
+        s.download(cloud, target)
+        repeat(3) { server.takeRequest() }
+        val second = server.takeRequest().requestUrl!!.queryParameter("requestId")
+        assertNotNull(first); assertNotNull(second); assertNotEquals(first, second)
+        s.close()
+    }
+    @Test fun desktopQuoteShowsPostpaidEstimateOrCredits() = runTest {
+        val s = service()
+        body("""{"credits":2,"quoteCents":250,"cashCurrency":"USD"}""")
+        assertTrue(s.desktopQuote(file).endsWith(tr("postpaid.partialCharge")))
+        assertEquals("/api/mobile/transfer/quote?bytes=4", server.takeRequest().path)
+        body("""{"credits":2}""")
+        assertEquals(tr("workspace.quote", mapOf("name" to file.name, "credits" to 2)), s.desktopQuote(file))
+        rejected { s.desktopQuote(file.copy(name = "app.exe")) }
+        assertEquals(2, server.requestCount)
+    }
 }

@@ -315,6 +315,7 @@
   "capture.saveFailed": "Deze opname kon niet lokaal worden opgeslagen. Het tijdelijke bestand kan verloren gaan nadat je afsluit. Wijs het toe aan een project en voltooi het uploaden snel, of maak de opname opnieuw.",
   "camera.error.start": "Camera is niet beschikbaar. Probeer het opnieuw.",
   "files.noPreviewApp": "Geen geïnstalleerde app kan dit formaat voorvertonen. Er is geen overdracht gestart.",
+  "files.openWith": "Openen in andere app",
   "files.platformUnsupported": "Dit formaat kan niet worden voorvertoond in WeChat. Er is geen overdracht gestart. Gebruik de iOS-app of desktop.",
   "backup.title": "Cloudback-up van bestanden",
   "backup.message": "Cloudback-up van bestanden inschakelen? Je desktop uploadt ondersteunde projectafbeeldingen, DOCX, PPTX, XLSX, PDF, audio en video naar de cloudopslag van je account. Met beschikbare cloudtoegang blijven bestanden waarvan al een back-up is gemaakt beschikbaar wanneer je desktop offline is. Back-up staat standaard uit en kan worden uitgeschakeld in Instellingen.",

@@ -46,7 +46,7 @@ import com.aiworkdeck.mobile.design.WorkdeckTheme
 import com.aiworkdeck.mobile.features.auth.LoginScreen
 import com.aiworkdeck.mobile.features.auth.ProjectPickerScreen
 import com.aiworkdeck.mobile.features.home.HomeScreen
-import com.aiworkdeck.mobile.features.workspace.ProjectFilesScreen
+import com.aiworkdeck.mobile.features.workspace.WorkspaceScreen
 import com.aiworkdeck.mobile.features.settings.BackupConsentScreen
 import com.aiworkdeck.mobile.features.library.LibraryScreen
 import com.aiworkdeck.mobile.features.library.ViewerScreen
@@ -226,10 +226,13 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
                     }
                     if (overlay == Overlay.Projects) {
                         ProjectPickerScreen(model, onClose = { overlay = returnOverlay }, onSelect = { model.selectProject(it); overlay = returnOverlay },
-                            onNone = { model.captureWithoutProject(); overlay = returnOverlay })
+                            onNone = { model.captureWithoutProject(); overlay = returnOverlay },
+                            onBrowse = { personalFileProject = null; overlay = Overlay.Files })
                     }
                     if (overlay == Overlay.Files) {
-                        (personalFileProject ?: project)?.let { ProjectFilesScreen(it, onClose = { overlay = returnOverlay }) }
+                        // 采集顶栏/选项目页进来是整个工作区（先落在当前项目）；日程里点项目进来只看那一个项目
+                        WorkspaceScreen(model, initialProject = personalFileProject ?: project, browse = personalFileProject == null,
+                            onClose = { overlay = returnOverlay }, onOpen = { returnOverlay = Overlay.None; overlay = it })
                     }
                     if (overlay == Overlay.Backup) BackupConsentScreen(onClose = { overlay = returnOverlay })
                     if (overlay == Overlay.Library) {

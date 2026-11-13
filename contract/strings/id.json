@@ -315,6 +315,7 @@
   "capture.saveFailed": "Tidak dapat menyimpan tangkapan ini secara lokal. File sementaranya mungkin hilang setelah Anda keluar. Tetapkan ke proyek dan segera selesaikan pengunggahan, atau tangkap kembali.",
   "camera.error.start": "Kamera tidak tersedia. Coba lagi.",
   "files.noPreviewApp": "Tidak ada aplikasi terinstal yang dapat mempratinjau format ini. Transfer tidak dimulai.",
+  "files.openWith": "Buka di aplikasi lain",
   "files.platformUnsupported": "Format ini tidak dapat dipratinjau di WeChat. Transfer tidak dimulai. Gunakan aplikasi iOS atau desktop.",
   "backup.title": "Pencadangan file cloud",
   "backup.message": "Aktifkan pencadangan file cloud? Desktop Anda akan mengunggah gambar proyek, DOCX, PPTX, XLSX, PDF, audio, dan video yang didukung ke penyimpanan cloud akun Anda. Dengan akses cloud yang tersedia, file yang sudah dicadangkan tetap tersedia saat desktop Anda offline. Pencadangan dinonaktifkan secara default dan dapat dimatikan di Pengaturan.",

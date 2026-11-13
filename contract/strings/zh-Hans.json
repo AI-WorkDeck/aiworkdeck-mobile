@@ -315,6 +315,7 @@
   "capture.saveFailed": "影像未能保存到本机，退出后可能丢失。请尽快归类到项目完成上传，或重新拍摄。",
   "camera.error.start": "相机暂不可用，请重试",
   "files.noPreviewApp": "未安装可预览此格式的应用，未发起传输",
+  "files.openWith": "用其他应用打开",
   "files.platformUnsupported": "当前微信版本无法预览此格式，未发起传输，请使用 iOS App 或桌面端",
   "backup.title": "文件云端备份",
   "backup.message": "是否开启文件云端备份？开启后，桌面端会将项目中支持手机预览的图片、DOCX、PPTX、XLSX、PDF、音频和视频上传到你的账户云空间。云端服务可用期间，即使桌面端离线，也能调取已完成备份的文件。默认关闭，你可以随时在设置中关闭。",

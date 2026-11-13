@@ -69,7 +69,7 @@ fun Hairline(modifier: Modifier = Modifier, color: Color = if (LocalOnDark.curre
 fun Pill(count: Int, label: String, color: Color, modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
         Box(Modifier.size(5.dp).clip(CircleShape).background(color))
-        Text(text = count.toString(), style = Fonts.mono(Tk.Ty.small))
+        Text(text = count.toString(), style = Fonts.mono(Tk.Ty.small), color = if (LocalOnDark.current) Tk.D.fg else Tk.L.fg)
         Text(text = label, style = Fonts.small(), color = if (LocalOnDark.current) Tk.D.fgMuted else Tk.L.fgMuted)
     }
 }

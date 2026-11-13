@@ -47,7 +47,9 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: Boolean = true, onSelect: (RelayProject) -> Unit = { model.selectProject(it) },
-                        onNone: () -> Unit = { model.captureWithoutProject(); onClose() }) {
+                        onNone: () -> Unit = { model.captureWithoutProject(); onClose() },
+                        /** 进项目工作区浏览文件（iOS `onBrowse`）；选了云端临时项目后也直接进去看。 */
+                        onBrowse: (() -> Unit)? = null) {
     val backend = ServiceLocator.backend
     val current by model.selectedProject.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
@@ -90,7 +92,7 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
         if (loading) return@launch
         loading = true
         // Without persistent cloud storage the cloud scratch project refuses uploads: keep captures local.
-        try { if (backend.persistentCloudWritable()) { onSelect(backend.defaultProject()); onClose() } else onNone() }
+        try { if (backend.persistentCloudWritable()) { onSelect(backend.defaultProject()); onBrowse?.invoke() ?: onClose() } else onNone() }
         catch (e: Exception) { error = userFacingMessage(e) }
         finally { loading = false }
     } }
@@ -102,6 +104,7 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
     ) {
         Row(Modifier.padding(top = Tk.Sp.s2), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("project.title"), style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, modifier = Modifier.weight(1f))
+            onBrowse?.let { Action(tr("project.files"), modifier = Modifier.padding(end = Tk.Sp.s4), onClick = it) }
             Action(tr("workspace.quickCapture"), onClick = onClose)
         }
         Text(

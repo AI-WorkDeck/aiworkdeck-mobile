@@ -315,6 +315,7 @@
   "capture.saveFailed": "Impossible d'enregistrer cette capture localement. Son fichier temporaire risque d'être perdu après votre déconnexion. Attribuez-la à un projet et terminez bientôt le téléversement, ou capturez-la à nouveau.",
   "camera.error.start": "La caméra est indisponible. Réessayez.",
   "files.noPreviewApp": "Aucune application installée ne peut prévisualiser ce format. Aucun transfert n'a été lancé.",
+  "files.openWith": "Ouvrir dans une autre app",
   "files.platformUnsupported": "Ce format ne peut pas être prévisualisé dans WeChat. Aucun transfert n'a été lancé. Utilisez l'application iOS ou l'application de bureau.",
   "backup.title": "Sauvegarde cloud des fichiers",
   "backup.message": "Activer la sauvegarde cloud des fichiers ? Votre ordinateur de bureau téléversera les images, fichiers DOCX, PPTX, XLSX, PDF, audio et vidéo des projets pris en charge vers le stockage cloud de votre compte. Lorsque l’accès cloud est disponible, les fichiers déjà sauvegardés restent disponibles lorsque votre ordinateur de bureau est hors ligne. La sauvegarde est désactivée par défaut et peut être désactivée dans les paramètres.",

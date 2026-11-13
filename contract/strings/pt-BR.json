@@ -315,6 +315,7 @@
   "capture.saveFailed": "Não foi possível salvar esta captura localmente. O arquivo temporário pode ser perdido após a saída. Atribua-o a um projeto e finalize o upload em breve, ou capture novamente.",
   "camera.error.start": "A câmera está indisponível. Tente novamente.",
   "files.noPreviewApp": "Nenhum aplicativo instalado pode visualizar este formato. Nenhuma transferência foi iniciada.",
+  "files.openWith": "Abrir em outro app",
   "files.platformUnsupported": "Este formato não pode ser visualizado no WeChat. Nenhuma transferência foi iniciada. Use o aplicativo iOS ou o desktop.",
   "backup.title": "Backup de arquivos na nuvem",
   "backup.message": "Ativar o backup de arquivos na nuvem? Seu desktop enviará imagens, DOCX, PPTX, XLSX, PDF, áudio e vídeo compatíveis dos projetos para o armazenamento em nuvem da sua conta. Com acesso à nuvem, os arquivos já salvos no backup permanecem disponíveis enquanto o desktop estiver offline. O backup fica desativado por padrão e pode ser desativado nos Ajustes.",

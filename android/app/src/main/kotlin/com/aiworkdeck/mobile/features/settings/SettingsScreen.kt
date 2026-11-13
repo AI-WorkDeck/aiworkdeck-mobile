@@ -82,7 +82,6 @@ private val RECHARGE_CHANNEL: String = ContractCapabilities.recharge
 fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck.mobile.Overlay) -> Unit = {}) {
     val prefs = ServiceLocator.prefs
     val uriHandler = LocalUriHandler.current
-    val context = androidx.compose.ui.platform.LocalContext.current
     // 区域登录后固定（只在未登录的登录页能换），进页面读一次即可
     val region = remember { prefs.accountRegion }
     val project by model.selectedProject.collectAsStateWithLifecycle()
@@ -254,13 +253,6 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                         onOpen(com.aiworkdeck.mobile.Overlay.Projects)
                     }
                     NavRow(tr("settings.language"), L10n.currentDisplayName) { showLanguagePicker = true }
-                    // 受邀尽调（大陆版）。iOS 放在项目工作区里，安卓工作区重做前先放这里。
-                    if (BuildConfig.FLAVOR == "cn" && region == com.aiworkdeck.mobile.services.AccountRegion.cn) {
-                        NavRow(tr("dd.title"), null) {
-                            androidx.browser.customtabs.CustomTabsIntent.Builder().setShowTitle(true).build()
-                                .launchUrl(context, android.net.Uri.parse(com.aiworkdeck.contract.ContractCapabilities.ddClientPortalUrl))
-                        }
-                    }
                     // 区域登录后固定，这里只读；换区要退出登录后在登录页重选。
                     InfoRow(tr("settings.region"), tr(region.labelKey))
                 }

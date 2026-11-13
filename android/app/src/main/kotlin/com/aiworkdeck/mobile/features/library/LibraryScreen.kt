@@ -68,6 +68,8 @@ import com.aiworkdeck.mobile.model.CaptureItem
 import com.aiworkdeck.mobile.model.DaySection
 import com.aiworkdeck.mobile.model.LibraryGrouping
 import com.aiworkdeck.mobile.model.MediaKind
+import com.aiworkdeck.mobile.model.ProjectChoice
+import com.aiworkdeck.mobile.model.RelayProject
 import com.aiworkdeck.mobile.model.TransferState
 import com.aiworkdeck.mobile.model.TransferTally
 import com.aiworkdeck.mobile.services.ServiceLocator
@@ -84,6 +86,8 @@ fun LibraryScreen(
     model: AppModel,
     onOpenViewer: (List<CaptureItem>, Int) -> Unit,
     onClose: () -> Unit,
+    /** 项目工作区「现场记录」页：只看这个项目，不能切换。 */
+    fixedProject: RelayProject? = null,
 ) {
     val all by model.items.collectAsStateWithLifecycle()
     val current by model.selectedProject.collectAsStateWithLifecycle()
@@ -103,10 +107,10 @@ fun LibraryScreen(
     val scope = rememberCoroutineScope()
     var barHeight by remember { mutableStateOf(0.dp) }
 
-    val projects = LibraryGrouping.projectsIn(all, current)
+    val projects = fixedProject?.let { listOf(ProjectChoice(it.id, it.name)) } ?: LibraryGrouping.projectsIn(all, current)
     // 正在看的项目：优先用手动切过的那个；它若已经没有记录了（比如刚被删空）就退回第一项
     val viewing = projects.firstOrNull { it.id == viewingId } ?: projects.firstOrNull()
-    val items = LibraryGrouping.itemsIn(all, viewing?.id, current).filter { !audioOnly || it.kind == MediaKind.audio }
+    val items = LibraryGrouping.itemsIn(all, viewing?.id, fixedProject ?: current).filter { !audioOnly || it.kind == MediaKind.audio }
     val days = LibraryGrouping.groupByDay(items)
     val selectedItems = items.filter { selected.contains(it.id) }
     val isGrid = viewMode == VIEW_GRID
@@ -218,7 +222,7 @@ fun LibraryScreen(
                         isGrid = isGrid,
                         selecting = selecting,
                         canSelect = items.isNotEmpty(),
-                        onPick = { id -> viewingId = id; prefs.libraryViewingProject = id; selected = emptySet() },
+                        onPick = { id -> if (fixedProject != null) return@TopBar; viewingId = id; prefs.libraryViewingProject = id; selected = emptySet() },
                         onColumns = {
                             columns = if (columns >= 4) 2 else columns + 1
                             prefs.libraryColumns = columns
@@ -229,6 +233,7 @@ fun LibraryScreen(
                         },
                         onToggleSelect = { selecting = !selecting; selected = emptySet() },
                         onClose = onClose,
+                        embedded = fixedProject != null,
                     )
                 }
             }
@@ -290,6 +295,8 @@ private fun TopBar(
     onToggleView: () -> Unit,
     onToggleSelect: () -> Unit,
     onClose: () -> Unit,
+    // 嵌在项目工作区「现场记录」里：项目已定，不给关闭和切项目
+    embedded: Boolean = false,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Column {
@@ -298,7 +305,7 @@ private fun TopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2),
         ) {
-            Box(
+            if (!embedded) Box(
                 Modifier.size(Tk.touchMin).clickable(onClick = onClose)
                     .semantics { contentDescription = tr("common.close") },
                 contentAlignment = Alignment.Center,
@@ -306,7 +313,7 @@ private fun TopBar(
 
             Box(Modifier.weight(1f)) {
                 Row(
-                    Modifier.heightIn(min = 28.dp).clickable { menuOpen = true },
+                    Modifier.heightIn(min = 28.dp).clickable(enabled = !embedded) { menuOpen = true },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
@@ -315,7 +322,7 @@ private fun TopBar(
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    Text("▾", style = Fonts.small(), color = Tk.D.fgMuted)
+                    if (!embedded) Text("▾", style = Fonts.small(), color = Tk.D.fgMuted)
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     for ((id, name) in projects) {

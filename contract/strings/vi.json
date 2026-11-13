@@ -315,6 +315,7 @@
   "capture.saveFailed": "Không thể lưu ảnh chụp này cục bộ. Tệp tạm thời của nó có thể bị mất sau khi bạn thoát. Hãy gán nó vào một dự án và hoàn tất tải lên sớm, hoặc chụp lại.",
   "camera.error.start": "Camera không khả dụng. Vui lòng thử lại.",
   "files.noPreviewApp": "Không có ứng dụng nào đã cài đặt có thể xem trước định dạng này. Chưa bắt đầu chuyển tệp.",
+  "files.openWith": "Mở bằng ứng dụng khác",
   "files.platformUnsupported": "Định dạng này không thể xem trước trong WeChat. Chưa bắt đầu chuyển tệp. Hãy sử dụng ứng dụng iOS hoặc máy tính để bàn.",
   "backup.title": "Sao lưu tệp lên đám mây",
   "backup.message": "Bật sao lưu tệp lên đám mây? Máy tính để bàn của bạn sẽ tải hình ảnh, DOCX, PPTX, XLSX, PDF, âm thanh và video của dự án được hỗ trợ lên bộ nhớ đám mây của tài khoản. Khi có quyền truy cập đám mây, các tệp đã sao lưu vẫn khả dụng khi máy tính để bàn ngoại tuyến. Sao lưu mặc định đang tắt và có thể tắt trong Cài đặt.",

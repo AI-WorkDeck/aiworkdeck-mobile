@@ -47,6 +47,14 @@ fun folderEntries(files: List<ProjectFile>, folder: String = ""): List<FileEntry
     }
     return entries.values.sortedWith(compareBy<FileEntry> { it.file != null }.thenBy { it.name.lowercase() })
 }
+/** Same wording as iOS `FileDownloadView`: a valid monetary estimate wins and carries the partial-charge notice. */
+fun quoteText(name: String, credits: Int?, cents: Long?, currency: String?): String? {
+    if (cents != null && cents >= 0 && currency in listOf("CNY", "USD")) {
+        val amount = java.text.NumberFormat.getCurrencyInstance().apply { this.currency = java.util.Currency.getInstance(currency) }.format(java.math.BigDecimal.valueOf(cents, 2))
+        return tr("postpaid.estimate", mapOf("amount" to amount)) + "\n" + tr("postpaid.partialCharge")
+    }
+    return credits?.let { tr("workspace.quote", mapOf("name" to name, "credits" to it)) }
+}
 fun validatePreview(file: ProjectFile) {
     if (file.isFolder || file.extension !in ContractCapabilities.previewExtensions) throw IllegalArgumentException(tr("files.unsupported"))
     if (file.size < 0 || file.size > ProjectFilesService.MAX_BYTES) throw IllegalArgumentException(tr("files.error.tooLarge"))
@@ -121,12 +129,14 @@ class ProjectFilesService(private val baseURL: String, private val session: Stri
         val cents = quote["quoteCents"]?.jsonPrimitive?.longOrNull ?: error(tr("files.error.response"))
         val currency = quote["cashCurrency"]?.jsonPrimitive?.content ?: error(tr("files.error.response"))
         check(cents >= 0 && currency in listOf("CNY", "USD") && quote["estimated"]?.jsonPrimitive?.booleanOrNull == true) { tr("files.error.response") }
-        val amount = java.text.NumberFormat.getCurrencyInstance().apply { this.currency = java.util.Currency.getInstance(currency) }.format(java.math.BigDecimal.valueOf(cents, 2))
-        return tr("postpaid.estimate", mapOf("amount" to amount)) + "\n" + tr("postpaid.partialCharge")
+        return quoteText(file.name, null, cents, currency) ?: error(tr("files.error.response"))
     }
-    suspend fun quote(file: ProjectFile): Int {
+    /** Desktop PULL quote: postpaid accounts get a monetary estimate, others the credit price. */
+    suspend fun desktopQuote(file: ProjectFile): String {
         validatePreview(file)
-        return request("/api/mobile/transfer/quote?bytes=${file.size.coerceAtLeast(1)}").getValue("credits").jsonPrimitive.int
+        val quote = request("/api/mobile/transfer/quote?bytes=${file.size.coerceAtLeast(1)}")
+        return quoteText(file.name, quote["credits"]?.jsonPrimitive?.intOrNull, quote["quoteCents"]?.jsonPrimitive?.longOrNull,
+            quote["cashCurrency"]?.jsonPrimitive?.contentOrNull) ?: error(tr("files.error.response"))
     }
     suspend fun download(project: RelayProject, file: ProjectFile): File {
         validatePreview(file); ensureOpen()

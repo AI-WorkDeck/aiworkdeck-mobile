@@ -315,6 +315,7 @@
   "capture.saveFailed": "Diese Aufnahme konnte nicht lokal gespeichert werden. Die temporäre Datei kann nach dem Beenden verloren gehen. Weisen Sie sie einem Projekt zu und schließen Sie den Upload bald ab, oder erfassen Sie sie erneut.",
   "camera.error.start": "Kamera ist nicht verfügbar. Bitte versuchen Sie es erneut.",
   "files.noPreviewApp": "Keine installierte App kann dieses Format in der Vorschau anzeigen. Es wurde keine Übertragung gestartet.",
+  "files.openWith": "In anderer App öffnen",
   "files.platformUnsupported": "Dieses Format kann in WeChat nicht in der Vorschau angezeigt werden. Es wurde keine Übertragung gestartet. Verwenden Sie die iOS-App oder den Desktop.",
   "backup.title": "Cloud-Dateisicherung",
   "backup.message": "Cloud-Dateisicherung aktivieren? Ihr Desktop lädt unterstützte Projektbilder, DOCX, PPTX, XLSX, PDF, Audio und Video in den Cloud-Speicher Ihres Kontos hoch. Bei verfügbarem Cloud-Zugang bleiben bereits gesicherte Dateien verfügbar, während Ihr Desktop offline ist. Die Sicherung ist standardmäßig deaktiviert und kann in den Einstellungen ausgeschaltet werden.",

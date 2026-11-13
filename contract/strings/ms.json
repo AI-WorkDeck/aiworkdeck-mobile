@@ -315,6 +315,7 @@
   "capture.saveFailed": "Tangkapan ini tidak dapat disimpan secara setempat. Fail sementaranya mungkin hilang selepas anda keluar. Tugaskannya kepada projek dan sebelum muat naik dengan segera, atau tangkap semula.",
   "camera.error.start": "Kamera tidak tersedia. Cuba lagi.",
   "files.noPreviewApp": "Tiada aplikasi terpasang boleh memratontonkan format ini. Pemindahan tidak dimulakan.",
+  "files.openWith": "Buka dalam apl lain",
   "files.platformUnsupported": "Format ini tidak boleh dipratonton dalam WeChat. Pemindahan tidak dimulakan. Gunakan aplikasi iOS atau desktop.",
   "backup.title": "Sandaran fail awan",
   "backup.message": "Aktifkan sandaran fail awan? Desktop anda akan memuat naik imej projek, DOCX, PPTX, XLSX, PDF, audio dan video yang disokong ke storan awan akaun anda. Dengan akses awan yang tersedia, fail yang telah disandarkan kekal tersedia semasa desktop anda luar talian. Sandaran dimatikan secara lalai dan boleh dimatikan dalam Tetapan.",

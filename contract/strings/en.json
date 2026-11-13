@@ -315,6 +315,7 @@
   "capture.saveFailed": "Could not save this capture locally. Its temporary file may be lost after you exit. Assign it to a project and finish uploading soon, or capture it again.",
   "camera.error.start": "Camera is unavailable. Try again.",
   "files.noPreviewApp": "No installed app can preview this format. No transfer was started.",
+  "files.openWith": "Open in another app",
   "files.platformUnsupported": "This format cannot be previewed in WeChat. No transfer was started. Use the iOS app or desktop.",
   "backup.title": "Cloud file backup",
   "backup.message": "Enable cloud file backup? Your desktop will upload supported project images, DOCX, PPTX, XLSX, PDF, audio and video to your account’s cloud storage. When cloud access is available, files already backed up remain available while your desktop is offline. Backup is off by default and can be turned off in Settings.",
