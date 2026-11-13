@@ -15,7 +15,11 @@ class EncryptedSessionStore(context: Context) : SessionStore {
     )
 
     override fun current(): String? = prefs.getString(KEY, null)
-    override fun save(id: String) { prefs.edit().putString(KEY, id).apply() }
+    /** commit 同步落盘并读回核对：apply 的失败是静默的，登录会「成功」进一个重启即丢的会话。 */
+    override fun save(id: String) {
+        val written = runCatching { prefs.edit().putString(KEY, id).commit() }.getOrDefault(false)
+        if (!written || runCatching { prefs.getString(KEY, null) }.getOrNull() != id) throw SessionSaveFailed()
+    }
     override fun clear() { prefs.edit().remove(KEY).apply() }
 
     private companion object { const val KEY = "sessionId" }

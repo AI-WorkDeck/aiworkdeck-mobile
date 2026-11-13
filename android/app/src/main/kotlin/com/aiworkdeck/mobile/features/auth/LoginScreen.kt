@@ -71,12 +71,10 @@ import com.aiworkdeck.mobile.design.L10n
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.services.AccountRegion
-import com.aiworkdeck.mobile.services.ApiError
 import com.aiworkdeck.mobile.services.ServiceLocator
-import com.aiworkdeck.mobile.services.Unauthorized
+import com.aiworkdeck.mobile.services.userFacingMessage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.IOException
 
 internal enum class Method { Phone, Email }
 private enum class Step { Identity, Code }
@@ -185,7 +183,7 @@ fun LoginScreen(model: AppModel) {
                             else backend.verifyMailLoginCode(identity.trim(), password)
                         password = ""; model.didLogin(result)
                     }
-                    catch (e: Exception) { error = errorText(e) }
+                    catch (e: Exception) { error = userFacingMessage(e) }
                     finally { busy = false }
                 }
             })
@@ -357,15 +355,4 @@ private fun mask(method: Method, value: String): String = when (method) {
             (if (name.length <= 1) "***" else name.take(1) + "***") + value.substring(at)
         }
     }
-}
-
-/**
- * 报错文案。网络失败与业务失败要分开说——用户看到「验证码错误」和看到「网络不通」，
- * 下一步该做什么完全不同。
- */
-internal fun errorText(e: Throwable): String = when (e) {
-    is Unauthorized -> tr("error.unauthorized")
-    is IOException -> tr("error.network")
-    is ApiError -> e.message ?: tr("error.network")
-    else -> e.message ?: tr("error.network")
 }

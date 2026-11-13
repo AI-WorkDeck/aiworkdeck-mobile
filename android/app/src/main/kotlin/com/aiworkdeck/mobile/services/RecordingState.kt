@@ -31,6 +31,19 @@ object RecordingState {
     var isSaving by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
 
+    /** 恢复草稿的结果：弹窗说一次。与录音舞台里的 [message] 分开——旧提醒不该把首页切到录音档。 */
+    var notice by mutableStateOf<String?>(null)
+    /** 有音频完好但没存进库的草稿：只在真失败过时给「重试保存」。 */
+    var canRetrySave by mutableStateOf(false)
+    /** 有读不出音频的草稿：给「丢弃」，否则每次启动都会再提醒一遍。 */
+    var canDiscardUnreadable by mutableStateOf(false)
+
+    fun applyRecovery(result: RecordingDrafts.Recovery) {
+        notice = result.message
+        canRetrySave = result.failed > 0
+        canDiscardUnreadable = result.invalid > 0
+    }
+
     var isRecording by mutableStateOf(false)
         private set
 

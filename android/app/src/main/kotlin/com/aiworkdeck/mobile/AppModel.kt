@@ -18,6 +18,7 @@ import com.aiworkdeck.mobile.services.LoginResult
 import com.aiworkdeck.mobile.services.MediaUsage
 import com.aiworkdeck.mobile.services.RecordingState
 import com.aiworkdeck.mobile.services.ServiceLocator
+import com.aiworkdeck.mobile.services.SessionSaveFailed
 import com.aiworkdeck.mobile.services.Unauthorized
 import com.aiworkdeck.mobile.services.UploadWorker
 import kotlinx.coroutines.Job
@@ -119,8 +120,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             _isSignedIn.value = backend.hasSession()
             _selectedProject.value = prefs.selectedProject
             if (!RecordingState.isRecording && !RecordingState.isSaving) {
-                com.aiworkdeck.mobile.services.RecordingDrafts(File(getApplication<Application>().filesDir, "recording-drafts"))
-                    .recover(evidence)?.let { RecordingState.message = it }
+                RecordingState.applyRecovery(recordingDrafts().recover(evidence))
             }
             evidence.sweepOrphans()
             refresh()
@@ -172,19 +172,31 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     // MARK: - 账号与项目
 
+    /** 登录接口成功但本机没存住会话（[Backend] 已在 save 时抛过；这里兜底）就不算登录成功。 */
     fun didLogin(result: LoginResult) {
+        if (!backend.hasSession()) throw SessionSaveFailed()
         _account.value = result.user
         _isSignedIn.value = true
         startHeartbeat()
         viewModelScope.launch { refresh() }
     }
 
-    fun retryRecordingDrafts() {
+    private fun recordingDrafts() = com.aiworkdeck.mobile.services.RecordingDrafts(File(getApplication<Application>().filesDir, "recording-drafts"))
+
+    fun retryRecordingDrafts() = recoverRecordingDrafts(discardUnreadable = false)
+
+    /** 用户确认丢弃读不出的录音草稿，再把其余草稿重试一遍。 */
+    fun discardUnreadableRecordings() = recoverRecordingDrafts(discardUnreadable = true)
+
+    private fun recoverRecordingDrafts(discardUnreadable: Boolean) {
         if (RecordingState.isRecording || RecordingState.isSaving) return
         RecordingState.isSaving = true
         viewModelScope.launch {
             try {
-                RecordingState.message = com.aiworkdeck.mobile.services.RecordingDrafts(File(getApplication<Application>().filesDir, "recording-drafts")).recover(evidence)
+                val drafts = recordingDrafts()
+                if (discardUnreadable) drafts.discardUnreadable()
+                RecordingState.message = null
+                RecordingState.applyRecovery(drafts.recover(evidence))
                 refresh()
                 if (!ScreenshotMode.enabled) UploadWorker.enqueue(getApplication<Application>())
             } finally { RecordingState.isSaving = false }

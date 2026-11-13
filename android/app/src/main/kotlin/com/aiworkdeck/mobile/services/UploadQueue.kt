@@ -188,14 +188,14 @@ class UploadQueue(
             _changes.tryEmit(Unit)
             true
         } catch (e: Unauthorized) {
-            lastUnauthorized = e.message
-            recordFailure(item.id, e.message, backoff = false)
+            lastUnauthorized = userFacingMessage(e)
+            recordFailure(item.id, userFacingMessage(e), backoff = false)
             false
         } catch (e: IOException) {
-            recordFailure(item.id, e.message, backoff = true)
+            recordFailure(item.id, userFacingMessage(e), backoff = true)
             false
         } catch (e: Exception) {
-            recordFailure(item.id, e.message, backoff = true)
+            recordFailure(item.id, userFacingMessage(e), backoff = true)
             false
         }
     }

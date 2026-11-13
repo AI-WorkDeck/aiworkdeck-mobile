@@ -1,12 +1,32 @@
 package com.aiworkdeck.mobile.services
 
 import android.content.Context
+import com.aiworkdeck.mobile.design.tr
 import java.util.logging.Logger
 
 interface SessionStore {
     fun current(): String?
+    /** 写盘并读回核对；存不住就抛 [SessionSaveFailed]——登录不能「成功」进一个重启即丢的会话。 */
     fun save(id: String)
     fun clear()
+}
+
+/** 登录接口已成功，但本机存不住会话。 */
+class SessionSaveFailed : Exception(tr("error.sessionSaveFailed"))
+
+/**
+ * Keystore 在启动时打不开时用：不崩、也不假装能记住登录。每次登录时现试一次建加密存储
+ * （开机未解锁等瞬时故障过后就能好）；还是不行就让登录明确失败。
+ */
+class DeferredSessionStore(private val open: () -> SessionStore) : SessionStore {
+    private var delegate: SessionStore? = null
+    override fun current(): String? = delegate?.current()
+    override fun save(id: String) {
+        val store = delegate ?: try { open() } catch (_: Exception) { throw SessionSaveFailed() }
+        delegate = store
+        store.save(id)
+    }
+    override fun clear() { delegate?.clear() }
 }
 
 /** 内存会话存储，测试用；不落盘。 */
@@ -23,7 +43,7 @@ class MemorySessionStore : SessionStore {
  * `Application.onCreate` 里调的，抛出去就是「一开就崩」的死循环，用户连卸载都不好定位。
  *
  * 所以：抛了就把那份已经解不开的 prefs 文件删掉重来一次（代价只是要重新登录一次），
- * 再不行退到内存存储——这一程用不了「记住登录」，但至少 App 能开、现场能拍。
+ * 再不行退到 [DeferredSessionStore]——App 能开，登录时再试；存不住就明说，不退到内存里假装记住了。
  */
 object SessionStores {
     private val logger = Logger.getLogger("SessionStores")
@@ -37,8 +57,8 @@ object SessionStores {
         try {
             EncryptedSessionStore(ctx)
         } catch (second: Exception) {
-            logger.warning("加密会话存储重建仍失败，本次退到内存存储: ${second.message}")
-            MemorySessionStore()
+            logger.warning("加密会话存储重建仍失败，登录时再试: ${second.message}")
+            DeferredSessionStore { EncryptedSessionStore(ctx) }
         }
     }
 }

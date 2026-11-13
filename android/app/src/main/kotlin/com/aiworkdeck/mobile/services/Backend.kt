@@ -18,7 +18,7 @@ import java.io.File
  * （[execute] 里的非 2xx）两者恒为 null——那两种失败压根没有信封可读。
  */
 class ApiError(val code: Int, message: String, val kind: EnvelopeKind? = null, val outTradeNo: String? = null) : Exception(message)
-class Unauthorized : Exception("unauthorized")
+class Unauthorized : Exception(tr("error.unauthorized"))
 
 /**
  * [baseUrlProvider] 每次发请求现取：主机跟着账号区域走（dev-board#837），区域在登录页换了，
