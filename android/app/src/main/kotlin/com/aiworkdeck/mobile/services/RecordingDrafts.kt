@@ -13,7 +13,9 @@ import java.time.Instant
 import java.util.UUID
 
 /** Metadata is durable before recording starts; process death leaves originals available for recovery. */
-class RecordingDrafts(private val root: File) {
+class RecordingDrafts(private val root: File, private val playable: (File) -> Boolean = ::isPlayableAudio) {
+    /** [invalid] 读不出音频、只能丢弃；[failed] 音频完好但没存进库，可重试。 */
+    data class Recovery(val message: String?, val invalid: Int, val failed: Int)
     @Serializable data class Draft(val name: String, val startedAt: Long, val project: RelayProject?,
         val lat: Double? = null, val lon: Double? = null, val accuracy: Double? = null) {
         val location: Loc? get() = if (lat != null && lon != null) Loc(lat, lon, accuracy) else null
@@ -28,21 +30,35 @@ class RecordingDrafts(private val root: File) {
     fun file(draft: Draft): File = File(root, draft.name)
     fun complete(draft: Draft) { File(root, draft.name + ".json").delete() }
     // A restart may follow a different sign-in; recovered audio requires explicit reassignment.
-    suspend fun recover(store: EvidenceStore): String? = withContext(Dispatchers.IO) {
+    suspend fun recover(store: EvidenceStore): Recovery = withContext(Dispatchers.IO) {
         var recovered = 0; var invalid = 0; var failed = 0
         for (metadata in root.listFiles { f -> f.extension == "json" }.orEmpty()) {
             val draft = runCatching { json.decodeFromString<Draft>(metadata.readText()) }.getOrNull() ?: continue
             if (File(draft.name).name != draft.name) continue
             val source = file(draft)
             if (!source.exists()) { complete(draft); continue }
-            if (!isPlayableAudio(source)) { invalid++; continue }
+            if (!playable(source)) { invalid++; continue }
             try { store.save(MediaKind.audio, source, Instant.ofEpochMilli(draft.startedAt), draft.location, null); complete(draft); recovered++ }
             catch (_: Exception) { failed++ }
         }
-        buildList {
+        val message = buildList {
             if (recovered > 0) add(tr("rec.recovery.saved", mapOf("count" to recovered)))
             if (invalid > 0) add(tr("rec.recovery.noAudio", mapOf("count" to invalid)))
             if (failed > 0) add(tr("rec.recovery.saveFailed", mapOf("count" to failed)))
         }.takeIf { it.isNotEmpty() }?.joinToString("\n")
+        Recovery(message, invalid, failed)
+    }
+
+    /** 用户确认后删掉读不出音频的草稿（元数据与音频一起）；可播放的原样留着等重试。返回删掉的条数。 */
+    suspend fun discardUnreadable(): Int = withContext(Dispatchers.IO) {
+        var removed = 0
+        for (metadata in root.listFiles { f -> f.extension == "json" }.orEmpty()) {
+            val draft = runCatching { json.decodeFromString<Draft>(metadata.readText()) }.getOrNull() ?: continue
+            if (File(draft.name).name != draft.name) continue
+            val source = file(draft)
+            if (source.exists() && playable(source)) continue
+            source.delete(); complete(draft); removed++
+        }
+        removed
     }
 }

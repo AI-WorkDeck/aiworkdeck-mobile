@@ -81,7 +81,7 @@ class PersonalWorkspaceState(
                 reportProgressError = null; reportSubmitted = true
             }
         } catch (e: CancellationException) { throw e }
-        catch (e: Exception) { if (store.isCurrent() && reportConversationId == id) reportError = e.message?.takeIf { it.isNotBlank() } ?: tr("error.network") }
+        catch (e: Exception) { if (store.isCurrent() && reportConversationId == id) reportError = userFacingMessage(e) }
         finally { reporting = false }
     }
     suspend fun refreshReportProgress() {
@@ -94,7 +94,7 @@ class PersonalWorkspaceState(
             if (store.isCurrent() && reportId == id) reportProgress = progress
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
-            if (store.isCurrent() && reportId == id) reportProgressError = e.message?.takeIf { it.isNotBlank() } ?: tr("error.network")
+            if (store.isCurrent() && reportId == id) reportProgressError = userFacingMessage(e)
         } finally { reportRefreshing = false }
     }
     suspend fun prepareCopy() {
@@ -115,14 +115,14 @@ class PersonalWorkspaceState(
                 desktopReady = true
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
                 if (!store.isCurrent()) return
-                error = e.message
+                error = userFacingMessage(e)
             }
             val projects = backend.myProjects()
             if (store.isCurrent() && conversationId == id) {
                 copyTargets = PersonalCopyDestination.targets(projects).filter { desktopReady || it.desktop == null }
                 copyNeedsUpgrade = PersonalCopyDestination.needsUpgrade(projects)
             }
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = userFacingMessage(e) }
         finally { loading = false }
     }
     suspend fun copyTo(project: RelayProject) {
@@ -137,7 +137,7 @@ class PersonalWorkspaceState(
             if (!store.isCurrent() || conversationId != id) return
             check(result.mode == "copy" && result.sourcePreserved && !result.filesCopied && result.sourceConversationId == id && result.targetProjectId == target) { tr("error.badResponse") }
             copySuccess = true; copyTargets = null
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = userFacingMessage(e) }
         finally { loading = false }
     }
     suspend fun copyTo(destination: PersonalCopyDestination) {
@@ -170,7 +170,7 @@ class PersonalWorkspaceState(
             val receipt = backend.personalDesktopCopy(request)
             if (!store.isCurrent() || conversationId != request.sourceConversationId || desktopCopy?.request != request) return
             desktopCopy = PersonalDesktopCopy(request, receipt); saveConversation(); copyTargets = null
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = userFacingMessage(e) }
         finally { loading = false }
     }
     suspend fun refreshDesktopCopy() {
@@ -182,7 +182,7 @@ class PersonalWorkspaceState(
             val receipt = backend.personalDesktopCopyStatus(current.request)
             if (!store.isCurrent() || desktopCopy?.request != current.request || conversationId != current.request.sourceConversationId) return
             desktopCopy = PersonalDesktopCopy(current.request, receipt); saveConversation()
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = userFacingMessage(e) }
         finally { loading = false }
     }
     private val operations = Mutex()
@@ -202,7 +202,7 @@ class PersonalWorkspaceState(
                 if (reply.status == "completed") { pending = null; draft = "" }
                 else error = tr("error.network")
                 saveConversation()
-            } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = userFacingMessage(e) }
             finally { busy = false }
         }
         conversationId?.let { id ->
@@ -211,7 +211,7 @@ class PersonalWorkspaceState(
                 if (!store.isCurrent() || conversationId != id || history.conversationId != id) return
                 messages.clear(); messages.addAll(history.messages.map { it.role to it.content })
                 sources = history.messages.lastOrNull { it.role == "assistant" }?.sources.orEmpty()
-            } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = userFacingMessage(e) }
         }
     }
     suspend fun load(context: android.content.Context) = operations.withLock { fetch(context) }
@@ -226,9 +226,9 @@ class PersonalWorkspaceState(
                     desktopCopy = null; copyTargets = null; messages.clear(); sources = emptyList(); conversationId = null; pending = null; draft = ""
                 } else if (status?.enabled == true && status?.canUseCloud == true) restore = true
                 else { messages.clear(); sources = emptyList() }
-            } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message }
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { error = userFacingMessage(e) }
             try { calendar = backend.personalCalendar(); calendarError = null; CalendarReminders.replace(context, calendar?.takeIf { it.enabled && it.canReadCloud }?.events ?: emptyList()) }
-            catch (e: CancellationException) { throw e } catch (e: Exception) { calendarError = e.message }
+            catch (e: CancellationException) { throw e } catch (e: Exception) { calendarError = userFacingMessage(e) }
             if (restore && !busy) restoreConversation(conversationStore ?: PersonalConversationStore.open(context, backend))
         } finally { loading = false }
     }
@@ -242,7 +242,7 @@ class PersonalWorkspaceState(
             }
             fetch(context)
         }
-        catch (e: CancellationException) { throw e } catch (e: Exception) { if (feature == "calendar") calendarError = e.message else error = e.message }
+        catch (e: CancellationException) { throw e } catch (e: Exception) { if (feature == "calendar") calendarError = userFacingMessage(e) else error = userFacingMessage(e) }
         finally { loading = false }
     }
     suspend fun send() {
@@ -258,7 +258,7 @@ class PersonalWorkspaceState(
             if (messages.lastOrNull() != ("user" to question.message)) messages.add("user" to question.message)
             messages.add("assistant" to reply.answer)
             sources = reply.sources; conversationId = reply.conversationId; pending = null; draft = ""; saveConversation()
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = e.message }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { if (store.isCurrent()) error = userFacingMessage(e) }
         finally { busy = false }
     }
 }

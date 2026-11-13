@@ -136,6 +136,7 @@ class RecordingService : Service() {
         val file = eng?.stop()
         if (file == null) {
             if (eng != null) RecordingState.message = tr("rec.recovery.noAudio", mapOf("count" to 1))
+            if (eng != null && currentDraft != null) RecordingState.canDiscardUnreadable = true
             finishService()
             return
         }
@@ -151,7 +152,7 @@ class RecordingService : Service() {
                 RecordingState.stored.emit(item)
             } catch (e: Exception) {
                 logger.warning("录音落库失败: ${e.message}")
-                withContext(Dispatchers.Main) { RecordingState.message = tr("rec.saveFailed") }
+                withContext(Dispatchers.Main) { RecordingState.message = tr("rec.saveFailed"); if (currentDraft != null) RecordingState.canRetrySave = true }
             } finally {
                 withContext(Dispatchers.Main) { finishService(); RecordingState.isSaving = false }
             }

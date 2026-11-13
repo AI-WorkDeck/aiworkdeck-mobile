@@ -49,7 +49,6 @@ import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.WorkdeckTheme
 import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.features.auth.Eyebrow
-import com.aiworkdeck.mobile.features.auth.errorText
 import com.aiworkdeck.mobile.features.queue.TextAction
 import com.aiworkdeck.mobile.features.queue.noRipple
 import com.aiworkdeck.mobile.services.ApiError
@@ -59,6 +58,7 @@ import com.aiworkdeck.mobile.services.showsExternalRecharge
 import com.aiworkdeck.mobile.services.BillingBalance
 import com.aiworkdeck.mobile.services.MediaUsage
 import com.aiworkdeck.mobile.services.ServiceLocator
+import com.aiworkdeck.mobile.services.userFacingMessage
 import kotlinx.coroutines.launch
 
 /** 用量读不到时的占位。一条「—」比一行报错更符合这行信息的分量。 */
@@ -341,7 +341,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                                     confirmingDelete = false
                                     onClose()
                                 } catch (e: Exception) {
-                                    deleteError = errorText(e)
+                                    deleteError = userFacingMessage(e)
                                     confirmingDelete = false
                                 }
                                 deleting = false

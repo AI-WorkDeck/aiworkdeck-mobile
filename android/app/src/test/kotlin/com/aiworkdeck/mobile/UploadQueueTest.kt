@@ -145,7 +145,7 @@ class UploadQueueTest {
         queue.kick()
         var reloaded = store.loadAll().first()
         assertEquals(TransferState.failed, reloaded.state)
-        assertEquals("network down", reloaded.lastError)
+        assertEquals(com.aiworkdeck.mobile.design.tr("error.network"), reloaded.lastError)
         assertEquals(now + 60_000, queue.nextAutoKickAt)
 
         queue.retryFailed()

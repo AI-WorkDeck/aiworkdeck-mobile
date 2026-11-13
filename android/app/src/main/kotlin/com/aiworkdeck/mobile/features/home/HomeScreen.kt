@@ -76,7 +76,11 @@ import com.aiworkdeck.mobile.services.Loc
 import com.aiworkdeck.mobile.services.LocationStamper
 import com.aiworkdeck.mobile.services.RecordingService
 import com.aiworkdeck.mobile.services.RecordingState
+import com.aiworkdeck.mobile.services.userFacingMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -117,6 +121,9 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
     var now by remember { mutableStateOf(Instant.now()) }
     var flash by remember { mutableStateOf(false) }
     var pauseError by remember { mutableStateOf<String?>(null) }
+    var captureError by remember { mutableStateOf<String?>(null) }
+    var locUnavailable by remember { mutableStateOf(false) }
+    var confirmDiscard by remember { mutableStateOf(false) }
     var cameraError by remember { mutableStateOf(false) }
     var cameraRetry by remember { mutableStateOf(0) }
 
@@ -162,7 +169,10 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
         if (!hasLocation) loc = null
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (hasLocation && active) {
-                stamper.current()?.let { loc = it }
+                // LocationManager 的查询是跨进程 binder 调用，别占主线程
+                val fresh = withContext(Dispatchers.IO) { stamper.current() }
+                fresh?.let { loc = it }
+                locUnavailable = fresh == null
                 delay(10_000)
             }
         }
@@ -252,14 +262,19 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
                 val at = Instant.now()
                 val target = project
                 flash = true
-                storeScope.launch { runCatching { model.store(MediaKind.photo, camera.takePhoto(), at, loc, target) } }
+                storeScope.launch {
+                    val photo = try { camera.takePhoto() } catch (e: CancellationException) { throw e } catch (_: Exception) { captureError = tr("capture.photoFailed"); return@launch }
+                    try { model.store(MediaKind.photo, photo, at, loc, target) } catch (e: CancellationException) { throw e } catch (e: Exception) { captureError = tr("error.saveFailed", mapOf("reason" to userFacingMessage(e))) }
+                }
                 scope.launch { delay(120); flash = false }
             }
             CapMode.video -> if (camera.isRecording) stopVideoAndStore() else {
                 if (!hasCamera) { ask.launch(arrayOf(Manifest.permission.CAMERA)); return }
                 val at = Instant.now(); val target = project; val location = loc
                 camera.startVideo { file ->
-                    storeScope.launch { runCatching { model.store(MediaKind.video, file, at, location, target) } }
+                    storeScope.launch {
+                        try { model.store(MediaKind.video, file, at, location, target) } catch (e: CancellationException) { throw e } catch (e: Exception) { captureError = tr("error.saveFailed", mapOf("reason" to userFacingMessage(e))) }
+                    }
                 }
             }
             CapMode.audio -> when {
@@ -281,7 +296,33 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
         } else shoot()
     }
 
-    androidx.compose.runtime.LaunchedEffect(RecordingState.message) { if (RecordingState.message != null) mode = CapMode.audio }
+    captureError?.let { message ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { captureError = null },
+            text = { Text(message) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { captureError = null }) { Text(tr("common.ok")) } },
+        )
+    }
+    // 恢复草稿的结果弹窗说一次，不切到录音档：首页该停在用户上次用的档位
+    RecordingState.notice?.let { notice ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { RecordingState.notice = null },
+            title = { Text(tr("rec.notice.title")) },
+            text = { Text(notice) },
+            confirmButton = {
+                if (RecordingState.canRetrySave) androidx.compose.material3.TextButton(onClick = { model.retryRecordingDrafts() }, enabled = !RecordingState.isSaving) { Text(tr("rec.retrySave")) }
+                if (RecordingState.canDiscardUnreadable) androidx.compose.material3.TextButton(onClick = { model.discardUnreadableRecordings() }, enabled = !RecordingState.isSaving) { Text(tr("rec.discardUnreadable"), color = Tk.S.failed) }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { RecordingState.notice = null }) { Text(tr("common.close")) } },
+        )
+    }
+    // 舞台里的「丢弃」是常驻按钮，删文件不可撤销，先确认一次
+    if (confirmDiscard) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { confirmDiscard = false },
+        text = { Text(tr("rec.discardUnreadable")) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmDiscard = false; model.discardUnreadableRecordings() }) { Text(tr("rec.discardUnreadable"), color = Tk.S.failed) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDiscard = false }) { Text(tr("common.cancel")) } },
+    )
 
     val recording = camera.isRecording || RecordingState.isRecording
     val paused = if (camera.isRecording) camera.isPaused else RecordingState.isPaused
@@ -310,6 +351,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
             projectName = project?.name.orEmpty(),
             loc = loc,
             hasLocation = hasLocation,
+            locUnavailable = locUnavailable,
             tally = tally,
             onOpenQueue = { onOpen(Overlay.Queue) },
             onOpenSettings = { onOpen(Overlay.Settings) },
@@ -329,9 +371,13 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
                     RecordingState.message?.let { message ->
                         Text(message, color = Color.White, modifier = Modifier.padding(Tk.Sp.s3)
                             .clickable { onOpen(Overlay.Library) })
-                        if (!RecordingState.isRecording) androidx.compose.material3.TextButton(onClick = { model.retryRecordingDrafts() }, enabled = !RecordingState.isSaving) {
-                            Text(tr("rec.retrySave"), color = Tk.D.fg)
-                        }
+                    }
+                    // 只有真失败过才给重试；保存成功的提示旁边不该挂着「重试保存」
+                    if (RecordingState.canRetrySave && !RecordingState.isRecording) androidx.compose.material3.TextButton(onClick = { model.retryRecordingDrafts() }, enabled = !RecordingState.isSaving) {
+                        Text(tr("rec.retrySave"), color = Tk.D.fg)
+                    }
+                    if (RecordingState.canDiscardUnreadable && !RecordingState.isRecording) androidx.compose.material3.TextButton(onClick = { confirmDiscard = true }, enabled = !RecordingState.isSaving) {
+                        Text(tr("rec.discardUnreadable"), color = Tk.S.failed)
                     }
                 }
                 !hasCamera -> PermissionStage(tr("home.permission.camera"), context)
@@ -409,6 +455,7 @@ private fun Header(
     projectName: String,
     loc: Loc?,
     hasLocation: Boolean,
+    locUnavailable: Boolean,
     tally: TransferTally,
     onOpenQueue: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -429,7 +476,7 @@ private fun Header(
                     Modifier.size(5.dp).clip(CircleShape)
                         .background(if (loc == null) Color.White.copy(alpha = 0.3f) else Tk.S.arrivedOnDark),
                 )
-                Text(if (hasLocation) WatermarkFormat.chip(loc) else tr("home.location.enable"), style = Fonts.mono(Tk.Ty.nano), color = Color.White.copy(alpha = 0.6f))
+                Text(if (!hasLocation) tr("home.location.enable") else if (loc == null && locUnavailable) tr("home.gps.unavailable") else WatermarkFormat.chip(loc), style = Fonts.mono(Tk.Ty.nano), color = Color.White.copy(alpha = 0.6f))
             }
             Text(
                 tr("home.settings").uppercase(), style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f),

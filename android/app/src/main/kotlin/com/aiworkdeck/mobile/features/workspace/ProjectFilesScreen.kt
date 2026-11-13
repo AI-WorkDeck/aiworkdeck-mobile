@@ -57,7 +57,7 @@ fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
         loading = true; error = null
         try { service.files(project).let { files = it.files; truncated = it.truncated } }
         catch (e: CancellationException) { throw e }
-        catch (e: Exception) { error = e.message }
+        catch (e: Exception) { error = userFacingMessage(e) }
         finally { loading = false }
     }
     suspend fun open(file: ProjectFile) {
@@ -67,7 +67,7 @@ fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
             val uri = FileProvider.getUriForFile(context, context.packageName + ".preview", local)
             context.startActivity(previewIntent(uri, local.extension).apply { clipData = ClipData.newRawUri("", uri) })
         } catch (e: CancellationException) { throw e }
-        catch (e: Exception) { error = e.message ?: tr("files.previewFailed") }
+        catch (e: Exception) { error = userFacingMessage(e, tr("files.previewFailed")) }
         finally { busy = false }
     }
     fun select(file: ProjectFile) {
@@ -81,7 +81,7 @@ fun ProjectFilesScreen(project: RelayProject, onClose: () -> Unit) {
                 else if (isCloudFile(project, file)) quote = file to service.cloudQuote(project, file)
                 else quote = file to tr("workspace.quote", mapOf("name" to file.name, "credits" to service.quote(file)))
             } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { error = e.message }
+            catch (e: Exception) { error = userFacingMessage(e) }
             finally { busy = false }
         }
     }

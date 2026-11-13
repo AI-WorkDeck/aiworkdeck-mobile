@@ -38,6 +38,7 @@ import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.features.queue.noRipple
 import com.aiworkdeck.mobile.model.RelayProject
 import com.aiworkdeck.mobile.services.ServiceLocator
+import com.aiworkdeck.mobile.services.userFacingMessage
 import com.aiworkdeck.mobile.services.Unauthorized
 import kotlinx.coroutines.launch
 
@@ -70,7 +71,7 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
             model.signOut()
             return
         } catch (e: Exception) {
-            error = errorText(e)
+            error = userFacingMessage(e)
         }
         loading = false
     }
@@ -90,7 +91,7 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
         loading = true
         // Without persistent cloud storage the cloud scratch project refuses uploads: keep captures local.
         try { if (backend.persistentCloudWritable()) { onSelect(backend.defaultProject()); onClose() } else onNone() }
-        catch (e: Exception) { error = errorText(e) }
+        catch (e: Exception) { error = userFacingMessage(e) }
         finally { loading = false }
     } }
     fun choose(p: RelayProject) { ServiceLocator.prefs.useRecentProject(p.id); onSelect(p) }
