@@ -65,7 +65,13 @@
           "familyShareable": false,
           "groupNumber": 1,
           "internalID": "6830036439",
-          "introductoryOffer": null,
+          "introductoryOffer": {
+            "displayPrice": "9.90",
+            "internalID": "6830036440",
+            "numberOfPeriods": 3,
+            "paymentMode": "payAsYouGo",
+            "subscriptionPeriod": "P1M"
+          },
           "localizations": [
             {
               "description": "每月745 Credits，每周上限200 Credits，含3GB云空间。",

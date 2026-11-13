@@ -210,6 +210,7 @@ private struct AssistantView: View {
     @State private var copyCompleted = false
     @State private var copied = false
     @State private var showSettings = false
+    @State private var showSubscription = false
     @State private var showBackup = false
     @FocusState private var inputFocused: Bool
     @State private var source: AssistantSource?
@@ -218,8 +219,11 @@ private struct AssistantView: View {
         NavigationStack {
             VStack(spacing: 12) {
                 if let status = model.status, !status.enabled || !status.canUseCloud {
-                    Text(status.canUseCloud ? tr("personal.assistantConsent") : tr("postpaid.restricted")).font(.callout).foregroundStyle(.secondary)
+                    Text(status.canUseCloud ? tr("personal.assistantConsent") : tr(status.cloudAccess?.frozen == true ? "postpaid.restricted" : "personal.subscription")).font(.callout).foregroundStyle(.secondary)
                     if status.canUseCloud && !status.backupEnabled { Button(tr("backup.title")) { showBackup = true } }
+                    if !status.canUseCloud && AccountRegion.current.billingEnabled && status.cloudAccess?.frozen != true {
+                        Button(tr("subscription.store.title")) { showSubscription = true }
+                    }
                     if !status.canUseCloud { Button(tr("settings.account")) { showSettings = true } }
                     if status.canUseCloud && status.backupEnabled { Button(tr("common.on")) { showConsent = true }.disabled(model.loading) }
                 }
@@ -287,6 +291,7 @@ private struct AssistantView: View {
             }
             .alert(tr("personal.copy.success"), isPresented: $copyCompleted) { Button(tr("common.ok"), role: .cancel) {} }
             .sheet(isPresented: $showSettings, onDismiss: { Task { await model.load() } }) { SettingsView(onClose: { showSettings = false }).environment(account) }
+            .sheet(isPresented: $showSubscription, onDismiss: { Task { await model.load() } }) { SubscriptionView() }
             .sheet(isPresented: $showBackup, onDismiss: { Task { await model.load() } }) { BackupConsentView().environment(account) }
             .sheet(isPresented: Binding(get: { source != nil }, set: { if !$0 { source = nil } })) {
                 if let source { NavigationStack { ProjectContentsView(project: source.project, client: account.workspaceFiles()).navigationTitle(source.projectName) } }
@@ -304,6 +309,7 @@ private struct PersonalCalendarView: View {
     @State private var reminders = CalendarReminders.shared
     @State private var notificationError = false
     @State private var showSettings = false
+    @State private var showSubscription = false
     @State private var selected: PersonalCalendarEvent?
     @Environment(AppModel.self) private var account
     private var events: [PersonalCalendarEvent] { (model.calendar?.events ?? []).filter { $0.isWithin(days: days) && (project.isEmpty || $0.projectIdentity == project) }.sorted { ($0.dueDate + ($0.dueTime ?? "")) < ($1.dueDate + ($1.dueTime ?? "")) } }
@@ -312,7 +318,11 @@ private struct PersonalCalendarView: View {
         NavigationStack {
             List {
                 if let calendar = model.calendar, !calendar.enabled || !calendar.canReadCloud {
-                    Text(calendar.canReadCloud ? tr("personal.calendarConsent") : tr("postpaid.restricted"))
+                    Text(calendar.canReadCloud ? tr("personal.calendarConsent") : tr(calendar.cloudAccess?.frozen == true ? "postpaid.restricted" : "personal.subscription"))
+                    if !calendar.canReadCloud && AccountRegion.current.billingEnabled && calendar.cloudAccess?.frozen != true {
+                        Button(tr("subscription.store.title")) { showSubscription = true }
+                    }
+                    if !calendar.canReadCloud { Button(tr("settings.account")) { showSettings = true } }
                     if calendar.canWriteCloud { Button(tr("common.on")) { showConsent = true }.disabled(model.loading) }
                 }
                 if model.calendar?.enabled == true {
@@ -359,6 +369,7 @@ private struct PersonalCalendarView: View {
                 }
             }
             .sheet(isPresented: $showSettings, onDismiss: { Task { await model.load() } }) { SettingsView(onClose: { showSettings = false }).environment(account) }
+            .sheet(isPresented: $showSubscription, onDismiss: { Task { await model.load() } }) { SubscriptionView() }
             .refreshable { await model.load() }
             .alert(tr("personal.calendar"), isPresented: $showConsent) {
                 Button(tr("common.ok")) { Task { await model.configure("calendar", enabled: true) } }; Button(tr("common.cancel"), role: .cancel) {}

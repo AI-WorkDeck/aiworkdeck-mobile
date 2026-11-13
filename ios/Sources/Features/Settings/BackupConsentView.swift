@@ -5,6 +5,7 @@ struct BackupConsentView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var busy = false
     @State private var confirmDisable = false
+    @State private var showSubscription = false
 
     var body: some View {
         NavigationStack {
@@ -12,7 +13,14 @@ struct BackupConsentView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text(tr("backup.message"))
                     if let consent = model.backupConsent {
-                        if !consent.canWriteCloud { Text(tr("postpaid.restricted")) }
+                        if !consent.canWriteCloud {
+                            Text(tr(consent.cloudAccess?.frozen == true ? "postpaid.restricted" : "backup.subscriptionRequired"))
+                                .foregroundStyle(consent.cloudAccess?.frozen == true ? T.S.failed : T.L.fgMuted)
+                            if AccountRegion.current.billingEnabled && consent.cloudAccess?.frozen != true {
+                                Button(tr("subscription.store.title")) { showSubscription = true }
+                                    .accessibilityIdentifier("backup.subscribe")
+                            }
+                        }
                         if consent.enabled {
                             Button(tr("backup.disable"), role: .destructive) { confirmDisable = true }
                                 .accessibilityIdentifier("backup.disable")
@@ -42,6 +50,7 @@ struct BackupConsentView: View {
                 Button(tr("common.cancel"), role: .cancel) {}
                 Button(tr("backup.disable"), role: .destructive) { save(false) }
             } message: { Text(tr("backup.disableMessage")) }
+            .sheet(isPresented: $showSubscription, onDismiss: { Task { await model.refreshBackupConsent(promptIfNeeded: false) } }) { SubscriptionView() }
         }
         .interactiveDismissDisabled(busy || (model.backupConsent?.decided == false && model.backupError == nil))
         .task { await model.refreshBackupConsent(promptIfNeeded: false) }

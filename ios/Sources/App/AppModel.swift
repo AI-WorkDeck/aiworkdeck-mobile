@@ -58,7 +58,7 @@ final class AppModel {
             let consent = try await workspaceFiles().backupConsent()
             guard generation == accountGeneration else { return }
             backupConsent = consent; backupError = nil
-            if promptIfNeeded { showBackupPrompt = !consent.decided }
+            if promptIfNeeded { showBackupPrompt = !consent.decided && consent.canWriteCloud }
         } catch {
             guard generation == accountGeneration else { return }
             backupError = tr("backup.error")

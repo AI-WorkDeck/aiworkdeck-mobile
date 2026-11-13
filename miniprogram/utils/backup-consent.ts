@@ -8,7 +8,7 @@ export async function chooseBackupConsent(current: BackupConsent): Promise<Backu
   const session = getSession()
   const { confirm } = await wx.showModal({
     title: t('backup.title'),
-    content: t('backup.message') + (cloudCanWrite(current) ? '' : '\n\n' + t('postpaid.restricted')),
+    content: t('backup.message') + (cloudCanWrite(current) ? '' : '\n\n' + t(current.cloudAccess?.frozen ? 'postpaid.restricted' : 'backup.subscriptionRequired')),
     showCancel: cloudCanWrite(current),
     confirmText: t(cloudCanWrite(current) ? 'backup.enable' : 'backup.decline'),
     cancelText: t('backup.decline'),
@@ -23,7 +23,7 @@ export async function promptBackupOnFirstUse(): Promise<void> {
   try {
     const current = await backupConsent()
     if (session !== getSession()) return
-    if (!current.decided) await chooseBackupConsent(current)
+    if (!current.decided && cloudCanWrite(current)) await chooseBackupConsent(current)
   } catch {
     if (session === getSession()) wx.showToast({ icon: 'none', title: t('backup.error') })
   } finally { if (promptSession === session) promptSession = null }
