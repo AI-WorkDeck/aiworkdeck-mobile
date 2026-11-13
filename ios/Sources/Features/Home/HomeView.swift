@@ -35,6 +35,7 @@ struct HomeView: View {
 #endif
     private let stamper = LocationStamper.shared
     @State private var mode: CapMode = .photo
+    @State private var confirmDiscardUnreadable = false
     @State private var showFlash = false
     @State private var visiblePreviews: Set<UUID> = []
     @State private var recordingDestination: FieldProject?
@@ -301,7 +302,7 @@ struct HomeView: View {
     }
 
     private var coordLine: String {
-        guard let l = stamper.last else { return tr("home.gps.locating") }
+        guard let l = stamper.last else { return tr(stamper.unavailable ? "home.gps.unavailable" : "home.gps.locating") }
         return String(format: "%.5f, %.5f · ±%.0fm", l.lat, l.lon, l.accuracy)
     }
 
@@ -631,6 +632,14 @@ struct HomeView: View {
                     if recorder.canRetrySave, !recorder.isRecording {
                         Button(tr("rec.retrySave")) { Task { await recorder.recoverPending(retry: true) } }
                             .disabled(recorder.isBusy)
+                    }
+                    if recorder.canDiscardUnreadable, !recorder.isRecording {
+                        // 删文件不可撤销：这里是常驻按钮，误触成本高，先确认一次。
+                        Button(tr("rec.discardUnreadable"), role: .destructive) { confirmDiscardUnreadable = true }
+                            .disabled(recorder.isBusy)
+                            .confirmationDialog(tr("rec.discardUnreadable"), isPresented: $confirmDiscardUnreadable) {
+                                Button(tr("rec.discardUnreadable"), role: .destructive) { Task { await recorder.discardUnreadable() } }
+                            }
                     }
                     if recorder.lastSavedID != nil, !recorder.isRecording {
                         Button(tr("rec.saved.open"), action: onOpenLibrary)

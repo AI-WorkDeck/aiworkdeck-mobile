@@ -108,4 +108,27 @@ final class RecordingRecoveryTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: invalid.metadataURL.path))
         await store.delete(ids: [valid.id])
     }
+
+    /// QA 2026-11-13 B4: an unreadable draft can never be retried into success, so the user
+    /// must be able to discard it; otherwise the same alert returns on every launch.
+    func testUnreadableDraftCanBeDiscardedAndStopsReappearing() async throws {
+        let invalid = try makeDraft()
+        let service = AudioRecorderService(store: store, pendingDrafts: { [invalid].filter { FileManager.default.fileExists(atPath: $0.metadataURL.path) } })
+        defer { invalid.remove() }
+        try Data([1, 2, 3]).write(to: invalid.audioURL)
+        await service.recoverPending()
+        XCTAssertTrue(service.canDiscardUnreadable)
+        XCTAssertTrue(service.notice?.contains(tr("rec.recovery.noAudio", ["count": "1"])) == true)
+        await service.discardUnreadable()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: invalid.metadataURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: invalid.audioURL.path))
+        XCTAssertFalse(service.canDiscardUnreadable)
+        XCTAssertFalse(service.canRetrySave)
+        XCTAssertNil(service.lastError)
+        XCTAssertNil(service.notice)
+        // Next launch: nothing left to announce.
+        let relaunched = AudioRecorderService(store: store, pendingDrafts: { [invalid].filter { FileManager.default.fileExists(atPath: $0.metadataURL.path) } })
+        await relaunched.recoverPending()
+        XCTAssertNil(relaunched.notice)
+    }
 }

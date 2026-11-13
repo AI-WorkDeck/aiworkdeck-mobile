@@ -527,24 +527,51 @@ struct CameraPreview: UIViewRepresentable {
 
 // MARK: - 位置
 
+/// CLLocationManager 的创建、`authorizationStatus`、`requestWhenInUseAuthorization`、
+/// `startUpdatingLocation` 都是到 locationd 的同步 XPC，daemon 一卡调用线程就跟着卡。
+/// QA 2026-11-13 抓到主线程卡在 `begin()` 里，登录后首屏一直停在「登录中…」。
+/// 所以 manager 只在专用定位线程上创建与调用，主线程只读结果；协议是给测试注入假 manager 用的。
+protocol LocationManaging: AnyObject {
+    var delegate: (any CLLocationManagerDelegate)? { get set }
+    var desiredAccuracy: CLLocationAccuracy { get set }
+    var authorizationStatus: CLAuthorizationStatus { get }
+    func requestWhenInUseAuthorization()
+    func startUpdatingLocation()
+    func stopUpdatingLocation()
+}
+
+extension CLLocationManager: LocationManaging {}
+
 /// 一次性取位置：只在拍摄时读一次，不做后台定位。
 /// 精度一并记下——没有精度的坐标在质证时说明不了问题。
+/// 拍摄从不等定位：定位慢或被拒时照常落库，只是不带坐标。
 @MainActor
 @Observable
-final class LocationStamper: NSObject, CLLocationManagerDelegate {
-    /// 同 CameraService：CLLocationManager 的创建也是主线程上的一次 daemon 注册，
-    /// 不该跟着 HomeView 结构体一遍遍重建（dev-board#418）。
+final class LocationStamper {
+    /// 同 CameraService：不该跟着 HomeView 结构体一遍遍重建（dev-board#418）。
     static let shared = LocationStamper()
 
-    private let manager = CLLocationManager()
     private(set) var last: (lat: Double, lon: Double, accuracy: Double)?
+    /// 授权被拒或定位失败：水印改说「未获取位置」，不让现场以为还在等。
+    private(set) var unavailable = false
+    @ObservationIgnored private var worker: LocationWorker!
 
-    private override init() {
-        super.init()
-        manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyBest
+    init(makeManager: @escaping @Sendable () -> any LocationManaging = { CLLocationManager() }) {
+        worker = LocationWorker(makeManager: makeManager) { [weak self] event in
+            Task { @MainActor in
+                guard let self else { return }
+                switch event {
+                case .fix(let lat, let lon, let accuracy):
+                    self.last = (lat, lon, accuracy)
+                    self.unavailable = false
+                case .unavailable:
+                    self.unavailable = true
+                }
+            }
+        }
     }
 
+    /// 立即返回：真正的定位调用投递到定位线程。
     func begin() {
 #if DEBUG
         // 截图模式给一个固定坐标与精度（规格要「±5 米」），不真起定位——
@@ -554,21 +581,87 @@ final class LocationStamper: NSObject, CLLocationManagerDelegate {
             return
         }
 #endif
-        if manager.authorizationStatus == .notDetermined {
-            manager.requestWhenInUseAuthorization()
+        worker.start()
+    }
+
+    func end() { worker.stop() }
+}
+
+enum LocationEvent: Sendable {
+    case fix(lat: Double, lon: Double, accuracy: Double)
+    case unavailable
+}
+
+/// 定位线程。CLLocationManager 把回调投递到创建它的那个线程的 RunLoop，
+/// 所以这里是一条自带 RunLoop 的常驻线程，而不是 GCD 队列。
+/// `manager` 与 `wanted` 只在这条线程上读写。
+final class LocationWorker: NSObject, CLLocationManagerDelegate, @unchecked Sendable {
+    private let makeManager: @Sendable () -> any LocationManaging
+    private let sink: @Sendable (LocationEvent) -> Void
+    private var manager: (any LocationManaging)?
+    private var wanted = false
+    private let thread: Thread
+
+    init(makeManager: @escaping @Sendable () -> any LocationManaging,
+         sink: @escaping @Sendable (LocationEvent) -> Void) {
+        self.makeManager = makeManager
+        self.sink = sink
+        thread = Thread {
+            RunLoop.current.add(NSMachPort(), forMode: .default)
+            while true { _ = autoreleasepool { RunLoop.current.run(mode: .default, before: .distantFuture) } }
         }
-        manager.startUpdatingLocation()
+        thread.name = "com.aiworkdeck.mobile.location"
+        thread.qualityOfService = .userInitiated
+        super.init()
+        thread.start()
     }
 
-    func end() { manager.stopUpdatingLocation() }
+    func start() { perform(#selector(startOnThread), on: thread, with: nil, waitUntilDone: false) }
+    func stop() { perform(#selector(stopOnThread), on: thread, with: nil, waitUntilDone: false) }
 
-    nonisolated func locationManager(_ m: CLLocationManager, didUpdateLocations locs: [CLLocation]) {
+    @objc private func startOnThread() {
+        wanted = true
+        let m: any LocationManaging
+        if let manager { m = manager } else {
+            m = makeManager()
+            m.delegate = self
+            m.desiredAccuracy = kCLLocationAccuracyBest
+            manager = m
+        }
+        switch m.authorizationStatus {
+        case .denied, .restricted:
+            sink(.unavailable)
+            return
+        case .notDetermined:
+            m.requestWhenInUseAuthorization()
+        default:
+            break
+        }
+        m.startUpdatingLocation()
+    }
+
+    @objc private func stopOnThread() {
+        wanted = false
+        manager?.stopUpdatingLocation()
+    }
+
+    func locationManagerDidChangeAuthorization(_ m: CLLocationManager) {
+        switch m.authorizationStatus {
+        case .denied, .restricted: sink(.unavailable)
+        case .authorizedWhenInUse, .authorizedAlways: if wanted { m.startUpdatingLocation() }
+        default: break
+        }
+    }
+
+    func locationManager(_ m: CLLocationManager, didUpdateLocations locs: [CLLocation]) {
         guard let l = locs.last else { return }
-        let v = (l.coordinate.latitude, l.coordinate.longitude, l.horizontalAccuracy)
-        Task { @MainActor [weak self] in self?.last = v }
+        sink(.fix(lat: l.coordinate.latitude, lon: l.coordinate.longitude, accuracy: l.horizontalAccuracy))
     }
 
-    nonisolated func locationManager(_ m: CLLocationManager, didFailWithError error: Error) {}
+    func locationManager(_ m: CLLocationManager, didFailWithError error: Error) {
+        // locationUnknown 只是「暂时还没有」，系统会继续尝试；其余（被拒等）才算拿不到。
+        if (error as? CLError)?.code != .locationUnknown { sink(.unavailable) }
+    }
 }
 
 enum Device {

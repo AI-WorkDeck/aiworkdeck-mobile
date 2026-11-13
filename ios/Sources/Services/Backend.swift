@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Security
 
 /// 账号区域（dev-board#837）。大陆站与国际站是**两套账号体系**，同一个人在两边是两个号，
@@ -90,26 +91,81 @@ enum Backend {
 
 // MARK: - 会话存储
 
+let sessionLog = Logger(subsystem: "com.aiworkdeck.mobile", category: "session")
+
+/// 写 Keychain 失败。登录接口已经成功，但本机存不住会话——不能当登录成功，
+/// 否则用户进了主界面，下一个请求就是「请先登录」（QA 2026-11-13 B3）。
+struct SessionSaveError: LocalizedError {
+    let status: OSStatus
+    var errorDescription: String? { tr("error.sessionSaveFailed") }
+}
+
 /// 会话令牌存 Keychain，不存 UserDefaults——那是凭据，不是偏好。
 /// UserDefaults 明文躺在沙盒里，设备被解锁取证时一览无余。
 enum SessionStore {
     private static let service = "com.aiworkdeck.mobile.session"
     private static let account = "sessionId"
 
+    /// 测试注入点：模拟 Keychain 写失败。
+    nonisolated(unsafe) static var addItem: (CFDictionary) -> OSStatus = { SecItemAdd($0, nil) }
+
     static var current: String? {
-        get {
 #if DEBUG
-            if SubscriptionUITestSeed.isOn { return "synthetic-subscription-test" }
+        if SubscriptionUITestSeed.isOn { return "synthetic-subscription-test" }
 #endif
-            return read()
-        }
-        set {
-#if DEBUG
-            if SubscriptionUITestSeed.isOn { return }
-#endif
-            if let newValue { write(newValue) } else { clear() }
-        }
+        return read()
     }
+
+    /// 存会话；失败就抛，调用方（登录）必须把它当登录失败。
+    static func save(_ value: String) throws {
+#if DEBUG
+        if SubscriptionUITestSeed.isOn { return }
+#endif
+        clear()
+        let q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: Data(value.utf8),
+            // 只在本机解锁后可读，且不同步到 iCloud 钥匙串——
+            // 尽调设备的会话不该跟着 Apple ID 漂到别的设备上。
+            // 不用 WhenUnlocked：锁屏后的后台续传（录音、上传自愈）还要带会话。
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+        let status = addItem(q as CFDictionary)
+        guard status != errSecSuccess else { return }
+#if DEBUG && targetEnvironment(simulator)
+        // 仓库默认的 Debug 模拟器构建不签名（project.yml），没有 application-identifier
+        // 授权，Keychain 一律回 errSecMissingEntitlement（-34018）。只为这种构建把会话
+        // 退存到 UserDefaults，CI/QA 才能登录；Release 与真机构建不编进这条。
+        if status == errSecMissingEntitlement {
+            sessionLog.notice("Keychain unavailable in unsigned simulator build; using DEBUG-only fallback")
+            UserDefaults.standard.set(value, forKey: debugFallbackKey)
+            return
+        }
+#endif
+        sessionLog.error("Keychain session write failed: OSStatus \(status, privacy: .public)")
+        throw SessionSaveError(status: status)
+    }
+
+    static func clear() {
+#if DEBUG
+        if SubscriptionUITestSeed.isOn { return }
+#endif
+#if DEBUG && targetEnvironment(simulator)
+        UserDefaults.standard.removeObject(forKey: debugFallbackKey)
+#endif
+        let q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        SecItemDelete(q as CFDictionary)
+    }
+
+#if DEBUG && targetEnvironment(simulator)
+    private static let debugFallbackKey = "debug.simulatorSessionFallback"
+#endif
 
     private static func read() -> String? {
         let q: [String: Any] = [
@@ -121,31 +177,14 @@ enum SessionStore {
         ]
         var out: CFTypeRef?
         guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess,
-              let data = out as? Data else { return nil }
+              let data = out as? Data else {
+#if DEBUG && targetEnvironment(simulator)
+            return UserDefaults.standard.string(forKey: debugFallbackKey)
+#else
+            return nil
+#endif
+        }
         return String(data: data, encoding: .utf8)
-    }
-
-    private static func write(_ value: String) {
-        clear()
-        let q: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: Data(value.utf8),
-            // 只在本机解锁后可读，且不同步到 iCloud 钥匙串——
-            // 尽调设备的会话不该跟着 Apple ID 漂到别的设备上。
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        ]
-        SecItemAdd(q as CFDictionary, nil)
-    }
-
-    private static func clear() {
-        let q: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ]
-        SecItemDelete(q as CFDictionary)
     }
 }
 
@@ -154,6 +193,25 @@ enum SessionStore {
 struct APIError: LocalizedError {
     let message: String
     var errorDescription: String? { message }
+}
+
+private let networkLog = Logger(subsystem: "com.aiworkdeck.mobile", category: "network")
+
+/// 队列行等处给用户看的失败原因。系统网络错误的原文（如「TLS 错误导致安全连接失败。」）
+/// 用户没法据此行动，换成词典里的说法；原文与错误码留在日志里供排查。
+func userFacingMessage(for error: Error) -> String {
+    if let api = error as? APIError { return api.message }
+    guard let url = error as? URLError else { return error.localizedDescription }
+    networkLog.error("Request failed: URLError \(url.code.rawValue, privacy: .public) \(url.localizedDescription, privacy: .public)")
+    switch url.code {
+    case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .secureConnectionFailed,
+         .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid,
+         .serverCertificateHasUnknownRoot, .clientCertificateRejected, .clientCertificateRequired,
+         .badServerResponse, .appTransportSecurityRequiresSecureConnection:
+        return tr("error.unreachable")
+    default:
+        return tr("error.network")
+    }
 }
 
 /// 后端返回的统一信封：{ code, message, data }。code 0 才是成功。
@@ -265,15 +323,20 @@ actor API: ArchiveMoveServing {
         return req
     }
 
-    private let session: URLSession = {
-        let c = URLSessionConfiguration.default
+    private let session: URLSession
+
+    /// `session` 只给测试注入桩协议用；App 内一律走 `shared`。
+    init(session: URLSession? = nil) {
+        self.session = session ?? {
+            let c = URLSessionConfiguration.default
 #if DEBUG
-        if SubscriptionUITestSeed.isOn { c.protocolClasses = [SubscriptionUITestProtocol.self] }
+            if SubscriptionUITestSeed.isOn { c.protocolClasses = [SubscriptionUITestProtocol.self] }
 #endif
-        c.timeoutIntervalForRequest = 20
-        c.waitsForConnectivity = true
-        return URLSession(configuration: c)
-    }()
+            c.timeoutIntervalForRequest = 20
+            c.waitsForConnectivity = true
+            return URLSession(configuration: c)
+        }()
+    }
 
     // MARK: 登录
 
@@ -281,7 +344,7 @@ actor API: ArchiveMoveServing {
         let r = try await post("/api/auth/account-login", body: ["account": account, "password": password], as: LoginResult.self)
         guard let r, !r.sessionId.isEmpty, r.user.id > 0 else { throw APIError(message: tr("error.loginNoData")) }
         try await CloudEpoch.shared.accountChanged()
-        SessionStore.current = r.sessionId
+        try SessionStore.save(r.sessionId)
         return r
     }
 
@@ -305,13 +368,13 @@ actor API: ArchiveMoveServing {
     /// 把本地影像一并销毁不是清理是毁证；界面上会写明这一点。
     func deleteAccount() async throws {
         _ = try await post("/api/auth/account/delete", body: [:], as: Empty.self)
-        SessionStore.current = nil
+        SessionStore.clear()
     }
 
     /// 清会话只碰 Keychain，不需要进 actor 排队——登出必须是立刻生效的同步操作，
     /// 排在别的网络请求后面等于「点了登出还在登录状态」。
     nonisolated func logout() {
-        SessionStore.current = nil
+        SessionStore.clear()
     }
 
     // MARK: 项目与上传
