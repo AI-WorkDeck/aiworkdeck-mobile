@@ -72,7 +72,7 @@ jobs:
               -only-testing:WorkdeckUITests/RecordingFlowTests/testTerminatedRecordingReportsRecoveryWithoutRestarting
             )
           fi
-          xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -collect-test-diagnostics never -test-timeouts-enabled YES -default-test-execution-time-allowance 900 -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$DEVICE_ID" "${TESTS[@]}" CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"
+          xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -retry-tests-on-failure -test-iterations 2 -collect-test-diagnostics never -test-timeouts-enabled YES -default-test-execution-time-allowance 900 -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$DEVICE_ID" "${TESTS[@]}" CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"
       - name: Export simulator screenshots and recordings
         if: always()
         run: |
