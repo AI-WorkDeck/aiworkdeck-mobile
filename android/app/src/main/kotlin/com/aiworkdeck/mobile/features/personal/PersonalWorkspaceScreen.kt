@@ -7,6 +7,18 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.aiworkdeck.mobile.R
+import com.aiworkdeck.mobile.design.Segmented
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -293,77 +305,110 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
         }
         if (state.tab == "assistant") {
             state.status?.let { status ->
-                if (!status.enabled || !status.canUseCloud) {
-                    Text(tr(if (status.canUseCloud) "personal.assistantConsent" else "postpaid.restricted"), color = Tk.L.fgMuted)
-                    if (status.canUseCloud && !status.backupEnabled) TextButton(onClick = { onOpen(Overlay.Backup) }) { Text(tr("backup.title")) }
-                    if (!status.canUseCloud) TextButton(onClick = { onOpen(Overlay.Settings) }) { Text(tr("settings.account")) }
-                    if (status.canUseCloud && status.backupEnabled) TextButton(onClick = { consent = "assistant" }) { Text(tr("common.on")) }
+                if (!status.enabled || !status.canUseCloud) Notice(tr(if (status.canUseCloud) "personal.assistantConsent" else "postpaid.restricted")) {
+                    if (status.canUseCloud && !status.backupEnabled) Link(tr("backup.title")) { onOpen(Overlay.Backup) }
+                    if (!status.canUseCloud) Link(tr("settings.account")) { onOpen(Overlay.Settings) }
+                    if (status.canUseCloud && status.backupEnabled) Link(tr("common.on")) { consent = "assistant" }
                 }
             }
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                if (state.messages.isEmpty()) item { Text(tr("personal.ask"), style = MaterialTheme.typography.titleMedium, color = Tk.L.fg); Text(tr("personal.summaries", mapOf("count" to (state.status?.summaryCount ?: 0))), color = Tk.L.fgMuted) }
-                items(state.messages) { message ->
-                    PersonalMessage(message.first, message.second)
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s5), contentPadding = PaddingValues(vertical = Tk.Sp.s4)) {
+                if (state.messages.isEmpty()) item {
+                    Column(Modifier.padding(vertical = Tk.Sp.s8), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
+                        Text(tr("personal.ask"), style = Fonts.title(), color = Tk.L.fg)
+                        Text(tr("personal.summaries", mapOf("count" to (state.status?.summaryCount ?: 0))), style = Fonts.small(), color = Tk.L.fgMuted)
+                    }
                 }
-                if (state.sources.isNotEmpty()) item { Text(tr("personal.sources"), color = Tk.L.fgMuted) }
-                items(state.sources) { source -> TextButton(onClick = { onProject(RelayProject(source.deviceId, null, source.projectKey, source.projectName)) }) { Text(source.projectName + " · " + personalSourceDate(source.sourceUpdatedAt)) } }
-                if (state.busy) item { Text(tr("personal.processing"), color = Tk.L.fgMuted); LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            }
-            state.error?.let { Text(it, color = Tk.S.failed); TextButton(onClick = { scope.launch { if (state.pending != null) { state.draft = state.pending!!.message; state.send() } else state.load(context) } }, enabled = !state.busy) { Text(tr("project.retry")) } }
-            state.desktopCopy?.let { copy ->
-                Text(tr(copy.statusKey), color = Tk.L.fgMuted)
-                Row {
-                    TextButton(enabled = !state.loading && !state.busy, onClick = { scope.launch { state.refreshDesktopCopy() } }) { Text(tr("common.refresh")) }
-                    if (copy.canRetry) TextButton(enabled = !state.loading && !state.busy, onClick = { scope.launch { state.retryDesktopCopy() } }) { Text(tr("project.retry")) }
+                items(state.messages) { message -> PersonalMessage(message.first, message.second) }
+                if (state.sources.isNotEmpty()) item { Text(tr("personal.sources"), style = Fonts.nano(), color = Tk.L.fgMuted) }
+                items(state.sources) { source ->
+                    Column(Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).clickable(role = Role.Button) { onProject(RelayProject(source.deviceId, null, source.projectKey, source.projectName)) }.padding(vertical = Tk.Sp.s1)) {
+                        Text(source.projectName, style = Fonts.body(), color = Tk.L.accent)
+                        personalSourceDate(source.sourceUpdatedAt).takeIf { it.isNotBlank() }?.let { Text(it, style = Fonts.micro(), color = Tk.L.fgMuted) }
+                    }
+                }
+                if (state.busy) item {
+                    Column(verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
+                        Text(tr("personal.processing"), style = Fonts.small(), color = Tk.L.fgMuted)
+                        LinearProgressIndicator(Modifier.fillMaxWidth(), color = Tk.L.accent, trackColor = Tk.L.sunken)
+                    }
                 }
             }
-            if (state.copySuccess) Text(tr("personal.copy.success"), color = Tk.L.fgMuted)
-            TextButton(onClick = { scope.launch { state.prepareCopy() } }, enabled = !state.busy && !state.loading && state.pending == null && state.messages.isNotEmpty()) { Text(tr("personal.copy.title")) }
-            if (state.messages.any { it.first == "assistant" }) TextButton(onClick = { state.openReport() }, enabled = !state.reporting && state.conversationId != null) { Text(tr("personal.report.conversation")) }
-            Row {
-                OutlinedTextField(value = state.draft, onValueChange = { state.draft = it }, enabled = !state.busy && !state.loading, placeholder = { Text(tr("personal.ask")) }, modifier = Modifier.weight(1f), maxLines = 5)
-                TextButton(onClick = {
-                    if (state.status?.enabled != true) consent = "assistant"
-                    else scope.launch { state.send() }
-                }, enabled = !state.busy && !state.loading && state.draft.isNotBlank() && state.status?.canUseCloud == true) { Text(tr("personal.send")) }
+            state.error?.let { Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(it, style = Fonts.small(), color = Tk.S.failed, modifier = Modifier.weight(1f))
+                Link(tr("project.retry"), !state.busy) { scope.launch { if (state.pending != null) { state.draft = state.pending!!.message; state.send() } else state.load(context) } }
+            } }
+            state.desktopCopy?.let { copy -> Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr(copy.statusKey), style = Fonts.small(), color = Tk.L.fgMuted, modifier = Modifier.weight(1f))
+                Link(tr("common.refresh"), !state.loading && !state.busy) { scope.launch { state.refreshDesktopCopy() } }
+                if (copy.canRetry) Link(tr("project.retry"), !state.loading && !state.busy) { scope.launch { state.retryDesktopCopy() } }
+            } }
+            if (state.copySuccess) Text(tr("personal.copy.success"), style = Fonts.small(), color = Tk.L.fgMuted)
+            Row(Modifier.fillMaxWidth().padding(vertical = Tk.Sp.s2), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
+                OutlinedTextField(value = state.draft, onValueChange = { state.draft = it }, enabled = !state.busy && !state.loading,
+                    placeholder = { Text(tr("personal.ask"), style = Fonts.body()) }, textStyle = Fonts.body(), shape = RoundedCornerShape(22.dp),
+                    modifier = Modifier.weight(1f), maxLines = 5)
+                val canSend = !state.busy && !state.loading && state.draft.isNotBlank() && state.status?.canUseCloud == true
+                Box(Modifier.size(Tk.touchMin + 4.dp).clip(CircleShape).background(if (canSend) Tk.L.accent else Tk.L.sunken)
+                    .clickable(enabled = canSend, role = Role.Button, onClickLabel = tr("personal.send")) {
+                        if (state.status?.enabled != true) consent = "assistant" else scope.launch { state.send() }
+                    }.semantics { contentDescription = tr("personal.send") }, contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_send), contentDescription = null, tint = if (canSend) Tk.L.bg else Tk.L.fgFaint, modifier = Modifier.size(20.dp))
+                }
             }
-            Row {
-                TextButton(onClick = { state.newConversation() }, enabled = !state.busy && !state.loading && state.pending == null) { Text(tr("personal.newChat")) }
-                if (state.status?.enabled == true) TextButton(onClick = { scope.launch { state.configure("assistant", false, context) } }, enabled = !state.busy && !state.loading) { Text(tr("common.off")) }
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
+                Link(tr("personal.newChat"), !state.busy && !state.loading && state.pending == null) { state.newConversation() }
+                Link(tr("personal.copy.title"), !state.busy && !state.loading && state.pending == null && state.messages.isNotEmpty()) { scope.launch { state.prepareCopy() } }
+                if (state.messages.any { it.first == "assistant" }) Link(tr("personal.report.conversation"), !state.reporting && state.conversationId != null) { state.openReport() }
+                if (state.status?.enabled == true) Link(tr("common.off"), !state.busy && !state.loading, muted = true) { scope.launch { state.configure("assistant", false, context) } }
             }
         } else {
             val calendar = state.calendar
-            if (calendar != null && (!calendar.enabled || !calendar.canReadCloud)) {
-                Text(tr(if (calendar.canReadCloud) "personal.calendarConsent" else "postpaid.restricted"), color = Tk.L.fgMuted)
-                if (calendar.canWriteCloud) TextButton(onClick = { consent = "calendar" }) { Text(tr("common.on")) }
+            if (calendar != null && (!calendar.enabled || !calendar.canReadCloud)) Notice(tr(if (calendar.canReadCloud) "personal.calendarConsent" else "postpaid.restricted")) {
+                if (calendar.canWriteCloud) Link(tr("common.on")) { consent = "calendar" }
             }
-            Row { for (n in listOf(1, 3, 5)) TextButton(onClick = { days = n }) { Text(if (n == 1) tr("personal.today") else tr("personal.nextDays", mapOf("days" to n))) }; TextButton(onClick = { scope.launch { state.load(context) } }) { Text(tr("common.refresh")) } }
+            Row(Modifier.fillMaxWidth().padding(top = Tk.Sp.s2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
+                Segmented(listOf(1, 3, 5).map { it to (if (it == 1) tr("personal.today") else tr("personal.nextDays", mapOf("days" to it))) }, days,
+                    modifier = Modifier.weight(1f)) { days = it }
+                Link(tr("common.refresh")) { scope.launch { state.load(context) } }
+            }
             var expanded by remember { mutableStateOf(false) }
-            Box {
-                TextButton(onClick = { expanded = true }) { Text(calendar?.events?.find { it.projectIdentity == project }?.projectName ?: tr("personal.allProjects")) }
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(text = { Text(tr("personal.allProjects")) }, onClick = { project = ""; expanded = false })
-                    calendar?.events?.distinctBy { it.projectIdentity }?.forEach { event -> DropdownMenuItem(text = { Text(event.projectName) }, onClick = { project = event.projectIdentity; expanded = false }) }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) {
+                    Row(Modifier.heightIn(min = Tk.touchMin).clickable(role = Role.Button) { expanded = true }, verticalAlignment = Alignment.CenterVertically) {
+                        Text(calendar?.events?.find { it.projectIdentity == project }?.projectName ?: tr("personal.allProjects"), style = Fonts.body(), color = Tk.L.accent)
+                        Icon(painterResource(R.drawable.ic_expand), contentDescription = null, tint = Tk.L.accent, modifier = Modifier.size(20.dp))
+                    }
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        DropdownMenuItem(text = { Text(tr("personal.allProjects")) }, onClick = { project = ""; expanded = false })
+                        calendar?.events?.distinctBy { it.projectIdentity }?.forEach { event -> DropdownMenuItem(text = { Text(event.projectName) }, onClick = { project = event.projectIdentity; expanded = false }) }
+                    }
                 }
             }
-            Row { Text(tr("personal.reminders"), color = Tk.L.fg, modifier = Modifier.weight(1f)); Switch(checked = reminders, enabled = calendar?.enabled == true && calendar.canReadCloud, onCheckedChange = { on ->
-                if (!on) { CalendarReminders.clear(context); reminders = false }
-                else if (Build.VERSION.SDK_INT >= 33) launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                else { reminders = CalendarReminders.enable(context); notificationError = !reminders; scope.launch { CalendarReminders.replace(context, calendar?.events ?: emptyList()) } }
-            }) }
-            Text(tr("personal.remindersHint"), style = MaterialTheme.typography.bodySmall, color = Tk.L.fgMuted)
-            if (notificationError) Text(tr("personal.remindersUnavailable"), color = Tk.S.failed)
+            Row(Modifier.fillMaxWidth().heightIn(min = Tk.touchMin), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("personal.reminders"), style = Fonts.body(), color = Tk.L.fg, modifier = Modifier.weight(1f))
+                Switch(checked = reminders, enabled = calendar?.enabled == true && calendar.canReadCloud, onCheckedChange = { on ->
+                    if (!on) { CalendarReminders.clear(context); reminders = false }
+                    else if (Build.VERSION.SDK_INT >= 33) launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    else { reminders = CalendarReminders.enable(context); notificationError = !reminders; scope.launch { CalendarReminders.replace(context, calendar?.events ?: emptyList()) } }
+                })
+            }
+            Text(tr("personal.remindersHint"), style = Fonts.micro(), color = Tk.L.fgMuted)
+            if (notificationError) Text(tr("personal.remindersUnavailable"), style = Fonts.small(), color = Tk.S.failed)
+            HorizontalDivider(color = Tk.L.rule, modifier = Modifier.padding(top = Tk.Sp.s3))
             val events = calendar?.events.orEmpty().filter { it.within(days) && (project.isEmpty() || it.projectIdentity == project) }.sortedBy { it.dueDate + (it.dueTime ?: "") }
             LazyColumn(Modifier.weight(1f)) {
-                if (events.isEmpty()) item { Text(tr("personal.noEvents"), color = Tk.L.fgMuted, modifier = Modifier.padding(vertical = 30.dp)) }
-                items(events, key = { it.id }) { event -> TextButton(onClick = { state.selected = event }) { Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-                    Text(event.title, style = MaterialTheme.typography.titleMedium, color = Tk.L.fg)
-                    Text(event.dueDate + " " + (event.dueTime ?: "") + " · " + event.timeZone, color = Tk.L.fgMuted)
-                    Text(event.projectName, color = Tk.L.fgMuted)
-                } }; HorizontalDivider(color = Tk.L.rule) }
+                if (events.isEmpty()) item { Text(tr("personal.noEvents"), style = Fonts.body(), color = Tk.L.fgMuted, modifier = Modifier.padding(vertical = Tk.Sp.s8)) }
+                items(events, key = { it.id }) { event ->
+                    Column(Modifier.fillMaxWidth().clickable(role = Role.Button) { state.selected = event }.padding(vertical = Tk.Sp.s3), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
+                        Text(event.title, style = Fonts.heading(), color = Tk.L.fg)
+                        Text(event.dueDate + " " + (event.dueTime ?: "") + " · " + event.timeZone, style = Fonts.mono(Tk.Ty.small), color = Tk.L.fgMuted)
+                        Text(event.projectName, style = Fonts.small(), color = Tk.L.fgMuted)
+                    }
+                    HorizontalDivider(color = Tk.L.rule)
+                }
             }
-            state.calendarError?.let { Text(it, color = Tk.S.failed) }
-            if (calendar?.enabled == true) TextButton(onClick = { scope.launch { state.configure("calendar", false, context); CalendarReminders.clear(context); reminders = false } }) { Text(tr("common.off")) }
+            state.calendarError?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+            if (calendar?.enabled == true) Link(tr("common.off"), muted = true) { scope.launch { state.configure("calendar", false, context); CalendarReminders.clear(context); reminders = false } }
         }
     }
     if (state.reportConversationId != null) {
@@ -412,4 +457,20 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
     }
     consent?.let { feature -> AlertDialog(onDismissRequest = { consent = null }, title = { Text(tr("personal." + feature)) }, text = { Text(tr("personal." + feature + "Consent")) }, confirmButton = { TextButton(onClick = { consent = null; scope.launch { state.configure(feature, true, context) } }) { Text(tr("common.ok")) } }, dismissButton = { TextButton(onClick = { consent = null }) { Text(tr("common.cancel")) } }) }
     state.selected?.let { event -> AlertDialog(onDismissRequest = { state.selected = null }, title = { Text(event.title) }, text = { Column { Text(event.dueDate + " " + (event.dueTime ?: "") + " · " + event.timeZone); Text(event.projectName); event.files.forEach { Text(it.fileName) } } }, confirmButton = { TextButton(onClick = { state.selected = null; onProject(RelayProject(event.deviceId, null, event.projectKey, event.projectName, event.projectUid)) }) { Text(tr("project.files")) } }, dismissButton = { TextButton(onClick = { state.selected = null }) { Text(tr("common.close")) } }) }
+}
+
+/** 浅底提示块：说明 + 一排操作。 */
+@Composable
+private fun Notice(text: String, actions: @Composable RowScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(top = Tk.Sp.s2).clip(RoundedCornerShape(10.dp)).background(Tk.L.sunken).padding(Tk.Sp.s3), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
+        Text(text, style = Fonts.small(), color = Tk.L.fg)
+        Row(horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s4), content = actions)
+    }
+}
+
+/** 文字操作：品牌色、至少一个触摸高度。 */
+@Composable
+private fun Link(text: String, enabled: Boolean = true, muted: Boolean = false, onClick: () -> Unit) {
+    Text(text, style = Fonts.small(), color = if (!enabled) Tk.L.fgFaint else if (muted) Tk.L.fgMuted else Tk.L.accent,
+        modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = enabled, role = Role.Button, onClick = onClick).wrapContentHeight())
 }

@@ -35,21 +35,24 @@ fun BackupConsentScreen(onClose: () -> Unit) {
         finally { busy = false }
     } }
     LaunchedEffect(Unit) { load() }
+    // 与 iOS 同：还没做选择（开启或暂不开启）时不能直接关掉；读取失败时允许关。
+    val closable = consent?.decided != false || error != null
+    androidx.activity.compose.BackHandler(enabled = !busy) { if (closable) onClose() }
     LightStatusBar()
     WorkdeckTheme(dark = false) {
         Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().verticalScroll(rememberScrollState()).padding(Tk.Sp.gutter), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
-            Text(tr("backup.title"), style = Fonts.heading())
-            Text(tr("backup.message"))
+            Text(tr("backup.title"), style = Fonts.title(), color = Tk.L.fg)
+            Text(tr("backup.message"), style = Fonts.body(), color = Tk.L.fg)
             consent?.let { state ->
-                Text(tr(if (state.enabled) "backup.enabled" else "backup.disabled"))
-                if (!state.canWriteCloud) Text(tr("postpaid.restricted"))
-                if (state.enabled) TextButton(onClick = { disable = true }, enabled = !busy) { Text(tr("backup.disable"), color = Tk.L.accent) }
-                else if (state.canWriteCloud) Button(onClick = { save(true) }, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = Tk.L.accent, contentColor = Tk.D.fg)) { Text(tr("backup.enable")) }
+                Text(tr(if (state.enabled) "backup.enabled" else "backup.disabled"), style = Fonts.small(), color = Tk.L.fgMuted)
+                if (!state.canWriteCloud) Text(tr("postpaid.restricted"), style = Fonts.small(), color = Tk.S.failed)
+                if (state.enabled) TextButton(onClick = { disable = true }, enabled = !busy) { Text(tr("backup.disable"), color = Tk.S.failed) }
+                else if (state.canWriteCloud) com.aiworkdeck.mobile.design.PrimaryButton(tr("backup.enable"), onClick = { save(true) }, enabled = !busy)
                 if (!state.decided) TextButton(onClick = { save(false) }, enabled = !busy) { Text(tr("backup.decline"), color = Tk.L.accent) }
             }
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Tk.L.accent, trackColor = Tk.L.rule)
             error?.let { Text(it, color = Tk.S.failed); TextButton(onClick = { scope.launch { load() } }, enabled = !busy) { Text(tr("project.retry"), color = Tk.L.accent) } }
-            TextButton(onClick = onClose, enabled = !busy) { Text(tr("common.close"), color = Tk.L.accent) }
+            if (closable) TextButton(onClick = onClose, enabled = !busy) { Text(tr("common.close"), color = Tk.L.accent) }
         }
         if (disable) AlertDialog(onDismissRequest = { disable = false }, containerColor = Tk.L.bg, titleContentColor = Tk.L.fg, textContentColor = Tk.L.fg, title = { Text(tr("backup.disable"), color = Tk.L.accent) }, text = { Text(tr("backup.disableMessage")) },
             confirmButton = { TextButton(onClick = { disable = false; save(false) }) { Text(tr("backup.disable"), color = Tk.L.accent) } },

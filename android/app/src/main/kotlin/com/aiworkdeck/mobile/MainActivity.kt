@@ -248,7 +248,8 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
     }
 
     // 系统返回键按浮层的层序逐层收回；没有浮层时从日程/助理回到采集，再按才退出应用
-    BackHandler(enabled = isSignedIn && (overlay != Overlay.None || tab != MainTab.capture)) {
+    // 备份同意页自己管返回（未做选择不能关），这里不接
+    BackHandler(enabled = isSignedIn && overlay != Overlay.Backup && (overlay != Overlay.None || tab != MainTab.capture)) {
         when {
             viewer != null -> viewer = null
             overlay != Overlay.None -> overlay = returnOverlay
