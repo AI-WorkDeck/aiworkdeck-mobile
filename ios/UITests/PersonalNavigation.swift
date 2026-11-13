@@ -74,12 +74,19 @@ extension XCTestCase {
                                         boundsTolerance: CGFloat = 0,
                                         file: StaticString = #filePath, line: UInt = #line) -> ReadyControlSnapshot? {
         var ready: ReadyControlSnapshot?
+        var previousFrame: CGRect?
         let condition = NSPredicate { _, _ in
             // A permission tap ends this poll. Never mix its transition with app AX queries.
             if self.allowVisibleRecordingPermission() { return false }
             guard let tree = try? app.snapshot() else { return false }
             let matches = target.states(in: tree)
             let window = tree.frame.insetBy(dx: -boundsTolerance, dy: -boundsTolerance)
+            // Only hit-test once the control has held the same frame for two polls. During a
+            // rotation animation the live element can briefly have no valid activation point,
+            // and XCTest records that as a hard failure instead of returning false.
+            let frame = matches.count == 1 ? matches[0].frame : nil
+            defer { previousFrame = frame }
+            guard frame != nil, frame == previousFrame else { return false }
             guard !tree.frame.isEmpty,
                   ControlSnapshotState.isReady(window: window, matches: matches, portrait: portrait,
                                                label: target.label, hitTest: { target.element.isHittable }) else { return false }
