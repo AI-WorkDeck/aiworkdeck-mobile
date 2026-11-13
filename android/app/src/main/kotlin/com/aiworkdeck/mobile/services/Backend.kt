@@ -81,6 +81,16 @@ class Backend(
         CloudEpoch.reconnect(request, client)
     }
     suspend fun billingBalance(): BillingBalance = bare("/api/mobile/billing/balance")
+    /** 微信 APP 支付建单（dev-board#428）：只传金额 + 幂等键 + channel=wxpay-app。成功是裸对象，失败是信封（code 1 + kind）。 */
+    suspend fun billingRecharge(amountCents: Long, idempotencyKey: String): RechargeOrder {
+        val result = json.parseToJsonElement(post("/api/mobile/billing/recharge", buildJsonObject {
+            put("amountCents", amountCents); put("idempotencyKey", idempotencyKey); put("channel", "wxpay-app")
+        })).jsonObject
+        checkEnvelopeCode(result)
+        return json.decodeFromJsonElement(result)
+    }
+    suspend fun billingRechargeStatus(outTradeNo: String): RechargeStatus =
+        bare("/api/mobile/billing/recharge/status?outTradeNo=" + java.net.URLEncoder.encode(outTradeNo, "UTF-8"))
     suspend fun mediaStatus(ids: List<String>): List<MediaStatus> =
         if (ids.isEmpty()) emptyList() else bare("/api/mobile/media/status?clientMediaIds=" + ids.joinToString(","))
 

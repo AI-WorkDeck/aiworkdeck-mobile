@@ -81,6 +81,7 @@ test('gen：每个生成物都带 GENERATED 头且落在约定路径', () => {
     'ios/Sources/Contract/Products.swift',
     'android/contract/src/main/kotlin/com/aiworkdeck/contract/Tokens.kt', 'android/contract/src/main/kotlin/com/aiworkdeck/contract/Strings.kt',
     'android/contract/src/main/kotlin/com/aiworkdeck/contract/States.kt', 'android/contract/src/main/kotlin/com/aiworkdeck/contract/Capabilities.kt',
+    'android/contract/src/main/kotlin/com/aiworkdeck/contract/Products.kt',
     'harmony/contract/src/main/ets/Tokens.ets', 'harmony/contract/src/main/ets/Strings.ets', 'harmony/contract/src/main/ets/States.ets', 'harmony/contract/src/main/ets/Capabilities.ets', 'harmony/contract/Index.ets',
   ]
   assert.deepEqual([...files.keys()].sort(), expected.sort())

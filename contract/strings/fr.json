@@ -168,6 +168,9 @@
   "recharge.ios.pending": "Achat soumis, confirmation en cours…",
   "recharge.ios.restore": "Restaurer les achats en attente",
   "recharge.ios.restoreNone": "Aucun achat en attente",
+  "recharge.wxpay.notInstalled": "WeChat n'est pas installé. Installez WeChat pour recharger.",
+  "recharge.wxpay.resume": "Vérifier le paiement inachevé",
+  "recharge.wxpay.resumeNone": "Aucun paiement inachevé",
   "recharge.external.title": "Recharge in-app bientôt disponible",
   "recharge.external.body": "Pour l'instant, rechargez dans le mini-programme WeChat ; le solde est partagé entre les appareils",
   "notify.channel.upload": "Uploads",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "Restreint",
   "login.consent": "J’ai lu et j’accepte les",
   "login.terms": "Conditions d’utilisation",
-  "login.consentRequired": "Veuillez d’abord lire et accepter les Conditions d’utilisation et la Politique de confidentialité"
+  "login.consentRequired": "Veuillez d’abord lire et accepter les Conditions d’utilisation et la Politique de confidentialité",
+  "recharge.wxpay.previousArrived": "Votre paiement précédent est arrivé. Aucun nouveau débit n’a été effectué."
 }

@@ -168,6 +168,9 @@
   "recharge.ios.pending": "購入を受け付けました。確認中…",
   "recharge.ios.restore": "未完了の購入を復元",
   "recharge.ios.restoreNone": "未完了の購入はありません",
+  "recharge.wxpay.notInstalled": "WeChat が見つかりません。WeChat をインストールしてからチャージしてください",
+  "recharge.wxpay.resume": "未完了の支払いを確認",
+  "recharge.wxpay.resumeNone": "未完了の支払いはありません",
   "recharge.external.title": "アプリ内チャージは近日提供予定",
   "recharge.external.body": "当面はWeChatミニプログラムでチャージしてください。残高はデバイス間で共有されます",
   "notify.channel.upload": "アップロード",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "制限中",
   "login.consent": "読み、同意します：",
   "login.terms": "利用規約",
-  "login.consentRequired": "先に利用規約とプライバシーポリシーを読み、同意してください"
+  "login.consentRequired": "先に利用規約とプライバシーポリシーを読み、同意してください",
+  "recharge.wxpay.previousArrived": "前回のお支払いが反映されました。今回は再度請求されていません。"
 }

@@ -162,7 +162,8 @@ const FIXTURE_CONSUMERS = {
     // 生产解码路径消费（readEnvelope + decodeRechargeOrder / decodeRechargeStatus）；
     // iOS 内购（dev-board#426）起同样由 ios/Tests/ContractFixturesTests 驱动
     // API.decodeRechargeOrder / API.decodeRechargeStatus（含 present=native 与 appAccountToken）
-    recharge: ['miniprogram', 'ios'], status: ['miniprogram', 'ios'],
+    // 安卓微信 APP 支付（dev-board#428）起，android WxPayRechargeTest 经真实 Backend 解码路径消费（含 present=app）
+    recharge: ['miniprogram', 'ios', 'android'], status: ['miniprogram', 'ios', 'android'],
   },
 }
 function checkFixtureConsumers(c, notes) {

@@ -1,6 +1,6 @@
 {
-  "serverCommit": "f6d6b1affc6d468ade4c38d959d091e28fa1ad3e",
-  "sha256": "ee54b194061a89c043d71194dcb070e70c0702d6ec7d92fb225501ed48b48279",
-  "pulledAt": "2026-11-09T10:36:03.868Z",
-  "note": "钉自 /Users/zewei/.codex/worktrees/algorithm-compliance-1717 的干净工作区，照 serverCommit 可复现。"
+  "serverCommit": "4eabd7343f35a2654f2a4b2427eec516bdc47666",
+  "sha256": "a1bab3c6ebc90789a9455179fa8b9790fc94618b393987c03fecd11cac54f678",
+  "pulledAt": "2026-11-13T03:58:05.476Z",
+  "note": "钉自 AI-WorkDeck/aiworkdeck PR #1543（feat/mobile-wxpay-app，尚未合并）的 head commit，经 gh api 按 commit 取原文，照 serverCommit 可复现。该 PR 合并后应从 master 重跑 contract/tools/pull-api.mjs 重新钉版。"
 }

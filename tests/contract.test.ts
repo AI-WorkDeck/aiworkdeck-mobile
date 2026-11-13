@@ -88,9 +88,9 @@ test('fixture: billing recharge — 走生产解码路径，缺席的可选键�
     assert.deepEqual(decoded, k.expect, k.name)
     presents.add(k.expect.present)
   }
-  // 四种 present 都对过：只测 qrcode 就发现不了 virtual 把 signData 解丢、
+  // 五种 present 都对过：只测 qrcode 就发现不了 virtual 把 signData 解丢、
   // native 把 appAccountToken 解丢（后者在 iOS 侧等于订单与交易失去唯一挂钩）
-  assert.deepEqual([...presents].sort(), ['native', 'qrcode', 'redirect', 'virtual'])
+  assert.deepEqual([...presents].sort(), ['app', 'native', 'qrcode', 'redirect', 'virtual'])
 })
 
 test('fixture: billing recharge status — 裸对象解码，四种状态都对过', () => {

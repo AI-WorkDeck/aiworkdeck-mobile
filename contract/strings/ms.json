@@ -168,6 +168,9 @@
   "recharge.ios.pending": "Pembelian dihantar, sedang mengesahkan…",
   "recharge.ios.restore": "Pulihkan pembelian yang belum selesai",
   "recharge.ios.restoreNone": "Tiada pembelian yang belum selesai",
+  "recharge.wxpay.notInstalled": "WeChat tidak dipasang. Pasang WeChat untuk tambah nilai.",
+  "recharge.wxpay.resume": "Semak pembayaran yang belum selesai",
+  "recharge.wxpay.resumeNone": "Tiada pembayaran yang belum selesai",
   "recharge.external.title": "Tambah nilai dalam apl akan datang tidak lama lagi",
   "recharge.external.body": "Buat tambah nilai dalam mini program WeChat buat masa ini; baki dikongsi merentas peranti",
   "notify.channel.upload": "Muat naik",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "Terhad",
   "login.consent": "Saya telah membaca dan bersetuju dengan",
   "login.terms": "Perjanjian Pengguna",
-  "login.consentRequired": "Sila baca dan terima Terma Penggunaan dan Dasar Privasi terlebih dahulu"
+  "login.consentRequired": "Sila baca dan terima Terma Penggunaan dan Dasar Privasi terlebih dahulu",
+  "recharge.wxpay.previousArrived": "Bayaran anda sebelum ini telah diterima. Anda tidak dicaj lagi."
 }

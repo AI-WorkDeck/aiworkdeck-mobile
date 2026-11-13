@@ -168,6 +168,9 @@
   "recharge.ios.pending": "Đã gửi yêu cầu mua hàng, đang xác nhận…",
   "recharge.ios.restore": "Khôi phục các giao dịch đang chờ",
   "recharge.ios.restoreNone": "Không có giao dịch nào đang chờ",
+  "recharge.wxpay.notInstalled": "Chưa cài đặt WeChat. Hãy cài WeChat để nạp tiền.",
+  "recharge.wxpay.resume": "Kiểm tra thanh toán chưa hoàn tất",
+  "recharge.wxpay.resumeNone": "Không có thanh toán nào chưa hoàn tất",
   "recharge.external.title": "Nạp tiền trong ứng dụng sắp ra mắt",
   "recharge.external.body": "Hiện tại hãy nạp tiền trong mini program WeChat; số dư được chia sẻ trên mọi thiết bị",
   "notify.channel.upload": "Tải lên",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "Bị hạn chế",
   "login.consent": "Tôi đã đọc và đồng ý với",
   "login.terms": "Thỏa thuận ngưới dùng",
-  "login.consentRequired": "Vui lòng đọc và đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư trước"
+  "login.consentRequired": "Vui lòng đọc và đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư trước",
+  "recharge.wxpay.previousArrived": "Khoản thanh toán trước đã được ghi nhận. Bạn không bị trừ tiền lần nữa."
 }

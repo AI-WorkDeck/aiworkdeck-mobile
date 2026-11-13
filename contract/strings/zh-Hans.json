@@ -168,6 +168,9 @@
   "recharge.ios.pending": "购买已提交，正在确认到账…",
   "recharge.ios.restore": "恢复未完成的购买",
   "recharge.ios.restoreNone": "没有未完成的购买",
+  "recharge.wxpay.notInstalled": "未检测到微信，请先安装微信再充值",
+  "recharge.wxpay.resume": "查询未完成的支付",
+  "recharge.wxpay.resumeNone": "没有未完成的支付",
   "recharge.external.title": "App 内充值开通中",
   "recharge.external.body": "请先在微信小程序「AI WorkDeck」的「我的 → 充值」里充值，余额四端通用",
   "notify.channel.upload": "上传",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "受限",
   "login.consent": "我已阅读并同意",
   "login.terms": "用户协议",
-  "login.consentRequired": "请先阅读并勾选同意用户协议和隐私政策"
+  "login.consentRequired": "请先阅读并勾选同意用户协议和隐私政策",
+  "recharge.wxpay.previousArrived": "上一笔支付已到账，本次没有重复扣款"
 }

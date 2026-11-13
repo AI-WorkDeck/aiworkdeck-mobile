@@ -115,6 +115,13 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
             editor.apply()
         }
 
+    /** 微信 APP 支付待确认订单（PendingRechargeStore 的落盘处）：幂等键与单号，不是凭据。 */
+    val pendingRecharge: PendingRechargeStore = PendingRechargeStore(
+        read = { prefs.getString(KEY_PENDING_RECHARGE, null) },
+        // commit 而不是 apply：幂等键必须在发请求之前真正落盘（扛进程被杀）
+        write = { v -> prefs.edit().apply { if (v == null) remove(KEY_PENDING_RECHARGE) else putString(KEY_PENDING_RECHARGE, v) }.commit() },
+    )
+
     var appLocale: String
         get() = prefs.getString(KEY_APP_LOCALE, null) ?: "system"
         set(value) {
@@ -132,5 +139,6 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
         const val KEY_LIBRARY_VIEWING_PROJECT = "libraryViewingProject"
         const val KEY_APP_LOCALE = "appLocale"
         const val KEY_RECENT_PROJECTS = "recentProjectIds"
+        const val KEY_PENDING_RECHARGE = "wxpayPendingRecharge"
     }
 }

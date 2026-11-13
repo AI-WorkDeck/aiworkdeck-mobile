@@ -168,6 +168,9 @@
   "recharge.ios.pending": "Покупка отправлена, подтверждение…",
   "recharge.ios.restore": "Восстановить незавершённые покупки",
   "recharge.ios.restoreNone": "Нет незавершённых покупок",
+  "recharge.wxpay.notInstalled": "WeChat не установлен. Установите WeChat, чтобы пополнить счёт.",
+  "recharge.wxpay.resume": "Проверить незавершённый платёж",
+  "recharge.wxpay.resumeNone": "Нет незавершённых платежей",
   "recharge.external.title": "Пополнение в приложении скоро появится",
   "recharge.external.body": "Пока пополняйте в мини-программе WeChat; баланс общий для всех устройств",
   "notify.channel.upload": "Uploads",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "Ограничено",
   "login.consent": "Я прочитал(а) и принимаю:",
   "login.terms": "Пользовательское соглашение",
-  "login.consentRequired": "Сначала прочитайте и примите Условия использования и Политику конфиденциальности"
+  "login.consentRequired": "Сначала прочитайте и примите Условия использования и Политику конфиденциальности",
+  "recharge.wxpay.previousArrived": "Предыдущий платёж зачислен. Повторного списания не было."
 }

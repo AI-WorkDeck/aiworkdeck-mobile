@@ -193,7 +193,7 @@ export const DEGRADED_NOTICE: Record<string, string> = ${q(notice)}
 /**
  * 充值档位。**每一端只出它自己那个通道的那一段**：wxvp 是微信小程序虚拟支付专有的道具表，
  * appstore 是 iOS 内购专有的商品表，互相生成一份用不上的常量只会变成死代码。
- * 安卓/鸿蒙当前 recharge=external（只放引导入口、不下单），没有档位可给。
+ * 安卓出 wxpayApp 段（微信 APP 支付，运行时开关见 android WxPayGate）；鸿蒙 recharge=external（只放引导入口、不下单），没有档位可给。
  */
 function renderTsProducts(c) {
   return H('//') + `export interface ContractProduct {
@@ -431,6 +431,20 @@ ${tr}
 }
 `
 }
+/**
+ * 安卓档位：只出 wxpayApp 段（见 renderTsProducts 的说明）。微信 APP 支付下单只传金额 +
+ * channel=wxpay-app，没有商品 id，所以只有面值（整数分，CNY）。
+ */
+function renderKtProducts(c) {
+  return H('//') + `package com.aiworkdeck.contract
+
+object ContractProducts {
+    /** 微信支付 APP 支付的充值档位，整数分（CNY） */
+    val wxpayApp: List<Long> = listOf(${(c.products.wxpayApp ?? []).map((p) => `${p.amountCents}L`).join(', ')})
+}
+`
+}
+
 function renderKtCaps(c) {
   const caps = c.caps.capabilities
   const v = (x) => x === null ? 'null' : typeof x === 'string' ? kq(x) : String(x)
@@ -620,6 +634,7 @@ export function outputs(c) {
     [`${kt}/Strings.kt`, renderKtStrings(c)],
     [`${kt}/States.kt`, renderKtStates(c)],
     [`${kt}/Capabilities.kt`, renderKtCaps(c)],
+    [`${kt}/Products.kt`, renderKtProducts(c)],
     [`${ets}/Tokens.ets`, renderEtsTokens(c)],
     [`${ets}/Strings.ets`, renderEtsStrings(c)],
     [`${ets}/States.ets`, renderEtsStates(c)],

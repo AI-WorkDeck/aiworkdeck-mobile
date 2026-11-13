@@ -168,6 +168,9 @@
   "recharge.ios.pending": "Η αγορά υποβλήθηκε, επιβεβαίωση…",
   "recharge.ios.restore": "Επαναφορά εκκρεμών αγορών",
   "recharge.ios.restoreNone": "Δεν υπάρχουν εκκρεμείς αγορές",
+  "recharge.wxpay.notInstalled": "Το WeChat δεν είναι εγκατεστημένο. Εγκαταστήστε το WeChat για να κάνετε φόρτιση.",
+  "recharge.wxpay.resume": "Έλεγχος μη ολοκληρωμένης πληρωμής",
+  "recharge.wxpay.resumeNone": "Δεν υπάρχει μη ολοκληρωμένη πληρωμή",
   "recharge.external.title": "Η επαναφόρτωση εντός εφαρμογής έρχεται σύντομα",
   "recharge.external.body": "Προς το παρόν, κάντε επαναφόρτωση στο mini program του WeChat· το υπόλοιπο είναι κοινό σε όλες τις συσκευές",
   "notify.channel.upload": "Uploads",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "Περιορισμένο",
   "login.consent": "Έχω διαβάσει και αποδέχομαι:",
   "login.terms": "Συμφωνία Χρήστη",
-  "login.consentRequired": "Διαβάστε και αποδεχτείτε πρώτα τους Όρους χρήσης και την Πολιτική απορρήτου"
+  "login.consentRequired": "Διαβάστε και αποδεχτείτε πρώτα τους Όρους χρήσης και την Πολιτική απορρήτου",
+  "recharge.wxpay.previousArrived": "Η προηγούμενη πληρωμή σας ολοκληρώθηκε. Δεν χρεωθήκατε ξανά."
 }

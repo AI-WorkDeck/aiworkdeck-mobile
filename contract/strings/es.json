@@ -168,6 +168,9 @@
   "recharge.ios.pending": "Compra enviada, confirmando…",
   "recharge.ios.restore": "Restaurar compras pendientes",
   "recharge.ios.restoreNone": "No hay compras pendientes",
+  "recharge.wxpay.notInstalled": "WeChat no está instalado. Instala WeChat para recargar.",
+  "recharge.wxpay.resume": "Comprobar pago sin terminar",
+  "recharge.wxpay.resumeNone": "No hay pagos sin terminar",
   "recharge.external.title": "Recarga desde la aplicación disponible próximamente",
   "recharge.external.body": "Por ahora, recarga en el mini programa de WeChat; el saldo se comparte entre dispositivos",
   "notify.channel.upload": "Subidas",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "Restringido",
   "login.consent": "He leído y acepto el",
   "login.terms": "Acuerdo de usuario",
-  "login.consentRequired": "Primero lee y acepta las Condiciones de uso y la Política de privacidad"
+  "login.consentRequired": "Primero lee y acepta las Condiciones de uso y la Política de privacidad",
+  "recharge.wxpay.previousArrived": "Tu pago anterior ya se ha recibido. No se te ha cobrado de nuevo."
 }

@@ -168,6 +168,9 @@
   "recharge.ios.pending": "Aankoop ingediend, wordt bevestigd…",
   "recharge.ios.restore": "In afwachting zijnde aankopen herstellen",
   "recharge.ios.restoreNone": "Geen aankopen in behandeling",
+  "recharge.wxpay.notInstalled": "WeChat is niet geïnstalleerd. Installeer WeChat om op te waarderen.",
+  "recharge.wxpay.resume": "Onvoltooide betaling controleren",
+  "recharge.wxpay.resumeNone": "Geen onvoltooide betaling",
   "recharge.external.title": "Opwaarderen in de app komt binnenkort",
   "recharge.external.body": "Waardeer voorlopig op via de WeChat mini-programma; het saldo wordt gedeeld tussen apparaten",
   "notify.channel.upload": "Uploads",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "Beperkt",
   "login.consent": "Ik heb gelezen en ga akkoord met de",
   "login.terms": "Gebruikersovereenkomst",
-  "login.consentRequired": "Lees en accepteer eerst de Gebruiksvoorwaarden en het Privacybeleid"
+  "login.consentRequired": "Lees en accepteer eerst de Gebruiksvoorwaarden en het Privacybeleid",
+  "recharge.wxpay.previousArrived": "Je vorige betaling is binnen. Er is niet opnieuw afgeschreven."
 }

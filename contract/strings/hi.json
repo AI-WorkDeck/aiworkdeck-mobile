@@ -168,6 +168,9 @@
   "recharge.ios.pending": "खरीद सबमिट हो गई, पुष्टि हो रही है…",
   "recharge.ios.restore": "लंबित खरीदारियाँ पुनर्स्थापित करें",
   "recharge.ios.restoreNone": "कोई लंबित खरीदारी नहीं",
+  "recharge.wxpay.notInstalled": "WeChat इंस्टॉल नहीं है। रिचार्ज करने के लिए WeChat इंस्टॉल करें।",
+  "recharge.wxpay.resume": "अधूरा भुगतान जाँचें",
+  "recharge.wxpay.resumeNone": "कोई अधूरा भुगतान नहीं",
   "recharge.external.title": "इन-ऐप रिचार्ज जल्द आ रहा है",
   "recharge.external.body": "फ़िलहाल WeChat मिनी प्रोग्राम में रिचार्ज करें; शेष राशि सभी डिवाइस पर साझा होती है",
   "notify.channel.upload": "Uploads",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "सीमित",
   "login.consent": "मैंने पढ़ लिया है और सहमत हूँ:",
   "login.terms": "उपयोगकर्ता अनुबंध",
-  "login.consentRequired": "कृपया पहले उपयोग की शर्तें और गोपनीयता नीति पढ़ें और स्वीकार करें"
+  "login.consentRequired": "कृपया पहले उपयोग की शर्तें और गोपनीयता नीति पढ़ें और स्वीकार करें",
+  "recharge.wxpay.previousArrived": "आपका पिछला भुगतान प्राप्त हो गया है। आपसे दोबारा शुल्क नहीं लिया गया।"
 }

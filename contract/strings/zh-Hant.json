@@ -168,6 +168,9 @@
   "recharge.ios.pending": "購買已提交，正在確認到帳…",
   "recharge.ios.restore": "恢復未完成的購買",
   "recharge.ios.restoreNone": "沒有未完成的購買",
+  "recharge.wxpay.notInstalled": "未偵測到微信，請先安裝微信再儲值",
+  "recharge.wxpay.resume": "查詢未完成的付款",
+  "recharge.wxpay.resumeNone": "沒有未完成的付款",
   "recharge.external.title": "App 內儲值開通中",
   "recharge.external.body": "請先在微信小程式「AI WorkDeck」的「我的 → 儲值」裡儲值，餘額四端通用",
   "notify.channel.upload": "上傳",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "受限",
   "login.consent": "我已閱讀並同意",
   "login.terms": "使用者協議",
-  "login.consentRequired": "請先閱讀並勾選同意使用者協議和隱私權政策"
+  "login.consentRequired": "請先閱讀並勾選同意使用者協議和隱私權政策",
+  "recharge.wxpay.previousArrived": "上一筆支付已到帳，本次沒有重複扣款"
 }

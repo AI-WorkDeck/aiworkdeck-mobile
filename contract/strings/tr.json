@@ -168,6 +168,9 @@
   "recharge.ios.pending": "Satın alma gönderildi, onaylanıyor…",
   "recharge.ios.restore": "Bekleyen satın almaları geri yükle",
   "recharge.ios.restoreNone": "Bekleyen satın alma yok",
+  "recharge.wxpay.notInstalled": "WeChat yüklü değil. Bakiye yüklemek için WeChat'i yükleyin.",
+  "recharge.wxpay.resume": "Tamamlanmamış ödemeyi kontrol et",
+  "recharge.wxpay.resumeNone": "Tamamlanmamış ödeme yok",
   "recharge.external.title": "Uygulama içi bakiye yükleme yakında geliyor",
   "recharge.external.body": "Şimdilik WeChat mini programından bakiye yükleyin; bakiye cihazlar arasında paylaşılır",
   "notify.channel.upload": "Uploads",
@@ -574,5 +577,6 @@
   "postpaid.status.restricted": "Kısıtlı",
   "login.consent": "Okudum ve kabul ediyorum:",
   "login.terms": "Kullanıcı Sözleşmesi",
-  "login.consentRequired": "Lütfen önce Kullanım Koşulları’nı ve Gizlilik Politikası’nı okuyup kabul edin"
+  "login.consentRequired": "Lütfen önce Kullanım Koşulları’nı ve Gizlilik Politikası’nı okuyup kabul edin",
+  "recharge.wxpay.previousArrived": "Önceki ödemeniz ulaştı. Yeniden ücretlendirilmediniz."
 }
