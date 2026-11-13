@@ -32,5 +32,16 @@
       "productId": "pro.monthly.cny.149",
       "amountCents": 14900
     }
+  ],
+  "wxpayApp": [
+    {
+      "amountCents": 5000
+    },
+    {
+      "amountCents": 10000
+    },
+    {
+      "amountCents": 30000
+    }
   ]
 }

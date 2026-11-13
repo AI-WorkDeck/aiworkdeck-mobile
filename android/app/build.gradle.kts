@@ -18,6 +18,13 @@ fun prop(name: String): String? = localProps.getProperty(name) ?: System.getenv(
 val versionProps = Properties().apply {
     rootProject.file("version.properties").inputStream().use { load(it) }
 }
+// 微信开放平台「移动应用」AppID（dev-board#428）。只给大陆版用；缺省空串 = 微信 APP 支付关闭，
+// 充值入口保持今天的行为（只弹「去小程序充值」说明）。来源：-Pwxpay.appId= / local.properties 的
+// wxpay.appId / 环境变量 WXPAY_APPID。
+val wxpayAppId: String = ((project.findProperty("wxpay.appId") as String?) ?: prop("wxpay.appId") ?: "").trim().also {
+    require(it.isEmpty() || Regex("^wx[0-9A-Za-z]{16}$").matches(it)) { "wxpay.appId 形状不对（应为 wx + 16 位）：$it" }
+}
+
 val appVersionCode = (project.findProperty("versionCode") as String?)?.toInt()
     ?: versionProps.getProperty("versionCode").toInt()
 val appVersionName = project.findProperty("versionName") as String?
@@ -44,11 +51,13 @@ android {
             applicationId = "com.aiworkdeck.mobile"
             // 缺省账号区域（dev-board#837）：没在登录页选过区域时用它。主机由 AccountRegion 映射。
             buildConfigField("String", "DEFAULT_REGION", "\"intl\"")
+            buildConfigField("String", "WXPAY_APP_ID", "\"\"")
         }
         create("cn") {
             dimension = "market"
             applicationId = "com.aiworkdeck.mobile.cn"
             buildConfigField("String", "DEFAULT_REGION", "\"cn\"")
+            buildConfigField("String", "WXPAY_APP_ID", "\"$wxpayAppId\"")
         }
     }
     signingConfigs {
@@ -99,6 +108,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil.compose); implementation(libs.coil.video)
+    // 微信 OpenSDK 只进大陆版（APP 支付，dev-board#428）；国际版不带这个包
+    "cnImplementation"(libs.wechat.opensdk)
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))

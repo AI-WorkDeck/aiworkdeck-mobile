@@ -404,7 +404,7 @@ export type RechargeChannel = 'wxvp'
 
 /** 契约的 present 全集（contract/schema/billing.schema.json）。小程序只会收到 virtual，
  *  其余取值照样解码：解码器是契约的实现，不是本页的实现。 */
-export type RechargePresent = 'qrcode' | 'redirect' | 'virtual' | 'native'
+export type RechargePresent = 'qrcode' | 'redirect' | 'virtual' | 'native' | 'app'
 
 /** 服务端裸响应原文：不适用的键**不出现**（服务端 putIfPresent 对 null 与空串都不出键）。 */
 export interface RawRechargeOrder {
@@ -418,6 +418,13 @@ export interface RawRechargeOrder {
   paySig?: string
   signature?: string
   appAccountToken?: string
+  appId?: string
+  partnerId?: string
+  prepayId?: string
+  packageValue?: string
+  nonceStr?: string
+  timeStamp?: string
+  sign?: string
 }
 
 /** 解码后的充值单：缺席的可选键一律是 null，不是空串也不是 undefined
@@ -438,6 +445,14 @@ export interface RechargeOrder {
   /** present=native（iOS 内购，dev-board#426）：订单与 StoreKit 交易的挂钩 UUID。
    *  小程序侧永远是 null，留在这里是因为解码器实现的是契约而不是某一端。 */
   appAccountToken: string | null
+  /** present=app（安卓微信 APP 支付，dev-board#428）：OpenSDK PayReq 的七个字段。小程序侧永远是 null。 */
+  appId: string | null
+  partnerId: string | null
+  prepayId: string | null
+  packageValue: string | null
+  nonceStr: string | null
+  timeStamp: string | null
+  sign: string | null
 }
 
 export interface RechargeStatus {
@@ -462,6 +477,13 @@ export function decodeRechargeOrder(raw: RawRechargeOrder): RechargeOrder {
     paySig: optional(raw.paySig),
     signature: optional(raw.signature),
     appAccountToken: optional(raw.appAccountToken),
+    appId: optional(raw.appId),
+    partnerId: optional(raw.partnerId),
+    prepayId: optional(raw.prepayId),
+    packageValue: optional(raw.packageValue),
+    nonceStr: optional(raw.nonceStr),
+    timeStamp: optional(raw.timeStamp),
+    sign: optional(raw.sign),
   }
 }
 

@@ -1,13 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "充值档位表（dev-board#427）。**端上的档位列表只能来自这里**，不许在页面里手抄一份价格。\n\n价格的最终权威在官网侧（lib/payments 的权威表）：这里是四端与官网对齐的那一份副本，两边不一致时官网回 400 product_mismatch，Java 译成 REJECTED（fixtures/billing.json 的「档位与金额不符」用例）。改档位的顺序是：先在微信公众平台发布/下架道具，再改官网权威表，最后改这里跑 gen。\n\nwxvp = 微信小程序虚拟支付。微信单个道具上限 100 元，所以 amountCents 封顶 10000，没有 300 档。\n\nappstore = iOS 内购（dev-board#426）。商品在 App Store Connect 上建（大陆版 App 6803309103 的消耗型 credits.cny.50/100/300），id 带点、价格无微信那条 100 元上限，所以与 wxvp 是两套约束。**端上只拿这张表当档位来源，价格文案一律用 StoreKit 的 Product.displayPrice**：苹果按买家 storefront 本地化，这里的 amountCents 只是站点币种面值，用于下单时与官网权威表对账。",
+  "description": "充值档位表（dev-board#427）。**端上的档位列表只能来自这里**，不许在页面里手抄一份价格。\n\n价格的最终权威在官网侧（lib/payments 的权威表）：这里是四端与官网对齐的那一份副本，两边不一致时官网回 400 product_mismatch，Java 译成 REJECTED（fixtures/billing.json 的「档位与金额不符」用例）。改档位的顺序是：先在微信公众平台发布/下架道具，再改官网权威表，最后改这里跑 gen。\n\nwxvp = 微信小程序虚拟支付。微信单个道具上限 100 元，所以 amountCents 封顶 10000，没有 300 档。\n\nappstore = iOS 内购（dev-board#426）。商品在 App Store Connect 上建（大陆版 App 6803309103 的消耗型 credits.cny.50/100/300），id 带点、价格无微信那条 100 元上限，所以与 wxvp 是两套约束。**端上只拿这张表当档位来源，价格文案一律用 StoreKit 的 Product.displayPrice**：苹果按买家 storefront 本地化，这里的 amountCents 只是站点币种面值，用于下单时与官网权威表对账。\n\nwxpayApp = 安卓大陆版（com.aiworkdeck.mobile.cn）微信支付 APP 支付（dev-board#428）。下单只传 amountCents + channel=wxpay-app，不带 productId（微信商户侧没有道具/商品表，金额校验与单笔上限走官网默认通道同一口径），所以这里只有面值。档位取官网充值弹窗的人民币预设（RechargeDialog 的 PRESET_UNITS：50/100/300 元），与 iOS appstore 三档同额，各端看到的档位一致。界面上按 amountCents 用金额展示口径（billing.schema.json）格式化。",
   "type": "object",
   "required": ["wxvp", "appstore"],
   "additionalProperties": false,
   "properties": {
     "wxvp": { "$ref": "#/$defs/wxvpTiers" },
     "appstore": { "$ref": "#/$defs/appstoreTiers" },
-    "appstoreSubscriptions": { "$ref": "#/$defs/appstoreTiers" }
+    "appstoreSubscriptions": { "$ref": "#/$defs/appstoreTiers" },
+    "wxpayApp": { "$ref": "#/$defs/amountTiers" }
   },
   "$defs": {
     "wxvpTiers": {
@@ -20,6 +21,18 @@
         "properties": {
           "productId": { "$comment": "微信公众平台上道具的 id，与 Java 侧的 ^[a-z0-9_]{1,64}$ 同一套约束", "type": "string", "pattern": "^[a-z0-9_]{1,64}$" },
           "amountCents": { "$comment": "整数分，须与公众平台上该道具的价格逐分相等；微信单道具上限 100 元", "type": "integer", "exclusiveMinimum": 0, "maximum": 10000 }
+        }
+      }
+    },
+    "amountTiers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["amountCents"],
+        "additionalProperties": false,
+        "properties": {
+          "amountCents": { "$comment": "站点币种（CNY）面值，整数分", "type": "integer", "exclusiveMinimum": 0 }
         }
       }
     },

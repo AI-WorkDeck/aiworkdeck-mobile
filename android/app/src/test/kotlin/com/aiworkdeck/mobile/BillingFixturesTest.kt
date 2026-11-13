@@ -24,8 +24,8 @@ import java.io.File
  *
  * 走真实的 Backend 网络解码路径（MockWebServer，同 BackendTest.kt 写法），而不是另外
  * 摆一遍 kotlinx.serialization——checkEnvelopeCode 的 kind/outTradeNo 解析改坏了会在
- * 这里先炸，不用等到设置页手测才发现。recharge/status 两段本期安卓没有消费方
- * （无充值界面），不在本文件覆盖范围。
+ * 这里先炸，不用等到设置页手测才发现。recharge/status 两段由 WxPayRechargeTest 消费
+ * （微信 APP 支付，dev-board#428）。
  */
 class BillingFixturesTest {
     private lateinit var server: MockWebServer

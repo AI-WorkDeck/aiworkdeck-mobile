@@ -234,8 +234,8 @@ final class ContractFixturesTests: XCTestCase {
             XCTAssertNotEqual(order.appAccountToken, "", name)
             presents.insert(order.present)
         }
-        XCTAssertEqual(presents, ["qrcode", "redirect", "virtual", "native"],
-                       "四种 present 都要对过：只测 qrcode 发现不了 native 把 appAccountToken 解丢")
+        XCTAssertEqual(presents, ["qrcode", "redirect", "virtual", "native", "app"],
+                       "五种 present 都要对过：只测 qrcode 发现不了 native 把 appAccountToken 解丢")
     }
 
     /// billing.json 的 status 段驱动 `API.decodeRechargeStatus`。confirm 与 status 两个端点
