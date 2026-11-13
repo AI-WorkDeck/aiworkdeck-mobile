@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "Limitato",
   "login.consent": "Ho letto e accetto il",
   "login.terms": "Contratto utente",
-  "login.consentRequired": "Leggi e accetta prima i Termini di utilizzo e l’Informativa sulla privacy"
+  "login.consentRequired": "Leggi e accetta prima i Termini di utilizzo e l’Informativa sulla privacy",
+  "recharge.wxpay.previousArrived": "Il pagamento precedente è arrivato. Non ti è stato addebitato di nuovo."
 }

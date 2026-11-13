@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "Restrito",
   "login.consent": "Li e concordo com o",
   "login.terms": "Contrato do Usuário",
-  "login.consentRequired": "Leia e aceite primeiro os Termos de Uso e a Política de Privacidade"
+  "login.consentRequired": "Leia e aceite primeiro os Termos de Uso e a Política de Privacidade",
+  "recharge.wxpay.previousArrived": "Seu pagamento anterior foi recebido. Você não foi cobrado novamente."
 }

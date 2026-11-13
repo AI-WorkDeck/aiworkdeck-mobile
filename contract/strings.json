@@ -12736,5 +12736,27 @@
     "nl": "Lees en accepteer eerst de Gebruiksvoorwaarden en het Privacybeleid",
     "hi": "कृपया पहले उपयोग की शर्तें और गोपनीयता नीति पढ़ें और स्वीकार करें",
     "ar": "يرجى قراءة شروط الاستخدام وسياسة الخصوصية والموافقة عليهما أولاً"
+  },
+  "recharge.wxpay.previousArrived": {
+    "zh-Hans": "上一笔支付已到账，本次没有重复扣款",
+    "zh-Hant": "上一筆支付已到帳，本次沒有重複扣款",
+    "en": "Your previous payment has arrived. You were not charged again.",
+    "ja": "前回のお支払いが反映されました。今回は再度請求されていません。",
+    "ko": "이전 결제가 반영되었습니다. 이번에는 다시 청구되지 않았습니다.",
+    "th": "การชำระเงินครั้งก่อนเข้าแล้ว ครั้งนี้ไม่ได้เรียกเก็บซ้ำ",
+    "ms": "Bayaran anda sebelum ini telah diterima. Anda tidak dicaj lagi.",
+    "id": "Pembayaran Anda sebelumnya sudah masuk. Anda tidak ditagih lagi.",
+    "vi": "Khoản thanh toán trước đã được ghi nhận. Bạn không bị trừ tiền lần nữa.",
+    "fr": "Votre paiement précédent est arrivé. Aucun nouveau débit n’a été effectué.",
+    "de": "Ihre vorherige Zahlung ist eingegangen. Es wurde nicht erneut abgebucht.",
+    "es": "Tu pago anterior ya se ha recibido. No se te ha cobrado de nuevo.",
+    "pt-BR": "Seu pagamento anterior foi recebido. Você não foi cobrado novamente.",
+    "it": "Il pagamento precedente è arrivato. Non ti è stato addebitato di nuovo.",
+    "ru": "Предыдущий платёж зачислен. Повторного списания не было.",
+    "el": "Η προηγούμενη πληρωμή σας ολοκληρώθηκε. Δεν χρεωθήκατε ξανά.",
+    "tr": "Önceki ödemeniz ulaştı. Yeniden ücretlendirilmediniz.",
+    "nl": "Je vorige betaling is binnen. Er is niet opnieuw afgeschreven.",
+    "hi": "आपका पिछला भुगतान प्राप्त हो गया है। आपसे दोबारा शुल्क नहीं लिया गया।",
+    "ar": "وصلت دفعتك السابقة. لم يتم خصم المبلغ مرة أخرى."
   }
 }

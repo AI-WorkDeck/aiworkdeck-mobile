@@ -67,6 +67,7 @@ private const val CLOSE_DELAY_MS = 900L
 /** 一笔充值的结局对应的那句话。 */
 internal fun rechargeHint(result: RechargeResult): String = when (result) {
     RechargeResult.Paid -> tr("recharge.success")
+    RechargeResult.PreviousPaid -> tr("recharge.wxpay.previousArrived")
     RechargeResult.Pending -> tr("recharge.pendingLong")
     RechargeResult.Cancelled -> tr("recharge.cancelled")
     RechargeResult.NotInstalled -> tr("recharge.wxpay.notInstalled")
@@ -123,7 +124,7 @@ fun RechargeScreen(onClose: (paid: Boolean) -> Unit, onChannelUnavailable: () ->
     fun settle(result: RechargeResult) {
         if (result == RechargeResult.ChannelUnavailable) { onChannelUnavailable(); return }
         hint = rechargeHint(result)
-        if (result == RechargeResult.Paid) {
+        if (result == RechargeResult.Paid || result == RechargeResult.PreviousPaid) {
             paid = true
             scope.launch { delay(CLOSE_DELAY_MS); onClose(true) }
         }
@@ -146,7 +147,7 @@ fun RechargeScreen(onClose: (paid: Boolean) -> Unit, onChannelUnavailable: () ->
     LaunchedEffect(Unit) {
         try {
             val r = flow.resume(quick = true)
-            if (r == RechargeResult.Paid) settle(r)
+            if (r == RechargeResult.Paid) settle(RechargeResult.PreviousPaid)
         } catch (e: CancellationException) { throw e } catch (_: Exception) { }
     }
 

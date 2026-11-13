@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "Bị hạn chế",
   "login.consent": "Tôi đã đọc và đồng ý với",
   "login.terms": "Thỏa thuận ngưới dùng",
-  "login.consentRequired": "Vui lòng đọc và đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư trước"
+  "login.consentRequired": "Vui lòng đọc và đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư trước",
+  "recharge.wxpay.previousArrived": "Khoản thanh toán trước đã được ghi nhận. Bạn không bị trừ tiền lần nữa."
 }

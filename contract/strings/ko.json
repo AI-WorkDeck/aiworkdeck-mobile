@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "제한됨",
   "login.consent": "읽고 동의합니다:",
   "login.terms": "이용약관",
-  "login.consentRequired": "먼저 이용약관과 개인정보 처리방침을 읽고 동의해 주세요"
+  "login.consentRequired": "먼저 이용약관과 개인정보 처리방침을 읽고 동의해 주세요",
+  "recharge.wxpay.previousArrived": "이전 결제가 반영되었습니다. 이번에는 다시 청구되지 않았습니다."
 }

@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "Terhad",
   "login.consent": "Saya telah membaca dan bersetuju dengan",
   "login.terms": "Perjanjian Pengguna",
-  "login.consentRequired": "Sila baca dan terima Terma Penggunaan dan Dasar Privasi terlebih dahulu"
+  "login.consentRequired": "Sila baca dan terima Terma Penggunaan dan Dasar Privasi terlebih dahulu",
+  "recharge.wxpay.previousArrived": "Bayaran anda sebelum ini telah diterima. Anda tidak dicaj lagi."
 }

@@ -131,7 +131,7 @@ class WxPayRechargeTest {
     @Test fun channelUnavailableClassification() {
         assertTrue(isChannelUnavailable(ApiError(1, "m", EnvelopeKind.DISABLED)))
         assertTrue(isChannelUnavailable(ApiError(1, "m", EnvelopeKind.REVIEW_ACCOUNT)))
-        assertTrue(isChannelUnavailable(ApiError(503, "m")))
+        assertFalse(isChannelUnavailable(ApiError(503, "m"))) // 裸 503 是瞬时故障
         assertFalse(isChannelUnavailable(ApiError(1, "m", EnvelopeKind.UNAVAILABLE)))
         assertFalse(isChannelUnavailable(ApiError(1, "m")))
         assertFalse(isChannelUnavailable(IllegalStateException()))
@@ -277,7 +277,7 @@ class WxPayRechargeTest {
     }
 
     @Test fun channelUnavailableNeverCallsWeChat() = runTest {
-        for (e in listOf(ApiError(1, "m", EnvelopeKind.DISABLED), ApiError(503, "m"), ApiError(1, "m", EnvelopeKind.REVIEW_ACCOUNT))) {
+        for (e in listOf(ApiError(1, "m", EnvelopeKind.DISABLED), ApiError(1, "m", EnvelopeKind.REVIEW_ACCOUNT))) {
             var called = false
             val r = WxPayRecharge(FakeApi(ArrayDeque(listOf(e))), store(Disk()), "acct", pay = { called = true; WxPayOutcome.SUCCESS }, sleep = {}).purchase(5000)
             assertEquals(RechargeResult.ChannelUnavailable, r); assertFalse(called)
@@ -288,7 +288,23 @@ class WxPayRechargeTest {
         val api = FakeApi(ArrayDeque(listOf(ApiError(1, "m", EnvelopeKind.ALREADY_PAID, "o7"))), ArrayDeque(listOf(st("paid"))))
         var called = false
         val r = WxPayRecharge(api, store(Disk()), "acct", pay = { called = true; WxPayOutcome.SUCCESS }, sleep = {}).purchase(5000)
-        assertEquals(RechargeResult.Paid, r); assertFalse(called); assertEquals(listOf("o7"), api.statusCalls)
+        assertEquals(RechargeResult.PreviousPaid, r); assertFalse(called); assertEquals(listOf("o7"), api.statusCalls)
+    }
+
+    @Test fun earlierUnconfirmedPaymentIsReportedNotRecharged() = runTest {
+        val disk = Disk()
+        // 第一次：付了但轮询窗口内没到账 → Pending，单子留在盘上
+        val first = FakeApi(ArrayDeque(listOf(appOrder)))
+        assertEquals(RechargeResult.Pending, flow(first, disk, WxPayOutcome.SUCCESS).purchase(5000))
+        // 再点同一档：先查到上一笔已到账 → PreviousPaid，不下新单、不调起微信
+        var called = false
+        val second = FakeApi(ArrayDeque(), ArrayDeque(listOf(st("paid"))))
+        val r = WxPayRecharge(second, store(disk), "acct", pay = { called = true; WxPayOutcome.SUCCESS }, sleep = {}).purchase(5000)
+        assertEquals(RechargeResult.PreviousPaid, r); assertFalse(called); assertTrue(second.keys.isEmpty())
+        // 再点一次就是一笔新的充值（新键）
+        val third = FakeApi(ArrayDeque(listOf(appOrder)), ArrayDeque(listOf(st("paid"))))
+        assertEquals(RechargeResult.Paid, flow(third, disk, WxPayOutcome.SUCCESS).purchase(5000))
+        assertNotEquals(first.keys[0], third.keys[0])
     }
 
     @Test fun idempotencyConflictRetriesOnceWithNewKey() = runTest {

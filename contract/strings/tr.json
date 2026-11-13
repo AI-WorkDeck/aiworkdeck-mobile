@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "Kısıtlı",
   "login.consent": "Okudum ve kabul ediyorum:",
   "login.terms": "Kullanıcı Sözleşmesi",
-  "login.consentRequired": "Lütfen önce Kullanım Koşulları’nı ve Gizlilik Politikası’nı okuyup kabul edin"
+  "login.consentRequired": "Lütfen önce Kullanım Koşulları’nı ve Gizlilik Politikası’nı okuyup kabul edin",
+  "recharge.wxpay.previousArrived": "Önceki ödemeniz ulaştı. Yeniden ücretlendirilmediniz."
 }

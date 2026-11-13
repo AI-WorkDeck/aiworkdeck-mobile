@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "制限中",
   "login.consent": "読み、同意します：",
   "login.terms": "利用規約",
-  "login.consentRequired": "先に利用規約とプライバシーポリシーを読み、同意してください"
+  "login.consentRequired": "先に利用規約とプライバシーポリシーを読み、同意してください",
+  "recharge.wxpay.previousArrived": "前回のお支払いが反映されました。今回は再度請求されていません。"
 }

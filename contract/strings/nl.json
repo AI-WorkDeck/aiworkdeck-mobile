@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "Beperkt",
   "login.consent": "Ik heb gelezen en ga akkoord met de",
   "login.terms": "Gebruikersovereenkomst",
-  "login.consentRequired": "Lees en accepteer eerst de Gebruiksvoorwaarden en het Privacybeleid"
+  "login.consentRequired": "Lees en accepteer eerst de Gebruiksvoorwaarden en het Privacybeleid",
+  "recharge.wxpay.previousArrived": "Je vorige betaling is binnen. Er is niet opnieuw afgeschreven."
 }

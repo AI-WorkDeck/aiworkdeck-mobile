@@ -110,7 +110,9 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
     // 充值确认到账后 +1：重拉余额、重建后付费段（欠款随之刷新）
     var billingReload by remember { mutableStateOf(0) }
     val openRecharge = {
-        if (wxpayAppEnabled(BuildConfig.FLAVOR, region, BuildConfig.WXPAY_APP_ID, WxPayChannel.serverUnavailable, balanceKind)) rechargeOpen = true
+        // 余额没拉到时不知道是不是包晴天律师（只能在包晴天 App 充值），宁可只给说明也不放真实扣款入口
+        if (balance != null && balance?.billingLine != "bqt" &&
+            wxpayAppEnabled(BuildConfig.FLAVOR, region, BuildConfig.WXPAY_APP_ID, WxPayChannel.serverUnavailable, balanceKind)) rechargeOpen = true
         else showRechargeNotice = true
     }
     var showLanguagePicker by remember { mutableStateOf(false) }

@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "受限",
   "login.consent": "我已阅读并同意",
   "login.terms": "用户协议",
-  "login.consentRequired": "请先阅读并勾选同意用户协议和隐私政策"
+  "login.consentRequired": "请先阅读并勾选同意用户协议和隐私政策",
+  "recharge.wxpay.previousArrived": "上一笔支付已到账，本次没有重复扣款"
 }

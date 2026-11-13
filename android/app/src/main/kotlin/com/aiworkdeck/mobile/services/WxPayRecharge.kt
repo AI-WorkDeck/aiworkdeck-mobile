@@ -86,12 +86,12 @@ fun wxpayAppEnabled(flavor: String, region: AccountRegion, appId: String, server
         balanceKind != EnvelopeKind.DISABLED && balanceKind != EnvelopeKind.REVIEW_ACCOUNT
 
 /**
- * 下单回这几种就当本部署没开这条通道：信封 DISABLED（计费未配）/ REVIEW_ACCOUNT（审核账号），
- * 或者 HTTP 503（官网未配 WXPAY_APP_APPID 时回 503 channel_unavailable，万一不经信封直接透出来）。
- * UNAVAILABLE 是瞬时故障，不在此列：照常提示稍后再试。
+ * 下单回这几种就当本部署没开这条通道：信封 DISABLED（计费未配，或官网未配 WXPAY_APP_APPID——
+ * 后端把官网的 503 channel_unavailable 翻成 DISABLED）/ REVIEW_ACCOUNT（审核账号）。
+ * 裸 HTTP 503（网关维护、过载）是瞬时故障，与 UNAVAILABLE 一样只提示稍后再试，不能据此把通道关到重启。
  */
 fun isChannelUnavailable(e: Throwable): Boolean = e is ApiError &&
-    (e.code == 503 || e.kind == EnvelopeKind.DISABLED || e.kind == EnvelopeKind.REVIEW_ACCOUNT)
+    (e.kind == EnvelopeKind.DISABLED || e.kind == EnvelopeKind.REVIEW_ACCOUNT)
 
 /** 进程级记号：服务端回过通道不可用，本进程里不再打开充值页，直接给说明。重启 App 再试一次。 */
 object WxPayChannel {
@@ -197,6 +197,8 @@ suspend fun pollRechargeStatus(
 /** 一笔充值的结局，界面据此给一句话。 */
 sealed interface RechargeResult {
     data object Paid : RechargeResult
+    /** 这次没有新扣款：同金额上一笔（之前没确认到）现在确认到账了。 */
+    data object PreviousPaid : RechargeResult
     /** 微信那边付了（或不确定），但查单还没到账：到账稍有延迟，稍后再看。 */
     data object Pending : RechargeResult
     data object Cancelled : RechargeResult
@@ -224,6 +226,15 @@ class WxPayRecharge(
     suspend fun purchase(amountCents: Long): RechargeResult = purchase(amountCents, retryOnConflict = true)
 
     private suspend fun purchase(amountCents: Long, retryOnConflict: Boolean): RechargeResult {
+        // 同金额上回有一笔「付了但还没确认」的单子：先查一次。已到账就告诉用户「上一笔到了」，
+        // 不把它说成这一次充值成功；关单了就作废换新键；还在途就沿用同一把键（不会变成两笔扣款）。
+        store.current(scope)?.takeIf { it.amountCents == amountCents && it.outTradeNo != null }?.let { p ->
+            when (pollRechargeStatus({ api.status(p.outTradeNo!!) }, tries = 1, delayFirst = false, sleep = sleep)) {
+                PollOutcome.PAID -> { store.clear(scope); return RechargeResult.PreviousPaid }
+                PollOutcome.CLOSED -> store.clear(scope)
+                PollOutcome.PENDING -> Unit
+            }
+        }
         val key = store.takeKey(scope, amountCents)
         val order = try {
             api.order(amountCents, key)
@@ -232,7 +243,8 @@ class WxPayRecharge(
             // 这把键的单子已经付过：不重新下单，拿服务端回的单号直接查单
             if (e.kind == EnvelopeKind.ALREADY_PAID && e.outTradeNo != null) {
                 store.attach(scope, key, e.outTradeNo)
-                return confirm(e.outTradeNo)
+                val r = confirm(e.outTradeNo)
+                return if (r == RechargeResult.Paid) RechargeResult.PreviousPaid else r
             }
             // 同一把键换了金额/类型：换新键重来一次，只重来一次，避免打转
             if (e.kind == EnvelopeKind.IDEMPOTENCY_CONFLICT && retryOnConflict) {

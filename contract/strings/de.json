@@ -577,5 +577,6 @@
   "postpaid.status.restricted": "Eingeschränkt",
   "login.consent": "Ich habe gelesen und stimme zu:",
   "login.terms": "Nutzervereinbarung",
-  "login.consentRequired": "Bitte lesen und akzeptieren Sie zuerst die Nutzungsbedingungen und die Datenschutzerklärung"
+  "login.consentRequired": "Bitte lesen und akzeptieren Sie zuerst die Nutzungsbedingungen und die Datenschutzerklärung",
+  "recharge.wxpay.previousArrived": "Ihre vorherige Zahlung ist eingegangen. Es wurde nicht erneut abgebucht."
 }
