@@ -1,0 +1,61 @@
+name: appstore-submit
+# Prepare the App Store version for review and optionally submit it, using the repo's
+# ASC API key. Steps: create/rename the version from ios/project.yml, set texts and
+# release notes, attach the given build, write review info (contact copied from the
+# previous version, demo account from secrets, notes from the template), then submit.
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "Build number already processed in App Store Connect (e.g. 46)"
+        required: true
+        type: string
+      submit:
+        description: "Submit for review after preparing (false = prepare only)"
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet "pyjwt[crypto]"
+      - name: Prepare version, texts and build
+        env:
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+        run: |
+          set +x
+          echo "$ASC_KEY_P8_B64" | base64 --decode > "$RUNNER_TEMP/asc.p8"
+          export ASC_KEY_PATH="$RUNNER_TEMP/asc.p8"
+          python3 scripts/asc-listing.py setversion
+          python3 scripts/asc-listing.py text
+          python3 scripts/asc-listing.py attach "${{ inputs.build }}"
+      - name: Review information
+        env:
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+          REVIEW_DEMO_USER: ${{ secrets.REVIEW_DEMO_USER }}
+          REVIEW_DEMO_PASSWORD: ${{ secrets.REVIEW_DEMO_PASSWORD }}
+        run: |
+          set +x
+          export ASC_KEY_PATH="$RUNNER_TEMP/asc.p8"
+          d=fastlane/metadata/review_information
+          printf '%s' "$REVIEW_DEMO_USER" > $d/demo_user.txt
+          printf '%s' "$REVIEW_DEMO_PASSWORD" > $d/demo_password.txt
+          grep -v '^#' $d/notes.txt.example | sed '/./,$!d' > $d/notes.txt
+          python3 scripts/appstore-review-contact.py "$d"
+          python3 scripts/asc-listing.py review
+      - name: Submit for review
+        if: ${{ inputs.submit }}
+        env:
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+        run: |
+          set +x
+          export ASC_KEY_PATH="$RUNNER_TEMP/asc.p8"
+          python3 scripts/asc-listing.py submit --yes
+          python3 scripts/asc-listing.py status
