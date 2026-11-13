@@ -6,7 +6,6 @@ import com.aiworkdeck.mobile.model.RelayProject
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.util.UUID
 
 /** 本机偏好：文件 "prefs"，非敏感设置（相册开关、当前项目、图集的看法），不加密。仅此文件依赖 Android，不参与 JVM 单测。 */
 class Prefs(context: Context, private val defaultRegion: AccountRegion) : RegionPrefs {
@@ -50,14 +49,6 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
     var saveToAlbum: Boolean
         get() = prefs.getBoolean(KEY_SAVE_TO_ALBUM, true)
         set(value) { prefs.edit().putBoolean(KEY_SAVE_TO_ALBUM, value).apply() }
-
-    /**
-     * 本机身份。上传时服务端靠它认「哪台手机」，一旦换了值，已经传上去的件与后面传的件
-     * 会被当成两台设备——所以只在第一次读取时生成，之后一直沿用，卸载重装才会换。
-     */
-    val deviceId: String
-        get() = prefs.getString(KEY_DEVICE_ID, null) ?: UUID.randomUUID().toString().lowercase()
-            .also { prefs.edit().putString(KEY_DEVICE_ID, it).apply() }
 
     /**
      * 账号区域（dev-board#837）。没存过就是 flavor 缺省值——包括本功能上线前就登录着的老用户，
@@ -120,7 +111,6 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
         const val KEY_SAVE_TO_ALBUM = "saveToAlbum"
         const val KEY_ACCOUNT_REGION = "accountRegion"
         const val KEY_SELECTED_PROJECT = "selectedProject"
-        const val KEY_DEVICE_ID = "deviceId"
         const val KEY_LIBRARY_COLUMNS = "libraryColumns"
         const val KEY_LIBRARY_VIEW_MODE = "libraryViewMode"
         const val KEY_LIBRARY_VIEWING_PROJECT = "libraryViewingProject"

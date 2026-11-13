@@ -13,9 +13,9 @@ interface Uploader {
 
 /**
  * Backend 的瘦适配层：把 CaptureItem + RelayProject + 已算好的文件名，拼成 Backend.upload
- * 要的六个字段。deviceId 现取现拿（不缓存），跟 iOS 一样不假设设备身份在队列生命周期内不变。
+ * 要的六个字段。deviceId 取项目所在电脑（云端项目为 "cloud"），与 iOS 相同。
  */
-class BackendUploader(private val backend: Backend, private val organizationPrefs: Prefs? = null, private val deviceIdProvider: () -> String) : Uploader {
+class BackendUploader(private val backend: Backend, private val organizationPrefs: Prefs? = null) : Uploader {
     override suspend fun persistentCloudWritable(): Boolean = backend.persistentCloudWritable()
     override suspend fun upload(item: CaptureItem, project: RelayProject, fileName: String, onProgress: (Double) -> Unit): UploadResult {
         val active = backend.accountSnapshot()
@@ -23,7 +23,9 @@ class BackendUploader(private val backend: Backend, private val organizationPref
         val organize = organizationPrefs?.organizeCaptures(scope) == true
         val result = active.upload(
             file = item.localFile,
-            deviceId = deviceIdProvider(),
+            // 收件方是项目所在的那台电脑（云端项目为 "cloud"），与 iOS 相同；
+            // 曾误传本机安装 ID，服务端按它入箱，桌面端永远取不到（2026-11-12 修）。
+            deviceId = project.deviceId,
             projectKey = project.key,
             clientMediaId = item.manifest.clientMediaId,
             fileName = fileName,
