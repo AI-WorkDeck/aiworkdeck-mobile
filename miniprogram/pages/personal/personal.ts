@@ -6,8 +6,10 @@ import { PersonalConversation, personalCopyTarget, personalCopyDestinations, des
 import { PERSONAL_CONSENT_VERSION } from '../../utils/contract/capabilities'
 import { readPersonalConversation, savePersonalConversation, clearPersonalConversation } from '../../utils/personal-storage'
 import { t, getLocale, isRtl } from '../../utils/i18n'
+import { stripEmoji } from '../../utils/reply-text'
 import type { Metrics } from '../../utils/layout'
 
+const displayMessages = (messages: PersonalMessage[]): PersonalMessage[] => messages.map(m => m.role === 'assistant' ? { ...m, content: stripEmoji(m.content) } : m)
 Page({
   data: {
     tab: 'assistant', direction: 'ltr', labels: {} as Record<string, string>, metrics: {} as Metrics,
@@ -94,7 +96,7 @@ Page({
         if (history.conversationId !== id) throw new Error(t('error.badResponse'))
         this.conversation.conversationId = id; this.conversation.messages = history.messages
         this.conversation.sources = reply?.sources ?? []; this.conversation.pending = undefined; this.saveRecent()
-        this.setData({ messages: history.messages, sources: this.displaySources(this.conversation.sources), draft: '', error: '' })
+        this.setData({ messages: displayMessages(history.messages), sources: this.displaySources(this.conversation.sources), draft: '', error: '' })
         if (!this.conversation.desktopCopy) {
           try {
             const receipts = await personalRequest<DesktopCopyReceipt[]>('assistant/conversations/' + encodeURIComponent(id) + '/desktop-copies')
@@ -132,7 +134,7 @@ Page({
       if (reply.status !== 'completed') throw new Error(t('error.network'))
       if (!this.conversation.accept(reply)) throw new Error(t('error.badResponse'))
       this.saveRecent()
-      this.setData({ draft: '', messages: [...this.conversation.messages], sources: this.displaySources(this.conversation.sources) })
+      this.setData({ draft: '', messages: displayMessages(this.conversation.messages), sources: this.displaySources(this.conversation.sources) })
     } catch (error) { if (this.alive() && this.session === account) this.setData({ error: (error as Error).message }) }
     finally { if (this.alive() && this.session === account) this.setData({ busy: false }) }
   },

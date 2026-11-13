@@ -7,6 +7,7 @@ import { ContractCapabilities } from 'contract'
 import { ServiceLocator } from '../services/ServiceLocator'
 import { PersonalConversationStore } from '../services/PersonalConversationStore'
 import { CalendarReminders } from '../services/CalendarReminders'
+import { stripEmoji } from '../model/ReplyText'
 import { PersonalCopyTarget, PersonalDesktopCopy, DesktopCopyRequest, DesktopCopyReceipt, personalCopyTargets, copyNeedsUpgrade, PersonalEvent, PersonalSource, PersonalMessage, PersonalConversation, personalMessages, personalHistorySources, personalSourceDate, personalEvents, personalSources, stringField, upcomingEvents } from '../model/PersonalWorkspace'
 import { ProjectFilesRequest } from './ProjectFilesRequest'
 import { RelayProject } from '../model/Capture'
@@ -203,7 +204,7 @@ export struct Personal {
   private async copyMessage(message: PersonalMessage): Promise<void> {
     const version: number = this.version
     if (!await this.current(version)) return
-    const text: string = this.t('personal.aiGenerated') + '\n' + message.content
+    const text: string = this.t('personal.aiGenerated') + '\n' + stripEmoji(message.content)
     try { await pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text)) }
     catch (e) { if (await this.current(version)) this.error = errorText(e as Object) }
   }
@@ -365,7 +366,7 @@ export struct Personal {
               ForEach(this.messages, (message: PersonalMessage): void => {
                 Column({ space: Tk.Sp.s2 }) {
                   if (message.role === 'assistant') Text(this.t('personal.aiGenerated')).fontSize(16).fontWeight(FontWeight.Medium).fontColor(Tk.L.fg)
-                  Text(message.content).fontSize(16).copyOption(message.role === 'assistant' ? CopyOptions.None : CopyOptions.InApp).fontColor(Tk.L.fg).width('100%')
+                  Text(message.role === 'assistant' ? stripEmoji(message.content) : message.content).fontSize(16).copyOption(message.role === 'assistant' ? CopyOptions.None : CopyOptions.InApp).fontColor(Tk.L.fg).width('100%')
                   if (message.role === 'assistant') Button(this.t('personal.copyMessage')).onClick((): void => { this.copyMessage(message) })
                 }.width('100%').alignItems(HorizontalAlign.Start).padding(Tk.Sp.s3)
               })

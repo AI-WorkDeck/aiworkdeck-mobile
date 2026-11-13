@@ -24,10 +24,11 @@ internal fun PersonalMessage(role: String, content: String) {
         val label = tr("personal.aiGenerated")
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
             Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = Tk.L.fg)
-            Text(content, style = MaterialTheme.typography.bodyLarge, color = Tk.L.fg)
+            val shown = stripEmoji(content)
+            Text(shown, style = MaterialTheme.typography.bodyLarge, color = Tk.L.fg)
             TextButton(onClick = {
                 context.getSystemService(ClipboardManager::class.java)
-                    .setPrimaryClip(ClipData.newPlainText(label, "$label\n$content"))
+                    .setPrimaryClip(ClipData.newPlainText(label, "$label\n$shown"))
             }) { Text(tr("personal.copyMessage")) }
         }
     } else {
