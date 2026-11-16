@@ -3,3 +3,4 @@
 3. Unreadable recordings can be discarded instead of being reported at every launch, and the recording notice no longer appears over the sign-in screen.
 4. Network problems are explained in plain language instead of raw system errors.
 5. Assistant replies no longer include emoji.
+6. Updated copyright information to BEIJING GONG FU INFORMATION TECHNOLOGY LIMITED.
