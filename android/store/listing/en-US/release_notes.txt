@@ -1,5 +1,1 @@
-1. Redesigned: opens to camera with Capture / Calendar / Assistant tabs; sign-in, settings, library and queue match iOS.
-2. In-app credit top-up via Google Play.
-3. Fixed: desktop-project captures staying "Staged" without reaching the computer.
-4. Queue shows all projects, file hashes and expiry, with move/copy; new workspace to browse and preview project files.
-5. Clearer errors; unreadable recordings can be discarded.
+Updated copyright information to BEIJING GONG FU INFORMATION TECHNOLOGY LIMITED.
