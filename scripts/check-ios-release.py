@@ -7,7 +7,7 @@ import re
 import subprocess
 import zipfile
 
-# Verified on 2026-10-24; new builds require an explicit review of Apple releases
+# Toolchain verified on 2026-10-24; new builds require an explicit review of Apple releases
 # and the runner image before adding them here. Build-number shape is not proof:
 # Xcode 27.1 beta (27A9269) and macOS 27.2 RC (26B118) have no lowercase suffix.
 # https://developer.apple.com/news/releases/?id=10152026a
@@ -16,7 +16,15 @@ import zipfile
 VERIFIED_TOOLCHAINS = {
     ("27A9275", "24A94232"): {"xcode": "27.1", "DTXcode": "2710", "sdk": "27.1"},
 }
-VERIFIED_MACOS_BUILDS = {"26A434"}  # macOS 27.0.1; xcode-27 image 20261012.0260.1
+# macOS 27.2 reviewed on 2026-11-16 (dev-board#1763): Apple final release
+# 2026-10-26; runner xcode-27-arm64/20261112.0361 still supplies Xcode 27.1
+# (27A9275) and iPhoneOS 27.1. The exact Xcode/SDK allowlist above is unchanged.
+# https://developer.apple.com/news/releases/?id=10262026d
+# https://github.com/actions/runner-images/blob/897b4f31a4274c5f97b681f24a8019e68c58fdcb/images/macos/xcode-27-arm64-Readme.md
+VERIFIED_MACOS_BUILDS = {
+    "26A434",  # macOS 27.0.1; xcode-27 image 20261012.0260.1
+    "26B123",  # macOS 27.2; xcode-27-arm64 image 20261112.0361.1
+}
 
 
 def check_macos_build(value):

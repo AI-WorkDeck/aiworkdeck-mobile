@@ -26,6 +26,28 @@ class ReleaseChecks(unittest.TestCase):
         result = release.check_environment("26A434", "Xcode 27.1\nBuild version 27A9275", "27.1", "24A94232")
         self.assertEqual(result["xcodeBuild"], "27A9275")
 
+    def test_verified_macos_27_2_accepts_environment_and_ipa(self):
+        result = release.check_environment("26B123", "Xcode 27.1\nBuild version 27A9275", "27.1", "24A94232")
+        self.assertEqual(result["macOSBuild"], "26B123")
+        info = self.metadata(); info["BuildMachineOSBuild"] = "26B123"
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "test.ipa"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("Payload/Workdeck.app/Info.plist", plistlib.dumps(info))
+            self.assertEqual(release.check_ipa(path)["BuildMachineOSBuild"], "26B123")
+
+    def test_new_macos_does_not_admit_unverified_xcode_or_sdk(self):
+        for xcode_build, sdk_build in [("27A9269", "24A94232"), ("27B48", "24A94232"),
+                                       ("27A9276", "24A94232"), ("27A9275", "24A94233"),
+                                       ("27A9275", "24A94232a")]:
+            with self.subTest(xcode_build=xcode_build, sdk_build=sdk_build):
+                with self.assertRaisesRegex(ValueError, "Xcode/SDK builds.*not verified"):
+                    release.check_environment("26B123", f"Xcode 27.1\nBuild version {xcode_build}", "27.1", sdk_build)
+                info = self.metadata()
+                info.update(BuildMachineOSBuild="26B123", DTXcodeBuild=xcode_build, DTSDKBuild=sdk_build)
+                with self.assertRaisesRegex(ValueError, "Xcode/SDK builds.*not verified"):
+                    release.check_metadata(info)
+
     def test_old_or_prerelease_environment_cannot_ship(self):
         final = ["26A434", "Xcode 27.1\nBuild version 27A9275", "27.1", "24A94232"]
         for index, bad in [(0, "26A5421a"), (1, "Xcode 26.6\nBuild version 17F113"),
@@ -76,7 +98,7 @@ class ReleaseChecks(unittest.TestCase):
                     release.check_metadata(info)
 
     def test_suffix_free_rc_and_unverified_macos_cannot_ship(self):
-        for build in ("26B118", "26A435", None):
+        for build in ("26B118", "26B123a", "26B124", "26A435", None):
             with self.subTest(build=build):
                 with self.assertRaisesRegex(ValueError, "macOS build.*not verified"):
                     release.check_environment(build, "Xcode 27.1\nBuild version 27A9275", "27.1", "24A94232")
