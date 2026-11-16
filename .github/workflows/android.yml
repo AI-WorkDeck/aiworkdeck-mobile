@@ -5,6 +5,8 @@ on:
     paths: ["android/**", "third_party/libfvad/**", "contract/**", ".github/workflows/android.yml"]
   pull_request:
     paths: ["android/**", "third_party/libfvad/**", "contract/**", ".github/workflows/android.yml"]
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: ubuntu-latest
