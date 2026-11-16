@@ -57,19 +57,19 @@
       },
       {
         "type": "file",
-        "value": "miniprogram/vendor/speech/MINIMP3-LICENSE"
+        "value": "miniprogram/vendor/speech/MINIMP3-LICENSE.md"
       },
       {
         "type": "file",
-        "value": "miniprogram/vendor/speech/LIBFVAD-LICENSE"
+        "value": "miniprogram/vendor/speech/LIBFVAD-LICENSE.md"
       },
       {
         "type": "file",
-        "value": "miniprogram/vendor/speech/LIBFVAD-PATENTS"
+        "value": "miniprogram/vendor/speech/LIBFVAD-PATENTS.md"
       },
       {
         "type": "file",
-        "value": "miniprogram/vendor/speech/LIBFVAD-AUTHORS"
+        "value": "miniprogram/vendor/speech/LIBFVAD-AUTHORS.md"
       }
     ]
   }

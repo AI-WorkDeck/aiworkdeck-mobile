@@ -9,6 +9,7 @@
   "scripts": {
     "prepare": "node scripts/patch-security-toolchain.cjs && node scripts/install-hooks.mjs",
     "typecheck": "tsc --noEmit",
+    "mp:package:check": "node scripts/check-mp-package.cjs",
     "shot": "node scripts/screenshot.js",
     "test": "node --import ./scripts/node-ts-resolve.mjs --test \"tests/**/*.test.ts\"",
     "contract:gen": "node contract/tools/gen.mjs",
