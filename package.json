@@ -2,7 +2,7 @@
   "name": "aiworkdeck-mobile",
   "version": "0.1.0",
   "private": true,
-  "description": "AI Workdeck \u79fb\u52a8\u7aef\uff1aiOS \u539f\u751f + \u5fae\u4fe1\u5c0f\u7a0b\u5e8f",
+  "description": "AI Workdeck 移动端：iOS 原生 + 微信小程序",
   "engines": {
     "node": ">=22.18"
   },
