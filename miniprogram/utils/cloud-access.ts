@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors
+// SPDX-FileCopyrightText: 2026 北京公富信息技术有限公司 and AI WorkDeck contributors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Capability responses are authoritative; legacy fallback is only for older servers. */
 export interface CloudAccess { canUse: boolean; canWrite: boolean; canRead: boolean; reason: string; epoch?: number; includedStorageBytes?: number; caseId?: string | null; cleanupEligible?: boolean; notificationStatus?: string; frozen?: boolean; cleanupState?: string }

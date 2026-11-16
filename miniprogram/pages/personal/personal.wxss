@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors */
+/* SPDX-FileCopyrightText: 2026 北京公富信息技术有限公司 and AI WorkDeck contributors */
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 @import '../../styles/tokens.wxss';
 .personal { height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; padding-inline: 28rpx; background: var(--bg); color: var(--fg); gap: 20rpx; }
