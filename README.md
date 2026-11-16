@@ -1,8 +1,12 @@
 # AI Workdeck 移动端
 
-个人助理、跨项目日程、现场采集、同步归档与文件管理。四个原生客户端：
+个人助理、跨项目日程、现场采集、同步归档与文件管理。四个原生客户端。
 
-| 端 | 技术 | 发布主体 | 覆盖 |
+本项目自有代码及商业许可主体统一为北京公富信息技术有限公司（BEIJING GONG FU INFORMATION TECHNOLOGY LIMITED）。社区贡献者及第三方的权利声明保持不变。
+
+以下是尚待逐项迁移的现有平台发行登记；代码版权调整不代表商店账号、备案或签名证书已经变更：
+
+| 端 | 技术 | 现有平台登记主体（待迁移） | 覆盖 |
 |---|---|---|---|
 | iOS | Swift / SwiftUI | 北京京微资易科技有限公司（Team `8WKHZVR2W8`） | 全球 175 个区 |
 | 微信小程序 | 原生 WXML / WXSS / TypeScript | 北京京微资易科技有限公司 | 中国大陆 |
@@ -118,7 +122,7 @@ docs/specs/              设计文档
 
 本仓库是 AI WorkDeck 一揽子开源项目的一部分，与内核仓库 [AI-WorkDeck/aiworkdeck](https://github.com/AI-WorkDeck/aiworkdeck) 遵循同一套安排：
 
-- 代码以 **GNU AGPLv3** 发布（见 [LICENSE](LICENSE)）；商业许可由北京京微资易科技有限公司（海外发行：真善美承泽有限公司 Zhen Shan Mei Grace Legacy Limited）另行提供，见内核仓库的 [COMMERCIAL-LICENSE.md](https://github.com/AI-WorkDeck/aiworkdeck/blob/master/legal/COMMERCIAL-LICENSE.md)。
+- 代码以 **GNU AGPLv3** 发布（见 [LICENSE](LICENSE)）；商业许可由北京公富信息技术有限公司（BEIJING GONG FU INFORMATION TECHNOLOGY LIMITED）另行提供，见内核仓库的 [COMMERCIAL-LICENSE.md](https://github.com/AI-WorkDeck/aiworkdeck/blob/master/legal/COMMERCIAL-LICENSE.md)。
 - 贡献适用内核仓库的 [CLA](https://github.com/AI-WorkDeck/aiworkdeck/blob/master/legal/CLA.md)（对贡献内容的双许可再授权集中于公司主体）。
 - 商标：AI WorkDeck 标识（K 形图形）已在中国注册（第 9 类）；「AI WorkDeck」文字为商号与未注册商标（™），受反不正当竞争法保护——见 [TRADEMARKS.md](https://github.com/AI-WorkDeck/aiworkdeck/blob/master/legal/TRADEMARKS.md)。
 - 治理与社区：见内核仓库 [GOVERNANCE.md](https://github.com/AI-WorkDeck/aiworkdeck/blob/master/GOVERNANCE.md)。

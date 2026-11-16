@@ -627,7 +627,7 @@ export function outputs(c) {
   const ets = 'harmony/contract/src/main/ets'
   return new Map([
     ...c.locales.map(({ code }) => [`ios/Resources/${code}.lproj/Localizable.strings`,
-      `// SPDX-FileCopyrightText: 2026 北京京微资易科技有限公司 and AI WorkDeck contributors\n// SPDX-License-Identifier: AGPL-3.0-or-later\n// ${HEADER}\n"personal.reminders" = ${JSON.stringify(c.strings['personal.reminders'][code])};\n`]),
+      `// SPDX-FileCopyrightText: 2026 北京公富信息技术有限公司 and AI WorkDeck contributors\n// SPDX-License-Identifier: AGPL-3.0-or-later\n// ${HEADER}\n"personal.reminders" = ${JSON.stringify(c.strings['personal.reminders'][code])};\n`]),
     ['miniprogram/styles/tokens.wxss', renderWxss(c)],
     ['miniprogram/utils/contract/states.ts', renderTsStates(c)],
     ['miniprogram/utils/contract/strings.ts', renderTsStrings(c)],
