@@ -10,6 +10,18 @@ const ALLOWED = new Set(['GHSA-pfq8-rq6v-vf5m', 'GHSA-w5hq-g745-h8pq']);
 function validateAudit(report, lock, now = new Date()) {
   if (!report || report.auditReportVersion !== 2 || report.error || !report.vulnerabilities || !report.metadata) throw new Error('Invalid npm audit report');
   const vulnerabilities = report.vulnerabilities;
+  if (Object.keys(vulnerabilities).length) {
+    for (const [name, version] of Object.entries({ 'html-minifier': '4.0.0', uuid: '3.4.0', 'miniprogram-ci': '2.1.48' })) {
+      if (lock.packages[`node_modules/${name}`]?.version !== version) throw new Error(`Exception version changed: ${name}`);
+    }
+    for (const [location, pkg] of Object.entries(lock.packages)) {
+      for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies', 'devDependencies']) {
+        for (const name of ['html-minifier', 'uuid']) {
+          if (pkg[field]?.[name] && location !== 'node_modules/miniprogram-ci') throw new Error(`New exception consumer: ${location} -> ${name}`);
+        }
+      }
+    }
+  }
   if (report.metadata.vulnerabilities?.total !== Object.keys(vulnerabilities).length) throw new Error('Incomplete npm audit report');
   function inspect(name, seen = new Set()) {
     if (seen.has(name)) throw new Error(`Cyclic vulnerability evidence: ${name}`);
@@ -59,7 +71,7 @@ function verifyReachabilityEvidence(root) {
   scan(sdk);
   if (uuidImports !== 1) throw new Error('UUID call-site evidence changed');
   const caller = fs.readFileSync(path.join(sdk, 'dist/modules/nativecompiler/ios/buildCloud.js'));
-  if (createHash('sha256').update(caller).digest('hex') !== 'b35c9cd1d8c4afd9a7c0705b5251bce61558ebcb79deec25493eb31e8ad34cda') throw new Error('UUID call-site fingerprint changed');
+  if (createHash('sha256').update(caller).digest('hex') !== '05a4984b95419f29fcf393b1bf87b9270bd62274a434715d58443cda527f9d5f') throw new Error('UUID call-site fingerprint changed');
 }
 
 if (require.main === module) {

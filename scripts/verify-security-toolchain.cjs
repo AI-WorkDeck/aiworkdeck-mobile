@@ -12,10 +12,12 @@ async function main() {
   const automatorRequire = createRequire(require.resolve('miniprogram-automator'));
   assert.equal(typeof require('miniprogram-automator').connect, 'function');
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aBLsAAAAASUVORK5CYII=', 'base64');
+  let generatedPng;
   for (const load of [ciRequire, automatorRequire]) {
     const Jimp = load('jimp');
     const source = new Jimp(2, 3, 0xff0000ff);
     const bytes = await source.getBufferAsync(Jimp.MIME_PNG);
+    generatedPng = bytes;
     const image = await Jimp.read(bytes);
     assert.equal(image.bitmap.width, 2);
     assert.equal(image.bitmap.height, 3);
@@ -42,9 +44,13 @@ async function main() {
   const temp = require('tmp').fileSync({ prefix: '', postfix: '' });
   assert.equal(fs.statSync(temp.name).isFile(), true);
   temp.removeCallback();
-  const { XMLBuilder, XMLParser } = require('fast-xml-parser');
-  const xml = new XMLBuilder().build({ Result: { Key: 'value&safe' } });
-  assert.equal(new XMLParser().parse(xml).Result.Key, 'value&safe');
+  // Exercise the consumers' configured XML wrappers, including string-value
+  // preservation; a standalone test of the parser's own API is insufficient.
+  for (const modulePath of ['cos-nodejs-sdk-v5/sdk/util', 'cos-js-sdk-v5/src/util']) {
+    const cosXml = ciRequire(modulePath);
+    const payload = { Result: { Key: 'value&safe', Identifier: '001' } };
+    assert.deepEqual(cosXml.xml2json(cosXml.json2xml(payload)), payload);
+  }
   const { updateLaunchBase64 } = require('miniprogram-ci/dist/modules/fullcompiler/app/contactandlaunch/updatecontactandlaunch');
   assert.ok(await updateLaunchBase64());
   assert.match(ciRequire('uuid/v4')(), /^[0-9a-f-]{36}$/);
@@ -53,13 +59,19 @@ async function main() {
     if (req.url === '/cross-protocol') {
       res.writeHead(302, { location: `https://127.0.0.1:${server.address().port}/target` });
       res.end();
-    } else { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ ok: true })); }
+    } else if (req.url === '/image') { res.setHeader('content-type', 'image/png'); res.end(generatedPng); }
+    else { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ ok: true })); }
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   try {
     const endpoint = `http://127.0.0.1:${server.address().port}`;
     const body = await new Promise((resolve, reject) => request({ url: endpoint, json: true, timeout: 2000 }, (error, response, body) => error ? reject(error) : resolve(body)));
     assert.deepEqual(body, { ok: true });
+    for (const load of [ciRequire, automatorRequire]) {
+      const image = await load('jimp').read(`${endpoint}/image`);
+      assert.equal(image.bitmap.width, 2);
+      assert.equal(image.bitmap.height, 3);
+    }
     const error = await new Promise(resolve => request({ url: `${endpoint}/cross-protocol`, timeout: 2000 }, error => resolve(error)));
     assert.equal(error?.code, 'ERR_INVALID_PROTOCOL');
   } finally { await new Promise(resolve => server.close(resolve)); }
@@ -67,6 +79,26 @@ async function main() {
   try {
     fs.writeFileSync(path.join(projectDir, 'project.config.json'), JSON.stringify({ appid: 'touristappid', compileType: 'miniprogram', miniprogramRoot: '.', setting: {} }));
     fs.writeFileSync(path.join(projectDir, 'app.json'), JSON.stringify({ pages: [] }));
+    fs.writeFileSync(path.join(projectDir, 'image.png'), generatedPng);
+    // Exercise the expression actually installed in the SDK; do not duplicate
+    // a hypothetical helper. This isolates the native cloud-build call site,
+    // without initiating native cloud compilation or an upload.
+    const nativeSource = fs.readFileSync(require.resolve('miniprogram-ci/dist/modules/nativecompiler/ios/buildCloud'), 'utf8');
+    const adapter = nativeSource.match(/sizeOf=(.*?),plist=require/);
+    assert.ok(adapter);
+    const sdkSizeOf = require('node:vm').runInNewContext(adapter[1], { require: ciRequire });
+    for (const input of [generatedPng, path.join(projectDir, 'image.png')]) {
+      const dimensions = sdkSizeOf(input);
+      assert.equal(dimensions.width, 2);
+      assert.equal(dimensions.height, 3);
+    }
+    assert.throws(() => sdkSizeOf(path.join(projectDir, 'missing.png')), /ENOENT/);
+    const css = await ciRequire('less').render(
+      '.image { width: image-width("image.png"); height: image-height("image.png"); }',
+      { filename: path.join(projectDir, 'style.less') },
+    );
+    assert.match(css.css, /width: 2px/);
+    assert.match(css.css, /height: 3px/);
     const project = new ci.Project({ projectPath: projectDir, type: 'miniProgram', appid: 'touristappid', privateKey: 'synthetic-unused-key' });
     await project.ready();
     const output = await ci.compileJS(project, 'app.js', {
@@ -80,6 +112,6 @@ async function main() {
   } finally {
     fs.rmSync(projectDir, { recursive: true, force: true });
   }
-  console.log('security toolchain: Jimp, image headers, tmp, COS XML, SDK protobuf and real offline JavaScript compilation passed');
+  console.log('security toolchain: Jimp (buffers and HTTP), Less image dimensions, image headers, tmp, COS XML, SDK protobuf and real offline JavaScript compilation passed');
 }
 main().then(() => process.exit(0), (error) => { console.error(error); process.exit(1); });
