@@ -7,20 +7,48 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "prepare": "node scripts/install-hooks.mjs",
+    "prepare": "node scripts/patch-security-toolchain.cjs && node scripts/install-hooks.mjs",
     "typecheck": "tsc --noEmit",
     "shot": "node scripts/screenshot.js",
     "test": "node --import ./scripts/node-ts-resolve.mjs --test \"tests/**/*.test.ts\"",
     "contract:gen": "node contract/tools/gen.mjs",
     "contract:check": "node contract/tools/check.mjs",
-    "palette:check": "node scripts/check-palette.mjs"
+    "palette:check": "node scripts/check-palette.mjs",
+    "security:dependencies": "node scripts/check-security-dependencies.cjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",
     "miniprogram-api-typings": "^4.0.4",
-    "miniprogram-automator": "^0.12.1",
-    "miniprogram-ci": "^2.1.31",
+    "miniprogram-automator": "0.13.0",
+    "miniprogram-ci": "2.1.48",
     "playwright-core": "1.62.0",
     "typescript": "^5.6.3"
+  },
+  "overrides": {
+    "@babel/core": "7.29.6",
+    "@babel/helpers": "7.29.14",
+    "@babel/runtime": "7.29.14",
+    "@babel/plugin-transform-modules-systemjs": "7.29.4",
+    "lodash": "4.18.1",
+    "qs": "6.17.1",
+    "minimatch": "3.1.5",
+    "minimist": "1.2.8",
+    "tmp": "0.2.7",
+    "protobufjs": "7.6.6",
+    "fast-xml-parser": "5.12.0",
+    "jpeg-js": "0.4.4",
+    "phin": "3.7.1",
+    "miniprogram-automator": {
+      "debug": "4.4.3"
+    },
+    "gulp-plumber": "1.2.1",
+    "request": "npm:@cypress/request@4.0.1",
+    "file-type@^16.5.4": "22.3.0",
+    "miniprogram-ci": {
+      "image-size": "2.1.0",
+      "less": {
+        "image-size": "0.5.4"
+      }
+    }
   }
 }
