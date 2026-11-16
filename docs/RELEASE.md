@@ -16,6 +16,13 @@ set -a; . fastlane/.env; set +a
 .venv/bin/python scripts/asc-listing.py status   # 提审前体检，随时可跑
 ```
 
+`text`、`category`、`rating` 的 appInfo 写入目标只接受 `PREPARE_FOR_SUBMISSION`
+或 `DEVELOPER_REJECTED`（优先前者），以新字段 `state` 为准，兼容旧字段
+`appStoreState`。没有符合条件的记录就报错停止，不按返回顺序回退到在售或在审记录；
+其他状态需另行核验可编辑性，不能仅因 API 枚举存在就加入白名单。`status` 的只读行为不变。
+离线回归：安装 `pyjwt[crypto]` 后运行 `python -m unittest discover -s scripts/tests -p 'test_asc*.py'`，
+使用合成响应，不需要凭据或访问 App Store Connect。
+
 ## 1. iOS App 的基本信息
 
 | 项 | 值 |

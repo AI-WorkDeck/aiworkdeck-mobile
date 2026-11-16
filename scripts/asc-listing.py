@@ -114,14 +114,23 @@ def die_on_error(resp, what):
 # ---------------------------------------------------------------- 读取
 
 def app_info_id(tok, app_id):
-    """已上架的 App 有两条 appInfo：在售那条和随新版本出现的可编辑那条。
-    往在售那条加本地化会 409「cannot be created in current state」，所以优先取可编辑的。"""
+    """仅供写入：选可编辑 appInfo，绝不回退到在售或在审记录。
+
+    保留准备提交的优先级，补充撤回审核后的可编辑状态；不套用版本状态全集。
+    Apple 撤回说明：https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/remove-a-submission-from-review
+    """
     r = call(tok, "GET", f"/apps/{app_id}/appInfos")
     die_on_error(r, "读取 appInfos")
-    for i in r["data"]:
-        if i["attributes"].get("appStoreState") == "PREPARE_FOR_SUBMISSION":
-            return i["id"]
-    return r["data"][0]["id"]
+    # API 3.3 起 state 替代 appStoreState；旧回包仍兼容。
+    # https://developer.apple.com/documentation/appstoreconnectapi/app-store-connect-api-3-3-release-notes
+    states = [(i, i["attributes"].get("state") or i["attributes"].get("appStoreState"))
+              for i in r["data"]]
+    for editable in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED"):
+        for i, state in states:
+            if state == editable:
+                return i["id"]
+    observed = ", ".join(state or "UNKNOWN" for _, state in states) or "空列表"
+    sys.exit(f"未找到可编辑的 appInfo（当前状态：{observed}），停止写入；请先核对版本状态")
 
 
 def version(tok, app_id):
