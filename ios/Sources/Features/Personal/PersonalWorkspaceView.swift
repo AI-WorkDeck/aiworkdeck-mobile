@@ -206,6 +206,8 @@ private struct AssistantView: View {
     @Bindable var model: PersonalWorkspaceModel
     @Environment(\.colorScheme) private var colorScheme
     @State private var showConsent = false
+    @State private var presentedReport: PersonalAssistantReportModel?
+    @State private var report: PersonalAssistantReportModel?
     @State private var showCopy = false
     @State private var copyCompleted = false
     @State private var copied = false
@@ -234,8 +236,7 @@ private struct AssistantView: View {
                             if let status = model.status { Text(tr("personal.summaries", ["count": String(status.summaryCount)])).font(.caption).foregroundStyle(.secondary) }
                         }
                         ForEach(model.messages) { message in
-                            Text(message.role == "assistant" ? ReplyText.stripEmoji(message.content) : message.content).textSelection(.enabled).frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
-                                .padding(12).background(message.role == "user" ? T.L.accent.opacity(0.08) : Color.clear).clipShape(RoundedRectangle(cornerRadius: 10))
+                            PersonalMessageView(message: message)
                         }
                         if !model.sources.isEmpty {
                             Text(tr("personal.sources")).font(.caption).foregroundStyle(.secondary)
@@ -277,6 +278,12 @@ private struct AssistantView: View {
                         Button(tr("personal.copy.title")) { copied = false; showCopy = true }
                             .disabled(model.busy || model.copyBusy || model.pending != nil || model.conversationID == nil || model.messages.isEmpty)
                             .accessibilityIdentifier("personal.copyToProject")
+                        Button(tr("personal.report.conversation")) {
+                            if report == nil, let id = model.conversationID { report = PersonalAssistantReportModel(conversationID: id, service: model.service) }
+                            presentedReport = report
+                        }
+                        .disabled(model.conversationID == nil || !model.messages.contains { $0.role == "assistant" })
+                        .accessibilityIdentifier("personal.reportConversation")
                         Button(tr("personal.newChat")) { model.newConversation() }.disabled(model.busy || model.copyBusy || model.pending != nil)
                         if model.status?.enabled == true { Button(tr("common.off")) { Task { await model.configure("assistant", enabled: false) } }.disabled(model.loading || model.busy) }
                     } label: { Image(systemName: "ellipsis.circle").accessibilityLabel(tr("personal.assistant")) }
@@ -289,6 +296,10 @@ private struct AssistantView: View {
             .sheet(isPresented: $showCopy, onDismiss: { if copied { copyCompleted = true } }) {
                 ConversationCopyView(model: model, files: account.workspaceFiles(), onClose: { showCopy = false }, onCloudCopied: { copied = true })
             }
+            .sheet(item: $presentedReport) { report in
+                PersonalAssistantReportView(model: report)
+            }
+            .onChange(of: model.conversationID) { _, _ in presentedReport = nil; report = nil }
             .alert(tr("personal.copy.success"), isPresented: $copyCompleted) { Button(tr("common.ok"), role: .cancel) {} }
             .sheet(isPresented: $showSettings, onDismiss: { Task { await model.load() } }) { SettingsView(onClose: { showSettings = false }).environment(account) }
             .sheet(isPresented: $showSubscription, onDismiss: { Task { await model.load() } }) { SubscriptionView() }

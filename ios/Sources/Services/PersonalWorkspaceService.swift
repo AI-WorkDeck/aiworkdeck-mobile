@@ -33,6 +33,8 @@ struct PersonalMessage: Codable, Identifiable {
     let role: String
     let content: String
     let createdAt: String?
+    var displayedContent: String { role == "assistant" ? ReplyText.stripEmoji(content) : content }
+    var copyText: String { role == "assistant" ? tr("personal.aiGenerated") + "\n" + displayedContent : content }
     var id: String { role + ":" + (createdAt ?? "") + ":" + content }
 }
 struct ConversationProjectCopy: Decodable {
@@ -134,23 +136,47 @@ struct PersonalWorkspaceService {
     var sessionID: () -> String? = { SessionStore.current }
     private struct Response<T: Decodable>: Decodable { let code: Int; let message: String?; let data: T? }
 
-    func request<T: Decodable>(_ path: String, method: String = "GET", body: Data? = nil) async throws -> T {
+    func request<T: Decodable>(_ path: String, method: String = "GET", body: Data? = nil, contentType: String = "application/json") async throws -> T {
         let host = baseURL()
         guard let account = sessionID() else { throw APIError(message: tr("error.signInRequired")) }
         var req = API.request(host.appendingPathComponent(path))
         req.setValue(account, forHTTPHeaderField: "X-Session-Id")
         req.httpMethod = method; req.httpBody = body
         req.timeoutInterval = 240
-        if body != nil { req.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+        if body != nil { req.setValue(contentType, forHTTPHeaderField: "Content-Type") }
         req = try await CloudEpoch.shared.authorize(req, session: session)
         guard sessionID() == account, baseURL() == host else { throw CancellationError() }
-        let (data, response) = try await session.data(for: req)
+        let (data, response) = try await session.data(for: req, delegate: path.hasPrefix("/api/feedback") ? PersonalFeedbackNoRedirect() : nil)
         try Task.checkCancellation()
         guard sessionID() == account, baseURL() == host else { throw CancellationError() }
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else { throw APIError(message: tr("error.network")) }
         let envelope = try JSONDecoder().decode(Response<T>.self, from: data)
         guard envelope.code == 0, let value = envelope.data else { throw APIError(message: envelope.message ?? tr("error.badResponse")) }
         return value
+    }
+    func reportAssistant(_ conversationID: String, description: String) async throws -> Int64 {
+        let text = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let id = UUID(uuidString: conversationID), !text.isEmpty, text.count <= 2000 else {
+            throw APIError(message: tr("error.badResponse"))
+        }
+        let payload = try JSONSerialization.data(withJSONObject: [
+            "kind": "BUG", "text": text, "page": "mobile/personal/assistant",
+            "clientContext": ["type": "ai-content-report", "platform": "ios", "conversationId": id.uuidString.lowercased()]
+        ])
+        let boundary = "awd-" + UUID().uuidString
+        var body = Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"payload\"\r\n\r\n".utf8)
+        body.append(payload)
+        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        struct Receipt: Decodable { let id: Int64 }
+        let receipt: Receipt = try await request("/api/feedback", method: "POST", body: body, contentType: "multipart/form-data; boundary=" + boundary)
+        guard receipt.id > 0 else { throw APIError(message: tr("error.badResponse")) }
+        return receipt.id
+    }
+    func assistantReport(_ id: Int64) async throws -> PersonalAssistantReport? {
+        guard id > 0 else { throw APIError(message: tr("error.badResponse")) }
+        struct Reports: Decodable { let items: [PersonalAssistantReport] }
+        let reports: Reports = try await request("/api/feedback/mine")
+        return reports.items.first { $0.id == id && $0.aiContentReport == true }
     }
     func status() async throws -> AssistantStatus { try await request("/api/mobile/assistant/status") }
     func calendar() async throws -> PersonalCalendar { try await request("/api/mobile/calendar/events") }
@@ -191,5 +217,13 @@ struct PersonalWorkspaceService {
         }
         guard reply.status == "completed", reply.requestId == question.requestId else { throw APIError(message: tr("error.network")) }
         return reply
+    }
+}
+
+private final class PersonalFeedbackNoRedirect: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
     }
 }

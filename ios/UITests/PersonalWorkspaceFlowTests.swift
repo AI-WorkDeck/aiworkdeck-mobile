@@ -11,15 +11,53 @@ final class PersonalWorkspaceFlowTests: XCTestCase {
         try await super.tearDown()
     }
 
-    @MainActor private func launch() -> XCUIApplication {
+    @MainActor private func launch(extraArguments: [String] = []) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launchArguments = ["-AWDWorkspaceUITest", "-AWDPersonalUITest"]
+        app.launchArguments = ["-AWDWorkspaceUITest", "-AWDPersonalUITest"] + extraArguments
         app.launch()
         dismissEarlierRecordingNotice(in: app)
         XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 15))
         return app
+    }
+
+    @MainActor func testAssistantLabelCopyAndReportRetryProgress() {
+        let app = launch(extraArguments: ["-AWDReportRetryUITest"])
+        personalTab(app, .assistant).tap()
+        let input = app.textFields["personal.input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 12))
+        input.tap(); input.typeText("Synthetic question")
+        app.buttons["personal.send"].tap()
+        XCTAssertTrue(app.staticTexts["personal.aiGenerated"].waitForExistence(timeout: 10))
+        let answer = app.staticTexts["Review the evidence checklist today. The source is Alpha project."]
+        answer.press(forDuration: 1)
+        XCTAssertEqual(app.menuItems.count, 0, "Assistant text must not expose native copy without its label")
+        app.buttons["personal.copyMessage"].tap()
+        input.tap(); input.press(forDuration: 1)
+        let paste = app.menuItems.matching(NSPredicate(format: "label IN %@", ["Paste", "粘贴"])).firstMatch
+        XCTAssertTrue(paste.waitForExistence(timeout: 5)); paste.tap()
+        XCTAssertEqual(input.value as? String, app.staticTexts["personal.aiGenerated"].label + "\n" + answer.label)
+        app.buttons["personal.actions"].tap()
+        app.buttons["personal.reportConversation"].tap()
+        let reason = app.descendants(matching: .any).matching(identifier: "personal.reportReason").firstMatch
+        XCTAssertTrue(reason.waitForExistence(timeout: 10))
+        reason.tap(); reason.typeText("Synthetic content issue")
+        app.buttons["personal.reportSend"].tap()
+        let retry = app.buttons["personal.reportRetry"]
+        XCTAssertTrue(retry.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["personal.reportSent"].exists)
+        retry.tap()
+        XCTAssertTrue(app.staticTexts["personal.reportSent"].waitForExistence(timeout: 10))
+        XCTAssertTrue(retry.waitForExistence(timeout: 10)); retry.tap()
+        XCTAssertTrue(app.staticTexts["personal.reportResponse"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["personal.reportResponse"].label, "Synthetic human review response")
+        capture("Assistant report handling response", app)
+        app.buttons["personal.reportClose"].tap()
+        app.buttons["personal.actions"].tap(); app.buttons["personal.reportConversation"].tap()
+        XCTAssertTrue(app.staticTexts["personal.reportResponse"].waitForExistence(timeout: 10))
+        app.buttons["personal.reportClose"].tap()
+        XCTAssertTrue(app.buttons["personal.copyMessage"].exists)
     }
 
     @MainActor func testCaptureIsHomeAndProjectQueueAndAccountCanReturn() {
