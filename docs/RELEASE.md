@@ -1,5 +1,20 @@
 # 正式上架流程
 
+## 当前维护范围
+
+自 2026-11-17 起，手机端只维护以下五个渠道（用户明确指示，dev-board#1775）：
+
+| 渠道 | 客户端与发布入口 |
+|---|---|
+| iOS App Store | iOS；本页流程 |
+| Google Play | Android 国际版；[Android 发布说明](../android/README.md) |
+| 应用宝 | Android 大陆版；[Android 发布说明](../android/README.md) |
+| 微信小程序 | 微信公众平台；本页流程 |
+| 鸿蒙 | HarmonyOS 原生端；[鸿蒙发布说明](../harmony/README.md) |
+
+其他商店退出日常维护、适配和更新范围。历史上架材料继续保留供查证，不据此自动下架已有应用。
+后续发版清单、渠道资质维护和验收均以这五个渠道为范围。
+
 本页介绍 iOS 与微信小程序的商店流程。Android 签名交付见 [android/README.md](../android/README.md)，
 鸿蒙见 [harmony/README.md](../harmony/README.md)。iOS 走 App Store 审核，小程序走微信公众平台审核。
 TestFlight / 体验版的日常发布见 `fastlane/Fastfile` 的 `beta` 与
