@@ -206,7 +206,7 @@ private struct AssistantView: View {
     @Bindable var model: PersonalWorkspaceModel
     @Environment(\.colorScheme) private var colorScheme
     @State private var showConsent = false
-    @State private var showReport = false
+    @State private var presentedReport: PersonalAssistantReportModel?
     @State private var report: PersonalAssistantReportModel?
     @State private var showCopy = false
     @State private var copyCompleted = false
@@ -280,7 +280,7 @@ private struct AssistantView: View {
                             .accessibilityIdentifier("personal.copyToProject")
                         Button(tr("personal.report.conversation")) {
                             if report == nil, let id = model.conversationID { report = PersonalAssistantReportModel(conversationID: id, service: model.service) }
-                            showReport = true
+                            presentedReport = report
                         }
                         .disabled(model.conversationID == nil || !model.messages.contains { $0.role == "assistant" })
                         .accessibilityIdentifier("personal.reportConversation")
@@ -296,10 +296,10 @@ private struct AssistantView: View {
             .sheet(isPresented: $showCopy, onDismiss: { if copied { copyCompleted = true } }) {
                 ConversationCopyView(model: model, files: account.workspaceFiles(), onClose: { showCopy = false }, onCloudCopied: { copied = true })
             }
-            .sheet(isPresented: $showReport) {
-                if let report { PersonalAssistantReportView(model: report) }
+            .sheet(item: $presentedReport) { report in
+                PersonalAssistantReportView(model: report)
             }
-            .onChange(of: model.conversationID) { _, _ in showReport = false; report = nil }
+            .onChange(of: model.conversationID) { _, _ in presentedReport = nil; report = nil }
             .alert(tr("personal.copy.success"), isPresented: $copyCompleted) { Button(tr("common.ok"), role: .cancel) {} }
             .sheet(isPresented: $showSettings, onDismiss: { Task { await model.load() } }) { SettingsView(onClose: { showSettings = false }).environment(account) }
             .sheet(isPresented: $showSubscription, onDismiss: { Task { await model.load() } }) { SubscriptionView() }

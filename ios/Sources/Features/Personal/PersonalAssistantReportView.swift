@@ -11,7 +11,8 @@ struct PersonalAssistantReport: Decodable {
 }
 
 @MainActor @Observable
-final class PersonalAssistantReportModel {
+final class PersonalAssistantReportModel: Identifiable {
+    var id: String { conversationID }
     var description = ""
     private(set) var reportID: Int64?
     private(set) var progress: PersonalAssistantReport?
