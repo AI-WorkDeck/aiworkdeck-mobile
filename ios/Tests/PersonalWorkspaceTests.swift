@@ -13,6 +13,142 @@ final class PersonalWorkspaceTests: XCTestCase {
     private func service(_ account: @escaping () -> String? = { "synthetic" }) -> PersonalWorkspaceService {
         PersonalWorkspaceService(session: session, baseURL: { URL(string: "https://synthetic.invalid")! }, sessionID: account)
     }
+    func testAssistantCopyAlwaysIncludesLocalizedLabelAndDisplayedText() {
+        let assistant = PersonalMessage(role: "assistant", content: "Answer ✅", createdAt: nil)
+        XCTAssertEqual(assistant.copyText, tr("personal.aiGenerated") + "\n" + ReplyText.stripEmoji("Answer ✅"))
+        XCTAssertEqual(PersonalMessage(role: "user", content: "My words ✅", createdAt: nil).copyText, "My words ✅")
+    }
+
+    func testAssistantReportUploadsOnlyDescriptionAndConversationReferenceAsMultipart() async throws {
+        PersonalTestProtocol.handler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/api/feedback")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-Session-Id"), "synthetic")
+            let contentType = try XCTUnwrap(request.value(forHTTPHeaderField: "Content-Type"))
+            XCTAssertTrue(contentType.hasPrefix("multipart/form-data; boundary=awd-"))
+            var body = request.httpBody ?? Data()
+            if let stream = request.httpBodyStream {
+                stream.open(); defer { stream.close() }
+                var bytes = [UInt8](repeating: 0, count: 1024)
+                while stream.hasBytesAvailable { let n = stream.read(&bytes, maxLength: bytes.count); if n <= 0 { break }; body.append(bytes, count: n) }
+            }
+            let multipart = try XCTUnwrap(String(data: body, encoding: .utf8))
+            let parts = multipart.components(separatedBy: "\r\n")
+            XCTAssertEqual(parts[1], "Content-Disposition: form-data; name=\"payload\"")
+            let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(parts[3].utf8)) as? [String: Any])
+            XCTAssertEqual(Set(payload.keys), ["kind", "text", "page", "clientContext"])
+            XCTAssertEqual(payload["text"] as? String, "Synthetic issue")
+            XCTAssertEqual(payload["kind"] as? String, "BUG")
+            XCTAssertEqual(payload["page"] as? String, "mobile/personal/assistant")
+            let context = try XCTUnwrap(payload["clientContext"] as? [String: String])
+            XCTAssertEqual(context, ["type": "ai-content-report", "platform": "ios", "conversationId": "00000000-0000-4000-8000-000000001778"])
+            return Data(#"{"code":0,"data":{"id":1778}}"#.utf8)
+        }
+        let id = try await service().reportAssistant("00000000-0000-4000-8000-000000001778", description: " Synthetic issue \n")
+        XCTAssertEqual(id, 1778)
+    }
+
+    func testAssistantReportRejectsInvalidInputAndInvalidReceipt() async throws {
+        PersonalTestProtocol.handler = { _ in XCTFail("Invalid input cannot send a request"); return Data() }
+        for (id, text) in [("invalid", "Issue"), ("00000000-0000-4000-8000-000000001778", "  "), ("00000000-0000-4000-8000-000000001778", String(repeating: "a", count: 2001))] {
+            do { _ = try await service().reportAssistant(id, description: text); XCTFail("Expected rejection") } catch {}
+        }
+        PersonalTestProtocol.handler = { _ in Data(#"{"code":0,"data":{"id":0}}"#.utf8) }
+        do { _ = try await service().reportAssistant("00000000-0000-4000-8000-000000001778", description: "Issue"); XCTFail("Expected invalid receipt") } catch {}
+    }
+
+    func testReportProgressFiltersOtherReportsAndReadsPublishedResponse() async throws {
+        PersonalTestProtocol.handler = { request in
+            XCTAssertEqual(request.url?.path, "/api/feedback/mine")
+            return Data(#"{"code":0,"data":{"items":[{"id":1,"status":"RESOLVED","aiContentReport":true},{"id":1778,"status":"RESOLVED","aiContentReport":true,"reporterResponse":"Reviewed","responsePublishedAt":"2026-11-17T00:00:00Z"},{"id":2,"status":"OPEN"}]}}"#.utf8)
+        }
+        let report = try await service().assistantReport(1778)
+        XCTAssertEqual(report?.reporterResponse, "Reviewed")
+        XCTAssertEqual(report?.responsePublishedAt, "2026-11-17T00:00:00Z")
+        let unrelated = try await service().assistantReport(2)
+        XCTAssertNil(unrelated)
+    }
+
+    @MainActor func testReportSubmissionAndRefreshRetryWithoutSubmittingTwice() async throws {
+        var posts = 0; var reads = 0
+        PersonalTestProtocol.handler = { request in
+            if request.httpMethod == "POST" {
+                posts += 1
+                if posts == 1 { throw URLError(.networkConnectionLost) }
+                return Data(#"{"code":0,"data":{"id":1778}}"#.utf8)
+            }
+            reads += 1
+            if reads == 1 { throw URLError(.networkConnectionLost) }
+            return Data(#"{"code":0,"data":{"items":[{"id":1778,"status":"RESOLVED","aiContentReport":true,"reporterResponse":"Reviewed"}]}}"#.utf8)
+        }
+        let model = PersonalAssistantReportModel(conversationID: "00000000-0000-4000-8000-000000001778", service: service())
+        model.description = "Synthetic issue"
+        await model.submit()
+        XCTAssertNil(model.reportID); XCTAssertNotNil(model.error); XCTAssertEqual(model.description, "Synthetic issue")
+        await model.submit()
+        XCTAssertEqual(model.reportID, 1778); XCTAssertNotNil(model.error); XCTAssertNil(model.progress)
+        await model.refresh()
+        XCTAssertNil(model.error); XCTAssertEqual(model.progress?.reporterResponse, "Reviewed")
+        await model.submit()
+        XCTAssertEqual(posts, 2); XCTAssertEqual(reads, 2)
+    }
+
+    @MainActor func testReportDoesNotAcceptLateAccountResponseOrSubmitFromStaleSheet() async throws {
+        var account: String? = "first"
+        let model = PersonalAssistantReportModel(conversationID: "00000000-0000-4000-8000-000000001778", service: service { account })
+        model.description = "Synthetic issue"
+        var calls = 0
+        PersonalTestProtocol.handler = { _ in
+            calls += 1; account = "second"
+            return Data(#"{"code":0,"data":{"id":1778}}"#.utf8)
+        }
+        await model.submit()
+        XCTAssertNil(model.reportID); XCTAssertNil(model.error)
+        await model.submit()
+        XCTAssertEqual(calls, 1)
+    }
+
+    @MainActor func testReportProgressDiscardsLateAccountResponse() async throws {
+        var account: String? = "first"
+        var calls = 0
+        PersonalTestProtocol.handler = { request in
+            calls += 1
+            if request.httpMethod == "POST" { return Data(#"{"code":0,"data":{"id":1778}}"#.utf8) }
+            account = "second"
+            return Data(#"{"code":0,"data":{"items":[{"id":1778,"status":"RESOLVED","aiContentReport":true,"reporterResponse":"Private response"}]}}"#.utf8)
+        }
+        let model = PersonalAssistantReportModel(conversationID: "00000000-0000-4000-8000-000000001778", service: service { account })
+        model.description = "Synthetic issue"
+        await model.submit()
+        XCTAssertEqual(model.reportID, 1778); XCTAssertNil(model.progress); XCTAssertNil(model.error)
+        await model.refresh()
+        XCTAssertEqual(calls, 2)
+    }
+
+    @MainActor func testReportDiscardsLateHostResponsesAndDoesNotRetryOnAnotherHost() async throws {
+        for switchDuringSubmit in [true, false] {
+            var host = URL(string: "https://first.invalid")!
+            var calls = 0
+            let scopedService = PersonalWorkspaceService(session: session, baseURL: { host }, sessionID: { "synthetic" })
+            PersonalTestProtocol.handler = { request in
+                calls += 1
+                if request.httpMethod == "POST" {
+                    if switchDuringSubmit { host = URL(string: "https://second.invalid")! }
+                    return Data(#"{"code":0,"data":{"id":1778}}"#.utf8)
+                }
+                host = URL(string: "https://second.invalid")!
+                return Data(#"{"code":0,"data":{"items":[{"id":1778,"status":"RESOLVED","aiContentReport":true,"reporterResponse":"Private response"}]}}"#.utf8)
+            }
+            let model = PersonalAssistantReportModel(conversationID: "00000000-0000-4000-8000-000000001778", service: scopedService)
+            model.description = "Synthetic issue"
+            await model.submit()
+            XCTAssertEqual(model.reportID, switchDuringSubmit ? nil : 1778)
+            XCTAssertNil(model.progress); XCTAssertNil(model.error)
+            await model.submit(); await model.refresh()
+            XCTAssertEqual(calls, switchDuringSubmit ? 1 : 2)
+        }
+    }
+
     private func event(_ id: String = "event", date: String = "2026-10-28", status: String = "OPEN", remind: String = "2026-10-28T00:00:00Z") throws -> PersonalCalendarEvent {
         try JSONDecoder().decode(PersonalCalendarEvent.self, from: Data("""
         {"id":"\(id)","deviceId":"desktop","projectKey":"alpha","projectName":"Synthetic","title":"Event","dueDate":"\(date)","timeZone":"Asia/Shanghai","status":"\(status)","remindAt":"\(remind)","files":[{"fileId":7,"fileName":"synthetic.pdf"}]}

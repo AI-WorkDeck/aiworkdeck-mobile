@@ -22,12 +22,26 @@ enum PersonalUITestSeed {
 }
 private final class PersonalUITestProtocol: URLProtocol {
     nonisolated(unsafe) private static var desktopReceipt: [String: Any] = [:]
+    nonisolated(unsafe) private static var reportAttempts = 0
+    nonisolated(unsafe) private static var reportRefreshes = 0
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         let path = request.url!.path
         var value: Any = [:]
-        if path.hasSuffix("assistant/status") {
+        if path == "/api/feedback" {
+            Self.reportAttempts += 1
+            if ProcessInfo.processInfo.arguments.contains("-AWDReportRetryUITest") && Self.reportAttempts == 1 {
+                client?.urlProtocol(self, didFailWithError: URLError(.networkConnectionLost)); return
+            }
+            value = ["id": 1778]
+        } else if path == "/api/feedback/mine" {
+            Self.reportRefreshes += 1
+            if ProcessInfo.processInfo.arguments.contains("-AWDReportRetryUITest") && Self.reportRefreshes == 1 {
+                client?.urlProtocol(self, didFailWithError: URLError(.networkConnectionLost)); return
+            }
+            value = ["items": [["id": 1778, "status": "RESOLVED", "aiContentReport": true, "reporterResponse": "Synthetic human review response", "responsePublishedAt": "2026-11-17T01:00:00Z"]]]
+        } else if path.hasSuffix("assistant/status") {
             value = ["enabled": true, "subscriptionActive": true, "backupEnabled": true, "summaryCount": 2]
         } else if path.hasSuffix("calendar/events") {
             let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.timeZone = TimeZone(identifier: "Asia/Shanghai")
@@ -37,19 +51,19 @@ private final class PersonalUITestProtocol: URLProtocol {
             var data = request.httpBody ?? Data()
             if let stream = request.httpBodyStream { stream.open(); defer { stream.close() }; var bytes = [UInt8](repeating: 0, count: 1024); while stream.hasBytesAvailable { let n = stream.read(&bytes, maxLength: bytes.count); if n <= 0 { break }; data.append(bytes, count: n) } }
             let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
-            Self.desktopReceipt = body.merging(["status": "QUEUED", "sourcePreserved": true, "filesCopied": false, "sourceConversationId": "synthetic-conversation", "conversationId": "desktop-conversation", "messageCount": 2, "expiresAt": "2026-11-10T00:00:00Z"]) { _, new in new }
+            Self.desktopReceipt = body.merging(["status": "QUEUED", "sourcePreserved": true, "filesCopied": false, "sourceConversationId": "00000000-0000-4000-8000-000000001778", "conversationId": "desktop-conversation", "messageCount": 2, "expiresAt": "2026-11-10T00:00:00Z"]) { _, new in new }
             value = Self.desktopReceipt
         } else if path.contains("/assistant/desktop-copies/") {
             value = Self.desktopReceipt.merging(["status": "DELIVERED"]) { _, new in new }
         } else if path.hasSuffix("/desktop-copies") {
             value = [] as [String]
         } else if path.hasSuffix("/copy-to-project") {
-            value = ["mode": "copy", "sourcePreserved": true, "sourceConversationId": "synthetic-conversation", "conversationId": "copied-conversation", "targetProjectId": 12, "messageCount": 2, "filesCopied": false]
+            value = ["mode": "copy", "sourcePreserved": true, "sourceConversationId": "00000000-0000-4000-8000-000000001778", "conversationId": "copied-conversation", "targetProjectId": 12, "messageCount": 2, "filesCopied": false]
         } else if path.hasSuffix("assistant/chat") {
             var data = request.httpBody ?? Data()
             if let stream = request.httpBodyStream { stream.open(); defer { stream.close() }; var bytes = [UInt8](repeating: 0, count: 1024); while stream.hasBytesAvailable { let n = stream.read(&bytes, maxLength: bytes.count); if n <= 0 { break }; data.append(bytes, count: n) } }
             let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
-            value = ["status": "completed", "conversationId": "synthetic-conversation", "requestId": body["requestId"] ?? "", "answer": "Review the evidence checklist today. The source is Alpha project.", "sources": [["deviceId": "synthetic-desktop", "projectKey": "alpha", "projectName": "Alpha project", "sourceUpdatedAt": "2026-10-27T00:00:00Z"]]]
+            value = ["status": "completed", "conversationId": "00000000-0000-4000-8000-000000001778", "requestId": body["requestId"] ?? "", "answer": "Review the evidence checklist today. The source is Alpha project.", "sources": [["deviceId": "synthetic-desktop", "projectKey": "alpha", "projectName": "Alpha project", "sourceUpdatedAt": "2026-10-27T00:00:00Z"]]]
         }
         let data = try! JSONSerialization.data(withJSONObject: ["code": 0, "data": value])
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!, cacheStoragePolicy: .notAllowed)
