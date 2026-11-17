@@ -3,6 +3,13 @@
 四个原生端（iOS Swift / 微信小程序 / 安卓 Kotlin / 鸿蒙 ArkTS）共享一份契约。
 设计见 `docs/specs/2026-09-02-contract-design.md`，操作步骤见 `contract/README.md`。
 
+## 维护渠道（2026-11-17 起）
+
+手机端只维护 **iOS App Store、Google Play、应用宝、微信小程序、鸿蒙** 五个渠道。
+Android 国际版对应 Google Play，大陆版对应应用宝；鸿蒙原生端单独维护。
+其他商店不再纳入日常适配、上架和更新任务，既有材料作为历史保留；本决定不代表自动下架旧渠道。
+发布任务按此范围执行，渠道流程见 `docs/RELEASE.md`。来源：用户明确指示，dev-board#1775。
+
 ## 契约规矩（每次改动前先读）
 
 1. 状态名、桶名、界面文案、设计令牌、能力开关、API 形状的**唯一来源**是 `contract/`。

@@ -45,7 +45,7 @@ signing.intl.keyPassword=...
 `-PversionCode=` / `-PversionName=` 覆盖（不落盘、不影响仓库里的文件）。
 
 发版前手动把 `version.properties` 里的号提一格再跑 `scripts/android-release.sh`（该脚本不会自己
-帮你改版本号）。国内商店（华为/小米/OPPO/vivo 等）要求新包的 `versionCode` 严格大于上一次通过审
+帮你改版本号）。国内发行（现仅维护应用宝）要求新包的 `versionCode` 严格大于上一次通过审
 核的包，单调递增，不能跳号也不能不变；`versionName` 无此限制，跟产品版本走即可。
 
 ## 应用名 / 图标
@@ -170,16 +170,18 @@ EOF
 
 ## 商店材料
 
-`android/store/` 下是 Google Play（国际版）与国内六家商店（华为 AGC / 应用宝 / 小米 / OPPO /
-vivo / 荣耀）的上架材料，文案改动顺序照抄 iOS：先改 `fastlane/metadata/**`，
+自 2026-11-17 起，Android 只维护 Google Play（国际版）与应用宝（大陆版）；鸿蒙原生端
+按 [harmony/README.md](../harmony/README.md) 单独维护，完整渠道范围见 [正式上架流程](../docs/RELEASE.md)。
+`android/store/` 中其他国内商店的既有材料仅作历史留存，不再纳入日常更新。
+文案改动顺序照抄 iOS：先改 `fastlane/metadata/**`，
 再回来同步 `android/store/listing/`（映射表见 `android/store/listing/README.md`）。
 
 - `listing/zh-Hans/` `listing/en-US/`：应用名称、简介、详情、更新说明。
 - `permissions.md`：权限用途表（对齐 `AndroidManifest.xml` 与 iOS purpose string 措辞）+
   可直接粘贴的国内商店「权限用途说明」与 Play「Permissions declaration」填写要点。
 - `data-safety.md`：Google Play「Data safety」表单逐节填写草稿。
-- `checklist-google-play.md` / `checklist-cn-stores.md`：两条发行渠道各自的上架清单，
-  不确定的条目标「待核」。
+- `checklist-google-play.md` / `checklist-cn-stores.md`：Google Play 与国内商店上架清单；
+  国内清单只执行应用宝适用项，其余渠道条目保留为历史参考。不确定的条目标「待核」。
 - `screenshots/phone-1080x1920/` `screenshots/phone-1080x2400/`：七张截图两套尺寸；
   `feature-graphic-1024x500-{en,zh}.png`：Play 商店图（1024×500）。
 
