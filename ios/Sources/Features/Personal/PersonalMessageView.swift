@@ -3,6 +3,7 @@
 import SwiftUI
 
 struct PersonalMessageView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let message: PersonalMessage
     var body: some View {
         Group {
@@ -21,5 +22,6 @@ struct PersonalMessageView: View {
         .frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
         .padding(12).background(message.role == "user" ? T.L.accent.opacity(0.08) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .tint(colorScheme == .dark ? T.D.fg : T.L.accent)
     }
 }

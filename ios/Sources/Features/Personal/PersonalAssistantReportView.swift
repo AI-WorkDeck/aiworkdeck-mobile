@@ -57,6 +57,7 @@ final class PersonalAssistantReportModel: Identifiable {
 struct PersonalAssistantReportView: View {
     @Bindable var model: PersonalAssistantReportModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     var body: some View {
         NavigationStack {
             Form {
@@ -98,6 +99,7 @@ struct PersonalAssistantReportView: View {
                     Button(tr("common.close")) { dismiss() }.disabled(model.busy).accessibilityIdentifier("personal.reportClose")
                 }
             }
+            .tint(colorScheme == .dark ? T.D.fg : T.L.accent)
             .interactiveDismissDisabled(model.busy)
             .task { if model.reportID != nil { await model.refresh() } }
         }
