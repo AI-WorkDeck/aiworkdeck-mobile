@@ -7,7 +7,7 @@
   "properties": {
     "previewExtensions": {"type": "object", "required": ["ios", "miniprogram", "android", "harmony"], "additionalProperties": false, "properties": {"ios": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "miniprogram": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "android": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}, "harmony": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+$"}}}},
     "ddClientPortalUrl": {"type": "string", "pattern": "^https://"},
-    "firmPortals": {"$comment": "Firm review portals (https host, optional single path prefix) a signed-in account may send its session to. Adding a firm portal = contract change.", "type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9.-]+(/[a-z0-9-]+)?$"}},
+    "firmPortals": {"$comment": "Firm review portals (https host, optional single office path) a signed-in account may send its session to. A link resolves by its first path segment; a bare host resolves to host/all when listed. Adding a firm portal = contract change.", "type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9.-]+(/[a-z0-9-]+)?$"}},
     "voiceReminderSeconds": { "type": "integer", "const": 300 },
     "privacyPolicyVersion": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
     "androidPlayRecharge": {"type": "boolean"},

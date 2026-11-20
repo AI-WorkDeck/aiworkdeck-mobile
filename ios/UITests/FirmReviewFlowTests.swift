@@ -52,7 +52,7 @@ final class FirmReviewFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["firm.join.error"].waitForExistence(timeout: 5))
         link.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
         link.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 40))
-        link.typeText("https://aifirm.aiworkdeck.com/sv/v2/")
+        link.typeText("https://aifirm.aiworkdeck.com/sv/")
         app.buttons["Use a trial code"].tap()
         let code = app.secureTextFields["firm.join.trial"]
         XCTAssertTrue(code.waitForExistence(timeout: 5)); code.tap(); code.typeText(env["AWD_FIRM_TRIAL_CODE"]!)

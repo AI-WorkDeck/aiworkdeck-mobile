@@ -5,7 +5,7 @@ enum ContractCapabilities {
     static let audioPause: Bool = true
     static let videoPause: String = "runtime"
     static let ddClientPortalURL = "https://case.aiworkdeck.com/client/"
-    static let firmPortals: [String] = ["aifirm.aiworkdeck.com","aifirm.aiworkdeck.com/tw","aifirm.aiworkdeck.com/jp","aifirm.aiworkdeck.com/sg"]
+    static let firmPortals: [String] = ["aifirm.aiworkdeck.com/all","aifirm.aiworkdeck.com/sv","aifirm.aiworkdeck.com/tw","aifirm.aiworkdeck.com/jp","aifirm.aiworkdeck.com/sg"]
     static let backupConsentVersion = "2026-10-11"
     static let personalConsentVersion = "2026-10-27"
     static let previewExtensions: [String] = ["jpg","jpeg","png","gif","webp","heic","heif","bmp","tif","tiff","docx","pptx","xlsx","pdf","m4a","mp3","wav","aac","caf","aif","aiff","mp4","mov","m4v"]

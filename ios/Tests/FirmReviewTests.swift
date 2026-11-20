@@ -48,18 +48,24 @@ final class FirmReviewTests: XCTestCase {
     }
 
     func testOnlyAllowlistedHttpsPortalsReceiveTheSession() {
-        let allowed = ["aifirm.aiworkdeck.com", "aifirm.aiworkdeck.com/tw"]
-        XCTAssertEqual(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/sv/v2/", allowed: allowed), "aifirm.aiworkdeck.com")
-        XCTAssertEqual(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/tw/v2/", allowed: allowed), "aifirm.aiworkdeck.com/tw")
+        let allowed = ["aifirm.aiworkdeck.com/all", "aifirm.aiworkdeck.com/sv", "aifirm.aiworkdeck.com/tw"]
+        XCTAssertEqual(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/sv/", allowed: allowed), "aifirm.aiworkdeck.com/sv")
+        XCTAssertEqual(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/sv/v2/#m=abc", allowed: allowed), "aifirm.aiworkdeck.com/sv")
+        XCTAssertEqual(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/tw/", allowed: allowed), "aifirm.aiworkdeck.com/tw")
         XCTAssertEqual(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/TW", allowed: allowed), "aifirm.aiworkdeck.com/tw")
-        XCTAssertEqual(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/twx/", allowed: allowed), "aifirm.aiworkdeck.com")
-        XCTAssertEqual(FirmPortalLink.portal(from: " AIFIRM.aiworkdeck.com/sv ", allowed: allowed), "aifirm.aiworkdeck.com")
-        XCTAssertNil(FirmPortalLink.portal(from: "http://aifirm.aiworkdeck.com/", allowed: allowed))
-        XCTAssertNil(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com.evil.example/", allowed: allowed))
+        XCTAssertEqual(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/", allowed: allowed), "aifirm.aiworkdeck.com/all")
+        XCTAssertEqual(FirmPortalLink.portal(from: "aifirm.aiworkdeck.com", allowed: allowed), "aifirm.aiworkdeck.com/all")
+        XCTAssertEqual(FirmPortalLink.portal(from: " AIFIRM.aiworkdeck.com/sv ", allowed: allowed), "aifirm.aiworkdeck.com/sv")
+        XCTAssertNil(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/twx/", allowed: allowed))
+        XCTAssertNil(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com/ces/", allowed: allowed))
+        XCTAssertNil(FirmPortalLink.portal(from: "http://aifirm.aiworkdeck.com/sv/", allowed: allowed))
+        XCTAssertNil(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com.evil.example/sv/", allowed: allowed))
         XCTAssertNil(FirmPortalLink.portal(from: "https://evil.example/aifirm.aiworkdeck.com/tw", allowed: allowed))
-        XCTAssertNil(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com@evil.example/", allowed: allowed))
+        XCTAssertNil(FirmPortalLink.portal(from: "https://aifirm.aiworkdeck.com@evil.example/sv/", allowed: allowed))
         XCTAssertNil(FirmPortalLink.portal(from: "", allowed: allowed))
-        XCTAssertTrue(ContractCapabilities.firmPortals.contains("aifirm.aiworkdeck.com/tw"))
+        for office in ["all", "sv", "tw", "jp", "sg"] {
+            XCTAssertTrue(ContractCapabilities.firmPortals.contains("aifirm.aiworkdeck.com/" + office), office)
+        }
         XCTAssertTrue(FirmPortalLink.isPortalURL(URL(string: "https://aifirm.aiworkdeck.com/tw/m/abc/1.pdf")!))
         XCTAssertFalse(FirmPortalLink.isPortalURL(URL(string: "http://aifirm.aiworkdeck.com/m/abc/1.pdf")!))
         XCTAssertFalse(FirmPortalLink.isPortalURL(URL(string: "https://evil.example/m/abc/1.pdf")!))
@@ -75,12 +81,12 @@ final class FirmReviewTests: XCTestCase {
 
     func testClientSendsBearerAndMapsPortalErrors() async throws {
         let t = RecordingTransport()
-        let client = FirmPortalClient(portal: "aifirm.aiworkdeck.com", credential: "awdt_test", transport: t)
+        let client = FirmPortalClient(portal: "aifirm.aiworkdeck.com/sv", credential: "awdt_test", transport: t)
         t.next = (Data(#"{"kind":"lawyer","name":"Li","status":"approved","lawyerId":"l1"}"#.utf8), 200)
         let me = try await client.me()
         XCTAssertEqual(me.name, "Li")
         let req = try XCTUnwrap(t.requests.last)
-        XCTAssertEqual(req.url?.absoluteString, "https://aifirm.aiworkdeck.com/api/portal/me")
+        XCTAssertEqual(req.url?.absoluteString, "https://aifirm.aiworkdeck.com/sv/api/portal/me")
         XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer awdt_test")
 
         t.next = (Data(#"{"error":"version_changed"}"#.utf8), 409)

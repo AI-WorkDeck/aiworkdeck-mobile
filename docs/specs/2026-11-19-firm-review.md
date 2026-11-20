@@ -9,7 +9,7 @@ client, a list "for the lawyer"); the feature is generic and carries no firm nam
 ## Who sees it (access and business model)
 
 - Invisible to ordinary users. It appears as a **Reviews** tab only after the signed-in AI WorkDeck account joins a firm portal.
-- Joining: Settings → *Firm review* → paste the office link the firm sent (for example `…/tw/v2/`). The app resolves it to an
+- Joining: Settings → *Firm review* → paste the office link the firm sent (for example `…/tw/`). The app resolves it to an
   allowlisted portal (host plus office path) and calls `<portal>/api/portal/me` with the account's session token. A new account shows *Waiting for the firm to approve you*. Once approved, the tab appears.
   A revoked account loses it.
 - The firm is the customer: the firm enables lawyers' seats on its portal (sold to firms, outside the app). The lawyer
@@ -53,8 +53,9 @@ client, a list "for the lawyer"); the feature is generic and carries no firm nam
 
 ## Portal contract (live on the portal side, 2026-11-19)
 
-1. Offices: `aifirm.aiworkdeck.com` (Silicon Valley), `/tw` (Taipei), `/jp` (Tokyo), `/sg` (Singapore); each serves
-   `<office>/api/portal/*` with its own matters and lawyers. Office text is shown as delivered (Taipei: Traditional Chinese).
+1. Portals: `/all` (all offices; the site root), `/sv` (Silicon Valley), `/tw` (Taipei), `/jp` (Tokyo), `/sg` (Singapore)
+   on `aifirm.aiworkdeck.com`; each serves `<office>/api/portal/*` with its own matters and lawyers. A link resolves by its
+   first path segment; the site root resolves to `/all`; other segments (event pages) are refused. Office text is shown as delivered (Taipei: Traditional Chinese).
 2. Visibility: a lawyer account sees matters requested for its `lawyerId` plus unassigned ones; anything else is 404.
 3. `GET me` → `kind`, `status` (`pending` | `approved` | `revoked`), `firm` `{en, zh}`, `lawyerName` `{en, zh}`, `trialUntil`.
 4. List items carry `attention` (`review_requested` | `call_requested` | `client_replied` | null) and `attentionAt`;

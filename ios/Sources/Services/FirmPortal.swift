@@ -219,16 +219,18 @@ enum FirmDiff {
 // MARK: - Portal link
 
 enum FirmPortalLink {
-    /// A firm link (`https://host/office/...`) or a bare `host/office` → the allowlisted portal id (`host` or
-    /// `host/prefix`). Only https; the office prefix must be a whole first path segment.
+    /// A firm link (`https://host/office/...`) or a bare `host/office` → the allowlisted portal id (`host/office`).
+    /// Only https; the office is the whole first path segment. A link to the site root resolves to `host/all`
+    /// (all offices) when listed; any other unlisted segment (an event page, say) is refused.
     static func portal(from input: String, allowed: [String] = ContractCapabilities.firmPortals) -> String? {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
         guard let url = URL(string: text.contains("://") ? text : "https://" + text),
               url.scheme?.lowercased() == "https", let host = url.host?.lowercased() else { return nil }
-        if let first = url.path.split(separator: "/").first.map({ String($0).lowercased() }), allowed.contains(host + "/" + first) {
-            return host + "/" + first
+        if let first = url.path.split(separator: "/").first.map({ String($0).lowercased() }) {
+            return allowed.contains(host + "/" + first) ? host + "/" + first : nil
         }
+        if allowed.contains(host + "/all") { return host + "/all" }
         return allowed.contains(host) ? host : nil
     }
 
