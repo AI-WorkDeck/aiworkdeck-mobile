@@ -268,6 +268,7 @@ final class AppModel {
         CaptureOrganizationStore.clear(scope: organizationScope)
         PersonalConversationStore.clear()
         CalendarReminders.shared.clear()
+        FirmPortal.shared.reset()
         closeWorkspaceFiles()
         selectedProject = nil
         project = FieldProject(id: "local", name: tr("project.none"),
@@ -287,6 +288,7 @@ final class AppModel {
         CaptureOrganizationStore.clear(scope: organizationScope)
         PersonalConversationStore.clear()
         CalendarReminders.shared.clear()
+        FirmPortal.shared.disconnect()  // the deleted account's firm link and trial code leave the device too
         closeWorkspaceFiles()
         account = nil
         selectedProject = nil

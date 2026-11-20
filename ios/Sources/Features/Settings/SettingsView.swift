@@ -4,6 +4,7 @@ import WatchConnectivity
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @State private var confirmDelete = false
+    @State private var showFirm = false
     @State private var deleting = false
     @State private var deleteError: String?
     var onClose: () -> Void
@@ -137,6 +138,12 @@ struct SettingsView: View {
                         if !AccountRegion.current.billingEnabled {
                             PostpaidSection(canRepay: false, repay: {})
                         }
+                    }
+
+                    // Firm review: a lawyer joins the firm's portal here; the Reviews tab appears once approved.
+                    group(tr("firm.settings.title")) {
+                        navRow(tr("firm.settings.title"), value: firmStatus) { showFirm = true }
+                            .accessibilityIdentifier("settings.firm")
                     }
 
                     group(tr("settings.media")) {
@@ -291,6 +298,7 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showSubscription, onDismiss: { Task { await loadBalance() } }) { SubscriptionView() }
             .sheet(isPresented: $showBackup) { BackupConsentView().environment(model) }
+            .sheet(isPresented: $showFirm) { FirmJoinView() }
             // 充值回来重拉一次余额：刚充的钱要在这一行上看得见，否则用户不知道到没到账
             .sheet(isPresented: $showRecharge, onDismiss: { Task { await loadBalance() } }) {
                 RechargeView(onClose: { showRecharge = false })
@@ -380,6 +388,15 @@ struct SettingsView: View {
     }
 
     /// 可点的一行：名称、可选状态、右箭头。
+    private var firmStatus: String? {
+        let portal = FirmPortal.shared
+        switch portal.access {
+        case .approved: return portal.firmName
+        case .pending, .checking: return portal.portalID == nil ? nil : tr("firm.status.pending", ["firm": portal.firmName])
+        default: return nil
+        }
+    }
+
     private func navRow(_ title: String, value: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: T.Sp.s3) {
