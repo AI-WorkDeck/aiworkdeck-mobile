@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Có phiên bản mới hơn. Hãy xem xét trước khi ký duyệt.",
   "firm.error.alreadySigned": "Vụ việc này đã được ký.",
   "firm.error.network": "Không thể kết nối với hãng luật. Hãy thử lại.",
-  "firm.error.access": "Quyền truy cập của bạn vào hãng luật này đã bị tắt."
+  "firm.error.access": "Quyền truy cập của bạn vào hãng luật này đã bị tắt.",
+  "firm.matter.flagsNew": "Mới trong phiên bản {n}"
 }

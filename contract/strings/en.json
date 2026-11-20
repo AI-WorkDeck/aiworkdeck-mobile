@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "A newer version arrived. Review it before signing off.",
   "firm.error.alreadySigned": "This matter is already signed.",
   "firm.error.network": "Couldn't reach the firm. Try again.",
-  "firm.error.access": "Your access to this firm is off."
+  "firm.error.access": "Your access to this firm is off.",
+  "firm.matter.flagsNew": "New in version {n}"
 }

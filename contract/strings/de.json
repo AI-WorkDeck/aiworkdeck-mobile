@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Eine neuere Version ist eingegangen. Prüfen Sie sie vor der Freigabe.",
   "firm.error.alreadySigned": "Diese Angelegenheit ist bereits unterzeichnet.",
   "firm.error.network": "Die Kanzlei ist nicht erreichbar. Versuchen Sie es erneut.",
-  "firm.error.access": "Ihr Zugang zu dieser Kanzlei ist deaktiviert."
+  "firm.error.access": "Ihr Zugang zu dieser Kanzlei ist deaktiviert.",
+  "firm.matter.flagsNew": "Neu in Version {n}"
 }

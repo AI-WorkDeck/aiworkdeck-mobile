@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Versi yang lebih baru telah masuk. Tinjau sebelum menandatangani.",
   "firm.error.alreadySigned": "Perkara ini sudah ditandatangani.",
   "firm.error.network": "Tidak dapat terhubung ke firma. Coba lagi.",
-  "firm.error.access": "Akses Anda ke firma ini dinonaktifkan."
+  "firm.error.access": "Akses Anda ke firma ini dinonaktifkan.",
+  "firm.matter.flagsNew": "Baru di versi {n}"
 }

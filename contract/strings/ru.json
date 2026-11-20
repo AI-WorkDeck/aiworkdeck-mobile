@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Поступила более новая версия. Проверьте её перед подписанием.",
   "firm.error.alreadySigned": "Это дело уже подписано.",
   "firm.error.network": "Не удалось связаться с фирмой. Повторите попытку.",
-  "firm.error.access": "Ваш доступ к этой фирме отключён."
+  "firm.error.access": "Ваш доступ к этой фирме отключён.",
+  "firm.matter.flagsNew": "Новое в версии {n}"
 }

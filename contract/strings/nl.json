@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Er is een nieuwere versie binnengekomen. Beoordeel die voordat je ondertekent.",
   "firm.error.alreadySigned": "Deze zaak is al ondertekend.",
   "firm.error.network": "Kan het kantoor niet bereiken. Probeer het opnieuw.",
-  "firm.error.access": "Je toegang tot dit kantoor is uitgeschakeld."
+  "firm.error.access": "Je toegang tot dit kantoor is uitgeschakeld.",
+  "firm.matter.flagsNew": "Nieuw in versie {n}"
 }

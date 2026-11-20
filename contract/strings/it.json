@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "È arrivata una versione più recente. Rivedila prima di firmare.",
   "firm.error.alreadySigned": "Questa pratica è già firmata.",
   "firm.error.network": "Impossibile raggiungere lo studio. Riprova.",
-  "firm.error.access": "Il tuo accesso a questo studio è disattivato."
+  "firm.error.access": "Il tuo accesso a questo studio è disattivato.",
+  "firm.matter.flagsNew": "Nuovo nella versione {n}"
 }

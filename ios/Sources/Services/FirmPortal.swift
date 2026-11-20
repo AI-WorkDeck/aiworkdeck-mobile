@@ -53,6 +53,12 @@ struct FirmConsult: Decodable, Equatable, Hashable {
     let times: String?
     let note: String?
     let lawyerName: String?
+    /// The chosen lawyer's name in several languages; `lawyerName` is the English fallback.
+    let lawyerNames: FirmName?
+    var lawyerDisplayName: String? {
+        if let n = lawyerNames?.text, !n.isEmpty { return n }
+        return lawyerName.flatMap { $0.isEmpty ? nil : $0 }
+    }
 }
 
 struct FirmMatterSummary: Decodable, Identifiable, Equatable, Hashable {
@@ -64,6 +70,12 @@ struct FirmMatterSummary: Decodable, Identifiable, Equatable, Hashable {
     let company: String?
     let versions: Int?
     let lawyerName: String?
+    /// The chosen lawyer's name in several languages; `lawyerName` is the English fallback.
+    let lawyerNames: FirmName?
+    var lawyerDisplayName: String? {
+        if let n = lawyerNames?.text, !n.isEmpty { return n }
+        return lawyerName.flatMap { $0.isEmpty ? nil : $0 }
+    }
     let consult: FirmConsult?
     let forLawyerCount: Int?
     let wantsCall: Bool?
@@ -129,6 +141,12 @@ struct FirmMatter: Decodable, Equatable {
     let client: String?
     let company: String?
     let lawyerName: String?
+    /// The chosen lawyer's name in several languages; `lawyerName` is the English fallback.
+    let lawyerNames: FirmName?
+    var lawyerDisplayName: String? {
+        if let n = lawyerNames?.text, !n.isEmpty { return n }
+        return lawyerName.flatMap { $0.isEmpty ? nil : $0 }
+    }
     let consult: FirmConsult?
     let transcript: [FirmTranscriptEntry]
     let versions: [FirmVersion]
@@ -146,6 +164,12 @@ struct FirmMatter: Decodable, Equatable {
     var flagsVersion: FirmVersion? {
         versions.filter { v in !(flagState?[String(v.n)] ?? [:]).isEmpty && !(v.notes?.flags ?? []).isEmpty }
             .max { $0.n < $1.n } ?? latest
+    }
+    /// Red flags of the latest version that the settled version did not have (by title): they still need a look.
+    var newFlags: [FirmFlag] {
+        guard let latest, let settled = flagsVersion, settled.n != latest.n else { return [] }
+        let known = Set((settled.notes?.flags ?? []).map { FirmDiff.visible($0.title ?? "") })
+        return (latest.notes?.flags ?? []).filter { !known.contains(FirmDiff.visible($0.title ?? "")) }
     }
     /// How a red flag of `flagsVersion` was settled: `noted` (changed), `kept`, `lawyer`, or nil (open).
     func settlement(of flag: FirmFlag) -> String? {
@@ -208,10 +232,17 @@ enum FirmDiff {
             .filter { !$0.isEmpty }
     }
 
-    /// Non-empty lines: legal drafts change a clause line, not a whole article.
+    /// Non-empty lines as the reader sees them: legal drafts change a clause line, not a whole article, and a
+    /// heading mark or bold (`**`) added to the same words is not a change of text.
     static func lines(_ markdown: String) -> [String] {
         markdown.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            .map(visible).filter { !$0.isEmpty }
+    }
+    static func visible(_ line: String) -> String {
+        var s = line.trimmingCharacters(in: .whitespaces)
+        while s.hasPrefix("#") { s.removeFirst() }
+        s = s.replacingOccurrences(of: "**", with: "")  // "__" stays: underscore blanks are content in drafts
+        return s.split(whereSeparator: { $0 == " " || $0 == "\t" }).joined(separator: " ")
     }
 
     /// LCS over lines; returns the full edit script in document order.
@@ -441,10 +472,16 @@ final class FirmPortal {
         return SessionStore.current
     }
 
+    /// Trial code for this account, read from the Keychain once per restore/connect rather than per request.
+    private var trialCode: String?
+
     var client: FirmPortalClient? {
-        guard let portalID, let scope, let session else { return nil }
-        return FirmPortalClient(portal: portalID, credential: FirmTrialStore.read(scope: scope) ?? session, transport: transport)
+        guard let portalID, scope != nil, let session else { return nil }
+        return FirmPortalClient(portal: portalID, credential: trialCode ?? session, transport: transport)
     }
+
+    /// Identity of the state a request was started for; a reply for another account or portal is dropped.
+    private var context: String { (scope ?? "") + "|" + (portalID ?? "") }
 
     /// Restores the saved link for the current account and checks access. Offline at launch: stays hidden,
     /// retried on the next foreground.
@@ -464,6 +501,7 @@ final class FirmPortal {
         guard let key = linkKey, let saved = UserDefaults.standard.string(forKey: key),
               ContractCapabilities.firmPortals.contains(saved) else { return }
         portalID = saved
+        trialCode = scope.flatMap { FirmTrialStore.read(scope: $0) }
         await check()
     }
 
@@ -474,8 +512,10 @@ final class FirmPortal {
         if let code = trialCode?.trimmingCharacters(in: .whitespacesAndNewlines), !code.isEmpty {
             // Never fall back to sending the account session when the code could not be stored.
             guard FirmTrialStore.save(code, scope: scope) else { return tr("error.sessionSaveFailed") }
+            self.trialCode = code
         } else {
             FirmTrialStore.clear(scope: scope)
+            self.trialCode = nil
         }
         portalID = portal
         UserDefaults.standard.set(portal, forKey: key)
@@ -489,36 +529,66 @@ final class FirmPortal {
         return nil
     }
 
+    /// Error codes meaning the credential no longer opens this portal.
+    static let lostAccessCodes: Set<String> = ["access_revoked", "unauthorized", "trial_expired"]
+
+    /// Status from `me` → access. Only an explicit "approved" opens the Reviews tab; anything unknown waits.
+    static func access(forStatus status: String?) -> Access {
+        switch status {
+        case "approved": .approved
+        case "revoked": .revoked
+        default: .pending
+        }
+    }
+
+    /// Access after a failed check: the portal's verdict when it gave one; on a network or server error the
+    /// last known state stands (never upgraded), and a first check that could not complete is `.failed`.
+    static func access(after error: FirmPortalError, previous: Access) -> Access {
+        if lostAccessCodes.contains(error.code) { return .revoked }
+        if error.code == "access_pending" { return .pending }
+        return [.none, .checking, .failed].contains(previous) ? .failed : previous
+    }
+
     func check() async {
         guard let client else { access = .none; return }
+        let started = context
+        let previous = access
         if access != .approved { access = .checking }
         do {
             let me = try await client.me()
+            guard context == started else { return }
             self.me = me
-            switch me.status {
-            case "revoked": access = .revoked
-            case "pending": access = .pending
-            default: access = .approved
-            }
+            access = Self.access(forStatus: me.status)
             if access == .approved { await refresh() } else { matters = [] }
         } catch let e as FirmPortalError {
+            guard context == started else { return }
             lastErrorCode = e.code
-            if e.code == "access_revoked" { access = .revoked }
-            else if e.code == "access_pending" { access = .pending }
-            else if access == .checking { access = e.status == 0 && me != nil ? .approved : .failed }
+            access = Self.access(after: e, previous: previous)
+            if access != .approved { matters = [] }
             loadError = e.errorDescription
-        } catch { access = .failed }
+        } catch {
+            guard context == started else { return }
+            access = Self.access(after: FirmPortalError(code: "network", status: 0), previous: previous)
+        }
     }
 
     func refresh() async {
         guard access == .approved, let client else { return }
+        let started = context
         do {
-            matters = try await client.matters().matters
+            let list = try await client.matters().matters
+            guard context == started else { return }
+            matters = list
             loadError = nil
         } catch let e as FirmPortalError {
-            if e.code == "access_revoked" { access = .revoked; matters = [] }
+            guard context == started else { return }
+            access = Self.access(after: e, previous: access)
+            if access != .approved { matters = [] }
             loadError = e.errorDescription
-        } catch { loadError = tr("firm.error.network") }
+        } catch {
+            guard context == started else { return }
+            loadError = tr("firm.error.network")
+        }
     }
 
     func disconnect() {
@@ -531,6 +601,6 @@ final class FirmPortal {
 
     /// Called on sign-out and account switch: forget in-memory state (stored links are account-scoped).
     func reset() {
-        scope = nil; portalID = nil; me = nil; matters = []; access = .none; loadError = nil
+        scope = nil; portalID = nil; trialCode = nil; me = nil; matters = []; access = .none; loadError = nil
     }
 }

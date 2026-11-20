@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "有較新版本，請先審閱再簽核。",
   "firm.error.alreadySigned": "此事項已簽核。",
   "firm.error.network": "無法連線至事務所，請重試。",
-  "firm.error.access": "你對該事務所的存取權限已關閉。"
+  "firm.error.access": "你對該事務所的存取權限已關閉。",
+  "firm.matter.flagsNew": "第 {n} 版新增"
 }

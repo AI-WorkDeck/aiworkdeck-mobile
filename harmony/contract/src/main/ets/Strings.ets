@@ -14604,5 +14604,27 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "nl": "Je toegang tot dit kantoor is uitgeschakeld.",
     "hi": "इस फ़र्म तक आपकी पहुँच बंद है।",
     "ar": "وصولك إلى هذا المكتب متوقف."
+  },
+  "firm.matter.flagsNew": {
+    "zh-Hans": "第 {n} 版新增",
+    "zh-Hant": "第 {n} 版新增",
+    "en": "New in version {n}",
+    "ja": "バージョン{n}で追加",
+    "ko": "버전 {n}에서 추가됨",
+    "th": "เพิ่มใหม่ในฉบับที่ {n}",
+    "ms": "Baharu dalam versi {n}",
+    "id": "Baru di versi {n}",
+    "vi": "Mới trong phiên bản {n}",
+    "fr": "Nouveau dans la version {n}",
+    "de": "Neu in Version {n}",
+    "es": "Nuevo en la versión {n}",
+    "pt-BR": "Novo na versão {n}",
+    "it": "Nuovo nella versione {n}",
+    "ru": "Новое в версии {n}",
+    "el": "Νέο στην έκδοση {n}",
+    "tr": "Sürüm {n} ile eklendi",
+    "nl": "Nieuw in versie {n}",
+    "hi": "संस्करण {n} में नया",
+    "ar": "جديد في الإصدار {n}"
   }
 }

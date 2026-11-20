@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Versi lebih baharu telah tiba. Semak sebelum menandatangani.",
   "firm.error.alreadySigned": "Perkara ini sudah ditandatangani.",
   "firm.error.network": "Tidak dapat menghubungi firma. Cuba lagi.",
-  "firm.error.access": "Akses anda ke firma ini telah dimatikan."
+  "firm.error.access": "Akses anda ke firma ini telah dimatikan.",
+  "firm.matter.flagsNew": "Baharu dalam versi {n}"
 }

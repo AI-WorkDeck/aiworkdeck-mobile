@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "새 버전이 도착했습니다. 검토한 후 서명하세요.",
   "firm.error.alreadySigned": "이 사건은 이미 서명되었습니다.",
   "firm.error.network": "사무소에 연결할 수 없습니다. 다시 시도하세요.",
-  "firm.error.access": "이 사무소에 대한 접근이 꺼져 있습니다."
+  "firm.error.access": "이 사무소에 대한 접근이 꺼져 있습니다.",
+  "firm.matter.flagsNew": "버전 {n}에서 추가됨"
 }

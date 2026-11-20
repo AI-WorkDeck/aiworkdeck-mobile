@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "有新版本，请先审阅再签发。",
   "firm.error.alreadySigned": "此事项已签发。",
   "firm.error.network": "无法连接律所，请重试。",
-  "firm.error.access": "你对该律所的访问已关闭。"
+  "firm.error.access": "你对该律所的访问已关闭。",
+  "firm.matter.flagsNew": "第 {n} 版新增"
 }

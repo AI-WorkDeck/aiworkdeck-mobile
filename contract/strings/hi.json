@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "नया संस्करण आया है। हस्ताक्षर करने से पहले उसकी समीक्षा करें।",
   "firm.error.alreadySigned": "इस मामले पर पहले ही हस्ताक्षर हो चुके हैं।",
   "firm.error.network": "फ़र्म से संपर्क नहीं हो सका। फिर कोशिश करें।",
-  "firm.error.access": "इस फ़र्म तक आपकी पहुँच बंद है।"
+  "firm.error.access": "इस फ़र्म तक आपकी पहुँच बंद है।",
+  "firm.matter.flagsNew": "संस्करण {n} में नया"
 }

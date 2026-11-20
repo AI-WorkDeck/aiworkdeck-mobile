@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Chegou uma versão mais recente. Revise antes de assinar.",
   "firm.error.alreadySigned": "Este caso já está assinado.",
   "firm.error.network": "Não foi possível acessar o escritório. Tente novamente.",
-  "firm.error.access": "Seu acesso a este escritório está desativado."
+  "firm.error.access": "Seu acesso a este escritório está desativado.",
+  "firm.matter.flagsNew": "Novo na versão {n}"
 }

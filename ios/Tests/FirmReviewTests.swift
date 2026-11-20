@@ -7,8 +7,8 @@ import XCTest
 final class FirmReviewTests: XCTestCase {
     private func summary(_ id: String, status: String, attention: String? = nil, consult: String? = nil) -> FirmMatterSummary {
         FirmMatterSummary(id: id, status: status, updatedAt: "2026-11-19T08:00:00.000Z", template: FirmName(en: "SAFE", zh: "SAFE"),
-                          client: "Ada", company: "Acme", versions: 1, lawyerName: nil,
-                          consult: consult.map { FirmConsult(status: $0, times: nil, note: nil, lawyerName: nil) },
+                          client: "Ada", company: "Acme", versions: 1, lawyerName: nil, lawyerNames: nil,
+                          consult: consult.map { FirmConsult(status: $0, times: nil, note: nil, lawyerName: nil, lawyerNames: nil) },
                           forLawyerCount: 2, wantsCall: false, attention: attention)
     }
 
@@ -45,6 +45,8 @@ final class FirmReviewTests: XCTestCase {
         ])
         XCTAssertEqual(FirmDiff.edits(from: old, to: old), [])
         XCTAssertEqual(FirmDiff.edits(from: "", to: "A"), [.added("A")])
+        // Formatting only (heading mark, bold, spacing) is not a change.
+        XCTAssertEqual(FirmDiff.edits(from: "## 株式会社 章程（定款）\n**第1条** 商号", to: "株式会社 章程（定款）\n第1条  商号"), [])
         // One changed line inside a multi-line article shows only that line.
         let art1 = "第23条（设立时发行的股份）\n每股发行价格为1日元。\n出资额1,000万日元。"
         let art2 = "第23条（设立时发行的股份）\n每股发行价格为1日元。\n出资额3,000万日元。"
@@ -128,6 +130,11 @@ final class FirmReviewTests: XCTestCase {
         XCTAssertEqual(FirmMatterView.settlementKey("noted"), "firm.flag.noted")
         XCTAssertEqual(FirmMatterView.settlementKey(nil), "firm.flag.open")
         XCTAssertEqual(m.forLawyer?.first?.text, "Is the cap market?")
+        XCTAssertEqual(m.lawyerDisplayName, "Li")  // English-only portals still show a name
+        let named = try JSONDecoder().decode(FirmMatter.self, from: Data(json.replacingOccurrences(of: #""lawyerName":"Li","#, with: #""lawyerName":"Morris Tu","lawyerNames":{"en":"Morris Tu","zh":"涂能谋","zht":"涂能謀"},"#).utf8))
+        L10n.locale = "zh-Hant"; XCTAssertEqual(named.lawyerDisplayName, "涂能謀")
+        L10n.locale = "zh-Hans"; XCTAssertEqual(named.lawyerDisplayName, "涂能谋")
+        L10n.locale = "en"; XCTAssertEqual(named.lawyerDisplayName, "Morris Tu")
     }
 
     func testPortalTextFollowsAppLanguageWithEnglishFallback() throws {
@@ -160,6 +167,58 @@ final class FirmReviewTests: XCTestCase {
         let soon = ISO8601DateFormatter().string(from: Date().addingTimeInterval(5))
         L10n.locale = "en"
         XCTAssertFalse(FirmText.ago(soon).lowercased().hasPrefix("in "), FirmText.ago(soon))
+    }
+
+    // MARK: Regressions from the bug hunt (2026-11-19)
+
+    @MainActor func testOnlyAnExplicitApprovalOpensTheReviewsTab() {
+        XCTAssertEqual(FirmPortal.access(forStatus: "approved"), .approved)
+        XCTAssertEqual(FirmPortal.access(forStatus: "revoked"), .revoked)
+        XCTAssertEqual(FirmPortal.access(forStatus: "pending"), .pending)
+        XCTAssertEqual(FirmPortal.access(forStatus: "rejected"), .pending)
+        XCTAssertEqual(FirmPortal.access(forStatus: nil), .pending)
+    }
+
+    @MainActor func testANetworkErrorNeverUpgradesAccess() {
+        let offline = FirmPortalError(code: "network", status: 0)
+        XCTAssertEqual(FirmPortal.access(after: offline, previous: .pending), .pending)
+        XCTAssertEqual(FirmPortal.access(after: offline, previous: .revoked), .revoked)
+        XCTAssertEqual(FirmPortal.access(after: offline, previous: .approved), .approved)
+        XCTAssertEqual(FirmPortal.access(after: offline, previous: .checking), .failed)
+        XCTAssertEqual(FirmPortal.access(after: FirmPortalError(code: "http_502", status: 502), previous: .none), .failed)
+    }
+
+    @MainActor func testExpiredOrRejectedCredentialsCloseAnApprovedSession() {
+        for code in ["trial_expired", "unauthorized", "access_revoked"] {
+            XCTAssertEqual(FirmPortal.access(after: FirmPortalError(code: code, status: 401), previous: .approved), .revoked, code)
+        }
+        XCTAssertEqual(FirmPortal.access(after: FirmPortalError(code: "access_pending", status: 403), previous: .approved), .pending)
+    }
+
+    func testANewerDraftsNewFlagsAreNotHiddenBehindSettledOnes() throws {
+        let json = #"""
+        {"id":"m","status":"review","updatedAt":"x","transcript":[],
+         "versions":[{"n":2,"markdown":"A","notes":{"flags":[{"id":"f1","title":"Cap"},{"id":"f2","title":"Law"}]}},
+                     {"n":3,"markdown":"B","notes":{"flags":[{"id":"f1","title":"Cap"},{"id":"f2","title":"Law"},{"id":"f3","title":"Board seat"}]}}],
+         "flagState":{"2":{"f1":"noted","f2":"kept"}}}
+        """#
+        let m = try JSONDecoder().decode(FirmMatter.self, from: Data(json.utf8))
+        XCTAssertEqual(m.flagsVersion?.n, 2)
+        XCTAssertEqual(m.newFlags.map(\.title), ["Board seat"])
+        // Re-listed flags with fresh ids but the same titles are not "new".
+        let relisted = try JSONDecoder().decode(FirmMatter.self, from: Data(json.replacingOccurrences(of: #"{"id":"f3","title":"Board seat"}"#, with: #"{"id":"f3","title":"**Cap**"}"#).utf8))
+        XCTAssertEqual(relisted.newFlags.count, 0)
+    }
+
+    func testHeadingFollowedByBodyOnTheNextLineRendersAsHeadingThenBody() {
+        let b = FirmMarkdown.blocks("## 第1条（商号）\n当会社は…と称する。\n第二行\n\n正文段落")
+        XCTAssertEqual(b.map(\.level), [2, 0, 0])
+        XCTAssertEqual(b.map(\.text), ["第1条（商号）", "当会社は…と称する。\n第二行", "正文段落"])
+    }
+
+    func testUnderscoreBlanksAreContentInTheDiff() {
+        XCTAssertFalse(FirmDiff.edits(from: "金额：______元", to: "金额：____元").isEmpty)
+        XCTAssertEqual(FirmDiff.edits(from: "条款", to: "条款\n________"), [.added("________")])
     }
 
     func testSignoffNeedsEveryConfirmationAndAName() {

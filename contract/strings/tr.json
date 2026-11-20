@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Daha yeni bir sürüm geldi. İmzalamadan önce inceleyin.",
   "firm.error.alreadySigned": "Bu dosya zaten imzalandı.",
   "firm.error.network": "Büroya ulaşılamadı. Tekrar deneyin.",
-  "firm.error.access": "Bu büroya erişiminiz kapalı."
+  "firm.error.access": "Bu büroya erişiminiz kapalı.",
+  "firm.matter.flagsNew": "Sürüm {n} ile eklendi"
 }

@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Ha llegado una versión más reciente. Revísala antes de firmar.",
   "firm.error.alreadySigned": "Este asunto ya está firmado.",
   "firm.error.network": "No se pudo conectar con el despacho. Inténtalo de nuevo.",
-  "firm.error.access": "Tu acceso a este despacho está desactivado."
+  "firm.error.access": "Tu acceso a este despacho está desactivado.",
+  "firm.matter.flagsNew": "Nuevo en la versión {n}"
 }

@@ -14,6 +14,8 @@ struct FirmMatterView: View {
     @State private var showConversation = false
     @State private var confirmSendBack = false
     @State private var busy = false
+    /// What changed, computed once per loaded matter (the comparison is O(lines²); never in `body`).
+    @State private var edits: [FirmDiff.Change] = []
 
     enum Sheet: Identifiable {
         case reply, edit, signoff, pdf(URL)
@@ -93,7 +95,7 @@ struct FirmMatterView: View {
     private func header(_ m: FirmMatter) -> some View {
         VStack(alignment: .leading, spacing: T.Sp.s2) {
             Text(FirmText.who(m.client, m.company)).font(T.F.title()).foregroundStyle(Color.primary)
-            if let name = m.lawyerName, !name.isEmpty {
+            if let name = m.lawyerDisplayName {
                 Text(tr("firm.matter.requestedLawyer", ["name": name])).font(T.F.small()).foregroundStyle(Color.secondary)
             }
             if let c = m.consult, c.status == "requested" || c.status == "scheduled" {
@@ -133,20 +135,27 @@ struct FirmMatterView: View {
     @ViewBuilder private func flags(_ m: FirmMatter) -> some View {
         if let v = m.flagsVersion, let flags = v.notes?.flags, !flags.isEmpty {
             section(tr("firm.matter.flags") + " · " + tr("firm.matter.version", ["n": String(v.n)])) {
-                ForEach(flags) { f in
-                    let s = m.settlement(of: f)
-                    HStack(alignment: .firstTextBaseline, spacing: T.Sp.s3) {
-                        Circle().fill(f.level == "high" ? FirmColor.urgent : FirmColor.waiting).frame(width: 7, height: 7)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text([FirmText.section(f.section), f.title].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
-                                .font(T.F.body()).foregroundStyle(Color.primary).fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer(minLength: T.Sp.s2)
-                        FirmChip(text: tr(Self.settlementKey(s)), color: s == "lawyer" ? FirmColor.waiting : s == nil ? Color(.tertiaryLabel) : FirmColor.accent)
-                    }
+                ForEach(flags) { f in flagRow(f, settlement: m.settlement(of: f)) }
+                let fresh = m.newFlags
+                if !fresh.isEmpty, let latest = m.latest {
+                    // Flags the newest draft raised after the client settled the others: never hidden behind them.
+                    Text(tr("firm.matter.flagsNew", ["n": String(latest.n)])).font(T.F.small().weight(.semibold))
+                        .foregroundStyle(FirmColor.urgent).padding(.top, T.Sp.s2)
+                        .accessibilityIdentifier("firm.flags.new")
+                    ForEach(fresh) { f in flagRow(f, settlement: nil) }
                 }
             }
             .accessibilityIdentifier("firm.flags")
+        }
+    }
+
+    private func flagRow(_ f: FirmFlag, settlement s: String?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: T.Sp.s3) {
+            Circle().fill(f.level == "high" ? FirmColor.urgent : FirmColor.waiting).frame(width: 7, height: 7)
+            Text([FirmText.section(f.section), f.title].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+                .font(T.F.body()).foregroundStyle(Color.primary).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: T.Sp.s2)
+            FirmChip(text: tr(Self.settlementKey(s)), color: s == "lawyer" ? FirmColor.waiting : s == nil ? Color(.tertiaryLabel) : FirmColor.accent)
         }
     }
 
@@ -162,10 +171,9 @@ struct FirmMatterView: View {
     @ViewBuilder private func changes(_ m: FirmMatter) -> some View {
         if let v = m.latest {
             section(tr("firm.matter.changes", ["n": String(v.n)])) {
-                if let prev = m.previous {
+                if m.previous != nil {
                     let notes = v.notes?.changes ?? []
                     ForEach(notes, id: \.self) { Text("• " + $0).font(T.F.body()).foregroundStyle(Color.primary) }
-                    let edits = FirmDiff.edits(from: prev.markdown, to: v.markdown)
                     ForEach(Array(edits.prefix(12).enumerated()), id: \.offset) { _, e in
                         switch e {
                         case .removed(let t): Text(FirmMarkdown.plain(t)).strikethrough().foregroundStyle(FirmColor.urgent).font(T.F.small())
@@ -232,7 +240,13 @@ struct FirmMatterView: View {
 
     private func load() async {
         guard let client = portal.client else { error = tr("firm.error.access"); return }
-        do { matter = try await client.matter(id); error = nil }
+        do {
+            let m = try await client.matter(id)
+            if let v = m.latest, let p = m.previous {
+                edits = await Task.detached(priority: .userInitiated) { FirmDiff.edits(from: p.markdown, to: v.markdown) }.value
+            } else { edits = [] }
+            matter = m; error = nil
+        }
         catch { self.error = error.localizedDescription }
     }
 
@@ -265,6 +279,24 @@ enum FirmMarkdown {
     static func plain(_ block: String) -> String {
         block.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "#", with: "").trimmingCharacters(in: .whitespaces)
     }
+    /// Display blocks: every `#` line is its own heading (level = number of #), body lines between them stay
+    /// together, so "## 第1条\n本文…" is a heading followed by body text, not one heading block.
+    static func blocks(_ markdown: String) -> [(level: Int, text: String)] {
+        var out: [(level: Int, text: String)] = []
+        for paragraph in FirmDiff.paragraphs(markdown) {
+            var body: [String] = []
+            func flush() { if !body.isEmpty { out.append((0, body.joined(separator: "\n"))); body = [] } }
+            for line in paragraph.components(separatedBy: "\n") {
+                let t = line.trimmingCharacters(in: .whitespaces)
+                if t.hasPrefix("#") {
+                    flush()
+                    out.append((t.prefix { $0 == "#" }.count, String(t.drop { $0 == "#" }).trimmingCharacters(in: .whitespaces)))
+                } else if !t.isEmpty { body.append(line) }
+            }
+            flush()
+        }
+        return out
+    }
     static func inline(_ text: String) -> AttributedString {
         (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text)
     }
@@ -274,14 +306,13 @@ struct FirmMarkdownView: View {
     let markdown: String
     var body: some View {
         VStack(alignment: .leading, spacing: T.Sp.s3) {
-            ForEach(Array(FirmDiff.paragraphs(markdown).enumerated()), id: \.offset) { _, block in
-                if block.hasPrefix("#") {
-                    let level = block.prefix { $0 == "#" }.count
-                    Text(FirmMarkdown.inline(String(block.drop { $0 == "#" }).trimmingCharacters(in: .whitespaces)))
-                        .font(level <= 1 ? .title3.weight(.semibold) : .headline)
+            ForEach(Array(FirmMarkdown.blocks(markdown).enumerated()), id: \.offset) { _, block in
+                if block.level > 0 {
+                    Text(FirmMarkdown.inline(block.text))
+                        .font(block.level <= 1 ? .title3.weight(.semibold) : .headline)
                         .padding(.top, T.Sp.s2)
                 } else {
-                    Text(FirmMarkdown.inline(block)).font(.body).lineSpacing(3)
+                    Text(FirmMarkdown.inline(block.text)).font(.body).lineSpacing(3)
                 }
             }
         }

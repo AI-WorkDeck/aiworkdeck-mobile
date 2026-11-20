@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "وصل إصدار أحدث. راجعه قبل التوقيع.",
   "firm.error.alreadySigned": "تم توقيع هذه القضية بالفعل.",
   "firm.error.network": "تعذّر الوصول إلى المكتب. حاول مرة أخرى.",
-  "firm.error.access": "وصولك إلى هذا المكتب متوقف."
+  "firm.error.access": "وصولك إلى هذا المكتب متوقف.",
+  "firm.matter.flagsNew": "جديد في الإصدار {n}"
 }

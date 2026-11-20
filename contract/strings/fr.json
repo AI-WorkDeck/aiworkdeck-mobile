@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "Une version plus récente est arrivée. Relisez-la avant de valider.",
   "firm.error.alreadySigned": "Ce dossier est déjà signé.",
   "firm.error.network": "Impossible de joindre le cabinet. Réessayez.",
-  "firm.error.access": "Votre accès à ce cabinet est désactivé."
+  "firm.error.access": "Votre accès à ce cabinet est désactivé.",
+  "firm.matter.flagsNew": "Nouveau dans la version {n}"
 }

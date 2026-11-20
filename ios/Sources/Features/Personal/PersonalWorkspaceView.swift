@@ -206,7 +206,14 @@ struct PersonalWorkspaceView: View {
         }
         .onChange(of: cameraBusy) { _, value in model.resumeCalendarNavigation(cameraBusy: value) }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await model.load(); if firm.scope == nil { await firm.restore(userID: account.account?.id) } } }
+            if phase == .active {
+                Task {
+                    await model.load()
+                    // Retry firm access that could not be established (offline launch, portal error).
+                    if firm.scope == nil { await firm.restore(userID: account.account?.id) }
+                    else if firm.portalID != nil, [.failed, .checking].contains(firm.access) { await firm.check() }
+                }
+            }
         }
     }
 }

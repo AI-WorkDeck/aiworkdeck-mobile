@@ -655,5 +655,6 @@
   "firm.error.versionChanged": "新しいバージョンが届きました。確認してから署名してください。",
   "firm.error.alreadySigned": "この案件はすでに署名済みです。",
   "firm.error.network": "事務所に接続できません。もう一度お試しください。",
-  "firm.error.access": "この事務所へのアクセスはオフになっています。"
+  "firm.error.access": "この事務所へのアクセスはオフになっています。",
+  "firm.matter.flagsNew": "バージョン{n}で追加"
 }
