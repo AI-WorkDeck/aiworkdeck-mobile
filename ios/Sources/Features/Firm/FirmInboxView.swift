@@ -118,8 +118,11 @@ enum FirmText {
         guard let d = date(iso) else { return "" }
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .abbreviated
+        f.dateTimeStyle = .named
         f.locale = Locale(identifier: L10n.locale)
-        return f.localizedString(for: d, relativeTo: Date())
+        // A server clock slightly ahead must not read "in 0 seconds".
+        let now = Date()
+        return f.localizedString(for: min(d, now), relativeTo: now)
     }
 }
 

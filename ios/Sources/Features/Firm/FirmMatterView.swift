@@ -131,7 +131,7 @@ struct FirmMatterView: View {
     }
 
     @ViewBuilder private func flags(_ m: FirmMatter) -> some View {
-        if let v = m.latest, let flags = v.notes?.flags, !flags.isEmpty {
+        if let v = m.flagsVersion, let flags = v.notes?.flags, !flags.isEmpty {
             section(tr("firm.matter.flags") + " · " + tr("firm.matter.version", ["n": String(v.n)])) {
                 ForEach(flags) { f in
                     let s = m.settlement(of: f)

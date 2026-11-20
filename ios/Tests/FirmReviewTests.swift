@@ -45,6 +45,10 @@ final class FirmReviewTests: XCTestCase {
         ])
         XCTAssertEqual(FirmDiff.edits(from: old, to: old), [])
         XCTAssertEqual(FirmDiff.edits(from: "", to: "A"), [.added("A")])
+        // One changed line inside a multi-line article shows only that line.
+        let art1 = "第23条（设立时发行的股份）\n每股发行价格为1日元。\n出资额1,000万日元。"
+        let art2 = "第23条（设立时发行的股份）\n每股发行价格为1日元。\n出资额3,000万日元。"
+        XCTAssertEqual(FirmDiff.edits(from: art1, to: art2), [.removed("出资额1,000万日元。"), .added("出资额3,000万日元。")])
     }
 
     func testOnlyAllowlistedHttpsPortalsReceiveTheSession() {
@@ -135,6 +139,27 @@ final class FirmReviewTests: XCTestCase {
         XCTAssertEqual(n.text(locale: "ms"), "Tokyo")
         XCTAssertEqual(n.text(locale: "de"), "Tokyo")
         XCTAssertEqual(FirmName(en: nil, zh: "硅谷").text(locale: "fr"), "硅谷")
+    }
+
+    func testFlagsShowTheVersionWhereTheyWereSettled() throws {
+        let json = #"""
+        {"id":"m","status":"review","updatedAt":"x","transcript":[],
+         "versions":[{"n":1,"markdown":"A","notes":{"flags":[{"id":"f1","title":"Cap"},{"id":"f2","title":"Law"}]}},
+                     {"n":2,"markdown":"B","notes":{"flags":[{"id":"f1","title":"New issue"}]}}],
+         "flagState":{"1":{"f1":"noted","f2":"lawyer"}}}
+        """#
+        let m = try JSONDecoder().decode(FirmMatter.self, from: Data(json.utf8))
+        XCTAssertEqual(m.flagsVersion?.n, 1)
+        XCTAssertEqual(m.flagsVersion?.notes?.flags?.map { m.settlement(of: $0) }, ["noted", "lawyer"])
+        let fresh = try JSONDecoder().decode(FirmMatter.self, from: Data(#"{"id":"m","status":"review","updatedAt":"x","transcript":[],"versions":[{"n":1,"markdown":"A","notes":{"flags":[{"id":"f1"}]}}]}"#.utf8))
+        XCTAssertEqual(fresh.flagsVersion?.n, 1)
+        XCTAssertNil(fresh.settlement(of: FirmFlag(id: "f1", level: nil, section: nil, title: nil, risk: nil)))
+    }
+
+    func testRelativeTimeNeverReadsAsFuture() {
+        let soon = ISO8601DateFormatter().string(from: Date().addingTimeInterval(5))
+        L10n.locale = "en"
+        XCTAssertFalse(FirmText.ago(soon).lowercased().hasPrefix("in "), FirmText.ago(soon))
     }
 
     func testSignoffNeedsEveryConfirmationAndAName() {

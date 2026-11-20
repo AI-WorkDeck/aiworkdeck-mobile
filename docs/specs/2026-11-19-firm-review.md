@@ -29,8 +29,9 @@ client, a list "for the lawyer"); the feature is generic and carries no firm nam
 2. **Matter.** One scroll, partner order:
    1. header: document, client, status, requested lawyer, call request;
    2. **For the lawyer**: the client's list, each with its section and flag;
-   3. red flags: how each was settled (changed / kept / for the lawyer);
-   4. what changed: the version's change notes plus a paragraph diff against the previous version;
+   3. red flags: how each was settled (changed / kept / for the lawyer), shown for the version where the client settled them
+      (flag ids are per version, so a later draft's list does not inherit settlements);
+   4. what changed: the version's change notes plus a line diff against the previous version;
    5. the document: rendered from Markdown, readable on a phone; PDF of any version;
    6. conversation: collapsed, opens on tap.
 3. **Bottom bar (one thumb):** *Reply* · *More* (confirm call, mark call done, send back to client, small fix) · **Sign off**.

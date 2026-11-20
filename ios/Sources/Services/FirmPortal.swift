@@ -141,10 +141,16 @@ struct FirmMatter: Decodable, Equatable {
         guard let latest else { return nil }
         return versions.filter { $0.n < latest.n }.max { $0.n < $1.n }
     }
-    /// How each red flag of the latest version was settled: `noted` (changed), `kept`, `lawyer`, or nil (open).
+    /// The version whose red flags were discussed with the client: the latest version that has settlements
+    /// (flag ids are per version, so a later draft's list cannot inherit them), else the latest version.
+    var flagsVersion: FirmVersion? {
+        versions.filter { v in !(flagState?[String(v.n)] ?? [:]).isEmpty && !(v.notes?.flags ?? []).isEmpty }
+            .max { $0.n < $1.n } ?? latest
+    }
+    /// How a red flag of `flagsVersion` was settled: `noted` (changed), `kept`, `lawyer`, or nil (open).
     func settlement(of flag: FirmFlag) -> String? {
-        guard let latest else { return nil }
-        return flagState?[String(latest.n)]?[flag.id]
+        guard let v = flagsVersion else { return nil }
+        return flagState?[String(v.n)]?[flag.id]
     }
 }
 
@@ -202,9 +208,15 @@ enum FirmDiff {
             .filter { !$0.isEmpty }
     }
 
-    /// LCS over paragraphs; returns the full edit script in document order.
+    /// Non-empty lines: legal drafts change a clause line, not a whole article.
+    static func lines(_ markdown: String) -> [String] {
+        markdown.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    /// LCS over lines; returns the full edit script in document order.
     static func changes(from old: String, to new: String) -> [Change] {
-        let a = paragraphs(old), b = paragraphs(new)
+        let a = lines(old), b = lines(new)
         let n = a.count, m = b.count
         var lcs = Array(repeating: Array(repeating: 0, count: m + 1), count: n + 1)
         if n > 0 && m > 0 {
