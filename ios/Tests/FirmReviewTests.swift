@@ -126,6 +126,17 @@ final class FirmReviewTests: XCTestCase {
         XCTAssertEqual(m.forLawyer?.first?.text, "Is the cap market?")
     }
 
+    func testPortalTextFollowsAppLanguageWithEnglishFallback() throws {
+        let n = try JSONDecoder().decode(FirmName.self, from: Data(#"{"en":"Tokyo","zh":"东京","zht":"東京","ja":"東京オフィス","ms":null}"#.utf8))
+        XCTAssertEqual(n.text(locale: "en"), "Tokyo")
+        XCTAssertEqual(n.text(locale: "zh-Hans"), "东京")
+        XCTAssertEqual(n.text(locale: "zh-Hant"), "東京")
+        XCTAssertEqual(n.text(locale: "ja"), "東京オフィス")
+        XCTAssertEqual(n.text(locale: "ms"), "Tokyo")
+        XCTAssertEqual(n.text(locale: "de"), "Tokyo")
+        XCTAssertEqual(FirmName(en: nil, zh: "硅谷").text(locale: "fr"), "硅谷")
+    }
+
     func testSignoffNeedsEveryConfirmationAndAName() {
         XCTAssertTrue(FirmSignoffSheet.ready(conflicts: true, engagement: true, reviewed: true, name: "Li"))
         XCTAssertFalse(FirmSignoffSheet.ready(conflicts: true, engagement: true, reviewed: true, name: "  "))

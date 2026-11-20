@@ -22,14 +22,30 @@ struct FirmMe: Decodable, Equatable {
     let lawyerName: FirmName?
 }
 
-/// `{ en, zh }` pair used by the portal for document and firm names.
+/// Text in several languages from the portal (`en`, `zh`, and optionally `zht`, `ja`, `ms`, ...).
+/// Shown in the app language when present, else English, else Chinese, else anything.
 struct FirmName: Decodable, Equatable, Hashable {
-    let en: String?
-    let zh: String?
-    var text: String {
-        let zhFirst = L10n.locale.hasPrefix("zh")
-        return (zhFirst ? (zh ?? en) : (en ?? zh)) ?? ""
+    let values: [String: String]
+    init(en: String? = nil, zh: String? = nil) {
+        values = [("en", en), ("zh", zh)].reduce(into: [:]) { if let v = $1.1 { $0[$1.0] = v } }
     }
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode([String: String?].self)
+        values = raw.compactMapValues { $0 }.filter { !$0.value.isEmpty }
+    }
+    var en: String? { values["en"] }
+    var zh: String? { values["zh"] }
+    func text(locale: String) -> String {
+        let keys: [String]
+        switch locale {
+        case "zh-Hant": keys = ["zht", "zh"]
+        case let l where l.hasPrefix("zh"): keys = ["zh"]
+        default: keys = [locale, String(locale.prefix(2))]
+        }
+        for k in keys + ["en", "zh"] { if let v = values[k] { return v } }
+        return values.sorted { $0.key < $1.key }.first?.value ?? ""
+    }
+    var text: String { text(locale: L10n.locale) }
 }
 
 struct FirmConsult: Decodable, Equatable, Hashable {
