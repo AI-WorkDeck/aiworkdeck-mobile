@@ -181,6 +181,7 @@ struct PersonalWorkspaceView: View {
     @Environment(AppModel.self) private var account
     @State private var model = PersonalWorkspaceModel()
     @State private var reminders = CalendarReminders.shared
+    @State private var firm = FirmPortal.shared
     @Environment(\.scenePhase) private var scenePhase
     private var cameraBusy: Bool {
         let camera = CameraService.shared
@@ -191,14 +192,22 @@ struct PersonalWorkspaceView: View {
             CaptureFlowView(isActive: model.selectedTab == "capture").tabItem { Label(tr("workspace.capture"), systemImage: "camera") }.tag("capture")
             PersonalCalendarView(model: model, cameraBusy: cameraBusy).tabItem { Label(tr("personal.calendar"), systemImage: "calendar") }.tag("calendar")
             AssistantView(model: model).tabItem { Label(tr("personal.assistant"), systemImage: "bubble.left.and.bubble.right") }.tag("assistant")
+            // Firm review appears only for an account its firm has approved (docs/specs/2026-11-19-firm-review.md).
+            if firm.access == .approved {
+                FirmInboxView().tabItem { Label(tr("firm.tab"), systemImage: "signature") }.tag("firm")
+                    .badge(firm.needsYouCount)
+            }
         }
         .tint(T.L.accent)
         .task { await model.load() }
+        .task(id: account.account?.id) { await firm.restore(userID: account.account?.id) }
         .onChange(of: reminders.selectedEventID, initial: true) { _, value in
             model.requestCalendarEvent(value, cameraBusy: cameraBusy)
         }
         .onChange(of: cameraBusy) { _, value in model.resumeCalendarNavigation(cameraBusy: value) }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await model.load() } } }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await model.load(); if firm.scope == nil { await firm.restore(userID: account.account?.id) } } }
+        }
     }
 }
 

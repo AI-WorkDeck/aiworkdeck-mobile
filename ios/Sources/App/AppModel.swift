@@ -268,6 +268,7 @@ final class AppModel {
         CaptureOrganizationStore.clear(scope: organizationScope)
         PersonalConversationStore.clear()
         CalendarReminders.shared.clear()
+        FirmPortal.shared.reset()
         closeWorkspaceFiles()
         selectedProject = nil
         project = FieldProject(id: "local", name: tr("project.none"),

@@ -4,3 +4,4 @@
 "NSMicrophoneUsageDescription" = "Used for on-site audio evidence and for sound in video recordings. Recorded audio is kept only as an evidence record.";
 "NSLocationWhenInUseUsageDescription" = "Records where each capture was taken and adds it to the archive details. Read once at capture time; no background tracking.";
 "NSPhotoLibraryAddUsageDescription" = "While \"Also save to the system album\" is on (the default), a copy of each photo and video is saved to your photo library. You can turn this off in Settings.";
+"NSFaceIDUsageDescription" = "Confirms it is you before you sign off a document.";

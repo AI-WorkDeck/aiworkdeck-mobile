@@ -108,6 +108,7 @@ targetTemplates:
           记录每张影像的拍摄地点，写入归档信息。仅在拍摄时读取一次，不做后台定位。
         NSPhotoLibraryAddUsageDescription: >-
           「同时存入系统相册」开启时（默认开启），把拍摄的照片和录像另存一份到系统相册；可在设置中关闭。
+        NSFaceIDUsageDescription: 签发文件前确认是你本人操作。
 
   # 录音 Live Activity 的 WidgetKit 扩展（dev-board#404）。扩展里只编：共享的属性与
   # 停止意图、卡片视图、以及 tr() 所需的词典与令牌（L10n + 生成物 Strings/Tokens +

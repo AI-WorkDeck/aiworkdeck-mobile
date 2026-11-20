@@ -180,6 +180,7 @@ function renderTsCaps(c, client) {
   const notice = Object.fromEntries(Object.entries(c.caps.capabilities).filter(([, v]) => v.degradedNotice).map(([k, v]) => [k, v.degradedNotice]))
   return H('//') + `export const VOICE_REMINDER_SECONDS = ${c.caps.voiceReminderSeconds}
 export const DD_CLIENT_PORTAL_URL = ${q(c.caps.ddClientPortalUrl)}
+export const FIRM_PORTALS: readonly string[] = ${q(c.caps.firmPortals)}
 export const BACKUP_CONSENT_VERSION = ${q(c.caps.backupConsentVersion)}
 export const PERSONAL_CONSENT_VERSION = ${q(c.caps.personalConsentVersion)}
 export const PREVIEW_EXTENSIONS: readonly string[] = ${q(c.caps.previewExtensions.ios)}
@@ -324,6 +325,7 @@ function renderSwiftCaps(c) {
     static let audioPause: Bool = ${caps.audioPause?.ios}
     static let videoPause: String = ${q(caps.videoPause?.ios)}
     static let ddClientPortalURL = ${q(c.caps.ddClientPortalUrl)}
+    static let firmPortals: [String] = ${q(c.caps.firmPortals)}
     static let backupConsentVersion = ${q(c.caps.backupConsentVersion)}
     static let personalConsentVersion = ${q(c.caps.personalConsentVersion)}
     static let previewExtensions: [String] = ${q(c.caps.previewExtensions.ios)}
