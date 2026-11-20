@@ -15,6 +15,11 @@ on:
         required: true
         default: false
         type: boolean
+      withdraw:
+        description: "Version currently in review to withdraw first, so this release reuses its record (e.g. 1.12.3; empty = none)"
+        required: false
+        default: ""
+        type: string
 permissions:
   contents: read
 jobs:
@@ -26,6 +31,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip install --quiet "pyjwt[crypto]"
+      - name: Withdraw the version in review
+        if: ${{ inputs.withdraw != '' }}
+        env:
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+          WITHDRAW: ${{ inputs.withdraw }}
+        run: |
+          set +x
+          echo "$ASC_KEY_P8_B64" | base64 --decode > "$RUNNER_TEMP/asc.p8"
+          ASC_KEY_PATH="$RUNNER_TEMP/asc.p8" python3 scripts/asc-listing.py withdraw "$WITHDRAW" --yes
       - name: Prepare version, texts and build
         env:
           ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}

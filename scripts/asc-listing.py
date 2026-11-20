@@ -12,6 +12,7 @@ fastlane 的 upload_to_app_store 负责二进制、文案、截图；剩下这�
   watch-screenshots <目录> 上传独立 Watch 截图（416x496，按 locale 分目录）
   attach <build> 把已上传的构建挂到版本上（构建号，如 13）
   submit        提交审核。对外动作，要再打一次 --yes 才真发
+  withdraw <ver> 撤回在审的 <ver>（核对版本号），等版本回到可编辑；同样要 --yes
   rating        年龄分级问卷（全部答「无」）
   contentrights 内容版权声明（不含第三方内容）
   price         价格表设为免费
@@ -387,6 +388,47 @@ def cmd_submit(tok, app_id, confirmed):
     print(f"已提交审核：{v['attributes']['versionString']}")
 
 
+IN_FLIGHT = ("WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES")
+
+
+def cmd_withdraw(tok, app_id, expected, confirmed, wait=600, sleep=time.sleep):
+    """把在审的 <expected> 版本撤回，等它回到可编辑，好让下一版复用这条版本记录。
+
+    只撤版本号对得上的那一份：防止把别人刚提的版本撤掉。
+    """
+    r = die_on_error(call(tok, "GET", f"/apps/{app_id}/appStoreVersions?limit=10"), "读取 appStoreVersions")
+    live = [v for v in r["data"] if v["attributes"]["appStoreState"] in IN_FLIGHT]
+    if not live:
+        print(f"没有在审的版本，无需撤回（期望 {expected}）")
+        return
+    found = [v["attributes"]["versionString"] for v in live]
+    if expected not in found:
+        sys.exit(f"在审的是 {', '.join(found)}，不是 {expected}，不撤")
+    if not confirmed:
+        print(f"将撤回在审版本 {expected}。确认后加 --yes 重跑。")
+        return
+    subs = die_on_error(call(tok, "GET", f"/apps/{app_id}/reviewSubmissions?filter[platform]=IOS"
+                             f"&filter[state]={','.join(IN_FLIGHT)}&limit=5"), "读取提交单")
+    if not subs.get("data"):
+        sys.exit("版本在审，但找不到对应的提交单")
+    for s in subs["data"]:
+        die_on_error(call(tok, "PATCH", f"/reviewSubmissions/{s['id']}",
+                          {"data": {"type": "reviewSubmissions", "id": s["id"],
+                                    "attributes": {"canceled": True}}}), "撤回提交单")
+    # 撤回是异步的（CANCELING），版本回到 DEVELOPER_REJECTED 才能改名、换构建。
+    waited = 0
+    while True:
+        v = version(tok, app_id)
+        state = v["attributes"]["appStoreState"] if v else None
+        if state == "DEVELOPER_REJECTED":
+            print(f"已撤回 {expected}，版本记录可编辑")
+            return
+        if waited >= wait:
+            sys.exit(f"撤回 {wait} 秒后版本仍是 {state}，停止")
+        sleep(15)
+        waited += 15
+
+
 def cmd_category(tok, app_id):
     """主/次类目。是提审必填项，且**建 App 时不会自动带**，新建的 App 一律空着。
 
@@ -658,6 +700,10 @@ def main():
         cmd_attach(tok, app_id, sys.argv[2])
     elif cmd == "submit":
         cmd_submit(tok, app_id, "--yes" in sys.argv)
+    elif cmd == "withdraw":
+        if len(sys.argv) < 3:
+            sys.exit("用法：asc-listing.py withdraw <在审版本号> [--yes]")
+        cmd_withdraw(tok, app_id, sys.argv[2], "--yes" in sys.argv)
     elif cmd == "screenshots":
         cmd_screenshots(tok, app_id)
     elif cmd == "watch-screenshots":
