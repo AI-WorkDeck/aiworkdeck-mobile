@@ -1,3 +1,2 @@
-1. Personal assistant replies now display an AI-generated label, which is preserved when copied.
-2. Report a conversation with a description of the issue, then view progress and human responses in the report panel.
-3. Retry failed report submissions or progress updates, with clearer buttons in dark mode.
+1. Firm review for lawyers: once your firm approves your account, a Reviews tab shows the client matters that need you. Read the client's questions for the lawyer, how each red flag was settled, what changed and the document, then reply, confirm a call or sign off with Face ID.
+2. Join your firm in Settings > Firm review by pasting the link your firm sent you.
