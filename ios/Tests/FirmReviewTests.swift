@@ -5,6 +5,11 @@ import XCTest
 
 /// Firm review (docs/specs/2026-11-19-firm-review.md): grouping, diff, host allowlist, portal client, sign-off guard.
 final class FirmReviewTests: XCTestCase {
+    // Some tests switch the app language; the rest of the suite expects it unchanged.
+    private var savedLocale = ""
+    override func setUp() { super.setUp(); savedLocale = L10n.locale }
+    override func tearDown() { L10n.locale = savedLocale; super.tearDown() }
+
     private func summary(_ id: String, status: String, attention: String? = nil, consult: String? = nil) -> FirmMatterSummary {
         FirmMatterSummary(id: id, status: status, updatedAt: "2026-11-19T08:00:00.000Z", template: FirmName(en: "SAFE", zh: "SAFE"),
                           client: "Ada", company: "Acme", versions: 1, lawyerName: nil, lawyerNames: nil,
