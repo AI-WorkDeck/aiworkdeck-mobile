@@ -1,0 +1,33 @@
+name: appstore-release-type
+# Set how the current App Store version is released once approved: auto (default,
+# AFTER_APPROVAL) or manual (MANUAL, someone presses Release). Works while the version
+# is waiting for or in review; only releaseType is changed then.
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "auto = release on approval; manual = press Release by hand"
+        required: true
+        default: auto
+        type: choice
+        options: [auto, manual]
+permissions:
+  contents: read
+jobs:
+  release-type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet "pyjwt[crypto]"
+      - name: Set release type
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          set +x
+          echo "$ASC_KEY_P8_B64" | base64 --decode > "$RUNNER_TEMP/asc.p8"
+          export ASC_KEY_PATH="$RUNNER_TEMP/asc.p8"
+          python3 scripts/asc-listing.py setversion "$RELEASE"
+          python3 scripts/asc-listing.py status | head -2

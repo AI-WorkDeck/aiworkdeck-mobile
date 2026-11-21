@@ -4,7 +4,7 @@
 fastlane 的 upload_to_app_store 负责二进制、文案、截图；剩下这些它要么没有
 对应参数、要么参数形状跟不上 Apple 2026 年改版后的问卷，只能直接打 API：
 
-  setversion    版本号对齐 ios/project.yml；加 auto 改成过审自动上架
+  setversion    版本号对齐 ios/project.yml；默认过审自动上架，加 manual 改成手动发布
   text          上架文案（fastlane/metadata/<locale>/*.txt → ASC）
   category      主/次类目（读 metadata/*_category.txt）
   review        审核联系信息与演示账号（读 metadata/review_information/）
@@ -288,16 +288,25 @@ def marketing_version():
     return m.group(1)
 
 
-def cmd_setversion(tok, app_id, auto_release=False):
+def cmd_setversion(tok, app_id, auto_release=True):
     """版本号对齐 project.yml，并设定发布方式。
 
-    ASC 建版本记录时默认 releaseType=AFTER_APPROVAL（过审即自动上架）。
-    要几个端凑同一天放出去就得用 MANUAL，过审后由人点发布；不在乎先后、
-    过审即上架就用 auto。
+    默认 releaseType=AFTER_APPROVAL（过审即自动上架），这是一贯做法。
+    偶尔要几个端凑同一天放出去，才加 manual 改成 MANUAL，过审后由人点发布。
+    版本已在审时只改发布方式，不动版本号和其他字段。
     """
     want = marketing_version()
     v = version(tok, app_id)
     target = "AFTER_APPROVAL" if auto_release else "MANUAL"
+    if v is not None and v["attributes"]["appStoreState"] in IN_FLIGHT:
+        if v["attributes"].get("releaseType") == target:
+            print(f"在审版本 {v['attributes']['versionString']} 已是 {target}")
+            return
+        body = {"data": {"type": "appStoreVersions", "id": v["id"],
+                         "attributes": {"releaseType": target}}}
+        die_on_error(call(tok, "PATCH", f"/appStoreVersions/{v['id']}", body), "改在审版本的发布方式")
+        print(f"在审版本 {v['attributes']['versionString']} 发布方式已改为 {target}")
+        return
     cp = os.path.join("fastlane", "metadata", "copyright.txt")
     want_cp = open(cp).read().strip() if os.path.exists(cp) else None
 
@@ -693,7 +702,7 @@ def main():
     tok = token_for()
     app_id = APP_ID
     if cmd == "setversion":
-        cmd_setversion(tok, app_id, auto_release="auto" in sys.argv)
+        cmd_setversion(tok, app_id, auto_release="manual" not in sys.argv)
     elif cmd == "attach":
         if len(sys.argv) < 3:
             sys.exit("用法：asc-listing.py attach <构建号>")
