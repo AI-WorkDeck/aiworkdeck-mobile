@@ -245,6 +245,7 @@ ASC → 版本 → 媒体，或用 deliver 传 `fastlane/screenshots/`。
 
 ## 5. 过审之后
 
-版本设成了「手动发布」（`releaseType: MANUAL`——ASC 的默认值是
-`AFTER_APPROVAL`，即过审自动上架，`setversion` 会把它改掉），
-过审后要人去点发布。这样能把 iOS 与小程序凑到同一天放出去。
+版本默认「过审自动上架」（`releaseType: AFTER_APPROVAL`，`setversion` 的默认值），
+过审后不用人去点发布。只有要把 iOS 与其他端凑到同一天放出去时，才用
+`setversion manual` 改成手动发布。已在审的版本也能改：跑 `appstore-release-type`
+工作流（auto / manual），它只改发布方式。

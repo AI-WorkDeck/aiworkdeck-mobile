@@ -174,6 +174,22 @@ class WithdrawTests(unittest.TestCase):
         self.assertEqual(self.run_withdraw([ver("v", "1.12.3", "IN_REVIEW")], confirmed=False), [])
         self.assertEqual(self.run_withdraw([ver("v", "1.12.3", "READY_FOR_SALE")]), [])
 
+    def test_setversion_defaults_to_auto_and_patches_only_release_type_in_review(self):
+        patched = []
+
+        def respond(tok, method, path, body=None):
+            if method == "GET":
+                v = ver("v", "1.13.0", "WAITING_FOR_REVIEW")
+                v["attributes"]["releaseType"] = "MANUAL"
+                return {"data": [v]}
+            patched.append((path, body["data"]["attributes"]))
+            return {}
+
+        with patch.object(asc, "call", side_effect=respond), \
+             patch.object(asc, "marketing_version", return_value="1.13.0"):
+            asc.cmd_setversion("tok", "app")
+        self.assertEqual(patched, [("/appStoreVersions/v", {"releaseType": "AFTER_APPROVAL"})])
+
     def test_stops_when_version_never_becomes_editable(self):
         with self.assertRaisesRegex(SystemExit, "仍是 IN_REVIEW"):
             self.run_withdraw([ver("v", "1.12.3", "IN_REVIEW")])
