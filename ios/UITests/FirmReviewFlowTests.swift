@@ -41,8 +41,7 @@ final class FirmReviewFlowTests: XCTestCase {
         app.buttons["capture.settings"].tap()
         let row = app.buttons["settings.firm"]
         XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
-        let leave = app.buttons["firm.leave"]
-        if leave.waitForExistence(timeout: 3) { leave.tap() }
+        while app.buttons["firm.leave"].waitForExistence(timeout: 3) { app.buttons["firm.leave"].firstMatch.tap() }
         let link = app.textFields["firm.join.link"]
         XCTAssertTrue(link.waitForExistence(timeout: 10))
         shot("01-join", app)
@@ -58,7 +57,8 @@ final class FirmReviewFlowTests: XCTestCase {
         XCTAssertTrue(code.waitForExistence(timeout: 5)); code.tap(); code.typeText(env["AWD_FIRM_TRIAL_CODE"]!)
         app.buttons["firm.join.connect"].tap()
         let status = app.staticTexts["firm.join.status"]
-        XCTAssertTrue(status.waitForExistence(timeout: 15))
+        if !status.waitForExistence(timeout: 15) { shot("02-missing", app) }
+        XCTAssertTrue(status.exists)
         XCTAssertTrue(status.label.hasPrefix("Connected to"), status.label)
         shot("02-connected", app)
         app.buttons["firm.join.close"].tap()
@@ -134,5 +134,62 @@ final class FirmReviewFlowTests: XCTestCase {
         app.buttons["Confirm the call"].tap()
         XCTAssertTrue(app.staticTexts["Call confirmed"].waitForExistence(timeout: 10))
         shot("10-call-confirmed", app)
+    }
+
+    /// Live, read-only: links both partner-network offices with a trial code and checks that their demo matters
+    /// share one inbox, labelled by firm. Opens the finalise sheet and cancels (nothing is written).
+    /// Skipped unless AWD_FIRM_LIVE_TRIAL is set.
+    @MainActor func testTwoPartnerOfficesShareOneInbox() throws {
+        guard let code = env["AWD_FIRM_LIVE_TRIAL"] else { throw XCTSkip("Needs AWD_FIRM_LIVE_TRIAL") }
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-AWDWorkspaceUITest", "-AWDPersonalUITest", "-AWDFirmUITest"]
+        app.launch()
+        dismissEarlierRecordingNotice(in: app)
+        XCTAssertTrue(app.buttons["capture.shutter"].waitForExistence(timeout: 15))
+
+        app.buttons["capture.settings"].tap()
+        let row = app.buttons["settings.firm"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        while app.buttons["firm.leave"].waitForExistence(timeout: 3) { app.buttons["firm.leave"].firstMatch.tap() }
+        for office in ["sv", "tw"] {
+            let link = app.textFields["firm.join.link"]
+            XCTAssertTrue(link.waitForExistence(timeout: 10)); link.tap()
+            link.typeText("https://ai-firm.aiworkdeck.com/\(office)/")
+            app.buttons["Use a trial code"].tap()
+            let field = app.secureTextFields["firm.join.trial"]
+            XCTAssertTrue(field.waitForExistence(timeout: 5)); field.tap(); field.typeText(code)
+            app.buttons["firm.join.connect"].tap()
+            XCTAssertTrue(app.textFields["firm.join.link"].waitForExistence(timeout: 15))
+            XCTAssertFalse(app.staticTexts["firm.join.error"].exists)
+        }
+        let statuses = app.staticTexts.matching(identifier: "firm.join.status")
+        XCTAssertTrue(statuses.element(boundBy: 1).waitForExistence(timeout: 15))
+        XCTAssertEqual(statuses.count, 2)
+        shot("live-01-two-firms", app)
+        app.buttons["firm.join.close"].tap()
+        let close = app.buttons["settings.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5)); close.tap()
+
+        let tab = reviewsTab(app)
+        XCTAssertTrue(tab.waitForExistence(timeout: 15)); tab.tap()
+        let sv = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Venture AI · Silicon Valley")).firstMatch
+        let tw = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Draft AI · Taipei")).firstMatch
+        XCTAssertTrue(sv.waitForExistence(timeout: 20))
+        XCTAssertTrue(tw.waitForExistence(timeout: 20))
+        shot("live-02-inbox", app)
+
+        tw.tap()
+        let finalise = app.buttons["firm.signoff"]
+        let found = finalise.waitForExistence(timeout: 15)
+        if !found { shot("live-03-missing", app) }
+        XCTAssertTrue(found)
+        shot("live-03-matter", app)
+        finalise.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["firm.signoff.signer"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.textFields["firm.signoff.firm"].exists, "a trial code is no lawyer: no firm field")
+        shot("live-04-finalise", app)
+        app.buttons["Cancel"].tap()
     }
 }

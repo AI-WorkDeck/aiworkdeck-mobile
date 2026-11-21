@@ -648,6 +648,8 @@
   "firm.signoff.engagement": "A contratação está formalizada",
   "firm.signoff.reviewed": "Revisei a versão {n}",
   "firm.signoff.signer": "Revisado por",
+  "firm.signoff.firm": "Seu escritório (opcional)",
+  "firm.signoff.firmHint": "Impresso após seu nome no PDF final.",
   "firm.signoff.demo": "Demonstração: um código de teste não está vinculado a nenhum advogado, então a revisão fica registrada em nome do advogado do caso.",
   "firm.signoff.footer": "O cliente recebe o PDF final, marcado como revisado por você e pronto para a assinatura das partes. Não é possível desfazer.",
   "firm.signoff.confirm": "Finalizar a versão {n}",

@@ -211,7 +211,7 @@ struct PersonalWorkspaceView: View {
                     await model.load()
                     // Retry firm access that could not be established (offline launch, portal error).
                     if firm.scope == nil { await firm.restore(userID: account.account?.id) }
-                    else if firm.portalID != nil, [.failed, .checking].contains(firm.access) { await firm.check() }
+                    else { await firm.retry() }
                 }
             }
         }

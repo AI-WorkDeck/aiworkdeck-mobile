@@ -391,8 +391,8 @@ struct SettingsView: View {
     private var firmStatus: String? {
         let portal = FirmPortal.shared
         switch portal.access {
-        case .approved: return portal.firmName
-        case .pending, .checking: return portal.portalID == nil ? nil : tr("firm.status.pending", ["firm": portal.firmName])
+        case .approved: return portal.approved.map(\.firmName).joined(separator: ", ")
+        case .pending, .checking: return portal.links.first.map { tr("firm.status.pending", ["firm": $0.firmName]) }
         default: return nil
         }
     }

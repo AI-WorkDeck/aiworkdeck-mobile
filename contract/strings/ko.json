@@ -648,6 +648,8 @@
   "firm.signoff.engagement": "위임 계약이 체결되었습니다",
   "firm.signoff.reviewed": "버전 {n}을 검토했습니다",
   "firm.signoff.signer": "검토 변호사",
+  "firm.signoff.firm": "소속 로펌(선택)",
+  "firm.signoff.firmHint": "최종 PDF에 이름 뒤에 표시됩니다.",
   "firm.signoff.demo": "데모: 체험 코드에는 연결된 변호사가 없으므로 검토는 이 사건의 담당 변호사 이름으로 기록됩니다.",
   "firm.signoff.footer": "확정하면 고객이 귀하가 검토했다고 표시된 최종 PDF를 받으며, 당사자들이 서명할 수 있습니다. 취소할 수 없습니다.",
   "firm.signoff.confirm": "버전 {n} 확정",

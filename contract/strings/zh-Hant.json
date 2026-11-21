@@ -648,6 +648,8 @@
   "firm.signoff.engagement": "委任關係已確立",
   "firm.signoff.reviewed": "我已審閱第 {n} 版",
   "firm.signoff.signer": "審定律師",
+  "firm.signoff.firm": "所在事務所（選填）",
+  "firm.signoff.firmHint": "會印在定稿 PDF 上你的名字後面。",
   "firm.signoff.demo": "示範：試用碼沒有對應的律師，審定記錄在本案的指定律師名下。",
   "firm.signoff.footer": "審定後，客戶會收到標明由你審定的定稿 PDF，供各方簽署，且無法撤回。",
   "firm.signoff.confirm": "審定第 {n} 版",

@@ -260,10 +260,63 @@ final class FirmReviewTests: XCTestCase {
         XCTAssertEqual(FirmPortal.accountScope(userID: 1, base: cn), FirmPortal.accountScope(userID: 1, base: cn))
     }
 
+    func testPartnerNetworkOfficesAreAllowlistedWithoutARootPortal() {
+        XCTAssertEqual(FirmPortalLink.portal(from: "https://ai-firm.aiworkdeck.com/sv/v2/"), "ai-firm.aiworkdeck.com/sv")
+        XCTAssertEqual(FirmPortalLink.portal(from: "ai-firm.aiworkdeck.com/tw"), "ai-firm.aiworkdeck.com/tw")
+        XCTAssertNil(FirmPortalLink.portal(from: "https://ai-firm.aiworkdeck.com/"), "the host has no all-offices portal")
+        XCTAssertNil(FirmPortalLink.portal(from: "https://ai-firm.aiworkdeck.com/jp/"))
+        XCTAssertTrue(FirmPortalLink.isPortalURL(URL(string: "https://ai-firm.aiworkdeck.com/tw/m/abc/1.pdf")!))
+    }
+
+    func testFinaliseSendsTheLawyersOwnFirmOnlyWhenGiven() async throws {
+        let t = RecordingTransport()
+        t.next = (Data(#"{"ok":true,"finalPdf":null}"#.utf8), 200)
+        let client = FirmPortalClient(portal: "ai-firm.aiworkdeck.com/tw", credential: "awdt_test", transport: t)
+        func body() throws -> [String: Any] {
+            try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(t.requests.last?.httpBody)) as? [String: Any])
+        }
+        _ = try await client.signoff("m1", version: 1, name: "Han", firm: "Han & Partners")
+        XCTAssertEqual(try body()["firm"] as? String, "Han & Partners")
+        _ = try await client.signoff("m1", version: 1, name: "Han", firm: "")
+        XCTAssertNil(try body()["firm"])
+        _ = try await client.signoff("m1", version: 1, name: "Han")
+        XCTAssertNil(try body()["firm"])
+    }
+
+    @MainActor func testLinkedPortalsKeepTheirMattersApartAndOneApprovalOpensTheTab() async {
+        let t = RoutingTransport()
+        t.routes["/sv/api/portal/me"] = #"{"kind":"lawyer","name":"Han","status":"approved","firm":{"en":"Venture AI · Silicon Valley"}}"#
+        t.routes["/tw/api/portal/me"] = #"{"kind":"lawyer","name":"Han","status":"approved","firm":{"en":"Draft AI · Taipei"}}"#
+        let matters = #"{"matters":[{"id":"m1","status":"review","updatedAt":"2026-11-21T00:00:00Z"}]}"#
+        t.routes["/sv/api/portal/matters"] = matters
+        t.routes["/tw/api/portal/matters"] = matters
+        let sv = FirmLink(portalID: "ai-firm.aiworkdeck.com/sv", trialCode: nil, session: { "s" }, transport: { t })
+        let tw = FirmLink(portalID: "ai-firm.aiworkdeck.com/tw", trialCode: nil, session: { "s" }, transport: { t })
+        await sv.check(); await tw.check()
+        let all = sv.matters + tw.matters
+        XCTAssertEqual(all.map(\.linkID), ["ai-firm.aiworkdeck.com/sv", "ai-firm.aiworkdeck.com/tw"])
+        XCTAssertEqual(Set(all.map(\.uid)).count, 2, "the same matter id in two portals stays two rows")
+        XCTAssertEqual(tw.firmName, "Draft AI · Taipei")
+        XCTAssertTrue(tw.asksFirm, "no roster: the lawyer may add their firm")
+        XCTAssertEqual(tw.signer(for: try! JSONDecoder().decode(FirmMatter.self, from: Data(#"{"id":"m1","status":"review","updatedAt":"2026-11-21T00:00:00Z","transcript":[],"versions":[]}"#.utf8)))?.name, "Han")
+
+        XCTAssertEqual(FirmPortal.combined([.pending, .approved, .revoked]), .approved)
+        XCTAssertEqual(FirmPortal.combined([.revoked, .pending]), .pending)
+        XCTAssertEqual(FirmPortal.combined([]), .none)
+    }
+
     func testEveryFirmStringExistsInAllLocales() {
         let keys = ContractStrings.table.keys.filter { $0.hasPrefix("firm.") }
         XCTAssertGreaterThan(keys.count, 60)
         for k in keys { XCTAssertEqual(ContractStrings.table[k]?.count, 20, k) }
+    }
+}
+
+private final class RoutingTransport: FirmTransport, @unchecked Sendable {
+    var routes: [String: String] = [:]
+    func send(_ request: URLRequest) async throws -> (Data, Int) {
+        guard let body = routes[request.url?.path ?? ""] else { return (Data(#"{"error":"not_found"}"#.utf8), 404) }
+        return (Data(body.utf8), 200)
     }
 }
 

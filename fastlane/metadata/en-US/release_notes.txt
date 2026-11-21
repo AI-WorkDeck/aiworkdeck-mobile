@@ -1,2 +1,3 @@
-1. Firm review for lawyers: once your firm approves your account, a Reviews tab shows the client matters that need you. Read the client's questions for the lawyer, how each red flag was settled, what changed and the document, then reply, confirm a call or finalise it with Face ID.
-2. Join your firm in Settings > Firm review by pasting the link your firm sent you.
+1. Firm review now works with more than one firm at a time: link each firm in Settings > Firm review, and the Reviews tab shows all their matters together, each labelled with its firm.
+2. Partner-network firms can add your own firm's name to the review line on the final PDF.
+3. A firm that can't be reached stays listed in Settings, so you can check again or disconnect it.

@@ -648,6 +648,8 @@
   "firm.signoff.engagement": "Das Mandat besteht",
   "firm.signoff.reviewed": "Ich habe Version {n} geprüft",
   "firm.signoff.signer": "Geprüft von",
+  "firm.signoff.firm": "Ihre Kanzlei (optional)",
+  "firm.signoff.firmHint": "Wird im finalen PDF nach Ihrem Namen gedruckt.",
   "firm.signoff.demo": "Demo: Ein Testcode gehört zu keinem Anwalt, daher wird die Prüfung unter dem zuständigen Anwalt erfasst.",
   "firm.signoff.footer": "Der Mandant erhält das finale PDF mit Ihrem Prüfvermerk, bereit zur Unterzeichnung durch die Parteien. Dies lässt sich nicht rückgängig machen.",
   "firm.signoff.confirm": "Version {n} finalisieren",
