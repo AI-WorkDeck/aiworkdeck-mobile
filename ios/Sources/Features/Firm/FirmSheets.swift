@@ -110,7 +110,7 @@ struct FirmSignoffSheet: View {
     @State private var conflicts = false
     @State private var engagement = false
     @State private var reviewed = false
-    @State private var ownFirm = ""
+    @State private var details: [String: String] = [:]
     @State private var signing = false
     @State private var error: String?
     @Environment(\.dismiss) private var dismiss
@@ -136,16 +136,16 @@ struct FirmSignoffSheet: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("firm.signoff.signer")
-                    if link?.asksFirm == true {
-                        TextField(tr("firm.signoff.firm"), text: $ownFirm)
-                            .textContentType(.organizationName).submitLabel(.done)
-                            .accessibilityIdentifier("firm.signoff.firm")
+                    if link?.asksDetails == true {
+                        detail("title", tr("firm.signoff.lawyerTitle"), .jobTitle)
+                        detail("firm", tr("firm.signoff.firm"), .organizationName)
+                        detail("admission", tr("firm.signoff.admission"), nil)
                     }
                 } header: {
                     Text(tr("firm.signoff.signer"))
                 } footer: {
                     if signer?.demo == true { Text(tr("firm.signoff.demo")) }
-                    else if link?.asksFirm == true { Text(tr("firm.signoff.firmHint")) }
+                    else if link?.asksDetails == true { Text(tr("firm.signoff.firmHint")) }
                 }
                 // Attestations, not settings: checklist rows rather than switches.
                 Section {
@@ -180,7 +180,13 @@ struct FirmSignoffSheet: View {
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(tr("common.cancel")) { dismiss() } } }
         }
         .interactiveDismissDisabled(signing)
-        .onAppear { if ownFirm.isEmpty { ownFirm = link?.savedFirm ?? "" } }
+        .onAppear { if details.isEmpty { details = link?.savedDetails ?? [:] } }
+    }
+
+    private func detail(_ key: String, _ label: String, _ content: UITextContentType?) -> some View {
+        TextField(label, text: Binding(get: { details[key] ?? "" }, set: { details[key] = $0 }))
+            .textContentType(content).submitLabel(.done)
+            .accessibilityIdentifier("firm.signoff." + key)
     }
 
     private func check(_ title: String, _ on: Binding<Bool>, id: String) -> some View {
@@ -204,9 +210,9 @@ struct FirmSignoffSheet: View {
         signing = true; defer { signing = false }
         guard await FirmOwnerCheck.confirm(reason: tr("firm.signoff.reason")) else { return }
         do {
-            let firm = link.asksFirm ? ownFirm.trimmingCharacters(in: .whitespacesAndNewlines) : ""
-            let pdf = try await client.signoff(matter.id, version: version.n, name: signer.name, firm: firm)
-            if link.asksFirm { link.savedFirm = firm }
+            let given = link.asksDetails ? details.mapValues { $0.trimmingCharacters(in: .whitespacesAndNewlines) } : [:]
+            let pdf = try await client.signoff(matter.id, version: version.n, name: signer.name, details: given)
+            if link.asksDetails { link.savedDetails = given }
             dismiss()
             onSigned(pdf.flatMap(URL.init(string:)))
         } catch let e as FirmPortalError where e.code == "version_changed" {

@@ -1,3 +1,3 @@
 1. Firm review now works with more than one firm at a time: link each firm in Settings > Firm review, and the Reviews tab shows all their matters together, each labelled with its firm.
-2. Partner-network firms can add your own firm's name to the review line on the final PDF.
+2. With partner-network firms, you can add your title, firm and where you are admitted to the review line on the final PDF.
 3. A firm that can't be reached stays listed in Settings, so you can check again or disconnect it.

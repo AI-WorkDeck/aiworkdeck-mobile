@@ -17,7 +17,7 @@ client, a list "for the lawyer"); the feature is generic and carries no firm nam
   code. The tab shows when any link is approved, and the inbox merges matters, labelled by firm when more than one is
   linked. Every action goes to the matter's own portal. A link that can't be reached stays listed in Settings, so it can be
   retried or removed. Partner-network portals have no roster: the review is recorded under the account's own name, and the
-  lawyer may add their firm (`firm` on `matter/signoff`). It is remembered per account and portal, and printed on the
+  lawyer may add `title`, `firm` and `admission` on `matter/signoff`. They are remembered per account and portal, and printed on the
   final PDF.
 - The firm is the customer: the firm enables lawyers' seats on its portal (sold to firms, outside the app). The lawyer
   never sees a paywall, so no in-app purchase is involved. Approval on the portal *is* the entitlement for v1. A later

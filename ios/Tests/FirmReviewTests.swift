@@ -268,17 +268,21 @@ final class FirmReviewTests: XCTestCase {
         XCTAssertTrue(FirmPortalLink.isPortalURL(URL(string: "https://ai-firm.aiworkdeck.com/tw/m/abc/1.pdf")!))
     }
 
-    func testFinaliseSendsTheLawyersOwnFirmOnlyWhenGiven() async throws {
+    func testFinaliseSendsTheLawyersOwnDetailsOnlyWhenGiven() async throws {
         let t = RecordingTransport()
         t.next = (Data(#"{"ok":true,"finalPdf":null}"#.utf8), 200)
         let client = FirmPortalClient(portal: "ai-firm.aiworkdeck.com/tw", credential: "awdt_test", transport: t)
         func body() throws -> [String: Any] {
             try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(t.requests.last?.httpBody)) as? [String: Any])
         }
-        _ = try await client.signoff("m1", version: 1, name: "Han", firm: "Han & Partners")
+        _ = try await client.signoff("m1", version: 1, name: "Han", details: ["firm": "Han & Partners", "title": "Partner", "admission": "Beijing"])
         XCTAssertEqual(try body()["firm"] as? String, "Han & Partners")
-        _ = try await client.signoff("m1", version: 1, name: "Han", firm: "")
+        XCTAssertEqual(try body()["title"] as? String, "Partner")
+        XCTAssertEqual(try body()["admission"] as? String, "Beijing")
+        _ = try await client.signoff("m1", version: 1, name: "Han", details: ["firm": "", "title": "Partner", "admission": ""])
         XCTAssertNil(try body()["firm"])
+        XCTAssertNil(try body()["admission"])
+        XCTAssertEqual(try body()["title"] as? String, "Partner")
         _ = try await client.signoff("m1", version: 1, name: "Han")
         XCTAssertNil(try body()["firm"])
     }
@@ -297,7 +301,7 @@ final class FirmReviewTests: XCTestCase {
         XCTAssertEqual(all.map(\.linkID), ["ai-firm.aiworkdeck.com/sv", "ai-firm.aiworkdeck.com/tw"])
         XCTAssertEqual(Set(all.map(\.uid)).count, 2, "the same matter id in two portals stays two rows")
         XCTAssertEqual(tw.firmName, "Draft AI · Taipei")
-        XCTAssertTrue(tw.asksFirm, "no roster: the lawyer may add their firm")
+        XCTAssertTrue(tw.asksDetails, "no roster: the lawyer may add title, firm and admission")
         XCTAssertEqual(tw.signer(for: try! JSONDecoder().decode(FirmMatter.self, from: Data(#"{"id":"m1","status":"review","updatedAt":"2026-11-21T00:00:00Z","transcript":[],"versions":[]}"#.utf8)))?.name, "Han")
 
         XCTAssertEqual(FirmPortal.combined([.pending, .approved, .revoked]), .approved)

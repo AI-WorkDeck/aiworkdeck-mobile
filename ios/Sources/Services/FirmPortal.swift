@@ -436,11 +436,12 @@ struct FirmPortalClient: Sendable {
         let r: FirmVersionResult = try await request("matter/version", method: "POST", body: ["id": id, "markdown": markdown, "note": note, "lawyer": lawyer])
         return r.n
     }
-    /// `firm`: the lawyer's own firm, for portals without a roster (printed on the final PDF); omitted when empty.
-    func signoff(_ id: String, version: Int, name: String, firm: String? = nil) async throws -> String? {
+    /// `details`: the lawyer's own `firm`, `title` and `admission`, for portals without a roster (printed on the
+    /// final PDF's review line); empty values are omitted.
+    func signoff(_ id: String, version: Int, name: String, details: [String: String] = [:]) async throws -> String? {
         var body: [String: Any] = ["id": id, "version": version, "name": name,
                                    "checks": ["conflicts": true, "engagement": true, "reviewed": true]]
-        if let firm, !firm.isEmpty { body["firm"] = firm }
+        for (k, v) in details where !v.isEmpty { body[k] = v }
         let r: FirmSignoffResult = try await request("matter/signoff", method: "POST", body: body)
         return r.finalPdf
     }
@@ -462,19 +463,25 @@ final class FirmLink {
     let trialCode: String?
     private let session: () -> String?
     private let transport: () -> any FirmTransport
-    /// Where this account's own firm name for this portal is remembered (nil: not remembered).
-    private let firmKey: String?
+    /// Prefix under which this account's own review details for this portal are remembered (nil: not remembered).
+    private let detailsKey: String?
 
-    init(portalID: String, trialCode: String?, firmKey: String? = nil, session: @escaping () -> String?, transport: @escaping () -> any FirmTransport) {
-        self.portalID = portalID; self.trialCode = trialCode; self.firmKey = firmKey; self.session = session; self.transport = transport
+    init(portalID: String, trialCode: String?, detailsKey: String? = nil, session: @escaping () -> String?, transport: @escaping () -> any FirmTransport) {
+        self.portalID = portalID; self.trialCode = trialCode; self.detailsKey = detailsKey; self.session = session; self.transport = transport
     }
 
+    /// What a lawyer on a portal without a roster may add to the review line: "<name>, <title>, <firm> (admitted in <admission>)".
+    static let detailFields = ["title", "firm", "admission"]
+
     /// A portal without a roster (a partner network) knows the lawyer only by account name, so the lawyer
-    /// may add their own firm to the review line on the final PDF.
-    var asksFirm: Bool { me?.kind == "lawyer" && (me?.lawyerName?.text ?? "").isEmpty }
-    var savedFirm: String {
-        get { firmKey.flatMap { UserDefaults.standard.string(forKey: $0) } ?? "" }
-        set { if let firmKey { UserDefaults.standard.set(newValue, forKey: firmKey) } }
+    /// may add their title, firm and admission to the review line on the final PDF.
+    var asksDetails: Bool { me?.kind == "lawyer" && (me?.lawyerName?.text ?? "").isEmpty }
+    var savedDetails: [String: String] {
+        get {
+            guard let detailsKey else { return [:] }
+            return Self.detailFields.reduce(into: [:]) { $0[$1] = UserDefaults.standard.string(forKey: detailsKey + $1) ?? "" }
+        }
+        set { if let detailsKey { for f in Self.detailFields { UserDefaults.standard.set(newValue[f] ?? "", forKey: detailsKey + f) } } }
     }
 
     var firmName: String { me?.firm.map(\.text).flatMap { $0.isEmpty ? nil : $0 } ?? portalID }
@@ -588,6 +595,7 @@ final class FirmPortal {
     /// Before 1.13.1 an account kept one link here, its trial code under the bare scope.
     private var legacyKey: String? { scope.map { "firm.link." + $0 } }
     nonisolated static func trialAccount(scope: String, portal: String) -> String { scope + "|" + portal }
+    nonisolated static func detailsKey(scope: String, portal: String) -> String { "firm.own." + trialAccount(scope: scope, portal: portal) + "." }
 
     private var session: String? {
 #if DEBUG
@@ -597,7 +605,7 @@ final class FirmPortal {
     }
 
     private func makeLink(_ portal: String, trialCode: String?) -> FirmLink {
-        FirmLink(portalID: portal, trialCode: trialCode, firmKey: scope.map { "firm.ownFirm." + Self.trialAccount(scope: $0, portal: portal) }, session: { [weak self] in self?.session },
+        FirmLink(portalID: portal, trialCode: trialCode, detailsKey: scope.map { Self.detailsKey(scope: $0, portal: portal) }, session: { [weak self] in self?.session },
                  transport: { [weak self] in self?.transport ?? URLSessionFirmTransport() })
     }
 
@@ -677,7 +685,7 @@ final class FirmPortal {
         drop(portal)
         if let scope {
             FirmTrialStore.clear(scope: Self.trialAccount(scope: scope, portal: portal))
-            UserDefaults.standard.removeObject(forKey: "firm.ownFirm." + Self.trialAccount(scope: scope, portal: portal))
+            for f in FirmLink.detailFields { UserDefaults.standard.removeObject(forKey: Self.detailsKey(scope: scope, portal: portal) + f) }
         }
         save()
     }

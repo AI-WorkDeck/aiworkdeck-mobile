@@ -188,7 +188,7 @@ final class FirmReviewFlowTests: XCTestCase {
         shot("live-03-matter", app)
         finalise.tap()
         XCTAssertTrue(app.descendants(matching: .any)["firm.signoff.signer"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.textFields["firm.signoff.firm"].exists, "a trial code is no lawyer: no firm field")
+        XCTAssertFalse(app.textFields["firm.signoff.firm"].exists, "a trial code is no lawyer: no detail fields")
         shot("live-04-finalise", app)
         app.buttons["Cancel"].tap()
     }
