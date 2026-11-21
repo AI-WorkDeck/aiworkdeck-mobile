@@ -13,7 +13,7 @@ sign-in page, enter the number and password, accept the agreement and tap Sign i
 
 律所审阅（1.13.0 新增，仅受邀律师可见）：登录后进入「设置 > 律所审阅」，在链接栏粘贴
 https://aifirm.aiworkdeck.com/sv/ 并点「连接」。审核账号已被演示律所批准，只能看到虚构的演示事项；
-随后底部出现「审阅」标签，可打开事项、回复、签发。
+随后底部出现「审阅」标签，可打开事项、回复、审定定稿。
 Firm review (new in 1.13.0, visible only to invited lawyers): after signing in, open Settings > Firm review,
 paste https://aifirm.aiworkdeck.com/sv/ into the link field and tap Connect. The review account is approved
-for synthetic demo matters only. A Reviews tab then appears, where you can open a matter, reply and sign off.
+for synthetic demo matters only. A Reviews tab then appears, where you can open a matter, reply and finalise it.

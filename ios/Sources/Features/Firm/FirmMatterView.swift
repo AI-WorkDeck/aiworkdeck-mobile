@@ -58,6 +58,8 @@ struct FirmMatterView: View {
         .background(FirmColor.background)
         .navigationTitle(matter?.template?.text ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        // A matter is a focused task: its own action bar replaces the tab bar instead of stacking on it.
+        .toolbar(.hidden, for: .tabBar)
         .safeAreaInset(edge: .bottom) { if let m = matter, !["signed", "closed"].contains(m.status) { actionBar(m) } }
         .overlay(alignment: .top) {
             if let toast {
@@ -76,7 +78,7 @@ struct FirmMatterView: View {
             case .edit:
                 if let m = matter, let v = m.latest { FirmEditSheet(version: v) { md, note in await act { _ = try await $0.saveVersion(m.id, markdown: md, note: note, lawyer: portal.lawyerName) } } }
             case .signoff:
-                if let m = matter, let v = m.latest { FirmSignoffSheet(matter: m, version: v, defaultName: portal.lawyerName, onSigned: { url in
+                if let m = matter, let v = m.latest { FirmSignoffSheet(matter: m, version: v, signer: portal.signer(for: m), onSigned: { url in
                     Task { await load(); await portal.refresh() }
                     if let url { sheet = .pdf(url) }
                 }, onStale: { Task { await load() } }) }
@@ -193,7 +195,7 @@ struct FirmMatterView: View {
         if let v = m.latest {
             VStack(alignment: .leading, spacing: T.Sp.s3) {
                 HStack {
-                    Eyebrow(text: tr("firm.matter.document") + " · " + tr("firm.matter.version", ["n": String(v.n)]))
+                    FirmSectionTitle(text: tr("firm.matter.document") + " · " + tr("firm.matter.version", ["n": String(v.n)]))
                     Spacer()
                     if let s = v.pdfUrl, let url = URL(string: s) {
                         Button(tr("firm.matter.pdf")) { sheet = .pdf(url) }.font(T.F.small()).accessibilityIdentifier("firm.pdf")
@@ -211,7 +213,7 @@ struct FirmMatterView: View {
 
     private func section<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: T.Sp.s3) {
-            Eyebrow(text: title)
+            FirmSectionTitle(text: title)
             content()
         }
     }
@@ -320,5 +322,14 @@ struct FirmMarkdownView: View {
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("firm.document")
+    }
+}
+
+/// Section title in the system style. No letter-spacing or uppercasing: both break CJK text apart.
+struct FirmSectionTitle: View {
+    let text: String
+    var body: some View {
+        Text(text).font(.footnote.weight(.semibold)).foregroundStyle(Color.secondary)
+            .accessibilityAddTraits(.isHeader)
     }
 }

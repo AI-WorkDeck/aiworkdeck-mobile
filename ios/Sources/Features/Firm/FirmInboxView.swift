@@ -76,7 +76,7 @@ struct FirmMatterRow: View {
                 if let reason = FirmInbox.reason(matter) {
                     FirmChip(text: tr(FirmInbox.reasonKey(reason)), color: reason == "call_requested" ? FirmColor.urgent : FirmColor.waiting)
                 }
-                if let n = matter.forLawyerCount, n > 0 {
+                if let n = matter.forLawyerCount, n > 0, FirmInbox.group(matter) != .done {
                     FirmChip(text: tr("firm.forLawyerCount", ["count": String(n)]), color: FirmColor.accent)
                 }
             }

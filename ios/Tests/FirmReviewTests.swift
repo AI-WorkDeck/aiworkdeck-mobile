@@ -226,12 +226,31 @@ final class FirmReviewTests: XCTestCase {
         XCTAssertEqual(FirmDiff.edits(from: "条款", to: "条款\n________"), [.added("________")])
     }
 
-    func testSignoffNeedsEveryConfirmationAndAName() {
-        XCTAssertTrue(FirmSignoffSheet.ready(conflicts: true, engagement: true, reviewed: true, name: "Li"))
-        XCTAssertFalse(FirmSignoffSheet.ready(conflicts: true, engagement: true, reviewed: true, name: "  "))
-        XCTAssertFalse(FirmSignoffSheet.ready(conflicts: false, engagement: true, reviewed: true, name: "Li"))
-        XCTAssertFalse(FirmSignoffSheet.ready(conflicts: true, engagement: false, reviewed: true, name: "Li"))
-        XCTAssertFalse(FirmSignoffSheet.ready(conflicts: true, engagement: true, reviewed: false, name: "Li"))
+    func testSignoffNeedsEveryConfirmationAndASigner() {
+        let li = FirmPortal.Signer(name: "Li", demo: false)
+        XCTAssertTrue(FirmSignoffSheet.ready(conflicts: true, engagement: true, reviewed: true, signer: li))
+        XCTAssertFalse(FirmSignoffSheet.ready(conflicts: true, engagement: true, reviewed: true, signer: nil))
+        XCTAssertFalse(FirmSignoffSheet.ready(conflicts: false, engagement: true, reviewed: true, signer: li))
+        XCTAssertFalse(FirmSignoffSheet.ready(conflicts: true, engagement: false, reviewed: true, signer: li))
+        XCTAssertFalse(FirmSignoffSheet.ready(conflicts: true, engagement: true, reviewed: false, signer: li))
+    }
+
+    /// The signature is the signed-in identity, never typed, and matches what the portal records:
+    /// a roster lawyer signs as themself; a trial code or an unlinked demo account as the matter's lawyer, marked demo.
+    func testSignerComesFromIdentityNotTyping() {
+        func signer(_ kind: String?, demo: Bool = false, roster: String? = nil, account: String? = nil, matter: String? = "Matter Lawyer") -> FirmPortal.Signer? {
+            FirmPortal.signer(kind: kind, demo: demo, rosterName: roster, title: "國際合夥人", office: "台北",
+                              accountName: account, matterLawyer: matter, firmName: "Firm")
+        }
+        XCTAssertEqual(signer("lawyer", roster: "涂能謀", account: "morris"),
+                       FirmPortal.Signer(name: "涂能謀", detail: "國際合夥人 · 台北", demo: false))
+        XCTAssertEqual(signer("lawyer", demo: true, roster: "涂能謀"), FirmPortal.Signer(name: "涂能謀", detail: "國際合夥人 · 台北", demo: false))
+        XCTAssertEqual(signer("lawyer", account: "Li Wei"), FirmPortal.Signer(name: "Li Wei", demo: false),
+                       "An unlinked full account signs under its own name, never another lawyer's")
+        XCTAssertNil(signer("lawyer", account: ""))
+        XCTAssertEqual(signer("lawyer", demo: true, account: "App Review"), FirmPortal.Signer(name: "Matter Lawyer", demo: true))
+        XCTAssertEqual(signer("trial"), FirmPortal.Signer(name: "Matter Lawyer", demo: true))
+        XCTAssertEqual(signer("trial", matter: nil), FirmPortal.Signer(name: "Firm", demo: true))
     }
 
     func testAccountScopeSeparatesAccountsAndRegions() {

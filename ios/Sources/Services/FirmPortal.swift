@@ -20,6 +20,11 @@ struct FirmMe: Decodable, Equatable {
     let firm: FirmName?
     /// The firm's catalog name for this lawyer ({ en, zh }), set when the firm approves the account.
     let lawyerName: FirmName?
+    /// Catalog title and office of the linked lawyer (null when the account is not linked).
+    let lawyerTitle: FirmName?
+    let lawyerOffice: FirmName?
+    /// "demo" when the account sees demo matters only.
+    let scope: String?
 }
 
 /// Text in several languages from the portal (`en`, `zh`, and optionally `zht`, `ja`, `ms`, ...).
@@ -457,6 +462,26 @@ final class FirmPortal {
     }
     var needsYouCount: Int { matters.filter { FirmInbox.group($0) == .needsYou }.count }
     var isTrial: Bool { me?.kind == "trial" }
+
+    /// Who signs a matter. A signature comes from the signed-in identity, never from typing.
+    /// A trial code has no person behind it, so a demo signs as the matter's lawyer (and says so).
+    nonisolated struct Signer: Equatable, Sendable { let name: String; var detail: String? = nil; let demo: Bool }
+    /// Mirrors the portal: a lawyer linked to the firm's roster signs as that lawyer; an unlinked full account
+    /// signs under its account name; a trial code or an unlinked demo account signs as the matter's lawyer.
+    nonisolated static func signer(kind: String?, demo: Bool, rosterName: String?, title: String?, office: String?,
+                                   accountName: String?, matterLawyer: String?, firmName: String) -> Signer? {
+        func nonEmpty(_ s: String?) -> String? { s.flatMap { $0.isEmpty ? nil : $0 } }
+        if kind == "lawyer", let n = nonEmpty(rosterName) {
+            let detail = [nonEmpty(title), nonEmpty(office)].compactMap { $0 }.joined(separator: " · ")
+            return Signer(name: n, detail: detail.isEmpty ? nil : detail, demo: false)
+        }
+        if kind == "lawyer", !demo { return nonEmpty(accountName).map { Signer(name: $0, demo: false) } }
+        return nonEmpty(nonEmpty(matterLawyer) ?? firmName).map { Signer(name: $0, demo: true) }
+    }
+    func signer(for m: FirmMatter) -> Signer? {
+        Self.signer(kind: me?.kind, demo: me?.scope == "demo", rosterName: me?.lawyerName?.text, title: me?.lawyerTitle?.text,
+                    office: me?.lawyerOffice?.text, accountName: me?.name, matterLawyer: m.lawyerDisplayName, firmName: firmName)
+    }
 
     /// Account scope (region host + user id): a link or trial code saved by one account is never used by another.
     private(set) var scope: String?
