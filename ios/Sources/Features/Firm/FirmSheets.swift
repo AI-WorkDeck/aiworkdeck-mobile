@@ -104,25 +104,20 @@ struct FirmEditSheet: View {
 struct FirmSignoffSheet: View {
     let matter: FirmMatter
     let version: FirmVersion
+    let signer: FirmPortal.Signer?
     let onSigned: (URL?) -> Void
     let onStale: () -> Void
     @State private var conflicts = false
     @State private var engagement = false
     @State private var reviewed = false
-    @State private var name: String
     @State private var signing = false
     @State private var error: String?
     @Environment(\.dismiss) private var dismiss
 
-    init(matter: FirmMatter, version: FirmVersion, defaultName: String, onSigned: @escaping (URL?) -> Void, onStale: @escaping () -> Void) {
-        self.matter = matter; self.version = version; self.onSigned = onSigned; self.onStale = onStale
-        _name = State(initialValue: defaultName)
+    static func ready(conflicts: Bool, engagement: Bool, reviewed: Bool, signer: FirmPortal.Signer?) -> Bool {
+        conflicts && engagement && reviewed && signer != nil
     }
-
-    static func ready(conflicts: Bool, engagement: Bool, reviewed: Bool, name: String) -> Bool {
-        conflicts && engagement && reviewed && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-    private var ready: Bool { Self.ready(conflicts: conflicts, engagement: engagement, reviewed: reviewed, name: name) }
+    private var ready: Bool { Self.ready(conflicts: conflicts, engagement: engagement, reviewed: reviewed, signer: signer) }
 
     var body: some View {
         NavigationStack {
@@ -131,25 +126,46 @@ struct FirmSignoffSheet: View {
                     Text(FirmText.who(matter.client, matter.company)).font(T.F.heading())
                     if let doc = matter.template?.text { Text(doc).foregroundStyle(Color.secondary) }
                 }
+                // The signature is the signed-in identity: shown, not typed.
                 Section {
-                    Toggle(tr("firm.signoff.conflicts"), isOn: $conflicts).accessibilityIdentifier("firm.signoff.conflicts")
-                    Toggle(tr("firm.signoff.engagement"), isOn: $engagement).accessibilityIdentifier("firm.signoff.engagement")
-                    Toggle(tr("firm.signoff.reviewed", ["n": String(version.n)]), isOn: $reviewed).accessibilityIdentifier("firm.signoff.reviewed")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(signer?.name ?? "—").font(.body.weight(.semibold)).foregroundStyle(Color.primary)
+                        if let detail = signer?.detail { Text(detail).font(.subheadline).foregroundStyle(Color.secondary) }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("firm.signoff.signer")
+                } header: {
+                    Text(tr("firm.signoff.signer"))
+                } footer: {
+                    if signer?.demo == true { Text(tr("firm.signoff.demo")) }
                 }
-                .tint(FirmColor.accent)
-                Section(tr("firm.signoff.name")) {
-                    TextField(tr("firm.signoff.name"), text: $name).textContentType(.name).accessibilityIdentifier("firm.signoff.name")
+                // Attestations, not settings: checklist rows rather than switches.
+                Section {
+                    check(tr("firm.signoff.conflicts"), $conflicts, id: "firm.signoff.conflicts")
+                    check(tr("firm.signoff.engagement"), $engagement, id: "firm.signoff.engagement")
+                    check(tr("firm.signoff.reviewed", ["n": String(version.n)]), $reviewed, id: "firm.signoff.reviewed")
+                } footer: {
+                    Text(tr("firm.signoff.footer"))
                 }
                 if let error {
                     Section { Text(error).foregroundStyle(FirmColor.urgent).accessibilityIdentifier("firm.signoff.error") }
                 }
-                Section {
-                    Button { Task { await sign() } } label: {
-                        HStack { Spacer(); if signing { ProgressView() } else { Text(tr("firm.signoff.confirm", ["n": String(version.n)])).fontWeight(.semibold) }; Spacer() }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button { Task { await sign() } } label: {
+                    HStack(spacing: T.Sp.s2) {
+                        if signing { ProgressView() } else {
+                            Image(systemName: FirmOwnerCheck.symbol)
+                            Text(tr("firm.signoff.confirm", ["n": String(version.n)])).fontWeight(.semibold)
+                        }
                     }
-                    .disabled(!ready || signing)
-                    .accessibilityIdentifier("firm.signoff.confirm")
+                    .frame(maxWidth: .infinity, minHeight: T.touchMin)
                 }
+                .buttonStyle(.borderedProminent).controlSize(.large).tint(FirmColor.accent)
+                .disabled(!ready || signing)
+                .accessibilityIdentifier("firm.signoff.confirm")
+                .padding(.horizontal, T.Sp.gutter).padding(.vertical, T.Sp.s3)
+                .background(.bar)
             }
             .navigationTitle(tr("firm.signoff.title", ["n": String(version.n)]))
             .navigationBarTitleDisplayMode(.inline)
@@ -158,12 +174,28 @@ struct FirmSignoffSheet: View {
         .interactiveDismissDisabled(signing)
     }
 
+    private func check(_ title: String, _ on: Binding<Bool>, id: String) -> some View {
+        Button { on.wrappedValue.toggle() } label: {
+            HStack(spacing: T.Sp.s3) {
+                Image(systemName: on.wrappedValue ? "checkmark.circle.fill" : "circle")
+                    .font(.title3).foregroundStyle(on.wrappedValue ? FirmColor.accent : Color(.tertiaryLabel))
+                Text(title).foregroundStyle(Color.primary)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
+        .accessibilityAddTraits(on.wrappedValue ? .isSelected : [])
+        .sensoryFeedback(.selection, trigger: on.wrappedValue)
+    }
+
     private func sign() async {
-        guard ready, let client = FirmPortal.shared.client else { return }
+        guard ready, let signer, let client = FirmPortal.shared.client else { return }
         signing = true; defer { signing = false }
         guard await FirmOwnerCheck.confirm(reason: tr("firm.signoff.reason")) else { return }
         do {
-            let pdf = try await client.signoff(matter.id, version: version.n, name: name.trimmingCharacters(in: .whitespacesAndNewlines))
+            let pdf = try await client.signoff(matter.id, version: version.n, name: signer.name)
             dismiss()
             onSigned(pdf.flatMap(URL.init(string:)))
         } catch let e as FirmPortalError where e.code == "version_changed" {
@@ -180,6 +212,17 @@ struct FirmSignoffSheet: View {
 /// a device without any owner authentication relies on the explicit confirmations alone.
 enum FirmOwnerCheck {
     nonisolated(unsafe) static var override: ((String) async -> Bool)?
+    /// The glyph for the check that will follow (Face ID, Touch ID, Optic ID, or the passcode).
+    @MainActor static var symbol: String {
+        let ctx = LAContext()
+        _ = ctx.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil)
+        switch ctx.biometryType {
+        case .faceID: return "faceid"
+        case .touchID: return "touchid"
+        case .opticID: return "opticid"
+        default: return "lock"
+        }
+    }
     @MainActor static func confirm(reason: String) async -> Bool {
         if let override { return await override(reason) }
 #if DEBUG
@@ -208,7 +251,7 @@ struct FirmPDFSheet: View {
                 else { ProgressView() }
             }
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(tr("common.close")) { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(tr("common.close")) { dismiss() }.accessibilityIdentifier("firm.pdf.close") }
                 if document != nil { ToolbarItem(placement: .primaryAction) { ShareLink(item: url) } }
             }
         }
@@ -304,7 +347,7 @@ struct FirmJoinView: View {
             }
             .navigationTitle(tr("firm.settings.title"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(tr("common.close")) { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(tr("common.close")) { dismiss() }.accessibilityIdentifier("firm.join.close") } }
         }
     }
 

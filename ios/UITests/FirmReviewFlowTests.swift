@@ -61,7 +61,7 @@ final class FirmReviewFlowTests: XCTestCase {
         XCTAssertTrue(status.waitForExistence(timeout: 15))
         XCTAssertTrue(status.label.hasPrefix("Connected to"), status.label)
         shot("02-connected", app)
-        app.buttons["Close"].firstMatch.tap()
+        app.buttons["firm.join.close"].tap()
         let close = app.buttons["settings.close"]
         XCTAssertTrue(close.waitForExistence(timeout: 5)); close.tap()
     }
@@ -102,21 +102,21 @@ final class FirmReviewFlowTests: XCTestCase {
         app.buttons["firm.reply.send"].tap()
         XCTAssertTrue(app.staticTexts["firm.toast"].waitForExistence(timeout: 10))
 
-        // Sign off: disabled until every confirmation and a name; then the signed PDF opens.
+        // Sign off: the signer is the connected identity (nothing to type); disabled until every confirmation.
         app.buttons["firm.signoff"].tap()
         let confirm = app.buttons["firm.signoff.confirm"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         XCTAssertFalse(confirm.isEnabled)
+        XCTAssertEqual(app.textFields.count, 0, "Signing never asks the lawyer to type a name")
+        XCTAssertTrue(app.descendants(matching: .any)["firm.signoff.signer"].exists)
         for id in ["firm.signoff.conflicts", "firm.signoff.engagement", "firm.signoff.reviewed"] {
-            let s = app.switches[id]; XCTAssertTrue(s.exists, id); s.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+            XCTAssertFalse(confirm.isEnabled, id)
+            let row = app.buttons[id]; XCTAssertTrue(row.exists, id); row.tap()
         }
-        XCTAssertFalse(confirm.isEnabled, "A name is still required")
-        let name = app.textFields["firm.signoff.name"]
-        name.tap(); name.typeText("Test Lawyer")
         shot("08-signoff", app)
         XCTAssertTrue(confirm.isEnabled)
         confirm.tap()
-        let closePDF = app.buttons["Close"].firstMatch
+        let closePDF = app.buttons["firm.pdf.close"]
         XCTAssertTrue(closePDF.waitForExistence(timeout: 20))
         sleep(2)
         shot("09-signed-pdf", app)
