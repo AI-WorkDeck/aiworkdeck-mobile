@@ -86,7 +86,14 @@ struct FirmMatterSummary: Decodable, Identifiable, Equatable, Hashable {
     let wantsCall: Bool?
     /// `review_requested` | `call_requested` | `client_replied`; older portals omit it (derived below).
     let attention: String?
+    /// Portal this matter came from; set by the app after loading (never sent by the server).
+    var linkID: String?
+    /// Unique across linked portals (two firms may reuse a matter id).
+    var uid: String { (linkID ?? "") + "#" + id }
 }
+
+/// A matter in one linked portal: what the inbox navigates to.
+struct FirmMatterRef: Hashable { let portal: String; let id: String }
 
 struct FirmMatterList: Decodable {
     let serverTime: String?
@@ -429,32 +436,55 @@ struct FirmPortalClient: Sendable {
         let r: FirmVersionResult = try await request("matter/version", method: "POST", body: ["id": id, "markdown": markdown, "note": note, "lawyer": lawyer])
         return r.n
     }
-    func signoff(_ id: String, version: Int, name: String) async throws -> String? {
-        let body: [String: Any] = ["id": id, "version": version, "name": name,
+    /// `details`: the lawyer's own `firm`, `title` and `admission`, for portals without a roster (printed on the
+    /// final PDF's review line); empty values are omitted.
+    func signoff(_ id: String, version: Int, name: String, details: [String: String] = [:]) async throws -> String? {
+        var body: [String: Any] = ["id": id, "version": version, "name": name,
                                    "checks": ["conflicts": true, "engagement": true, "reviewed": true]]
+        for (k, v) in details where !v.isEmpty { body[k] = v }
         let r: FirmSignoffResult = try await request("matter/signoff", method: "POST", body: body)
         return r.finalPdf
     }
 }
 
-// MARK: - Connection state (per signed-in account)
+// MARK: - Connection state
 
+/// One linked portal for the signed-in account: its access, identity and matters.
 @MainActor @Observable
-final class FirmPortal {
-    static let shared = FirmPortal()
-
-    enum Access: Equatable { case none, checking, pending, approved, revoked, failed }
-    private(set) var access: Access = .none
-    /// Joined portal id (`host` or `host/office`).
-    private(set) var portalID: String?
+final class FirmLink {
+    let portalID: String
     private(set) var me: FirmMe?
     private(set) var matters: [FirmMatterSummary] = []
+    private(set) var access: FirmPortal.Access = .none
     private(set) var loadError: String?
     /// Portal error code of the last failed access check (e.g. `unauthorized`, `network`).
     private(set) var lastErrorCode: String?
-    var transport: any FirmTransport = URLSessionFirmTransport()
+    /// Trial code for this portal, read from the Keychain once rather than per request.
+    let trialCode: String?
+    private let session: () -> String?
+    private let transport: () -> any FirmTransport
+    /// Prefix under which this account's own review details for this portal are remembered (nil: not remembered).
+    private let detailsKey: String?
 
-    var firmName: String { me?.firm.map(\.text).flatMap { $0.isEmpty ? nil : $0 } ?? portalID ?? "" }
+    init(portalID: String, trialCode: String?, detailsKey: String? = nil, session: @escaping () -> String?, transport: @escaping () -> any FirmTransport) {
+        self.portalID = portalID; self.trialCode = trialCode; self.detailsKey = detailsKey; self.session = session; self.transport = transport
+    }
+
+    /// What a lawyer on a portal without a roster may add to the review line: "<name>, <title>, <firm> (admitted in <admission>)".
+    static let detailFields = ["title", "firm", "admission"]
+
+    /// A portal without a roster (a partner network) knows the lawyer only by account name, so the lawyer
+    /// may add their title, firm and admission to the review line on the final PDF.
+    var asksDetails: Bool { me?.kind == "lawyer" && (me?.lawyerName?.text ?? "").isEmpty }
+    var savedDetails: [String: String] {
+        get {
+            guard let detailsKey else { return [:] }
+            return Self.detailFields.reduce(into: [:]) { $0[$1] = UserDefaults.standard.string(forKey: detailsKey + $1) ?? "" }
+        }
+        set { if let detailsKey { for f in Self.detailFields { UserDefaults.standard.set(newValue[f] ?? "", forKey: detailsKey + f) } } }
+    }
+
+    var firmName: String { me?.firm.map(\.text).flatMap { $0.isEmpty ? nil : $0 } ?? portalID }
     var lawyerName: String {
         guard me?.kind == "lawyer" else { return "" }
         if let n = me?.lawyerName?.text, !n.isEmpty { return n }
@@ -462,6 +492,83 @@ final class FirmPortal {
     }
     var needsYouCount: Int { matters.filter { FirmInbox.group($0) == .needsYou }.count }
     var isTrial: Bool { me?.kind == "trial" }
+
+    var client: FirmPortalClient? {
+        guard let session = session() else { return nil }
+        return FirmPortalClient(portal: portalID, credential: trialCode ?? session, transport: transport())
+    }
+
+    func signer(for m: FirmMatter) -> FirmPortal.Signer? {
+        FirmPortal.signer(kind: me?.kind, demo: me?.scope == "demo", rosterName: me?.lawyerName?.text, title: me?.lawyerTitle?.text,
+                          office: me?.lawyerOffice?.text, accountName: me?.name, matterLawyer: m.lawyerDisplayName, firmName: firmName)
+    }
+
+    /// Set when the link is dropped; a late reply for it is ignored.
+    var closed = false
+
+    func check() async {
+        guard !closed, let client else { access = .none; return }
+        let previous = access
+        if access != .approved { access = .checking }
+        do {
+            let me = try await client.me()
+            guard !closed else { return }
+            self.me = me
+            access = FirmPortal.access(forStatus: me.status)
+            if access == .approved { await refresh() } else { matters = [] }
+        } catch let e as FirmPortalError {
+            guard !closed else { return }
+            lastErrorCode = e.code
+            access = FirmPortal.access(after: e, previous: previous)
+            if access != .approved { matters = [] }
+            loadError = e.errorDescription
+        } catch {
+            guard !closed else { return }
+            access = FirmPortal.access(after: FirmPortalError(code: "network", status: 0), previous: previous)
+        }
+    }
+
+    func refresh() async {
+        guard !closed, access == .approved, let client else { return }
+        do {
+            var list = try await client.matters().matters
+            guard !closed else { return }
+            for i in list.indices { list[i].linkID = portalID }
+            matters = list
+            loadError = nil
+        } catch let e as FirmPortalError {
+            guard !closed else { return }
+            access = FirmPortal.access(after: e, previous: access)
+            if access != .approved { matters = [] }
+            loadError = e.errorDescription
+        } catch {
+            guard !closed else { return }
+            loadError = tr("firm.error.network")
+        }
+    }
+}
+
+/// All portals the signed-in account has linked. The Reviews tab merges their matters; each action goes to
+/// the matter's own portal.
+@MainActor @Observable
+final class FirmPortal {
+    static let shared = FirmPortal()
+
+    enum Access: Equatable { case none, checking, pending, approved, revoked, failed }
+    private(set) var links: [FirmLink] = []
+    var transport: any FirmTransport = URLSessionFirmTransport()
+
+    /// Approved when any linked portal is: that is what shows the Reviews tab.
+    var access: Access { Self.combined(links.map(\.access)) }
+    nonisolated static func combined(_ all: [Access]) -> Access {
+        for a in [Access.approved, .checking, .pending, .revoked, .failed] where all.contains(a) { return a }
+        return .none
+    }
+    var approved: [FirmLink] { links.filter { $0.access == .approved } }
+    var matters: [FirmMatterSummary] { approved.flatMap(\.matters) }
+    var loadError: String? { approved.lazy.compactMap(\.loadError).first }
+    var needsYouCount: Int { approved.reduce(0) { $0 + $1.needsYouCount } }
+    func link(_ portal: String?) -> FirmLink? { links.first { $0.portalID == portal } }
 
     /// Who signs a matter. A signature comes from the signed-in identity, never from typing.
     /// A trial code has no person behind it, so a demo signs as the matter's lawyer (and says so).
@@ -478,17 +585,17 @@ final class FirmPortal {
         if kind == "lawyer", !demo { return nonEmpty(accountName).map { Signer(name: $0, demo: false) } }
         return nonEmpty(nonEmpty(matterLawyer) ?? firmName).map { Signer(name: $0, demo: true) }
     }
-    func signer(for m: FirmMatter) -> Signer? {
-        Self.signer(kind: me?.kind, demo: me?.scope == "demo", rosterName: me?.lawyerName?.text, title: me?.lawyerTitle?.text,
-                    office: me?.lawyerOffice?.text, accountName: me?.name, matterLawyer: m.lawyerDisplayName, firmName: firmName)
-    }
 
     /// Account scope (region host + user id): a link or trial code saved by one account is never used by another.
     private(set) var scope: String?
     nonisolated static func accountScope(userID: Int, base: URL) -> String {
         SHA256.hash(data: Data((base.absoluteString + "#" + String(userID)).utf8)).map { String(format: "%02x", $0) }.joined()
     }
-    private var linkKey: String? { scope.map { "firm.link." + $0 } }
+    private var linksKey: String? { scope.map { "firm.links." + $0 } }
+    /// Before 1.13.1 an account kept one link here, its trial code under the bare scope.
+    private var legacyKey: String? { scope.map { "firm.link." + $0 } }
+    nonisolated static func trialAccount(scope: String, portal: String) -> String { scope + "|" + portal }
+    nonisolated static func detailsKey(scope: String, portal: String) -> String { "firm.own." + trialAccount(scope: scope, portal: portal) + "." }
 
     private var session: String? {
 #if DEBUG
@@ -497,18 +604,18 @@ final class FirmPortal {
         return SessionStore.current
     }
 
-    /// Trial code for this account, read from the Keychain once per restore/connect rather than per request.
-    private var trialCode: String?
-
-    var client: FirmPortalClient? {
-        guard let portalID, scope != nil, let session else { return nil }
-        return FirmPortalClient(portal: portalID, credential: trialCode ?? session, transport: transport)
+    private func makeLink(_ portal: String, trialCode: String?) -> FirmLink {
+        FirmLink(portalID: portal, trialCode: trialCode, detailsKey: scope.map { Self.detailsKey(scope: $0, portal: portal) }, session: { [weak self] in self?.session },
+                 transport: { [weak self] in self?.transport ?? URLSessionFirmTransport() })
     }
 
-    /// Identity of the state a request was started for; a reply for another account or portal is dropped.
-    private var context: String { (scope ?? "") + "|" + (portalID ?? "") }
+    private func save() {
+        guard let key = linksKey else { return }
+        if links.isEmpty { UserDefaults.standard.removeObject(forKey: key) }
+        else { UserDefaults.standard.set(links.map(\.portalID), forKey: key) }
+    }
 
-    /// Restores the saved link for the current account and checks access. Offline at launch: stays hidden,
+    /// Restores the saved links for the current account and checks access. Offline at launch: stays hidden,
     /// retried on the next foreground.
     func restore(userID: Int?) async {
         reset()
@@ -522,36 +629,72 @@ final class FirmPortal {
         // (it would be shared by every account on the device): ask the account server who this is.
         if id <= 0 { id = (try? await API.shared.verifiedAccount(sessionID: session, baseURL: base).id) ?? 0 }
         guard id > 0, self.session == session, Backend.baseURL == base else { return }
-        scope = Self.accountScope(userID: id, base: base)
-        guard let key = linkKey, let saved = UserDefaults.standard.string(forKey: key),
-              ContractCapabilities.firmPortals.contains(saved) else { return }
-        portalID = saved
-        trialCode = scope.flatMap { FirmTrialStore.read(scope: $0) }
-        await check()
+        let scope = Self.accountScope(userID: id, base: base)
+        self.scope = scope
+        migrateLegacyLink(scope: scope)
+        let saved = (linksKey.flatMap { UserDefaults.standard.stringArray(forKey: $0) } ?? [])
+            .filter { ContractCapabilities.firmPortals.contains($0) }
+        links = saved.map { makeLink($0, trialCode: FirmTrialStore.read(scope: Self.trialAccount(scope: scope, portal: $0))) }
+        await checkAll()
     }
 
-    /// Joins a portal. Returns nil on success, otherwise the message to show.
-    func connect(portal: String, trialCode: String? = nil) async -> String? {
-        guard let key = linkKey, let scope else { return tr("firm.error.network") }
-        lastErrorCode = nil
-        if let code = trialCode?.trimmingCharacters(in: .whitespacesAndNewlines), !code.isEmpty {
-            // Never fall back to sending the account session when the code could not be stored.
-            guard FirmTrialStore.save(code, scope: scope) else { return tr("error.sessionSaveFailed") }
-            self.trialCode = code
-        } else {
-            FirmTrialStore.clear(scope: scope)
-            self.trialCode = nil
+    private func migrateLegacyLink(scope: String) {
+        guard let old = legacyKey, let portal = UserDefaults.standard.string(forKey: old), let key = linksKey else { return }
+        if let code = FirmTrialStore.read(scope: scope) {
+            if FirmTrialStore.save(code, scope: Self.trialAccount(scope: scope, portal: portal)) { FirmTrialStore.clear(scope: scope) }
         }
-        portalID = portal
-        UserDefaults.standard.set(portal, forKey: key)
-        await check()
-        if access == .failed || access == .none {
-            let usedTrial = trialCode?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-            let message = usedTrial && ["unauthorized", "trial_expired"].contains(lastErrorCode ?? "") ? tr("firm.trial.invalid") : (loadError ?? tr("firm.error.network"))
-            disconnect()
+        var list = UserDefaults.standard.stringArray(forKey: key) ?? []
+        if !list.contains(portal) { list.append(portal) }
+        UserDefaults.standard.set(list, forKey: key)
+        UserDefaults.standard.removeObject(forKey: old)
+    }
+
+    /// Links a portal (or re-links one already listed, e.g. with a new trial code). Returns nil on success,
+    /// otherwise the message to show; a link that could not be established is not kept.
+    func connect(portal: String, trialCode: String? = nil) async -> String? {
+        guard let scope else { return tr("firm.error.network") }
+        let account = Self.trialAccount(scope: scope, portal: portal)
+        let code = trialCode?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        if let code {
+            // Never fall back to sending the account session when the code could not be stored.
+            guard FirmTrialStore.save(code, scope: account) else { return tr("error.sessionSaveFailed") }
+        } else {
+            FirmTrialStore.clear(scope: account)
+        }
+        drop(portal)
+        let link = makeLink(portal, trialCode: code)
+        links.append(link)
+        save()
+        await link.check()
+        guard self.scope == scope else { return nil }
+        if link.access == .failed || link.access == .none {
+            let message = code != nil && ["unauthorized", "trial_expired"].contains(link.lastErrorCode ?? "") ? tr("firm.trial.invalid") : (link.loadError ?? tr("firm.error.network"))
+            disconnect(portal)
             return message
         }
         return nil
+    }
+
+    private func drop(_ portal: String) {
+        links.filter { $0.portalID == portal }.forEach { $0.closed = true }
+        links.removeAll { $0.portalID == portal }
+    }
+
+    /// Unlinks one portal and forgets its trial code.
+    func disconnect(_ portal: String) {
+        drop(portal)
+        if let scope {
+            FirmTrialStore.clear(scope: Self.trialAccount(scope: scope, portal: portal))
+            for f in FirmLink.detailFields { UserDefaults.standard.removeObject(forKey: Self.detailsKey(scope: scope, portal: portal) + f) }
+        }
+        save()
+    }
+
+    /// Unlinks every portal (account deletion): links and trial codes leave the device.
+    func disconnectAll() {
+        for l in links { disconnect(l.portalID) }
+        if let scope { FirmTrialStore.clear(scope: scope) }
+        if let old = legacyKey { UserDefaults.standard.removeObject(forKey: old) }
     }
 
     /// Error codes meaning the credential no longer opens this portal.
@@ -574,58 +717,27 @@ final class FirmPortal {
         return [.none, .checking, .failed].contains(previous) ? .failed : previous
     }
 
-    func check() async {
-        guard let client else { access = .none; return }
-        let started = context
-        let previous = access
-        if access != .approved { access = .checking }
-        do {
-            let me = try await client.me()
-            guard context == started else { return }
-            self.me = me
-            access = Self.access(forStatus: me.status)
-            if access == .approved { await refresh() } else { matters = [] }
-        } catch let e as FirmPortalError {
-            guard context == started else { return }
-            lastErrorCode = e.code
-            access = Self.access(after: e, previous: previous)
-            if access != .approved { matters = [] }
-            loadError = e.errorDescription
-        } catch {
-            guard context == started else { return }
-            access = Self.access(after: FirmPortalError(code: "network", status: 0), previous: previous)
-        }
+    func checkAll() async {
+        await withTaskGroup(of: Void.self) { g in for l in links { g.addTask { await l.check() } } }
+    }
+
+    /// Re-checks links that could not be established (offline launch, portal error).
+    func retry() async {
+        let stale = links.filter { [.failed, .checking].contains($0.access) }
+        await withTaskGroup(of: Void.self) { g in for l in stale { g.addTask { await l.check() } } }
     }
 
     func refresh() async {
-        guard access == .approved, let client else { return }
-        let started = context
-        do {
-            let list = try await client.matters().matters
-            guard context == started else { return }
-            matters = list
-            loadError = nil
-        } catch let e as FirmPortalError {
-            guard context == started else { return }
-            access = Self.access(after: e, previous: access)
-            if access != .approved { matters = [] }
-            loadError = e.errorDescription
-        } catch {
-            guard context == started else { return }
-            loadError = tr("firm.error.network")
-        }
-    }
-
-    func disconnect() {
-        if let key = linkKey { UserDefaults.standard.removeObject(forKey: key) }
-        if let scope { FirmTrialStore.clear(scope: scope) }
-        let keep = scope
-        reset()
-        scope = keep
+        await withTaskGroup(of: Void.self) { g in for l in approved { g.addTask { await l.refresh() } } }
     }
 
     /// Called on sign-out and account switch: forget in-memory state (stored links are account-scoped).
     func reset() {
-        scope = nil; portalID = nil; trialCode = nil; me = nil; matters = []; access = .none; loadError = nil
+        links.forEach { $0.closed = true }
+        scope = nil; links = []
     }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

@@ -5,8 +5,10 @@ import SwiftUI
 /// One matter, in the order a partner reads it: the client's list for the lawyer, how the red flags were
 /// settled, what changed, the document; the conversation is one tap away.
 struct FirmMatterView: View {
-    let id: String
+    let ref: FirmMatterRef
     @State private var portal = FirmPortal.shared
+    private var id: String { ref.id }
+    private var link: FirmLink? { portal.link(ref.portal) }
     @State private var matter: FirmMatter?
     @State private var error: String?
     @State private var sheet: Sheet?
@@ -74,11 +76,11 @@ struct FirmMatterView: View {
         .sheet(item: $sheet) { s in
             switch s {
             case .reply:
-                if let m = matter { FirmReplySheet(matter: m) { text in await act { try await $0.message(m.id, text: text, lawyer: portal.lawyerName) } done: { show(tr("firm.reply.sent")) } } }
+                if let m = matter { FirmReplySheet(matter: m) { text in await act { try await $0.message(m.id, text: text, lawyer: link?.lawyerName ?? "") } done: { show(tr("firm.reply.sent")) } } }
             case .edit:
-                if let m = matter, let v = m.latest { FirmEditSheet(version: v) { md, note in await act { _ = try await $0.saveVersion(m.id, markdown: md, note: note, lawyer: portal.lawyerName) } } }
+                if let m = matter, let v = m.latest { FirmEditSheet(version: v) { md, note in await act { _ = try await $0.saveVersion(m.id, markdown: md, note: note, lawyer: link?.lawyerName ?? "") } } }
             case .signoff:
-                if let m = matter, let v = m.latest { FirmSignoffSheet(matter: m, version: v, signer: portal.signer(for: m), onSigned: { url in
+                if let m = matter, let v = m.latest { FirmSignoffSheet(matter: m, version: v, link: link, onSigned: { url in
                     Task { await load(); await portal.refresh() }
                     if let url { sheet = .pdf(url) }
                 }, onStale: { Task { await load() } }) }
@@ -241,7 +243,7 @@ struct FirmMatterView: View {
     }
 
     private func load() async {
-        guard let client = portal.client else { error = tr("firm.error.access"); return }
+        guard let client = link?.client else { error = tr("firm.error.access"); return }
         do {
             let m = try await client.matter(id)
             if let v = m.latest, let p = m.previous {
@@ -255,7 +257,7 @@ struct FirmMatterView: View {
     /// Runs one portal action, then reloads the matter (fresh state before any next step) and the inbox.
     @discardableResult
     private func act(_ work: (FirmPortalClient) async throws -> Void, done: (() -> Void)? = nil) async -> Bool {
-        guard let client = portal.client else { return false }
+        guard let client = link?.client else { return false }
         busy = true; defer { busy = false }
         do {
             try await work(client)

@@ -5,7 +5,7 @@ import SwiftUI
 /// Reviews tab: what needs the lawyer first, then what is waiting, in progress, and done.
 struct FirmInboxView: View {
     @State private var portal = FirmPortal.shared
-    @State private var path: [String] = []
+    @State private var path: [FirmMatterRef] = []
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -20,8 +20,10 @@ struct FirmInboxView: View {
                 }
                 ForEach(FirmInbox.grouped(portal.matters), id: \.0) { group, items in
                     Section {
-                        ForEach(items) { m in
-                            NavigationLink(value: m.id) { FirmMatterRow(matter: m) }
+                        ForEach(items, id: \.uid) { m in
+                            NavigationLink(value: FirmMatterRef(portal: m.linkID ?? "", id: m.id)) {
+                                FirmMatterRow(matter: m, firm: portal.links.count > 1 ? portal.link(m.linkID)?.firmName : nil)
+                            }
                                 .accessibilityIdentifier("firm.row." + m.id)
                         }
                     } header: {
@@ -34,7 +36,7 @@ struct FirmInboxView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle(tr("firm.tab"))
-            .navigationDestination(for: String.self) { id in FirmMatterView(id: id) }
+            .navigationDestination(for: FirmMatterRef.self) { ref in FirmMatterView(ref: ref) }
             .refreshable { await portal.refresh() }
             // Polls while the tab is on screen; instant delivery needs the server push (see the spec).
             .task {
@@ -60,9 +62,12 @@ struct FirmInboxView: View {
 
 struct FirmMatterRow: View {
     let matter: FirmMatterSummary
+    /// Which firm, shown only when more than one portal is linked.
+    var firm: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: T.Sp.s1) {
+            if let firm { Text(firm).font(T.F.micro()).foregroundStyle(Color.secondary).lineLimit(1) }
             HStack(alignment: .firstTextBaseline) {
                 Text(FirmText.who(matter.client, matter.company))
                     .font(T.F.heading()).foregroundStyle(Color.primary).lineLimit(1)

@@ -12,6 +12,13 @@ client, a list "for the lawyer"); the feature is generic and carries no firm nam
 - Joining: Settings → *Firm review* → paste the office link the firm sent (for example `…/tw/`). The app resolves it to an
   allowlisted portal (host plus office path) and calls `<portal>/api/portal/me` with the account's session token. A new account shows *Waiting for the firm to approve you*. Once approved, the tab appears.
   A revoked account loses it.
+- Several portals per account (1.13.1): a lawyer can link K&W offices and the partner network
+  (`ai-firm.aiworkdeck.com/sv` Venture AI, `/tw` Draft AI) side by side. Each link has its own access state and trial
+  code. The tab shows when any link is approved, and the inbox merges matters, labelled by firm when more than one is
+  linked. Every action goes to the matter's own portal. A link that can't be reached stays listed in Settings, so it can be
+  retried or removed. Partner-network portals have no roster: the review is recorded under the account's own name, and the
+  lawyer may add `title`, `firm` and `admission` on `matter/signoff`. They are remembered per account and portal, and printed on the
+  final PDF.
 - The firm is the customer: the firm enables lawyers' seats on its portal (sold to firms, outside the app). The lawyer
   never sees a paywall, so no in-app purchase is involved. Approval on the portal *is* the entitlement for v1. A later
   server step can record it as an AI WorkDeck advanced feature, so the account page and other clients know about it.
