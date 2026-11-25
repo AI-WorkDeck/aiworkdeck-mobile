@@ -80,7 +80,7 @@ private fun MatterRow(matter: FirmMatterSummary, firm: String?, onClick: () -> U
     ) {
         firm?.let { Text(it, style = Fonts.nano(), color = Tk.L.fgMuted, maxLines = 1) }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(FirmText.who(matter.client, matter.company), style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(FirmText.title(matter.client, matter.company, matter.template?.text), style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             FirmText.instant(matter.updatedAt)?.let { FirmTabs.agoKey(it) }?.let { (key, n) ->
                 Text(tr(key, mapOf("n" to n)), style = Fonts.nano(), color = Tk.L.fgFaint)
             }

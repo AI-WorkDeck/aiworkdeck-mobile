@@ -270,6 +270,14 @@ class FirmReviewTest {
         assertEquals("第1条 商号", FirmMarkdown.plain("## **第1条** 商号"))
     }
 
+    @Test fun unnamedMattersShowTheDocumentAndCallsWithoutTimesHaveNoDanglingSeparator() {
+        assertEquals("Acme · Ada", FirmText.title("Ada", "Acme", "NDA"))
+        assertEquals("Mutual NDA", FirmText.title("", null, "Mutual NDA"))
+        assertEquals("—", FirmText.title(null, "", " "))
+        assertEquals("firm.reason.call" to emptyMap<String, Any>(), FirmText.callLine(""))
+        assertEquals("firm.matter.call" to mapOf<String, Any>("times" to "Tue 3pm"), FirmText.callLine("Tue 3pm"))
+    }
+
     @Test fun everyFirmStringKeyUsedHereExists() {
         val keys = FirmInbox.Group.entries.map(FirmInbox::titleKey) +
             listOf("call_requested", "client_replied", "review_requested").map(FirmInbox::reasonKey) +

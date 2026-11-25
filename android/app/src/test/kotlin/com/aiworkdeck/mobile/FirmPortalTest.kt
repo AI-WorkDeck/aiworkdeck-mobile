@@ -158,7 +158,12 @@ class FirmPortalTest {
             assertEquals(FirmAccess.approved, p.access)
             assertEquals("Bearer LOCAL-TRIAL", server.takeRequest().getHeader("Authorization"))
             assertTrue("local PDFs open", FirmPortalLink.isPortalUrl(base.resolve("/m/1.pdf").toString()))
+            assertEquals("a production portal link is fetched from the seed portal",
+                base.resolve("/all/m/tok/2.pdf").toString(), FirmPortalLink.localize("https://aifirm.aiworkdeck.com/all/m/tok/2.pdf"))
+            assertEquals("https://evil.example/x.pdf", FirmPortalLink.localize("https://evil.example/x.pdf"))
         } finally { FirmPortalLink.debugBase = null }
+        assertEquals("outside seed mode nothing is rewritten", "https://aifirm.aiworkdeck.com/all/m/tok/2.pdf",
+            FirmPortalLink.localize("https://aifirm.aiworkdeck.com/all/m/tok/2.pdf"))
         assertFalse(FirmPortalLink.isPortalUrl(base.resolve("/m/1.pdf").toString()))
     }
 

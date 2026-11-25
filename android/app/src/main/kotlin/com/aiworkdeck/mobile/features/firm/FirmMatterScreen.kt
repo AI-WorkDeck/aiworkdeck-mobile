@@ -160,10 +160,10 @@ fun FirmMatterScreen(portal: FirmPortal, ref: FirmMatterSummary, onClose: () -> 
 
 @Composable
 private fun Header(m: FirmMatter) = Column(verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
-    Text(FirmText.who(m.client, m.company), style = Fonts.title(), color = Tk.L.fg)
+    Text(FirmText.title(m.client, m.company, m.template?.text), style = Fonts.title(), color = Tk.L.fg)
     m.lawyerDisplayName?.let { Text(tr("firm.matter.requestedLawyer", mapOf("name" to it)), style = Fonts.small(), color = Tk.L.fgMuted) }
     m.consult?.takeIf { it.status == "requested" || it.status == "scheduled" }?.let { c ->
-        Text(if (c.status == "scheduled") tr("firm.matter.callScheduled") else tr("firm.matter.call", mapOf("times" to (c.times ?: ""))),
+        Text(if (c.status == "scheduled") tr("firm.matter.callScheduled") else FirmText.callLine(c.times).let { (k, v) -> tr(k, v) },
             style = Fonts.small(), color = if (c.status == "requested") Tk.S.failed else Tk.L.accent, modifier = Modifier.testTag("firm.call"))
     }
 }
@@ -269,7 +269,7 @@ private fun FirmReplyLayer(matter: FirmMatter, onCancel: () -> Unit, send: suspe
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
-    LayerScaffold(FirmText.who(matter.client, matter.company), tr("common.cancel"), onCancel, busy = sending, backDismisses = text.isBlank(), action = {
+    LayerScaffold(FirmText.title(matter.client, matter.company, matter.template?.text), tr("common.cancel"), onCancel, busy = sending, backDismisses = text.isBlank(), action = {
         TextButton(onClick = { sending = true; scope.launch { send(text.trim()); sending = false } }, enabled = !sending && text.isNotBlank(),
             modifier = Modifier.testTag("firm.reply.send")) { Text(tr("firm.reply.send"), color = Tk.L.accent, fontWeight = FontWeight.SemiBold) }
     }) {
@@ -344,7 +344,7 @@ private fun FirmSignoffLayer(portal: FirmPortal, link: FirmLink, matter: FirmMat
     }
     LayerScaffold(tr("firm.signoff.title", mapOf("n" to version.n)), tr("common.cancel"), { if (!signing) onCancel() }) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
-            Text(FirmText.who(matter.client, matter.company), style = Fonts.heading(), color = Tk.L.fg)
+            Text(FirmText.title(matter.client, matter.company, matter.template?.text), style = Fonts.heading(), color = Tk.L.fg)
             matter.template?.text?.let { Text(it, color = Tk.L.fgMuted) }
             SectionTitle(tr("firm.signoff.signer"))
             Column(Modifier.testTag("firm.signoff.signer")) {
@@ -399,7 +399,7 @@ private fun FirmPdfLayer(url: String, scope: String?, onClose: () -> Unit) {
     var failed by remember(url) { mutableStateOf(false) }
     LaunchedEffect(url) {
         if (!FirmPortalLink.isPortalUrl(url)) { failed = true; return@LaunchedEffect }
-        file = runCatching { withContext(Dispatchers.IO) { downloadPdf(context, url, scope) } }.getOrNull()
+        file = runCatching { withContext(Dispatchers.IO) { downloadPdf(context, FirmPortalLink.localize(url), scope) } }.getOrNull()
         failed = file == null
     }
     LayerScaffold(tr("firm.matter.pdf"), tr("common.close"), onClose, action = {

@@ -119,6 +119,17 @@ object FirmPortalLink {
     /** Debug builds only: a local portal server for journeys without production accounts (see FirmSeed). */
     @Volatile var debugBase: URI? = null
 
+    /**
+     * Seed mode only: a portal URL (the server writes absolute https://<portal host>/... links) is fetched from the
+     * local seed portal instead, so nothing reaches production. Outside seed mode the URL is returned unchanged.
+     */
+    fun localize(url: String, allowed: List<String> = ContractCapabilities.firmPortals): String {
+        val b = debugBase ?: return url
+        val uri = runCatching { URI(url) }.getOrNull() ?: return url
+        if (uri.scheme != "https" || uri.host !in allowed.map { parts(it).first }) return url
+        return URI(b.scheme, null, b.host, b.port, uri.rawPath, uri.rawQuery, null).toString()
+    }
+
     /** PDFs and other portal links open only when they point at an allowlisted https host. */
     fun isPortalUrl(url: String, allowed: List<String> = ContractCapabilities.firmPortals): Boolean {
         val uri = runCatching { URI(url) }.getOrNull() ?: return false
@@ -204,6 +215,14 @@ object FirmIdentity {
 object FirmText {
     /** "2" → "§2"; named sections stay as they are. */
     fun section(s: String?): String? = s?.takeIf { it.isNotEmpty() }?.let { if (it.first().isDigit()) "§$it" else it }
+
+    /** Who the matter is for, else the document's name, else a dash (synthetic or unnamed matters). */
+    fun title(client: String?, company: String?, document: String?): String =
+        who(client, company).takeIf { it != "—" } ?: document?.takeIf { it.isNotBlank() } ?: "—"
+
+    /** The call line: with the proposed times when the client gave some, without a dangling separator otherwise. */
+    fun callLine(times: String?): Pair<String, Map<String, Any>> =
+        if (times.isNullOrBlank()) "firm.reason.call" to emptyMap() else "firm.matter.call" to mapOf("times" to times)
 
     fun who(client: String?, company: String?): String =
         listOfNotNull(company, client).filter { it.isNotEmpty() }.joinToString(" · ").ifEmpty { "—" }
