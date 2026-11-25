@@ -28,6 +28,7 @@ export interface TokensS {
   waitingOnDark: string
   movingOnDark: string
   arrivedOnDark: string
+  failedOnDark: string
 }
 
 export interface TokensSp {
@@ -97,7 +98,8 @@ export const T: Tokens = {
     failed: "#B5483C",
     waitingOnDark: "#D19C3D",
     movingOnDark: "#93B3C6",
-    arrivedOnDark: "#89A8A0"
+    arrivedOnDark: "#89A8A0",
+    failedOnDark: "#E8938A"
   },
   Sp: {
     s1: 4,

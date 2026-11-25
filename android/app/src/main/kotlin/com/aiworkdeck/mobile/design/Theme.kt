@@ -47,7 +47,8 @@ fun WorkdeckTheme(dark: Boolean, content: @Composable () -> Unit) {
                 surfaceContainer = Tk.D.surface, surfaceContainerHigh = Tk.D.surface, surfaceContainerHighest = Tk.D.surface,
                 surfaceContainerLow = Tk.D.bg, surfaceContainerLowest = Tk.D.bg,
                 outline = Tk.D.rule, outlineVariant = Tk.D.rule,
-                error = Tk.S.failed, onError = Tk.D.fg,
+                inverseSurface = Tk.D.fg, inverseOnSurface = Tk.D.bg, inversePrimary = Tk.Paper.Day.accent,
+                error = Tk.S.failedOnDark, onError = Tk.D.bg,
             )
         } else {
             lightColorScheme(
@@ -59,7 +60,10 @@ fun WorkdeckTheme(dark: Boolean, content: @Composable () -> Unit) {
                 surfaceContainer = Tk.L.bg, surfaceContainerHigh = Tk.L.bg, surfaceContainerHighest = Tk.L.sunken,
                 surfaceContainerLow = Tk.L.bg, surfaceContainerLowest = Tk.L.bg,
                 outline = Tk.L.ruleStrong, outlineVariant = Tk.L.rule,
-                error = Tk.S.failed, onError = Tk.L.bg,
+                // Snackbar: inverse of the page. Its action needs an accent that reads on that inverse.
+                inverseSurface = Tk.L.fg, inverseOnSurface = Tk.L.bg,
+                inversePrimary = if (night) Tk.Paper.Day.accent else Tk.S.arrivedOnDark,
+                error = Tk.S.failedText, onError = Tk.L.bg,
             )
         }
         MaterialTheme(colorScheme = scheme, content = content)

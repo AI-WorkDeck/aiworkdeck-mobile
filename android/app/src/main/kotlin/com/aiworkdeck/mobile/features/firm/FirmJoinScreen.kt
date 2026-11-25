@@ -65,7 +65,7 @@ fun FirmJoinScreen(portal: FirmPortal, onClose: () -> Unit) {
                 trial, { trial = it }, Modifier.fillMaxWidth().testTag("firm.join.trial"), enabled = !working, singleLine = true,
                 placeholder = { Text(tr("firm.trial.code")) }, visualTransformation = PasswordVisualTransformation(),
             ) else TextButton(onClick = { showTrial = true }, enabled = !working) { Text(tr("firm.trial.use"), color = Tk.L.accent) }
-            error?.let { Text(it, style = Fonts.small(), color = Tk.S.failed, modifier = Modifier.testTag("firm.join.error")) }
+            error?.let { Text(it, style = Fonts.small(), color = Tk.S.failedText, modifier = Modifier.testTag("firm.join.error")) }
             PrimaryButton(tr("firm.join.connect"), onClick = { join() }, modifier = Modifier.fillMaxWidth().testTag("firm.join.connect"),
                 enabled = !working && link.isNotBlank())
             if (working) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Tk.L.accent, trackColor = Tk.L.rule)
@@ -81,11 +81,11 @@ private fun LinkRow(l: FirmLink, onCheck: () -> Unit, onLeave: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
         val status = FirmStatus.link(state.access, l.firmName)
         Text(status?.let { tr(it.first, it.second) } ?: l.firmName, style = Fonts.body(), color = Tk.L.fg, modifier = Modifier.testTag("firm.join.status"))
-        if (state.access == FirmAccess.failed) Text(tr("firm.error.network"), style = Fonts.small(), color = Tk.S.failed)
+        if (state.access == FirmAccess.failed) Text(tr("firm.error.network"), style = Fonts.small(), color = Tk.S.failedText)
         state.me?.trialUntil?.let { Text(tr("firm.trial.until", mapOf("date" to it.take(10))), style = Fonts.small(), color = Tk.L.fgMuted) }
         Row(horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
             if (state.access in setOf(FirmAccess.pending, FirmAccess.checking, FirmAccess.failed)) TextButton(onClick = onCheck) { Text(tr("firm.status.check"), color = Tk.L.accent) }
-            TextButton(onClick = onLeave, modifier = Modifier.testTag("firm.leave")) { Text(tr("firm.leave"), color = Tk.S.failed) }
+            TextButton(onClick = onLeave, modifier = Modifier.testTag("firm.leave")) { Text(tr("firm.leave"), color = Tk.S.failedText) }
         }
         Hairline()
     }

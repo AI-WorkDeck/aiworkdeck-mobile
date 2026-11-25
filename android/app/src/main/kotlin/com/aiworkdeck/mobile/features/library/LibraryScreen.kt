@@ -306,7 +306,7 @@ fun LibraryScreen(
                         selected = emptySet()
                         selecting = false
                         confirming = false
-                    }) { Text(tr("library.delete"), color = Tk.S.failed) }
+                    }) { Text(tr("library.delete"), color = Tk.S.failedText) }
                 },
                 dismissButton = {
                     TextButton(onClick = { confirming = false }) { Text(tr("common.cancel")) }
@@ -527,7 +527,7 @@ private fun ListRow(item: CaptureItem, selecting: Boolean, checked: Boolean, onM
             }
             Text(kindLabel(item.kind), style = Fonts.nano(), color = Tk.D.fgMuted)
             if (item.state == TransferState.failed) item.lastError?.takeIf { it.isNotEmpty() }?.let {
-                Text(it, style = Fonts.nano(), color = Tk.S.failed)
+                Text(it, style = Fonts.nano(), color = Tk.S.failedText)
             }
             if (item.project == null && item.state == TransferState.waiting) TextButton(onClick = onAssign) { Text(tr("library.assign")) }
         }

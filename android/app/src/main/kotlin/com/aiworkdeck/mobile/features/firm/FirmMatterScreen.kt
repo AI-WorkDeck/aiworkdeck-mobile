@@ -102,7 +102,7 @@ fun FirmMatterScreen(portal: FirmPortal, ref: FirmMatterSummary, onClose: () -> 
                 error?.let { msg ->
                     Column(Modifier.fillMaxWidth().testTag("firm.matter.error"), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
                         if (m == null) Text(FirmText.title(ref.client, ref.company, ref.template?.text), style = Fonts.title(), color = Tk.L.fg)
-                        Text(msg, style = Fonts.body(), color = Tk.S.failed)
+                        Text(msg, style = Fonts.body(), color = Tk.S.failedText)
                         TextButton(onClick = { scope.launch { busy = true; try { load() } finally { busy = false } } }, enabled = !busy,
                             modifier = Modifier.testTag("firm.matter.retry")) { Text(tr("project.retry"), color = Tk.L.accent) }
                     }
@@ -205,7 +205,7 @@ private fun Flags(m: FirmMatter) {
         val latest = m.latest
         if (fresh.isNotEmpty() && latest != null) {
             // Flags the newest draft raised after the client settled the others: never hidden behind them.
-            Text(tr("firm.matter.flagsNew", mapOf("n" to latest.n)), style = Fonts.small(), fontWeight = FontWeight.SemiBold, color = Tk.S.failed, modifier = Modifier.testTag("firm.flags.new"))
+            Text(tr("firm.matter.flagsNew", mapOf("n" to latest.n)), style = Fonts.small(), fontWeight = FontWeight.SemiBold, color = Tk.S.failedText, modifier = Modifier.testTag("firm.flags.new"))
             fresh.forEach { FlagRow(it, null) }
         }
     }
@@ -229,7 +229,7 @@ private fun Changes(m: FirmMatter, edits: List<FirmDiff.Change>) {
         (v.notes?.changes ?: emptyList()).forEach { Text("• $it", style = Fonts.body(), color = Tk.L.fg) }
         edits.take(12).forEach { e ->
             when (e) {
-                is FirmDiff.Change.Removed -> Text(FirmMarkdown.plain(e.text), style = Fonts.small(), color = Tk.S.failed, textDecoration = TextDecoration.LineThrough)
+                is FirmDiff.Change.Removed -> Text(FirmMarkdown.plain(e.text), style = Fonts.small(), color = Tk.S.failedText, textDecoration = TextDecoration.LineThrough)
                 is FirmDiff.Change.Added -> Text(FirmMarkdown.plain(e.text), style = Fonts.small(), color = Tk.L.accent)
                 is FirmDiff.Change.Same -> {}
             }
@@ -370,7 +370,7 @@ private fun FirmSignoffLayer(portal: FirmPortal, link: FirmLink, matter: FirmMat
             Check(tr("firm.signoff.engagement"), engagement, "firm.signoff.engagement") { engagement = it }
             Check(tr("firm.signoff.reviewed", mapOf("n" to version.n)), reviewed, "firm.signoff.reviewed") { reviewed = it }
             Text(tr("firm.signoff.footer"), style = Fonts.small(), color = Tk.L.fgMuted)
-            error?.let { Text(it, color = Tk.S.failed, modifier = Modifier.testTag("firm.signoff.error")) }
+            error?.let { Text(it, color = Tk.S.failedText, modifier = Modifier.testTag("firm.signoff.error")) }
         }
         Button(onClick = {
             signing = true; error = null
@@ -421,7 +421,7 @@ private fun FirmPdfLayer(url: String, scope: String?, onClose: () -> Unit) {
     }) {
         when {
             file != null -> FilePreview(file!!, PreviewKind.Pdf, Modifier.fillMaxSize())
-            failed -> Text(tr("firm.error.network"), color = Tk.S.failed)
+            failed -> Text(tr("firm.error.network"), color = Tk.S.failedText)
             else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Tk.L.accent) }
         }
     }

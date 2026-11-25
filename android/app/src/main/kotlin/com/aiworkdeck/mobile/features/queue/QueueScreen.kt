@@ -147,7 +147,7 @@ fun QueueScreen(model: AppModel, onClose: () -> Unit) {
                             selectedId = selectedId, expiry = expiry, progress = progress,
                             onSelect = { selectedId = it.id }, onRetry = retry, onAction = ::startAction,
                         )
-                        section(tr("queue.section.failed"), sections.failed, Tk.S.failed, rows)
+                        section(tr("queue.section.failed"), sections.failed, if (onDark) Tk.S.failedOnDark else Tk.S.failed, rows)
                         section(tr("library.unknownProject"), sections.unassigned, unassignedTint, rows)
                         section(tr("queue.section.uploading"), sections.active, if (onDark) Tk.S.waitingOnDark else Tk.S.waiting, rows)
                         section(tr("queue.section.staged"), sections.staged, if (onDark) Tk.S.movingOnDark else Tk.S.moving, rows)
@@ -294,7 +294,7 @@ private fun QueueRow(
                     // 失败原因照实显示。区分「你的网络」与「我们这边」，用户才知道是该换个地方
                     // 重试还是该找人。
                     item.queueError?.takeIf { it.isNotEmpty() }?.let {
-                        Text(it, style = Fonts.nano(), color = Tk.S.failed)
+                        Text(it, style = Fonts.nano(), color = Tk.S.failedText)
                     }
                     // 中转区不是网盘：到期未被桌面端取走就会被清理。只在还剩不到 3 天时说话。
                     if (item.state == TransferState.uploaded && expiresSoon(expiresAt, Instant.now())) {
@@ -388,8 +388,8 @@ private fun Details(
                     Text(move.target.name, style = Fonts.body(), color = Tk.L.fg)
                 }
                 val accountChanged = move.accountBinding != currentBinding
-                if (accountChanged) Text(tr("queue.moveAccountChanged"), style = Fonts.small(), color = Tk.S.failed)
-                move.lastError?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+                if (accountChanged) Text(tr("queue.moveAccountChanged"), style = Fonts.small(), color = Tk.S.failedText)
+                move.lastError?.let { Text(it, style = Fonts.small(), color = Tk.S.failedText) }
                 // 等目标的事务可能熬过中转有效期：显式重试同一个请求
                 IconAction(null, tr("queue.moveRetry"), enabled = !accountChanged, onClick = onRetry)
             }
@@ -407,7 +407,7 @@ private fun Details(
                 if (result.tags.isNotEmpty()) Text(result.tags.joinToString(" · "), style = Fonts.small(), color = Tk.L.fgMuted)
             }
             if (item.state == TransferState.failed && item.archiveMove == null) {
-                item.lastError?.takeIf { it.isNotEmpty() }?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+                item.lastError?.takeIf { it.isNotEmpty() }?.let { Text(it, style = Fonts.small(), color = Tk.S.failedText) }
                 PrimaryButton(tr("project.retry"), onClick = onRetry)
             }
             if (item.state == TransferState.uploaded) {

@@ -55,6 +55,13 @@ object Tk {
         val waitingOnDark: Color = Color(T.S.waitingOnDark)
         val movingOnDark: Color = Color(T.S.movingOnDark)
         val arrivedOnDark: Color = Color(T.S.arrivedOnDark)
+        val failedOnDark: Color = Color(T.S.failedOnDark)
+        /**
+         * Error and destructive text. On any dark surface ([LocalOnDark]: functional dark screens and
+         * system dark mode) [failed] is only 3.4:1, so text reads [failedOnDark]. Dots, icons and
+         * borders keep [failed].
+         */
+        val failedText: Color @Composable @ReadOnlyComposable get() = if (LocalOnDark.current) failedOnDark else failed
     }
 
     object Sp {

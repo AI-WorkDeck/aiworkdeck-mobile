@@ -46,13 +46,13 @@ fun BackupConsentScreen(onClose: () -> Unit) {
             Text(tr("backup.message"), style = Fonts.body(), color = Tk.L.fg)
             consent?.let { state ->
                 Text(tr(if (state.enabled) "backup.enabled" else "backup.disabled"), style = Fonts.small(), color = Tk.L.fgMuted)
-                if (!state.canWriteCloud) Text(tr(if (state.cloudAccess?.frozen == true) "postpaid.restricted" else "backup.subscriptionRequired"), style = Fonts.small(), color = if (state.cloudAccess?.frozen == true) Tk.S.failed else Tk.L.fgMuted)
-                if (state.enabled) TextButton(onClick = { disable = true }, enabled = !busy) { Text(tr("backup.disable"), color = Tk.S.failed) }
+                if (!state.canWriteCloud) Text(tr(if (state.cloudAccess?.frozen == true) "postpaid.restricted" else "backup.subscriptionRequired"), style = Fonts.small(), color = if (state.cloudAccess?.frozen == true) Tk.S.failedText else Tk.L.fgMuted)
+                if (state.enabled) TextButton(onClick = { disable = true }, enabled = !busy) { Text(tr("backup.disable"), color = Tk.S.failedText) }
                 else if (state.canWriteCloud) com.aiworkdeck.mobile.design.PrimaryButton(tr("backup.enable"), onClick = { save(true) }, enabled = !busy)
                 if (!state.decided) TextButton(onClick = { save(false) }, enabled = !busy) { Text(tr("backup.decline"), color = Tk.L.accent) }
             }
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Tk.L.accent, trackColor = Tk.L.rule)
-            error?.let { Text(it, color = Tk.S.failed); TextButton(onClick = { scope.launch { load() } }, enabled = !busy) { Text(tr("project.retry"), color = Tk.L.accent) } }
+            error?.let { Text(it, color = Tk.S.failedText); TextButton(onClick = { scope.launch { load() } }, enabled = !busy) { Text(tr("project.retry"), color = Tk.L.accent) } }
             if (closable) TextButton(onClick = onClose, enabled = !busy) { Text(tr("common.close"), color = Tk.L.accent) }
         }
         if (disable) AlertDialog(onDismissRequest = { disable = false }, containerColor = Tk.L.bg, titleContentColor = Tk.L.fg, textContentColor = Tk.L.fg, title = { Text(tr("backup.disable"), color = Tk.L.accent) }, text = { Text(tr("backup.disableMessage")) },

@@ -59,6 +59,10 @@ class PaperTest {
             "waitingOnDark/bg" to (Tk.S.waitingOnDark to n.bg),
             "movingOnDark/bg" to (Tk.S.movingOnDark to n.bg),
             "arrivedOnDark/bg" to (Tk.S.arrivedOnDark to n.bg),
+            "failedOnDark/bg" to (Tk.S.failedOnDark to n.bg),
+            "failedOnDark/sunken" to (Tk.S.failedOnDark to n.sunken),
+            // Snackbar at night: inverseSurface = fg, action = inversePrimary = Day.accent.
+            "snackbarAction/inverse" to (Tk.Paper.Day.accent to n.fg),
         )
         for ((name, pair) in pairs) {
             val ratio = contrast(pair.first, pair.second)
@@ -72,6 +76,8 @@ class PaperTest {
         assertTrue(contrast(d.fgMuted, d.bg) >= 4.5)
         assertTrue(contrast(d.accent, d.bg) >= 4.5)
         assertTrue(contrast(d.onAccent, d.accent) >= 4.5)
+        // Snackbar by day: inverseSurface = fg, action = inversePrimary = arrivedOnDark.
+        assertTrue(contrast(Tk.S.arrivedOnDark, d.fg) >= 4.5)
     }
 
     private fun contrast(a: Color, b: Color): Double {

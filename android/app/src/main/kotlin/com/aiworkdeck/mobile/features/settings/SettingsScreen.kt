@@ -336,7 +336,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     }
                 }
 
-                TextAction(tr("common.signOut"), color = Tk.S.failed, modifier = Modifier.padding(top = Tk.Sp.s4)) { model.signOut(); onClose() }
+                TextAction(tr("common.signOut"), color = Tk.S.failedText, modifier = Modifier.padding(top = Tk.Sp.s4)) { model.signOut(); onClose() }
                 // 各应用商店的账号删除要求（与 App Store 5.1.1(v)）都指向这个入口。
                 // 放在退出登录下面、字号更小：它比退出重得多，不该长得一样容易误点。
                 Text(
@@ -442,7 +442,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                                 deleting = false
                             }
                         },
-                    ) { Text(tr("settings.deleteAccount"), color = Tk.S.failed) }
+                    ) { Text(tr("settings.deleteAccount"), color = Tk.S.failedText) }
                 },
                 dismissButton = {
                     TextButton(enabled = !deleting, onClick = { confirmingDelete = false }) {

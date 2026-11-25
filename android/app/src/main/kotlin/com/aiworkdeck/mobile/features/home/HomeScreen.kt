@@ -318,7 +318,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
             text = { Text(notice) },
             confirmButton = {
                 if (RecordingState.canRetrySave) androidx.compose.material3.TextButton(onClick = { model.retryRecordingDrafts() }, enabled = !RecordingState.isSaving) { Text(tr("rec.retrySave")) }
-                if (RecordingState.canDiscardUnreadable) androidx.compose.material3.TextButton(onClick = { model.discardUnreadableRecordings() }, enabled = !RecordingState.isSaving) { Text(tr("rec.discardUnreadable"), color = Tk.S.failed) }
+                if (RecordingState.canDiscardUnreadable) androidx.compose.material3.TextButton(onClick = { model.discardUnreadableRecordings() }, enabled = !RecordingState.isSaving) { Text(tr("rec.discardUnreadable"), color = Tk.S.failedText) }
             },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { RecordingState.notice = null }) { Text(tr("common.close")) } },
         )
@@ -327,7 +327,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
     if (confirmDiscard) androidx.compose.material3.AlertDialog(
         onDismissRequest = { confirmDiscard = false },
         text = { Text(tr("rec.discardUnreadable")) },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmDiscard = false; model.discardUnreadableRecordings() }) { Text(tr("rec.discardUnreadable"), color = Tk.S.failed) } },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmDiscard = false; model.discardUnreadableRecordings() }) { Text(tr("rec.discardUnreadable"), color = Tk.S.failedText) } },
         dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDiscard = false }) { Text(tr("common.cancel")) } },
     )
 
@@ -378,7 +378,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
                         Text(tr("rec.retrySave"), color = Tk.D.fg)
                     }
                     if (RecordingState.canDiscardUnreadable && !RecordingState.isRecording) androidx.compose.material3.TextButton(onClick = { confirmDiscard = true }, enabled = !RecordingState.isSaving) {
-                        Text(tr("rec.discardUnreadable"), color = Tk.S.failed)
+                        Text(tr("rec.discardUnreadable"), color = Tk.S.failedText)
                     }
                 }
                 !hasCamera -> PermissionStage(tr("home.permission.camera"), tr("home.permission.cameraHint"), context)
@@ -407,7 +407,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
             if (flash) Box(Modifier.fillMaxSize().background(Color.White))
         } }
         val pauseNote: @Composable () -> Unit = {
-            pauseError?.let { Text(it, color = Tk.S.failed, style = Fonts.small(), modifier = Modifier.padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s1)) }
+            pauseError?.let { Text(it, color = Tk.S.failedText, style = Fonts.small(), modifier = Modifier.padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s1)) }
         }
         val controls: @Composable (Boolean) -> Unit = { side -> Controls(
             side = side,
@@ -588,7 +588,7 @@ private fun Controls(
                     Text(statusLabel, style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f), textAlign = TextAlign.Center)
                     Text(pauseLabel, style = Fonts.small(), color = if (canPause) Color.White else Color.White.copy(alpha = 0.4f), textAlign = TextAlign.Center,
                         modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = canPause, role = Role.Button, onClick = onTogglePause).wrapContentHeight())
-                    if (paused) Text(tr("rec.silence.stop"), style = Fonts.small(), color = Tk.S.failed,
+                    if (paused) Text(tr("rec.silence.stop"), style = Fonts.small(), color = Tk.S.failedText,
                         modifier = Modifier.heightIn(min = Tk.touchMin).clickable(role = Role.Button, onClick = onStop).wrapContentHeight())
                 }
             } else {
@@ -620,7 +620,7 @@ private fun Controls(
                 if (!paused) Box(Modifier.size(7.dp).clip(CircleShape).background(Tk.S.failed))
                 Text(WatermarkFormat.duration(elapsed), style = Fonts.mono(Tk.Ty.small), color = Color.White)
                 Text(statusLabel, style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f))
-                if (paused) Text(tr("rec.silence.stop"), style = Fonts.small(), color = Tk.S.failed,
+                if (paused) Text(tr("rec.silence.stop"), style = Fonts.small(), color = Tk.S.failedText,
                     modifier = Modifier.padding(start = Tk.Sp.s3).heightIn(min = Tk.touchMin).clickable(role = Role.Button, onClick = onStop).wrapContentHeight())
                 Text(
                     pauseLabel,

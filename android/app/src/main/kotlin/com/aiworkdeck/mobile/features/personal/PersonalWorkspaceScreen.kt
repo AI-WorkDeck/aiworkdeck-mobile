@@ -341,7 +341,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
                 }
             }
             state.error?.let { Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(it, style = Fonts.small(), color = Tk.S.failed, modifier = Modifier.weight(1f))
+                Text(it, style = Fonts.small(), color = Tk.S.failedText, modifier = Modifier.weight(1f))
                 Link(tr("project.retry"), !state.busy) { scope.launch { if (state.pending != null) { state.draft = state.pending!!.message; state.send() } else state.load(context) } }
             } }
             state.desktopCopy?.let { copy -> Row(verticalAlignment = Alignment.CenterVertically) {
@@ -403,7 +403,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
                 })
             }
             Text(tr("personal.remindersHint"), style = Fonts.micro(), color = Tk.L.fgMuted)
-            if (notificationError) Text(tr("personal.remindersUnavailable"), style = Fonts.small(), color = Tk.S.failed)
+            if (notificationError) Text(tr("personal.remindersUnavailable"), style = Fonts.small(), color = Tk.S.failedText)
             HorizontalDivider(color = Tk.L.rule, modifier = Modifier.padding(top = Tk.Sp.s3))
             val events = calendar?.events.orEmpty().filter { it.within(days) && (project.isEmpty() || it.projectIdentity == project) }.sortedBy { it.dueDate + (it.dueTime ?: "") }
             LazyColumn(Modifier.weight(1f)) {
@@ -417,7 +417,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
                     HorizontalDivider(color = Tk.L.rule)
                 }
             }
-            state.calendarError?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+            state.calendarError?.let { Text(it, style = Fonts.small(), color = Tk.S.failedText) }
             if (calendar?.enabled == true) Link(tr("personal.turnOff"), muted = true) { scope.launch { state.configure("calendar", false, context); CalendarReminders.clear(context); reminders = false } }
         }
     }
@@ -440,13 +440,13 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
                         }
                     }
                     if (state.reportRefreshing) { Text(tr("common.loading")); LinearProgressIndicator(Modifier.fillMaxWidth()) }
-                    state.reportProgressError?.let { Text(it, color = Tk.S.failed) }
+                    state.reportProgressError?.let { Text(it, color = Tk.S.failedText) }
                 } else {
                     Text(tr("personal.report.privacy"))
                     OutlinedTextField(value = state.reportDescription, onValueChange = { state.reportDescription = it.take(2000) },
                         enabled = !state.reporting, label = { Text(tr("personal.report.reason")) }, maxLines = 5)
                     if (state.reporting) { Text(tr("personal.processing")); LinearProgressIndicator(Modifier.fillMaxWidth()) }
-                    state.reportError?.let { Text(it, color = Tk.S.failed) }
+                    state.reportError?.let { Text(it, color = Tk.S.failedText) }
                 }
             } },
             confirmButton = {
@@ -462,7 +462,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
     state.copyTargets?.let { targets ->
         AlertDialog(onDismissRequest = { if (!state.loading) state.copyTargets = null },
             title = { Text(tr("personal.copy.title")) },
-            text = { Column { Text(tr("personal.copy.hint")); if (state.copyNeedsUpgrade) Text(tr("personal.copy.upgrade")); state.error?.let { Text(it, color = Tk.S.failed) }; if (targets.isEmpty()) Text(tr("project.emptyTitle")); LazyColumn { items(targets) { target -> TextButton(enabled = !state.loading, onClick = { scope.launch { state.copyTo(target) } }) { Text(target.label) } } } } },
+            text = { Column { Text(tr("personal.copy.hint")); if (state.copyNeedsUpgrade) Text(tr("personal.copy.upgrade")); state.error?.let { Text(it, color = Tk.S.failedText) }; if (targets.isEmpty()) Text(tr("project.emptyTitle")); LazyColumn { items(targets) { target -> TextButton(enabled = !state.loading, onClick = { scope.launch { state.copyTo(target) } }) { Text(target.label) } } } } },
             confirmButton = {}, dismissButton = { TextButton(enabled = !state.loading, onClick = { state.copyTargets = null }) { Text(tr("common.cancel")) } })
     }
     if (proOpen) ProScreen(onClose = { paid -> proOpen = false; if (paid) scope.launch { state.load(context) } })

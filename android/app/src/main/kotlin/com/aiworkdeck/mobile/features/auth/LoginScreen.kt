@@ -170,7 +170,7 @@ fun LoginScreen(model: AppModel) {
                 modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR)) }
                     .padding(horizontal = Tk.Sp.s1).wrapContentHeight(Alignment.CenterVertically))
         }
-        error?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+        error?.let { Text(it, style = Fonts.small(), color = Tk.S.failedText) }
         Box(contentAlignment = Alignment.Center) {
             PrimaryButton(text = tr(if (busy) "login.working" else "login.title"), onClick = ::signIn,
                 enabled = !busy && identity.isNotBlank() && password.isNotEmpty())

@@ -273,7 +273,7 @@ private fun FilesPane(
         }
         error?.let {
             Column(Modifier.padding(horizontal = Tk.Sp.gutter)) {
-                Text(it, style = Fonts.small(), color = Tk.S.failed)
+                Text(it, style = Fonts.small(), color = Tk.S.failedText)
                 TextAction(tr("project.retry"), enabled = !loading, onClick = onRefresh)
             }
         }
@@ -338,7 +338,7 @@ private fun ReaderPane(file: ProjectFile, cloud: Boolean, state: ReaderState, on
                 LinearProgressIndicator(Modifier.fillMaxWidth(), color = Tk.L.accent, trackColor = Tk.L.rule)
                 Text(tr(if (cloud) "workspace.cloudDownload" else "workspace.downloading"), style = Fonts.small(), color = Tk.L.fgMuted)
             }
-            state.error?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+            state.error?.let { Text(it, style = Fonts.small(), color = Tk.S.failedText) }
             when {
                 state.canConfirm -> {
                     Text(state.quote.orEmpty(), style = Fonts.body(), color = Tk.L.fg)
