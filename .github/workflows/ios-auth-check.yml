@@ -4,10 +4,16 @@ on:
   workflow_call:
   push:
     branches: [main]
+    paths: ['ios/**', 'contract/**', 'fastlane/Fastfile', 'fastlane/tests/**', 'scripts/check-ios-*.py', 'scripts/create-ios-ci-simulator.py', 'scripts/tests/test_ios_*.py', '.github/workflows/ios-auth-check.yml', '.github/workflows/appstore-build.yml']
   pull_request:
     paths: ['ios/**', 'contract/**', 'fastlane/Fastfile', 'fastlane/tests/**', 'scripts/check-ios-*.py', 'scripts/create-ios-ci-simulator.py', 'scripts/tests/test_ios_*.py', '.github/workflows/ios-auth-check.yml', '.github/workflows/appstore-build.yml']
 permissions:
   contents: read
+# macOS jobs are limited per organization, so a run of three simulators blocks every other PR.
+# A newer push to the same PR cancels the older run; main and release calls never cancel.
+concurrency:
+  group: ios-auth-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   simulator:
     runs-on: xcode-27
@@ -21,7 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        device: [iphone, iphone-large, duo]
+        # PRs run the two blocking devices; the non-blocking large iPhone runs on main and releases.
+        device: ${{ fromJSON(github.event_name == 'pull_request' && '["iphone","duo"]' || '["iphone","iphone-large","duo"]') }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
