@@ -20,11 +20,25 @@ iOS 只有一条 App 记录（`com.aiworkdeck.mobile.cn`，2026-09-05 起全球�
 
 ## 个人工作区
 
-登录后可在「个人助理 / 日程 / 项目 / 采集」之间切换，直接提问，无需先选项目。云端订阅、备份和摘要处理授权由服务端校验；最近一次对话与未完成请求按账号隔离恢复。订阅仍沿用现有账户渠道，本次没有新增手机购买流程，也不把积分充值当作订阅。
+登录后可在「个人助理 / 日程 / 项目 / 采集」之间切换，直接提问，无需先选项目。云端订阅、备份和摘要处理授权由服务端校验；最近一次对话与未完成请求按账号隔离恢复。各端的订阅与充值方式见下文「购买与充值」；积分充值不等于订阅。
 
 日程支持跨项目筛选与今天 / 3 天 / 5 天事项。iOS 使用本地通知，Android 使用 WorkManager，Harmony 使用系统代理提醒；这些提醒依据最近同步快照，需打开日程刷新。微信小程序暂未接通后台日程订阅通知。iOS APNs 源码已接入，默认关闭，启用仍须匹配北京主体的 Push 签名配置与后端凭据，本次未改生产签名或部署推送。
 
 具体边界、API 与配置见 [个人工作区说明](docs/specs/2026-10-27-personal-workspace.md) 和 [验证记录](docs/qa/2026-10-27-personal-workspace.md)。
+
+## 购买与充值
+
+服务端按账号校验权益，各端只是付款入口。当前主线：
+
+| 端 | 个人 Pro 订阅 | 积分充值 |
+|---|---|---|
+| iOS | App Store 自动续期订阅 `pro.monthly.cny.149` | App Store 内购 `credits.cny.50 / 100 / 300` |
+| Android 国际版（intl） | 暂无端内购买 | Google Play 消耗型内购，仅国际区账号（契约 `androidPlayRecharge`） |
+| Android 国内版（cn） | 暂无端内购买；微信 APP 支付个人 Pro 开发中，服务端开关与契约 `androidWxpayPro` 默认关闭 | 微信 APP 支付，仅大陆账号；通道未开时只给「去小程序充值」说明 |
+| 微信小程序 | 只读显示 | 小程序虚拟支付 |
+| Harmony | 只读显示 | 无端内支付，只给外部充值说明 |
+
+包晴天律师账号只能在包晴天 App 充值或续费：四端都不显示充值入口，改为显示这条提示。
 
 ## 场景
 
@@ -60,12 +74,13 @@ iOS 只有一条 App 记录（`com.aiworkdeck.mobile.cn`，2026-09-05 起全球�
 
 已知的能力差，不假装等价：
 
-| | iOS | 小程序 |
-|---|---|---|
-| 后台上传 | `URLSession` 后台传输 | **不支持**，退出即停 |
-| 录像时长 | 无限制 | `chooseMedia` 最长 60 秒（iOS），`startRecord` 最长 30 秒 |
-| 毛玻璃 | `.ultraThinMaterial` 系统级 | `backdrop-filter`，安卓中低端机降级为实色 |
-| 设备证明 | App Attest | 无 |
+| | iOS | Android | 小程序 |
+|---|---|---|---|
+| 后台上传 | `URLSession` 后台传输 | WorkManager + 数据同步前台服务 | **不支持**，退出即停 |
+| 后台录音 | 支持 | 支持（麦克风前台服务，常驻通知） | 不支持 |
+| 录像时长 | 无限制 | 无限制 | `chooseMedia` 最长 60 秒（iOS），`startRecord` 最长 30 秒 |
+| 毛玻璃 | `.ultraThinMaterial` 系统级 | 不用，实色 | `backdrop-filter`，安卓中低端机降级为实色 |
+| 设备证明 | App Attest | 无 | 无 |
 
 小程序端录像做**连续分段**，并在界面上明示「本端录像为记录用途，证据用途请用 iOS 端」。
 分段对证据是瑕疵，不能默默降级。
@@ -101,7 +116,9 @@ miniprogram/
   utils/phase.ts         传输阶段展示层：三段映射 / 计数 / 按日分段 / 删除文案（纯函数，tests/ 里有单测）
   pages/
     gallery/             图集：按项目看、按日分段、列数 / 视图切换、多选删除
-ios/                     SwiftUI（待建）
+ios/                     iOS / Apple Watch，SwiftUI
+android/                 Kotlin / Jetpack Compose，cn 与 intl 两个 flavor
+harmony/                 ArkTS / ArkUI
 docs/specs/              设计文档
 ```
 

@@ -1,4 +1,6 @@
-# 本次国内签名候选包
+# 1.3.1 国内签名候选包（2026-10-29 首次上架记录）
+
+> 历史记录。当前在架版本见 [README](README.md) 的「现状」；新版本的 APK 由 `android-release` 工作流构建，哈希和签名以该次运行的产物为准。
 
 核对日期：2026-10-29；应用 AI WorkDeck；包名 `com.aiworkdeck.mobile.cn`。
 
@@ -13,7 +15,7 @@
 | 与上一次国内正式包签名一致 | 核验记录为 `true` |
 | 与备案后台登记签名一致 | 尚未核对；不能用历次发版签名一致替代 |
 
-文件位置：[国内 APK](</Users/zewei/.codex/artifacts/2026-10-29-android-launch-1613/release/AI-WorkDeck-Android-CN-1.3.1-6.apk>)；核验来源：[release-verification.json](</Users/zewei/.codex/artifacts/2026-10-29-android-launch-1613/release/release-verification.json>)。本轮独立重新计算 CN APK 及 Intl APK / AAB 的字节数和 SHA-256，均与该记录一致；签名结论依据主任务的签名工具核验记录。
+APK 文件与 `release-verification.json` 核验记录存放在当时任务的本地产物目录，不在本仓库。本轮独立重新计算 CN APK 及 Intl APK / AAB 的字节数和 SHA-256，均与该记录一致；签名结论依据主任务的签名工具核验记录。
 
 本包以 1.3.0 的 `ef0cb213` 为稳定基线，只加入 #1615 修复，不包含新个人助理。主线已经集成相同修复且保留个人助理 / 日历功能；主线产物不能代替这里的候选包。若候选代码或文件后续改变，须重新签名、核验并同步本页，不能沿用旧哈希。
 
@@ -26,7 +28,7 @@
 - [国际区移动端隐私政策](https://workdeck.ai/mobile-account/en/privacy?site=intl)
 - [国际区移动端删除说明](https://workdeck.ai/mobile-account/en/deletion?site=intl)
 
-国际入口保留 `site=intl`。PR #305 已完成两区部署；2026-10-29 08:06:25 UTC 从北京无 Cookie GET 验证隐私、删除及注册入口均直接 HTTP 200、零重定向，最终 URL 保留原国际域名与参数，正文为香港运营主体。原先无 Cookie 会跳回中国区的问题已修复。证据为 `/Users/zewei/.codex/artifacts/android-1615/website-deploy-verification/pr305-beijing-no-cookie-live.json`。网页可访问不代表六店后台已经填写或保存。用户已确认两个 `hi` 客服邮箱能正常收信；各店后台联系人和审核测试账号仍须在登录后核对。
+国际入口保留 `site=intl`。PR #305 已完成两区部署；2026-10-29 08:06:25 UTC 从北京无 Cookie GET 验证隐私、删除及注册入口均直接 HTTP 200、零重定向，最终 URL 保留原国际域名与参数，正文为香港运营主体。原先无 Cookie 会跳回中国区的问题已修复。证据为当时任务本地产物中的北京无 Cookie 访问记录。网页可访问不代表六店后台已经填写或保存。用户已确认两个 `hi` 客服邮箱能正常收信；各店后台联系人和审核测试账号仍须在登录后核对。
 
 ## 验证边界
 
