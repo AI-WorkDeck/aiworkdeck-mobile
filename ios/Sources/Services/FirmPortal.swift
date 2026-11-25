@@ -355,7 +355,9 @@ enum FirmTrialStore {
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
                                 kSecAttrAccount as String: scope, kSecValueData as String: Data(value.utf8),
                                 kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
-        return SecItemAdd(q as CFDictionary, nil) == errSecSuccess
+        guard SecItemAdd(q as CFDictionary, nil) == errSecSuccess else { return false }
+        AccountCarry.setFirmTrial(value, scope: scope)
+        return true
     }
     static func clear(scope: String) {
 #if DEBUG
@@ -364,6 +366,7 @@ enum FirmTrialStore {
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
                                 kSecAttrAccount as String: scope]
         SecItemDelete(q as CFDictionary)
+        AccountCarry.setFirmTrial(nil, scope: scope)
     }
 }
 

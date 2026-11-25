@@ -147,7 +147,7 @@ enum SessionStore {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
         let status = addItem(q as CFDictionary)
-        guard status != errSecSuccess else { return }
+        guard status != errSecSuccess else { AccountCarry.setSession(value); return }
 #if DEBUG && targetEnvironment(simulator)
         // 仓库默认的 Debug 模拟器构建不签名（project.yml），没有 application-identifier
         // 授权，Keychain 一律回 errSecMissingEntitlement（-34018）。只为这种构建把会话
@@ -175,6 +175,7 @@ enum SessionStore {
             kSecAttrAccount as String: account,
         ]
         SecItemDelete(q as CFDictionary)
+        AccountCarry.setSession(nil)
     }
 
 #if DEBUG && targetEnvironment(simulator)
