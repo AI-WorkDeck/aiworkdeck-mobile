@@ -194,7 +194,7 @@ struct FirmSignoffSheet: View {
         Button { on.wrappedValue.toggle() } label: {
             HStack(spacing: T.Sp.s3) {
                 Image(systemName: on.wrappedValue ? "checkmark.circle.fill" : "circle")
-                    .font(.title3).foregroundStyle(on.wrappedValue ? FirmColor.accent : T.LD.fgFaint)
+                    .font(.title3).foregroundStyle(on.wrappedValue ? FirmColor.accent : T.LD.fgMuted)
                 Text(title).foregroundStyle(T.LD.fg)
                 Spacer(minLength: 0)
             }
@@ -300,7 +300,7 @@ struct FirmConversationSheet: View {
         NavigationStack {
             List(Array(matter.transcript.filter { $0.role != "event" }.enumerated()), id: \.offset) { _, e in
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(who(e)).font(T.F.nano()).foregroundStyle(e.role == "lawyer" ? FirmColor.accent : T.LD.fgFaint)
+                    Text(who(e)).font(T.F.nano()).foregroundStyle(e.role == "lawyer" ? FirmColor.accent : T.LD.fgMuted)
                     Text(FirmMarkdown.inline(e.content)).font(.callout).foregroundStyle(T.LD.fg)
                 }
                 .padding(.vertical, 2)

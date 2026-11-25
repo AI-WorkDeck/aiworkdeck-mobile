@@ -86,3 +86,11 @@ test('the type ramp scales with Dynamic Type', () => {
   }
   assert.match(ramp, /\.custom\(systemFamily, size: size, relativeTo: style\)/)
 })
+
+test('text that carries information is never in the faint (decoration-only) colour', () => {
+  for (const f of ['Sources/Features/Firm/FirmInboxView.swift', 'Sources/Features/Firm/FirmSheets.swift']) {
+    const lines = read(f).split('\n')
+    const bad = lines.map((l, i) => [i + 1, l] as const).filter(([, l]) => /Text\(/.test(l) && /fgFaint/.test(l))
+    assert.deepEqual(bad, [], `${f}: use fgMuted for text (fgFaint is about 2.5:1)`)
+  }
+})

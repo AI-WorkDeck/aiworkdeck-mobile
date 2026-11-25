@@ -97,7 +97,7 @@ struct FirmMatterRow: View {
                 Text(FirmText.title(matter.client, matter.company, matter.template?.text ?? heading))
                     .font(T.F.heading()).foregroundStyle(T.LD.fg).lineLimit(1)
                 Spacer(minLength: T.Sp.s2)
-                Text(FirmText.ago(matter.updatedAt)).font(T.F.micro()).foregroundStyle(T.LD.fgFaint)
+                Text(FirmText.ago(matter.updatedAt)).font(T.F.micro()).foregroundStyle(T.LD.fgMuted)
             }
             if let doc = matter.template?.text, !doc.isEmpty {
                 Text(doc).font(T.F.small()).foregroundStyle(T.LD.fgMuted).lineLimit(1)

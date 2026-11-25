@@ -20,6 +20,7 @@ extension T {
         static let fg = pair(T.L.fg, T.D.fg)
         static let fgMuted = pair(T.L.fgMuted, T.D.fgMuted)
         /// 深色没有 fgFaint 令牌，退到 fgMuted（宁可清楚一点，不新造灰）。
+        /// Decoration only (separators, placeholder glyphs): about 2.5:1. Text that carries information uses fgMuted (lane X rule).
         static let fgFaint = pair(T.L.fgFaint, T.D.fgMuted)
         static let rule = pair(T.L.rule, T.D.rule)
         static let accent = pair(T.L.accent, T.S.arrivedOnDark)
