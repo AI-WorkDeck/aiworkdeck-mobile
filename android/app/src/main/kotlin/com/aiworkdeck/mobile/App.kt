@@ -61,6 +61,12 @@ class App : Application() {
                 prefs.stableAccountBinding(session, url)?.let { ArchiveMoveAccount(it, url, session) }
             }
         }
+        ServiceLocator.firm = com.aiworkdeck.mobile.services.firm.FirmPortal(
+            trials = com.aiworkdeck.mobile.services.firm.EncryptedFirmTrialStore(this),
+            settings = com.aiworkdeck.mobile.services.firm.SharedPrefsFirmSettings(this),
+            identity = { backend.identity() },
+            verifiedUserId = { backend.verifiedUserId() },
+        )
         ServiceLocator.playRecharge = com.aiworkdeck.mobile.services.PlayRechargeCoordinator(
             backend = backend,
             gateway = com.aiworkdeck.mobile.services.createPlayBillingGateway(this) {
