@@ -4,6 +4,7 @@ import XCTest
 import StoreKitTest
 
 /// Real local StoreKit purchases with an explicitly synthetic API transport; no real charge or account.
+/// The app follows the phone's language (X48), so these tests pin it to zh-Hans: they assert Chinese result text.
 final class SubscriptionFlowTests: XCTestCase {
     /// Sales open but the Apple Account storefront has no product: name the region instead of a generic error.
     @MainActor
@@ -14,7 +15,7 @@ final class SubscriptionFlowTests: XCTestCase {
         session.storefront = "HKG"
         session.locale = Locale(identifier: "zh_CN")
         let app = XCUIApplication()
-        app.launchArguments = ["-AWDSubscriptionUITest", "-AWDSubscriptionMissingProduct"]
+        app.launchArguments = ["-AWDSubscriptionUITest", "-AWDSubscriptionMissingProduct", "-AppleLanguages", "(zh-Hans)"]
         app.launch()
         defer { app.terminate() }
         let message = app.staticTexts["subscription.unavailable"]
@@ -37,7 +38,7 @@ final class SubscriptionFlowTests: XCTestCase {
         session.locale = Locale(identifier: "zh_CN")
         defer { session.clearTransactions() }
         let app = XCUIApplication()
-        app.launchArguments = ["-AWDSubscriptionUITest"]
+        app.launchArguments = ["-AWDSubscriptionUITest", "-AppleLanguages", "(zh-Hans)"]
         app.launch()
         defer { app.terminate() }
         let buy = app.buttons["subscription.buy"]
@@ -126,7 +127,7 @@ final class SubscriptionFlowTests: XCTestCase {
         session.storefront = "CHN"
         defer { session.clearTransactions() }
         let app = XCUIApplication()
-        app.launchArguments = ["-AWDSubscriptionUITest", "-AWDSubscriptionConfirmFailure"]
+        app.launchArguments = ["-AWDSubscriptionUITest", "-AWDSubscriptionConfirmFailure", "-AppleLanguages", "(zh-Hans)"]
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.buttons["subscription.buy"].waitForExistence(timeout: 20))
@@ -138,7 +139,7 @@ final class SubscriptionFlowTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [pending], timeout: 20), .completed)
         XCTAssertEqual(session.allTransactions().count, 1)
         app.terminate()
-        app.launchArguments = ["-AWDSubscriptionUITest"]
+        app.launchArguments = ["-AWDSubscriptionUITest", "-AppleLanguages", "(zh-Hans)"]
         app.launch()
         XCTAssertTrue(app.buttons["subscription.buy"].waitForExistence(timeout: 20))
         app.buttons["subscription.restore"].tap()

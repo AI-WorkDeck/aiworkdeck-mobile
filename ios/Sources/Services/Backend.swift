@@ -83,11 +83,11 @@ extension L10n {
         region == .intl ? "en" : "zh-Hans"
     }
 
-    /// 启动时或登录页切区域时调用：若用户未指定语言偏好（system），则跟随区域默认语言。
+    /// 启动时或登录页切区域时调用：偏好为 system 时跟随手机语言，手机语言不支持时才用区域默认语言（X48）。
     static func apply(region: AccountRegion, defaults: UserDefaults = .standard) {
         let pref = loadPreference(from: defaults)
         if preference != pref { preference = pref }
-        let target = pref == systemPreference ? locale(for: region) : normalize(pref, fallback: locale(for: region))
+        let target = pref == systemPreference ? resolveSystemLocale(fallback: locale(for: region)) : normalize(pref, fallback: locale(for: region))
         if locale != target { locale = target }
     }
 

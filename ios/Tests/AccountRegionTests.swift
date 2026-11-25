@@ -27,15 +27,35 @@ final class AccountRegionTests: XCTestCase {
 
     private let suite = "AccountRegionTests"
 
+    private var savedLanguages: (() -> [String])!
+
     override func setUp() {
         super.setUp()
         UserDefaults().removePersistentDomain(forName: suite)
         defaults = UserDefaults(suiteName: suite)
+        // A phone language the app doesn't support: "Follow system" falls back to the region's language.
+        savedLanguages = L10n.systemLanguages
+        L10n.systemLanguages = { ["sw-KE"] }
     }
 
     override func tearDown() {
+        L10n.systemLanguages = savedLanguages
         UserDefaults().removePersistentDomain(forName: suite)
         super.tearDown()
+    }
+
+    /// X48: "Follow system" follows the phone; the region's language is only the fallback.
+    func testFollowSystemFollowsThePhoneAndOnlyFallsBackToTheRegion() {
+        defer { L10n.locale = "zh-Hans" }
+        L10n.systemLanguages = { ["zh-Hant-TW"] }
+        L10n.apply(region: .intl, defaults: defaults)
+        XCTAssertEqual(L10n.locale, "zh-Hant", "a zh-TW phone opens in zh-Hant")
+        L10n.systemLanguages = { ["de-DE"] }
+        L10n.apply(region: .cn, defaults: defaults)
+        XCTAssertEqual(L10n.locale, "de")
+        L10n.systemLanguages = { ["sw-KE"] }
+        L10n.apply(region: .intl, defaults: defaults)
+        XCTAssertEqual(L10n.locale, "en")
     }
 
     /// 存量已登录用户没有这个键：必须落到大陆站，零迁移。
