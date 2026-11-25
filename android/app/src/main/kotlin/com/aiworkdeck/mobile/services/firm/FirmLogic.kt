@@ -213,6 +213,9 @@ object FirmText {
 object FirmMarkdown {
     data class Block(val level: Int, val text: String)
 
+    /** Text without emphasis or heading marks, for plain display. */
+    fun plain(block: String): String = block.replace("**", "").replace("#", "").trim(' ', '\t')
+
     /** Every `#` line is its own heading; body lines between headings stay together. */
     fun blocks(markdown: String): List<Block> {
         val out = mutableListOf<Block>()
@@ -269,4 +272,9 @@ object FirmTabs {
             else -> "time.daysAgo" to s / 86400
         }
     }
+}
+
+object FirmPdf {
+    /** A portal reply is shown as a PDF only if it is one (an error page must not be saved as the signed document). */
+    fun looksLikePdf(bytes: ByteArray): Boolean = bytes.size >= 5 && String(bytes, 0, 5, Charsets.US_ASCII) == "%PDF-"
 }
