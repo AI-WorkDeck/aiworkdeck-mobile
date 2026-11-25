@@ -8,7 +8,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -217,6 +222,12 @@ class FirmPortal(
     val listed: Boolean get() = approved.all { it.state.value.listed }
     val needsYouCount: Int get() = approved.sumOf { it.needsYouCount }
     fun link(portal: String?): FirmLink? = _links.value.firstOrNull { it.portalID == portal }
+
+    /** Every link with its latest state; emits whenever a link is added, removed or changes. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val overview: Flow<List<Pair<FirmLink, FirmLinkState>>> = _links.flatMapLatest { ls ->
+        if (ls.isEmpty()) flowOf(emptyList()) else combine(ls.map { l -> l.state }) { states -> ls.zip(states.toList()) }
+    }
 
     private val linksKey get() = scope?.let { "firm.links.$it" }
 

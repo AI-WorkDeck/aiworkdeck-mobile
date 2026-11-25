@@ -79,11 +79,14 @@ android {
         release {
             isMinifyEnabled = false
             resValue("string", "app_label", "AI WorkDeck")
+            // Firm review is being ported in steps (readiness/qa/M1-android-firm/plan.md); on in release from the sign-off PR.
+            buildConfigField("boolean", "FIRM_REVIEW", "false")
             productFlavors.getByName("cn").signingConfig = signingConfigs.findByName("release-cn")
             productFlavors.getByName("intl").signingConfig = signingConfigs.findByName("release-intl")
         }
         debug {
             resValue("string", "app_label", "AI WorkDeck Dev")
+            buildConfigField("boolean", "FIRM_REVIEW", "true")
         }
     }
     buildFeatures { compose = true; buildConfig = true; resValues = true }

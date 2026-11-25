@@ -244,6 +244,7 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
                             onClose = { overlay = returnOverlay }, onOpen = { returnOverlay = Overlay.None; overlay = it })
                     }
                     if (overlay == Overlay.Backup) BackupConsentScreen(onClose = { overlay = returnOverlay })
+                    if (overlay == Overlay.Firm) com.aiworkdeck.mobile.features.firm.FirmJoinScreen(ServiceLocator.firm, onClose = { overlay = Overlay.Settings })
                     if (overlay == Overlay.Library) {
                         LibraryScreen(
                             model = model,
