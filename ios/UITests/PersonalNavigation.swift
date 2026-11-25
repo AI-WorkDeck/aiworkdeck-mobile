@@ -46,7 +46,7 @@ struct ReadyControlSnapshot {
 }
 
 enum PersonalTab: String {
-    case assistant = "Personal assistant", calendar = "Calendar", capture = "Capture"
+    case assistant = "Assistant", calendar = "Calendar", capture = "Capture"
     var icon: String {
         switch self {
         case .assistant: return "bubble.left.and.bubble.right"
