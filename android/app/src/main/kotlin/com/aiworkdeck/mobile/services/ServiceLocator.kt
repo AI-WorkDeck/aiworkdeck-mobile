@@ -11,6 +11,10 @@ object ServiceLocator {
     lateinit var prefs: Prefs
     lateinit var archiveMoves: ArchiveMoveQueue
     lateinit var playRecharge: PlayRechargeCoordinator
+    /** Firm review portals linked by the signed-in account (docs/specs/2026-11-19-firm-review.md). */
+    lateinit var firm: com.aiworkdeck.mobile.services.firm.FirmPortal
+
+    fun firmOrNull(): com.aiworkdeck.mobile.services.firm.FirmPortal? = if (::firm.isInitialized) firm else null
 
     fun queueOrNull(): UploadQueue? = if (::queue.isInitialized) queue else null
 }
