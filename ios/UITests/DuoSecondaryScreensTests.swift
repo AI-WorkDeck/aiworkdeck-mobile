@@ -87,5 +87,11 @@ final class DuoSecondaryScreensTests: XCTestCase {
         XCTAssertTrue(about.isHittable)
         XCTAssertTrue(app.buttons["settings.close"].isHittable)
         keepScreenshot("Settings account and about in current window")
+        // Privacy policy and user agreement sit under About for every region (POLISH M5).
+        let privacy = app.buttons["settings.privacy"], terms = app.buttons["settings.terms"]
+        for _ in 0..<4 where !terms.isHittable { app.swipeUp() }
+        XCTAssertTrue(privacy.isHittable)
+        XCTAssertTrue(terms.isHittable)
+        keepScreenshot("Settings privacy policy and user agreement")
     }
 }

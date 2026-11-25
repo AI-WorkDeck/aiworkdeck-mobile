@@ -199,6 +199,14 @@ struct FirmOK: Decodable { let ok: Bool }
 enum FirmInbox {
     enum Group: String, CaseIterable { case needsYou, waiting, inProgress, done }
 
+    /// What stands in for the list when it has no rows: a spinner until the first load, "nothing here" after it,
+    /// and nothing when the load failed (the error line says why).
+    enum Placeholder: Equatable { case loading, empty }
+    static func placeholder(hasMatters: Bool, listed: Bool, failed: Bool) -> Placeholder? {
+        if hasMatters || failed { return nil }
+        return listed ? .empty : .loading
+    }
+
     /// Why a matter needs the lawyer now, or nil.
     static func reason(_ m: FirmMatterSummary) -> String? {
         if let a = m.attention, ["review_requested", "call_requested", "client_replied"].contains(a) { return a }
@@ -457,6 +465,8 @@ final class FirmLink {
     private(set) var matters: [FirmMatterSummary] = []
     private(set) var access: FirmPortal.Access = .none
     private(set) var loadError: String?
+    /// True once the matter list has loaded at least once, so an empty list means "nothing here" rather than "not loaded yet".
+    private(set) var listed = false
     /// Portal error code of the last failed access check (e.g. `unauthorized`, `network`).
     private(set) var lastErrorCode: String?
     /// Trial code for this portal, read from the Keychain once rather than per request.
@@ -535,6 +545,7 @@ final class FirmLink {
             guard !closed else { return }
             for i in list.indices { list[i].linkID = portalID }
             matters = list
+            listed = true
             loadError = nil
         } catch let e as FirmPortalError {
             guard !closed else { return }
@@ -567,6 +578,7 @@ final class FirmPortal {
     var approved: [FirmLink] { links.filter { $0.access == .approved } }
     var matters: [FirmMatterSummary] { approved.flatMap(\.matters) }
     var loadError: String? { approved.lazy.compactMap(\.loadError).first }
+    var listed: Bool { approved.allSatisfy(\.listed) }
     var needsYouCount: Int { approved.reduce(0) { $0 + $1.needsYouCount } }
     func link(_ portal: String?) -> FirmLink? { links.first { $0.portalID == portal } }
 

@@ -17,6 +17,14 @@ final class AccountRegionTests: XCTestCase {
     }
 
     private var defaults: UserDefaults!
+    func testLegalPagesFollowTheRegion() {
+        XCTAssertEqual(AccountRegion.cn.privacyURL.host, "www.aiworkdeck.com")
+        XCTAssertEqual(AccountRegion.intl.privacyURL.host, "workdeck.ai")
+        XCTAssertTrue(AccountRegion.intl.privacyURL.path.hasPrefix("/mobile-account/en/"), "international users get the English page")
+        XCTAssertTrue(AccountRegion.intl.termsURL.path.hasSuffix("/terms"))
+        XCTAssertTrue(AccountRegion.cn.termsURL.path.hasSuffix("/terms"))
+    }
+
     private let suite = "AccountRegionTests"
 
     override func setUp() {

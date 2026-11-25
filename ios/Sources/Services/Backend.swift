@@ -33,6 +33,20 @@ enum AccountRegion: String, CaseIterable, Sendable {
     /// 手机号验证码登录只在大陆站可用；国际站那边 `sms-login/send-code` 会因为网关未启用而失败。
     var allowsPhoneLogin: Bool { self == .cn }
 
+    /// Privacy policy and user agreement for this region's site (same pages as Android `mobilePrivacyUrl` / `mobileTermsUrl`).
+    var privacyURL: URL {
+        switch self {
+        case .cn:   URL(string: "https://www.aiworkdeck.com/zh/legal/mobile-privacy?site=cn")!
+        case .intl: URL(string: "https://workdeck.ai/mobile-account/en/privacy?site=intl")!
+        }
+    }
+    var termsURL: URL {
+        switch self {
+        case .cn:   URL(string: "https://www.aiworkdeck.com/zh/legal/terms?site=cn")!
+        case .intl: URL(string: "https://workdeck.ai/mobile-account/en/terms?site=intl")!
+        }
+    }
+
     /// 余额与充值入口。国际站计费未开通（dev-board#664），那边的余额行与入口整个不渲染。
     var billingEnabled: Bool { self == .cn }
 

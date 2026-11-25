@@ -11,12 +11,20 @@ struct FirmInboxView: View {
     var body: some View {
         NavigationStack(path: $path) {
             List {
-                if portal.matters.isEmpty {
+                switch FirmInbox.placeholder(hasMatters: !portal.matters.isEmpty, listed: portal.listed, failed: portal.loadError != nil) {
+                case .loading:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, T.Sp.s10)
+                        .listRowBackground(Color.clear)
+                        .accessibilityIdentifier("firm.inbox.loading")
+                case .empty:
                     Text(tr("firm.inbox.empty"))
                         .font(T.F.body()).foregroundStyle(Color.secondary)
                         .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, T.Sp.s10)
                         .listRowBackground(Color.clear)
                         .accessibilityIdentifier("firm.inbox.empty")
+                case nil:
+                    EmptyView()
                 }
                 ForEach(FirmInbox.grouped(portal.matters), id: \.0) { group, items in
                     Section {
