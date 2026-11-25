@@ -29,3 +29,8 @@
 | `zh-Hans/release_notes.txt` | 更新说明 / 版本更新内容 | 各商店 500 上下 | 60 |
 
 各商店具体字数上限见 `checklist-cn-stores.md`；已标注「待核」的以各商店后台实际表单为准。
+
+## zh-Hant（2026-11-25 新增，lane X）
+
+`zh-Hant/*` 是 Play Console「中文（台灣）」listing 的四个字段，字数上限同 en-US（30 / 80 / 4000 / 500），由 `scripts/store-shots/check-copy.mjs` 一并检查。
+Android 版尚未上线律所审阅与 Apple Watch，所以 zh-Hant / en-US 的安卓文案都不写这两项；iOS 文案（fastlane/metadata）照常写。

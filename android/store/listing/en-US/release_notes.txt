@@ -1,1 +1,1 @@
-Updated copyright information to BEIJING GONG FU INFORMATION TECHNOLOGY LIMITED.
+Traditional Chinese text corrected throughout the app. Permission prompts now name AI WorkDeck. The relay-retention note now says 30 days, matching how the service works.

@@ -1,6 +1,6 @@
 For professionals working on site — capture it, and it's already filed into the project.
 
-Lawyers running due diligence, auditors doing stocktakes, engineers inspecting factories and sites — the photos, video and audio shot on location usually mean exporting, renaming and sorting one by one back at the office. AI WorkDeck Mobile removes that step: shoot on your phone, and each capture is queued and delivered straight into the "Site Media / date" folder of that project on your computer, alongside the rest of the project's files on the desktop app.
+Lawyers running due diligence, auditors doing stocktakes, engineers inspecting factories and sites — the photos, video and audio shot on location usually mean exporting, renaming and sorting one by one back at the office. AI WorkDeck Mobile removes that step: shoot on your phone, and each capture is queued and delivered straight into the "Field media / date" folder of that project on your computer, alongside the rest of the project's files on the desktop app.
 
 A verifiable fingerprint on every capture
 A SHA-256 digest is computed the moment a capture is written, recorded together with capture time, GPS coordinates and accuracy, device model and OS version. The digest is generated on device and doesn't depend on a network connection.
@@ -19,6 +19,9 @@ All three capture modes share one screen and file into the same project folder. 
 
 One phone, every matter you're on
 Switch projects and each capture files itself into the right folder.
+
+Assistant and calendar (Personal Pro)
+With an active Personal Pro plan on your AI WorkDeck account you can ask the assistant about the projects you've backed up, and see your desktop calendar items on your phone with reminders. Each needs your separate consent.
 
 Who it's for
 Due diligence and site visits for law firms, audit stocktakes for accounting firms, supply-chain factory inspections, site acceptance for engineering, insurance surveys, and anyone whose work is document-driven and needs what happens on site brought back into the project.
