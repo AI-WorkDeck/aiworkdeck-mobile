@@ -236,12 +236,14 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
     val darkChrome = didRestore && isSignedIn && tab == MainTab.capture && overlay == Overlay.None
     // 资料库与查看器是深色全屏浮层，系统栏也要白图标
     val darkBars = darkChrome || (didRestore && isSignedIn && overlay == Overlay.Library)
+    // Normal screens follow the system dark mode, so they want light icons then too
+    val lightBars = !darkBars && !androidx.compose.foundation.isSystemInDarkTheme()
     val view = androidx.compose.ui.platform.LocalView.current
     androidx.compose.runtime.SideEffect {
         val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
         androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
-            isAppearanceLightStatusBars = !darkBars
-            isAppearanceLightNavigationBars = !darkBars
+            isAppearanceLightStatusBars = lightBars
+            isAppearanceLightNavigationBars = lightBars
         }
     }
     val layoutDir = if (L10n.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr

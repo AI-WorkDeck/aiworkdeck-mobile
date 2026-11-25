@@ -1,5 +1,7 @@
 package com.aiworkdeck.mobile.design
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -12,17 +14,27 @@ import com.aiworkdeck.contract.T
  * 字号 `Int`(sp) → `TextUnit`。逐字段手写，不用反射——契约改了字段这里编译不过，比运行时漏映射早发现。
  */
 object Tk {
-    /** 浅色（主界面之外大多数屏）。底是纯白不是浅灰。 */
+    /**
+     * 浅色（主界面之外大多数屏）。底是纯白不是浅灰。
+     *
+     * Follows system dark mode: on a normal screen with the system in dark mode ([LocalNightPaper])
+     * each member reads [Paper.Night] instead of [Paper.Day], so call sites stay `Tk.L.x`.
+     * Functional dark screens (`WorkdeckTheme(dark = true)`) never set the local and keep [Paper.Day].
+     * Members are `@Composable` getters; outside composition use [Paper.Day] / [Paper.Night] directly.
+     */
     object L {
-        val bg: Color = Color(T.L.bg)
-        val sunken: Color = Color(T.L.sunken)
-        val fg: Color = Color(T.L.fg)
-        val fgMuted: Color = Color(T.L.fgMuted)
-        val fgFaint: Color = Color(T.L.fgFaint)
-        val rule: Color = Color(T.L.rule)
-        val ruleStrong: Color = Color(T.L.ruleStrong)
-        val accent: Color = Color(T.L.accent)
-        val accentWash: Color = Color(T.L.accentWash)
+        private val p: Paper @Composable @ReadOnlyComposable get() = Paper.of(LocalNightPaper.current)
+        val bg: Color @Composable @ReadOnlyComposable get() = p.bg
+        val sunken: Color @Composable @ReadOnlyComposable get() = p.sunken
+        val fg: Color @Composable @ReadOnlyComposable get() = p.fg
+        val fgMuted: Color @Composable @ReadOnlyComposable get() = p.fgMuted
+        val fgFaint: Color @Composable @ReadOnlyComposable get() = p.fgFaint
+        val rule: Color @Composable @ReadOnlyComposable get() = p.rule
+        val ruleStrong: Color @Composable @ReadOnlyComposable get() = p.ruleStrong
+        val accent: Color @Composable @ReadOnlyComposable get() = p.accent
+        val accentWash: Color @Composable @ReadOnlyComposable get() = p.accentWash
+        /** Text/icons on an [accent] fill (PrimaryButton). */
+        val onAccent: Color @Composable @ReadOnlyComposable get() = p.onAccent
     }
 
     /** 深色（取景器、影像浏览——功能性深色，不是全局主题）。 */
@@ -67,6 +79,30 @@ object Tk {
         val small: TextUnit = T.Ty.small.sp
         val micro: TextUnit = T.Ty.micro.sp
         val nano: TextUnit = T.Ty.nano.sp
+    }
+
+    /**
+     * The normal screens' palette. [Day] is exactly today's light tokens. [Night] is the same roles in
+     * system dark mode, built only from existing contract tokens (no dark faint/sunken/ruleStrong/
+     * accentWash token exists, so the nearest existing one stands in; see the PR for the table).
+     */
+    data class Paper(
+        val bg: Color, val sunken: Color, val fg: Color, val fgMuted: Color, val fgFaint: Color,
+        val rule: Color, val ruleStrong: Color, val accent: Color, val accentWash: Color, val onAccent: Color,
+    ) {
+        companion object {
+            val Day = Paper(
+                bg = Color(T.L.bg), sunken = Color(T.L.sunken), fg = Color(T.L.fg), fgMuted = Color(T.L.fgMuted),
+                fgFaint = Color(T.L.fgFaint), rule = Color(T.L.rule), ruleStrong = Color(T.L.ruleStrong),
+                accent = Color(T.L.accent), accentWash = Color(T.L.accentWash), onAccent = Color(T.D.fg),
+            )
+            val Night = Paper(
+                bg = Color(T.D.bg), sunken = Color(T.D.surface), fg = Color(T.D.fg), fgMuted = Color(T.D.fgMuted),
+                fgFaint = Color(T.D.fgMuted), rule = Color(T.D.rule), ruleStrong = Color(T.D.rule),
+                accent = Color(T.S.arrivedOnDark), accentWash = Color(T.D.rule), onAccent = Color(T.D.bg),
+            )
+            fun of(night: Boolean): Paper = if (night) Night else Day
+        }
     }
 
     /** 最小可点触尺寸——现场单手操作，闭着眼睛也要按得到。 */

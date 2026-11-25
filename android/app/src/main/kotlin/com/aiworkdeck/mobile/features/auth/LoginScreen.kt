@@ -174,7 +174,7 @@ fun LoginScreen(model: AppModel) {
         Box(contentAlignment = Alignment.Center) {
             PrimaryButton(text = tr(if (busy) "login.working" else "login.title"), onClick = ::signIn,
                 enabled = !busy && identity.isNotBlank() && password.isNotEmpty())
-            if (busy) CircularProgressIndicator(Modifier.align(Alignment.CenterEnd).padding(end = Tk.Sp.s4).size(18.dp), color = Tk.D.fg, strokeWidth = 2.dp)
+            if (busy) CircularProgressIndicator(Modifier.align(Alignment.CenterEnd).padding(end = Tk.Sp.s4).size(18.dp), color = Tk.L.onAccent, strokeWidth = 2.dp)
         }
         Column {
             LinkRow(tr("login.register"), !busy) { openFlow("register") }

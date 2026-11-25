@@ -123,7 +123,7 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = text, style = Fonts.body(), color = Tk.D.fg)
+        Text(text = text, style = Fonts.body(), color = Tk.L.onAccent)
     }
 }
 
