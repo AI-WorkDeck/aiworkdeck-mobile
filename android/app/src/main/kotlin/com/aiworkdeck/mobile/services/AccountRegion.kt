@@ -64,6 +64,19 @@ fun switchAccountRegion(prefs: RegionPrefs): AccountRegion {
 fun showsExternalRecharge(flavor: String, region: AccountRegion, channel: String): Boolean =
     flavor != "intl" && region == AccountRegion.cn && channel != "false"
 
+/**
+ * What the Assistant/Calendar notice says when there is no cloud access. Pro is sold only in the mainland
+ * edition for now (WeChat pay, POLISH M3), so the Play build explains that instead of pointing at an account
+ * row with nothing to buy.
+ */
+fun subscriptionNoticeKey(flavor: String): String = if (flavor == "intl") "personal.subscription.mainland" else "personal.subscription"
+
+/** The notice links to the account section only where something can be done there. */
+fun subscriptionNoticeLinksAccount(flavor: String): Boolean = flavor != "intl"
+
+/** Settings shows the subscription row when there is one, or when this edition can sell one. */
+fun showsSubscriptionRow(flavor: String, active: Boolean): Boolean = active || flavor != "intl"
+
 /** Google Play 消耗型内购仅在 intl flavor + 国际区账号下开放（dev-board#665）。 */
 fun showsPlayRecharge(
     flavor: String,

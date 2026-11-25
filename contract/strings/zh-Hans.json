@@ -462,6 +462,7 @@
   "personal.assistantConsent": "同意在云端使用 AI 处理已开启备份的项目摘要，供个人助理跨项目检索。",
   "personal.calendarConsent": "同意将桌面事项同步到云端，在手机上查看并设置提醒。",
   "personal.subscription": "需要有效的云端订阅。请在账户中查看权益。",
+  "personal.subscription.mainland": "个人助理和日程需要 Pro 订阅，目前仅在中国大陆版提供。",
   "personal.summaries": "已有 {count} 个项目摘要",
   "personal.reminders": "手机提醒",
   "personal.turnOn": "开启",

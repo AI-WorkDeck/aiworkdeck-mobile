@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Allow cloud AI to process summaries of projects with backup enabled for cross-project assistance.",
   "personal.calendarConsent": "Allow desktop events to sync to the cloud for viewing and reminders on this phone.",
   "personal.subscription": "An active cloud subscription is required. Check your account benefits.",
+  "personal.subscription.mainland": "The Assistant and Calendar need Pro, which is currently available only in the mainland China edition.",
   "personal.summaries": "{count} project summaries available",
   "personal.reminders": "Phone reminders",
   "personal.turnOn": "Turn on",

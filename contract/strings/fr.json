@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Autoriser l’IA cloud à traiter les résumés des projets sauvegardés pour une assistance entre projets.",
   "personal.calendarConsent": "Autoriser la synchronisation des événements du bureau vers le cloud pour les consulter et programmer des rappels sur ce téléphone.",
   "personal.subscription": "Un abonnement cloud actif est nécessaire. Consultez les avantages de votre compte.",
+  "personal.subscription.mainland": "L'assistant et le calendrier nécessitent Pro, disponible pour l'instant uniquement dans l'édition Chine continentale.",
   "personal.summaries": "{count} résumés de projets disponibles",
   "personal.reminders": "Rappels du téléphone",
   "personal.turnOn": "Activer",

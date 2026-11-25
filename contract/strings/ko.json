@@ -462,6 +462,7 @@
   "personal.assistantConsent": "백업이 활성화된 프로젝트 요약을 클라우드 AI로 처리하여 프로젝트 간 지원에 활용하도록 허용합니다.",
   "personal.calendarConsent": "데스크톱 일정을 클라우드에 동기화하여 이 휴대폰에서 확인하고 알림을 받도록 허용합니다.",
   "personal.subscription": "활성 클라우드 구독이 필요합니다. 계정 혜택을 확인하세요.",
+  "personal.subscription.mainland": "어시스턴트와 캘린더에는 Pro가 필요하며, Pro는 현재 중국 본토판에서만 제공됩니다.",
   "personal.summaries": "프로젝트 요약 {count}개 사용 가능",
   "personal.reminders": "휴대폰 알림",
   "personal.turnOn": "켜기",

@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Izinkan AI cloud memproses ringkasan proyek dengan pencadangan aktif untuk bantuan lintas proyek.",
   "personal.calendarConsent": "Izinkan acara desktop disinkronkan ke cloud untuk dilihat dan diingatkan di ponsel ini.",
   "personal.subscription": "Langganan cloud aktif diperlukan. Periksa manfaat akun Anda.",
+  "personal.subscription.mainland": "Asisten dan Kalender memerlukan Pro, yang saat ini hanya tersedia di edisi Tiongkok daratan.",
   "personal.summaries": "{count} ringkasan proyek tersedia",
   "personal.reminders": "Pengingat ponsel",
   "personal.turnOn": "Aktifkan",
