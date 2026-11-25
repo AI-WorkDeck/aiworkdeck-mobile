@@ -1,7 +1,11 @@
 {
   "_source": "docs/specs/2026-09-13-store-assets-design.md §2（截图叙事，三端同一套 8 张）",
   "_note": "改文案只改这里，然后重跑 compose.mjs。ends 里的覆盖项用于安卓/鸿蒙与 iOS 不同的那一张。",
-  "locales": ["zh-Hans", "en-US"],
+  "locales": [
+    "zh-Hans",
+    "zh-Hant",
+    "en-US"
+  ],
   "shots": [
     {
       "n": "01",
@@ -9,11 +13,15 @@
       "screen": "首页取景（项目名 + 归档路径 + GPS 精度 + 桌面端在线）",
       "zh-Hans": {
         "title": "现场拍的，\n直接落到项目目录",
-        "subtitle": "手机拍完，照片就在电脑上那个项目的「现场影像 / 日期」里"
+        "subtitle": "手机拍完，照片就在电脑上那个项目的“现场影像 / 日期”里"
       },
       "en-US": {
         "title": "Shot on site, filed in the project",
-        "subtitle": "Every capture lands in that project's Site Media / date folder on your computer"
+        "subtitle": "Every capture lands in that project's Field media / date folder on your computer"
+      },
+      "zh-Hant": {
+        "title": "現場拍的，\n直接存進專案資料夾",
+        "subtitle": "手機拍完，照片就在電腦上那個專案的「現場影像 / 日期」裡"
       }
     },
     {
@@ -27,6 +35,10 @@
       "en-US": {
         "title": "Every capture carries a verifiable fingerprint",
         "subtitle": "SHA-256 computed as it is written, filed with time, location and device"
+      },
+      "zh-Hant": {
+        "title": "每一張都有\n可驗證的指紋",
+        "subtitle": "寫入的同時計算 SHA-256，\n連同時間、座標、裝置一起歸檔"
       }
     },
     {
@@ -40,6 +52,10 @@
       "en-US": {
         "title": "Nothing is lost to a dropped connection",
         "subtitle": "Quit the app or lose signal; transfers resume when you are back"
+      },
+      "zh-Hant": {
+        "title": "網路不穩也不遺失",
+        "subtitle": "關閉 App、斷線重連，回來接著傳"
       }
     },
     {
@@ -53,6 +69,10 @@
       "en-US": {
         "title": "No more sorting when you are back at your desk",
         "subtitle": "Grouped by project and by day, mirroring the folders on your computer"
+      },
+      "zh-Hant": {
+        "title": "回辦公室不用\n再一張張整理",
+        "subtitle": "按專案、按日期自動分好，和電腦上的資料夾一一對應"
       }
     },
     {
@@ -66,6 +86,10 @@
       "en-US": {
         "title": "Capture details travel with the file",
         "subtitle": "Capture time and SHA-256 digest at a glance; coordinates and device details travel with the file"
+      },
+      "zh-Hant": {
+        "title": "拍攝資訊隨檔歸檔",
+        "subtitle": "拍攝時間與 SHA-256 摘要隨時可查，\n座標與裝置資訊寫進歸檔資訊一併存檔"
       }
     },
     {
@@ -74,21 +98,36 @@
       "screen": "录音（iOS 含灵动岛；安卓 / 鸿蒙常驻通知）",
       "zh-Hans": {
         "title": "谈话记录切后台继续录",
-        "subtitle": "来电、切应用都不中断，中断后自动续录"
+        "subtitle": "切应用不中断；来电中断时\n保存已录片段并提示"
       },
       "en-US": {
         "title": "Recording keeps going in the background",
-        "subtitle": "Calls and app switches don't stop it; it resumes on its own"
+        "subtitle": "Switching apps doesn't stop it; if a call interrupts, what's recorded is saved and you're told"
       },
       "ends": {
         "android": {
-          "zh-Hans": { "subtitle": "常驻通知里看得见时长，切应用不中断" },
-          "en-US": { "subtitle": "Duration stays in the notification; switching apps doesn't stop it" }
+          "zh-Hans": {
+            "subtitle": "常驻通知里看得见时长，切应用不中断"
+          },
+          "en-US": {
+            "subtitle": "Duration stays in the notification; switching apps doesn't stop it"
+          },
+          "zh-Hant": {
+            "subtitle": "常駐通知裡看得到時長，切換 App 不中斷"
+          }
         },
         "harmony": {
-          "zh-Hans": { "subtitle": "切到后台、锁屏也继续录，来电中断后自动续录" },
-          "en-US": { "subtitle": "Keeps recording in the background and picks up again after a call" }
+          "zh-Hans": {
+            "subtitle": "切到后台、锁屏也继续录；来电中断时保存已录片段并提示"
+          },
+          "en-US": {
+            "subtitle": "Keeps recording in the background and when locked; a call saves what's recorded and tells you"
+          }
         }
+      },
+      "zh-Hant": {
+        "title": "談話記錄切到背景繼續錄",
+        "subtitle": "切換 App 不中斷；來電中斷時\n保存已錄片段並提示"
       }
     },
     {
@@ -97,11 +136,15 @@
       "screen": "设置页（云端中转用量 + 本地原图说明）",
       "zh-Hans": {
         "title": "云端只做中转",
-        "subtitle": "桌面端确认落盘后立即删除中转副本，\n本地原图不会被自动删除"
+        "subtitle": "桌面端确认落盘后删除中转副本，\n未取回的最多保留 30 天；本地原图不会被自动删除"
       },
       "en-US": {
         "title": "The cloud is only a relay",
-        "subtitle": "Deleted the moment your desktop confirms; local originals are never auto-deleted"
+        "subtitle": "Deleted once your desktop confirms, kept at most 30 days if never collected; local originals are never auto-deleted"
+      },
+      "zh-Hant": {
+        "title": "雲端只做中轉",
+        "subtitle": "桌面版確認存檔後刪除中轉副本，\n未取回的最多保留 30 天；手機原檔不會被自動刪除"
       }
     },
     {
@@ -115,12 +158,59 @@
       "en-US": {
         "title": "One phone, every matter you are on",
         "subtitle": "Switch projects; each capture files itself into the right folder"
+      },
+      "zh-Hant": {
+        "title": "一支手機，\n服務所有承辦中的專案",
+        "subtitle": "切換專案，影像各自歸入正確的資料夾"
       }
     }
   ],
   "feature": {
     "_note": "安卓宣传图 1024×500（Google Play feature graphic）",
-    "zh-Hans": { "title": "AI WorkDeck", "subtitle": "出现场，拍完就归档到项目里" },
-    "en-US": { "title": "AI WorkDeck", "subtitle": "Field capture, filed for you" }
+    "zh-Hans": {
+      "title": "AI WorkDeck",
+      "subtitle": "出现场，拍完就归档到项目里"
+    },
+    "en-US": {
+      "title": "AI WorkDeck",
+      "subtitle": "Field capture, filed for you"
+    },
+    "zh-Hant": {
+      "title": "AI WorkDeck",
+      "subtitle": "出現場，拍完就歸檔到專案裡"
+    }
+  },
+  "proposed_new_shots": {
+    "_note": "Lane X 11-25: proposed, not yet captured. Add capture steps (iOS firm review needs a seeded firm portal; assistant needs a Pro test account) before turning these into shots 09/10.",
+    "09-firm-review (iOS only)": {
+      "screen": "审阅标签：多家律所事项列表，每项标注所属律所",
+      "zh-Hans": {
+        "title": "律所审阅，\n在手机上完成",
+        "subtitle": "查看客户问题与风险点，确认后签发定稿"
+      },
+      "zh-Hant": {
+        "title": "事務所審閱，\n在手機上完成",
+        "subtitle": "查看客戶問題與風險點，確認後簽發定稿"
+      },
+      "en-US": {
+        "title": "Firm review on your phone",
+        "subtitle": "Read the client's questions and red flags, then sign off the draft"
+      }
+    },
+    "10-assistant (Personal Pro)": {
+      "screen": "个人助理对话，回答引用已备份项目里的资料",
+      "zh-Hans": {
+        "title": "问一句，\n跨项目找资料",
+        "subtitle": "个人 Pro：助理只查你有权限、已备份的项目"
+      },
+      "zh-Hant": {
+        "title": "問一句，\n跨專案找資料",
+        "subtitle": "個人 Pro：助理只查你有權限、已備份的專案"
+      },
+      "en-US": {
+        "title": "Ask across your projects",
+        "subtitle": "Personal Pro: the assistant only searches projects you can access and have backed up"
+      }
+    }
   }
 }

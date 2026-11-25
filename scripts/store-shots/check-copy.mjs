@@ -29,6 +29,16 @@ const rows = [
   { file: "fastlane/metadata/zh-Hans/release_notes.txt", label: "App Store 更新说明 zh-Hans", limit: 4000, unit: chars },
   { file: "fastlane/metadata/en-US/release_notes.txt", label: "App Store 更新说明 en-US", limit: 4000, unit: chars },
 
+  { file: "fastlane/metadata/zh-Hant/subtitle.txt", label: "App Store 副標題 zh-Hant", limit: 30, unit: chars },
+  { file: "fastlane/metadata/zh-Hant/promotional_text.txt", label: "App Store 推廣文字 zh-Hant", limit: 170, unit: chars },
+  { file: "fastlane/metadata/zh-Hant/keywords.txt", label: "App Store 關鍵字 zh-Hant", limit: 100, unit: bytes },
+  { file: "fastlane/metadata/zh-Hant/description.txt", label: "App Store 描述 zh-Hant", limit: 4000, unit: chars },
+  { file: "fastlane/metadata/zh-Hant/release_notes.txt", label: "App Store 更新說明 zh-Hant", limit: 4000, unit: chars },
+  { file: "android/store/listing/zh-Hant/title.txt", label: "Play App name zh-Hant", limit: 30, unit: chars },
+  { file: "android/store/listing/zh-Hant/short_description.txt", label: "Play Short description zh-Hant", limit: 80, unit: chars },
+  { file: "android/store/listing/zh-Hant/full_description.txt", label: "Play Full description zh-Hant", limit: 4000, unit: chars },
+  { file: "android/store/listing/zh-Hant/release_notes.txt", label: "Play Release notes zh-Hant", limit: 500, unit: chars },
+
   // --- Google Play（android/store/listing/en-US，见该目录 README）---
   { file: "android/store/listing/en-US/title.txt", label: "Play App name", limit: 30, unit: chars },
   { file: "android/store/listing/en-US/short_description.txt", label: "Play Short description", limit: 80, unit: chars },

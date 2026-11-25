@@ -1,6 +1,6 @@
 For professionals working on site — capture it, and it's already filed into the project.
 
-Lawyers running due diligence, auditors doing stocktakes, engineers inspecting factories and sites — the photos, video and audio shot on location usually mean exporting, renaming and sorting one by one back at the office. AI WorkDeck Mobile removes that step: shoot on your phone, and each capture is queued and delivered straight into the "Site Media / date" folder of that project on your computer, alongside the rest of the project's files on the desktop app.
+Lawyers running due diligence, auditors doing stocktakes, engineers inspecting factories and sites — the photos, video and audio shot on location usually mean exporting, renaming and sorting one by one back at the office. AI WorkDeck Mobile removes that step: shoot on your phone, and each capture is queued and delivered straight into the "Field media / date" folder of that project on your computer, alongside the rest of the project's files on the desktop app.
 
 A verifiable fingerprint on every capture
 A SHA-256 digest is computed the moment a capture is written, recorded together with capture time, GPS coordinates and accuracy, device model and OS version. The digest is generated on device and doesn't depend on a network connection.
@@ -17,8 +17,8 @@ Relay copies for desktop projects are deleted after the desktop confirms receipt
 Photo, video and audio in one viewfinder
 All three capture modes share one screen and file into the same project folder. Audio recording continues in the background. When a call or system event interrupts it, usable audio is saved with a clear notice. Reopen the app after an unexpected exit to see the recovery result.
 
-One phone, every matter you're on
-Switch projects and each capture files itself into the right folder.
+Assistant and calendar (Personal Pro)
+With Personal Pro, ask the assistant about projects you've backed up and see your desktop calendar on your phone with reminders. Each needs your separate consent.
 
 Firm review on your phone
 If your firm runs an AI firm portal, join it in Settings > Firm review. Once the firm approves you, a Reviews tab shows what needs you: read the client's questions and red flags, reply, confirm a call, and sign off a draft after Face ID, Touch ID or your passcode. Several firms or partner offices share one inbox.
@@ -27,7 +27,7 @@ Apple Watch recording
 Start and stop recording on your watch; recordings transfer to your paired iPhone and upload into the project. Pending recordings stay on the watch while disconnected. Requires watchOS 10 or later.
 
 Who it's for
-Due diligence and site visits for law firms, audit stocktakes for accounting firms, supply-chain factory inspections, site acceptance for engineering, insurance surveys, and anyone whose work is document-driven and needs what happens on site brought back into the project.
+Law-firm due diligence and site visits, audit stocktakes, factory inspections, engineering acceptance, insurance surveys, and anyone who needs what happens on site brought back into the project.
 
 An AI WorkDeck account is required. Syncing to desktop projects also requires the AI WorkDeck desktop app.
 
