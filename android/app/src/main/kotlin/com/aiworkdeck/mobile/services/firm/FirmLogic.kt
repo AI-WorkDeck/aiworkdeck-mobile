@@ -253,3 +253,20 @@ object FirmStatus {
     }
     sealed class SettingsValue { data class Text(val text: String) : SettingsValue(); data class Key(val key: String, val vars: Map<String, Any>) : SettingsValue() }
 }
+
+/** Tabs and their visibility (iOS PersonalWorkspaceView: the Reviews tab exists only while a firm approves the account). */
+object FirmTabs {
+    /** The tab to stay on when the Reviews tab disappears while selected (POLISH M10 on iOS). */
+    fun <T> keep(selected: T, firmTab: T, fallback: T, firmVisible: Boolean): T = if (!firmVisible && selected == firmTab) fallback else selected
+
+    /** "3 min ago"-style label as a contract key and number; never in the future. */
+    fun agoKey(then: Instant, now: Instant = Instant.now()): Pair<String, Long> {
+        val s = maxOf(0, java.time.Duration.between(then, now).seconds)
+        return when {
+            s < 60 -> "time.secondsAgo" to s
+            s < 3600 -> "time.minutesAgo" to s / 60
+            s < 86400 -> "time.hoursAgo" to s / 3600
+            else -> "time.daysAgo" to s / 86400
+        }
+    }
+}
