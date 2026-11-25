@@ -206,7 +206,7 @@ private fun FlagRow(f: FirmFlag, settlement: String?) = Row(verticalAlignment = 
     Box(Modifier.size(7.dp).clip(CircleShape).background(if (f.level == "high") Tk.S.failed else Tk.S.waiting))
     Text(listOfNotNull(FirmText.section(f.section), f.title).filter { it.isNotEmpty() }.joinToString(" · "), style = Fonts.body(), color = Tk.L.fg, modifier = Modifier.weight(1f))
     val color = when (settlement) { "lawyer" -> Tk.S.waiting; null -> Tk.L.fgFaint; else -> Tk.L.accent }
-    Text(tr(FirmIdentity.settlementKey(settlement)), style = Fonts.nano(), color = color,
+    Text(tr(FirmIdentity.settlementKey(settlement)), style = Fonts.micro().copy(fontWeight = FontWeight.Medium), color = color,
         modifier = Modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.12f)).padding(horizontal = Tk.Sp.s2, vertical = 2.dp))
 }
 
@@ -304,7 +304,7 @@ private fun FirmConversationLayer(matter: FirmMatter, onClose: () -> Unit) {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
             for (e in entries) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val who = when (e.role) { "user" -> tr("firm.who.client"); "lawyer" -> e.name?.takeIf { it.isNotEmpty() } ?: tr("firm.tab"); else -> tr("firm.who.assistant") }
-                Text(who, style = Fonts.nano(), color = if (e.role == "lawyer") Tk.L.accent else Tk.L.fgFaint)
+                Text(who, style = Fonts.micro().copy(fontWeight = FontWeight.Medium), color = if (e.role == "lawyer") Tk.L.accent else Tk.L.fgMuted)
                 Text(FirmMarkdown.plain(e.content), style = Fonts.body(), color = Tk.L.fg)
             }
         }

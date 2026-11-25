@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package com.aiworkdeck.mobile.features.firm
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -78,11 +79,11 @@ private fun MatterRow(matter: FirmMatterSummary, firm: String?, onClick: () -> U
             .padding(Tk.Sp.s4).testTag("firm.row." + matter.id),
         verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1),
     ) {
-        firm?.let { Text(it, style = Fonts.nano(), color = Tk.L.fgMuted, maxLines = 1) }
+        firm?.let { Text(it, style = Fonts.micro(), color = Tk.L.fgMuted, maxLines = 1) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(FirmText.title(matter.client, matter.company, matter.template?.text), style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             FirmText.instant(matter.updatedAt)?.let { FirmTabs.agoKey(it) }?.let { (key, n) ->
-                Text(tr(key, mapOf("n" to n)), style = Fonts.nano(), color = Tk.L.fgFaint)
+                Text(tr(key, mapOf("n" to n)), style = Fonts.micro(), color = Tk.L.fgMuted)
             }
         }
         matter.template?.text?.takeIf { it.isNotEmpty() }?.let { Text(it, style = Fonts.small(), color = Tk.L.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -95,5 +96,5 @@ private fun MatterRow(matter: FirmMatterSummary, firm: String?, onClick: () -> U
 
 @Composable
 private fun Chip(text: String, color: Color) {
-    Text(text, style = Fonts.nano(), color = color, modifier = Modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.12f)).padding(horizontal = Tk.Sp.s2, vertical = 2.dp))
+    Text(text, style = Fonts.micro().copy(fontWeight = FontWeight.Medium), color = color, modifier = Modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.12f)).padding(horizontal = Tk.Sp.s2, vertical = 2.dp))
 }
