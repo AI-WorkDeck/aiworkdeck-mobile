@@ -1,5 +1,6 @@
 package com.aiworkdeck.mobile.features.auth
 
+import com.aiworkdeck.mobile.design.readableWidth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -111,7 +112,7 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
 
     LightStatusBar()
     Column(
-        Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(horizontal = Tk.Sp.gutter),
+        Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().readableWidth().padding(horizontal = Tk.Sp.gutter),
     ) {
         Row(Modifier.padding(top = Tk.Sp.s2), verticalAlignment = Alignment.CenterVertically) {
             Text(tr(titleKey ?: "project.title"), style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, modifier = Modifier.weight(1f))

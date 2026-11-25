@@ -12,6 +12,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import com.aiworkdeck.mobile.design.layoutFor
+import com.aiworkdeck.mobile.design.LocalWindowLayout
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -221,13 +231,22 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
     val layoutDir = if (L10n.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
     CompositionLocalProvider(LocalLayoutDirection provides layoutDir) {
         WorkdeckTheme(dark = darkChrome) {
+          // 窗口尺寸类（M17）：平板与展开的折叠屏把底栏换成侧边导航栏，浮层据此决定是否并排分栏
+          BoxWithConstraints(Modifier.fillMaxSize()) {
+          val windowLayout = layoutFor(maxWidth.value, maxHeight.value)
+          CompositionLocalProvider(LocalWindowLayout provides windowLayout) {
             when {
                 // 恢复会话前先给一张与主界面同色的空屏，避免登录页闪一下再跳走
                 !didRestore -> Column(Modifier.fillMaxSize().background(Tk.L.bg)) {}
                 !isSignedIn -> LoginScreen(model)
                 else -> Box(Modifier.fillMaxSize()) {
-                    Column(Modifier.fillMaxSize()) {
-                        Box(Modifier.weight(1f).consumeWindowInsets(WindowInsets.navigationBars)) {
+                    val rail = windowLayout.navRail
+                    val selectTab: (MainTab) -> Unit = { tab = it }
+                    Row(Modifier.fillMaxSize()) {
+                    if (rail) MainTabRail(tab, dark = tab == MainTab.capture, enabled = !captureBusy, showFirm = firmApproved, firmBadge = firmBadge, onSelect = selectTab)
+                    Column(Modifier.weight(1f).fillMaxHeight()) {
+                        // 底栏模式下底栏自己垫系统导航条；侧栏模式下内容自己垫
+                        Box(Modifier.weight(1f).then(if (rail) Modifier else Modifier.consumeWindowInsets(WindowInsets.navigationBars))) {
                             // 取景器一直留在组合里：切到日程/助理或盖上浮层时只放掉相机，切回来模式与计时都在
                             val captureActive = tab == MainTab.capture && overlay == Overlay.None
                             Box(if (captureActive) Modifier else Modifier.clearAndSetSemantics {}) {
@@ -240,7 +259,8 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
                                 onOpen = { returnOverlay = Overlay.None; overlay = it },
                                 onProject = { returnOverlay = Overlay.None; personalFileProject = it; overlay = Overlay.Files })
                         }
-                        MainTabBar(tab, dark = tab == MainTab.capture, enabled = !captureBusy, showFirm = firmApproved, firmBadge = firmBadge) { tab = it }
+                        if (!rail) MainTabBar(tab, dark = tab == MainTab.capture, enabled = !captureBusy, showFirm = firmApproved, firmBadge = firmBadge, onSelect = selectTab)
+                    }
                     }
                     if (overlay == Overlay.Queue) {
                         QueueScreen(model, onClose = { overlay = returnOverlay })
@@ -276,6 +296,8 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
                     }
                 }
             }
+          }
+          }
         }
     }
 
@@ -287,6 +309,39 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
             overlay != Overlay.None -> overlay = returnOverlay
             !captureBusy -> tab = MainTab.capture
         }
+    }
+}
+
+/** 侧边三栏（平板、展开的折叠屏）：与底栏同样的三项、配色与「录制中锁住」规则。 */
+@Composable
+private fun MainTabRail(selected: MainTab, dark: Boolean, enabled: Boolean, showFirm: Boolean, firmBadge: Int, onSelect: (MainTab) -> Unit) {
+    val bg = if (dark) Tk.D.bg else Tk.L.bg
+    val on = if (dark) Tk.D.fg else Tk.L.accent
+    val off = if (dark) Tk.D.fgMuted else Tk.L.fgMuted
+    Row(Modifier.fillMaxHeight().background(bg)) {
+        NavigationRail(containerColor = bg, modifier = Modifier.fillMaxHeight()) {
+            Spacer(Modifier.weight(1f))
+            for (t in MainTab.entries.filter { it != MainTab.firm || showFirm }) {
+                NavigationRailItem(
+                    selected = t == selected,
+                    enabled = enabled || t == selected,
+                    onClick = { onSelect(t) },
+                    icon = {
+                        if (t == MainTab.firm && firmBadge > 0) BadgedBox(badge = { Badge { Text(firmBadge.toString()) } }) { Icon(painterResource(t.icon), contentDescription = null) }
+                        else Icon(painterResource(t.icon), contentDescription = null)
+                    },
+                    label = { Text(tr(t.labelKey), style = Fonts.small()) },
+                    colors = NavigationRailItemDefaults.colors(
+                        selectedIconColor = on, selectedTextColor = on,
+                        unselectedIconColor = off, unselectedTextColor = off,
+                        indicatorColor = if (dark) Tk.D.surface else Tk.L.accentWash,
+                        disabledIconColor = off.copy(alpha = 0.4f), disabledTextColor = off.copy(alpha = 0.4f),
+                    ),
+                )
+            }
+            Spacer(Modifier.weight(1f))
+        }
+        VerticalDivider(color = if (dark) Tk.D.rule else Tk.L.rule)
     }
 }
 

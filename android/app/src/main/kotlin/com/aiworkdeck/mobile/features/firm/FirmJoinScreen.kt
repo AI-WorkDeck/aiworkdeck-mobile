@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package com.aiworkdeck.mobile.features.firm
 
+import com.aiworkdeck.mobile.design.readableWidth
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -48,7 +49,7 @@ fun FirmJoinScreen(portal: FirmPortal, onClose: () -> Unit) {
     LightStatusBar()
     WorkdeckTheme(dark = false) {
         Column(
-            Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().imePadding().verticalScroll(rememberScrollState()).padding(Tk.Sp.gutter),
+            Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().readableWidth().imePadding().verticalScroll(rememberScrollState()).padding(Tk.Sp.gutter),
             verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3),
         ) {
             Text(tr("firm.settings.title"), style = Fonts.title(), color = Tk.L.fg)

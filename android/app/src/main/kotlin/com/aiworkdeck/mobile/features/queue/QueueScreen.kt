@@ -8,7 +8,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -66,6 +65,7 @@ import com.aiworkdeck.mobile.design.L10n
 import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.PrimaryButton
 import com.aiworkdeck.mobile.design.StatusDot
+import com.aiworkdeck.mobile.design.LocalWindowLayout
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.WorkdeckTheme
 import com.aiworkdeck.mobile.design.tr
@@ -126,8 +126,8 @@ fun QueueScreen(model: AppModel, onClose: () -> Unit) {
 
     LightStatusBar()
     WorkdeckTheme(dark = false) {
-        BoxWithConstraints(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()) {
-            val wide = maxWidth >= 700.dp && maxWidth > maxHeight
+        Box(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()) {
+            val wide = LocalWindowLayout.current.splitPanes
             val list: @Composable (Modifier) -> Unit = { modifier ->
                 Column(modifier) {
                     TopBar(

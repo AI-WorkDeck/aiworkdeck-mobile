@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package com.aiworkdeck.mobile.features.settings
 
+import com.aiworkdeck.mobile.design.readableWidth
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -75,7 +76,7 @@ fun PlayRechargeScreen(onClose: () -> Unit) {
 
     LightStatusBar()
     WorkdeckTheme(dark = false) {
-        Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().readableWidth()) {
             Column {
                 Row(
                     Modifier.fillMaxWidth().padding(start = Tk.Sp.s2, end = Tk.Sp.gutter, bottom = Tk.Sp.s2),

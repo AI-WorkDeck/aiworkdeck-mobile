@@ -1,5 +1,6 @@
 package com.aiworkdeck.mobile.features.settings
 
+import com.aiworkdeck.mobile.design.readableWidth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -40,7 +41,7 @@ fun BackupConsentScreen(onClose: () -> Unit) {
     androidx.activity.compose.BackHandler(enabled = !busy) { if (closable) onClose() }
     LightStatusBar()
     WorkdeckTheme(dark = false) {
-        Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().verticalScroll(rememberScrollState()).padding(Tk.Sp.gutter), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
+        Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().readableWidth().verticalScroll(rememberScrollState()).padding(Tk.Sp.gutter), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
             Text(tr("backup.title"), style = Fonts.title(), color = Tk.L.fg)
             Text(tr("backup.message"), style = Fonts.body(), color = Tk.L.fg)
             consent?.let { state ->

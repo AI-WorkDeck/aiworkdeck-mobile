@@ -1,5 +1,6 @@
 package com.aiworkdeck.mobile.features.settings
 
+import com.aiworkdeck.mobile.design.readableWidth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -154,7 +155,7 @@ fun RechargeScreen(onClose: (paid: Boolean) -> Unit, onChannelUnavailable: () ->
     Dialog(onDismissRequest = { onClose(paid) }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         LightStatusBar()
         WorkdeckTheme(dark = false) {
-            Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()) {
+            Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().readableWidth()) {
                 Row(
                     Modifier.fillMaxWidth().padding(start = Tk.Sp.s2, end = Tk.Sp.gutter, bottom = Tk.Sp.s2),
                     verticalAlignment = Alignment.CenterVertically,
