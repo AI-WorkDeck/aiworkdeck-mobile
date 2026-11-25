@@ -29,7 +29,7 @@ struct WorkdeckWatchApp: App {
                               systemImage: recorder.recording ? "stop.fill" : "mic.fill")
                             .frame(maxWidth: .infinity, minHeight: T.touchMin)
                     }
-                    .tint(recorder.recording ? T.S.failed : T.L.accent)
+                    .tint(recorder.recording ? T.S.failed : T.S.arrivedOnDark)
                     .disabled(recorder.busy)
                     .accessibilityIdentifier("watch.record")
 

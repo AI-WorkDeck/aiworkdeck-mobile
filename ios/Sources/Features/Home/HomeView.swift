@@ -668,7 +668,7 @@ struct HomeView: View {
                         .font(T.F.heading()).foregroundStyle(T.D.fg)
                     if destinationItems.isEmpty {
                         Text(tr("home.recent.empty"))
-                            .font(T.F.small()).foregroundStyle(.secondary)
+                            .font(T.F.small()).foregroundStyle(T.D.fgMuted)
                     }
                     ForEach(destinationItems) { item in
                         Button { openRecent(item) } label: {
@@ -676,7 +676,7 @@ struct HomeView: View {
                                 EvidenceThumb(item: item, onDark: true).frame(width: 44, height: 44)
                                 VStack(alignment: .leading, spacing: T.Sp.s1) {
                                     Text(RelativeTime.clock(item.capturedAt)).font(T.F.mono(13))
-                                    Text(item.state.caption).font(T.F.small()).foregroundStyle(.secondary)
+                                    Text(item.state.caption).font(T.F.small()).foregroundStyle(T.D.fgMuted)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -697,9 +697,9 @@ struct HomeView: View {
 
     private var recentCaptures: some View {
         VStack(alignment: .leading, spacing: T.Sp.s2) {
-            Text(tr("home.recent")).font(T.F.nano()).foregroundStyle(.secondary)
+            Text(tr("home.recent")).font(T.F.nano()).foregroundStyle(T.D.fgMuted)
             if destinationItems.isEmpty {
-                Text(tr("home.recent.empty")).font(T.F.micro()).foregroundStyle(.secondary)
+                Text(tr("home.recent.empty")).font(T.F.micro()).foregroundStyle(T.D.fgMuted)
             } else {
                 ScrollView(.horizontal) {
                     HStack(spacing: T.Sp.s2) {

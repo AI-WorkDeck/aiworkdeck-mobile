@@ -243,7 +243,7 @@ private struct AssistantView: View {
         NavigationStack {
             VStack(spacing: 12) {
                 if let status = model.status, !status.enabled || !status.canUseCloud {
-                    Text(status.canUseCloud ? tr("personal.assistantConsent") : tr(status.cloudAccess?.frozen == true ? "postpaid.restricted" : "personal.subscription")).font(.callout).foregroundStyle(.secondary)
+                    Text(status.canUseCloud ? tr("personal.assistantConsent") : tr(status.cloudAccess?.frozen == true ? "postpaid.restricted" : "personal.subscription")).font(.callout).foregroundStyle(T.LD.fgMuted)
                     if status.canUseCloud && !status.backupEnabled { Button(tr("backup.title")) { showBackup = true } }
                     if !status.canUseCloud && AccountRegion.current.billingEnabled && status.cloudAccess?.frozen != true {
                         Button(tr("subscription.store.title")) { showSubscription = true }
@@ -255,13 +255,13 @@ private struct AssistantView: View {
                     LazyVStack(alignment: .leading, spacing: 20) {
                         if model.messages.isEmpty {
                             Text(tr("personal.ask")).font(.title3).padding(.vertical, 32)
-                            if let status = model.status { Text(tr("personal.summaries", ["count": String(status.summaryCount)])).font(.caption).foregroundStyle(.secondary) }
+                            if let status = model.status { Text(tr("personal.summaries", ["count": String(status.summaryCount)])).font(.caption).foregroundStyle(T.LD.fgMuted) }
                         }
                         ForEach(model.messages) { message in
                             PersonalMessageView(message: message)
                         }
                         if !model.sources.isEmpty {
-                            Text(tr("personal.sources")).font(.caption).foregroundStyle(.secondary)
+                            Text(tr("personal.sources")).font(.caption).foregroundStyle(T.LD.fgMuted)
                             ForEach(model.sources, id: \.self) { item in
                                 Button { source = item } label: { VStack(alignment: .leading) { Text(item.projectName); if let date = PersonalDates.display(item.sourceUpdatedAt) { Text(date).font(.caption2) } } }
                             }
@@ -288,7 +288,7 @@ private struct AssistantView: View {
                     .tint(colorScheme == .dark ? T.D.fg : T.L.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .padding().navigationTitle(tr("personal.assistant")).navigationBarTitleDisplayMode(.inline)
+            .padding().background(T.LD.groupedPage).navigationTitle(tr("personal.assistant")).navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showSettings = true } label: { AccountAvatar() }
@@ -350,44 +350,48 @@ private struct PersonalCalendarView: View {
     var body: some View {
         NavigationStack {
             List {
-                if let calendar = model.calendar, !calendar.enabled || !calendar.canReadCloud {
-                    Text(calendar.canReadCloud ? tr("personal.calendarConsent") : tr(calendar.cloudAccess?.frozen == true ? "postpaid.restricted" : "personal.subscription"))
-                    if !calendar.canReadCloud && AccountRegion.current.billingEnabled && calendar.cloudAccess?.frozen != true {
-                        Button(tr("subscription.store.title")) { showSubscription = true }
+                Group {
+                    if let calendar = model.calendar, !calendar.enabled || !calendar.canReadCloud {
+                        Text(calendar.canReadCloud ? tr("personal.calendarConsent") : tr(calendar.cloudAccess?.frozen == true ? "postpaid.restricted" : "personal.subscription"))
+                        if !calendar.canReadCloud && AccountRegion.current.billingEnabled && calendar.cloudAccess?.frozen != true {
+                            Button(tr("subscription.store.title")) { showSubscription = true }
+                        }
+                        if !calendar.canReadCloud { Button(tr("settings.account")) { showSettings = true } }
+                        if calendar.canWriteCloud { Button(tr("personal.turnOn")) { showConsent = true }.disabled(model.loading) }
                     }
-                    if !calendar.canReadCloud { Button(tr("settings.account")) { showSettings = true } }
-                    if calendar.canWriteCloud { Button(tr("personal.turnOn")) { showConsent = true }.disabled(model.loading) }
+                    if model.calendar?.enabled == true {
+                        Picker(tr("personal.calendar"), selection: $days) {
+                            Text(tr("personal.today")).tag(1)
+                            Text(tr("personal.nextDays", ["days": "3"])).tag(3)
+                            Text(tr("personal.nextDays", ["days": "5"])).tag(5)
+                        }.pickerStyle(.segmented)
+                        Picker(tr("workspace.title"), selection: $project) {
+                            Text(tr("personal.allProjects")).tag("")
+                            ForEach(projects) { event in Text(event.projectName).tag(event.projectIdentity) }
+                        }
+                        Toggle(tr("personal.reminders"), isOn: Binding(get: { reminders.enabled }, set: { value in
+                            Task { if value { notificationError = !((await reminders.allow())); reminders.replace(model.calendar?.events ?? []) } else { reminders.clear() } }
+                        }))
+                        if !CalendarRemotePush.shared.registered { Text(tr("personal.remindersHint")).font(.caption).foregroundStyle(T.LD.fgMuted) }
+                        if notificationError { Text(tr("personal.remindersUnavailable")).font(.caption).foregroundStyle(T.S.failed) }
+                        if events.isEmpty { Text(tr("personal.noEvents")).foregroundStyle(T.LD.fgMuted) }
+                        ForEach(events) { event in
+                            Button { selected = event } label: {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(event.title).font(.headline).foregroundStyle(T.LD.fg)
+                                    Text(event.dueDate + " " + (event.dueTime ?? "") + " · " + event.timeZone).font(.caption)
+                                    Text(event.projectName).font(.caption).foregroundStyle(T.LD.fgMuted)
+                                }.padding(.vertical, 6)
+                            }.id(event.id)
+                        }
+                    }
+                    if let error = model.calendarError { Text(error).foregroundStyle(T.S.failed); Button(tr("project.retry")) { Task { await model.load() } } }
+                    if model.loading { ProgressView() }
+                    if let sync = PersonalDates.display(model.calendar?.syncedAt) { Text(sync).font(.caption2).foregroundStyle(T.LD.fgMuted) }
                 }
-                if model.calendar?.enabled == true {
-                    Picker(tr("personal.calendar"), selection: $days) {
-                        Text(tr("personal.today")).tag(1)
-                        Text(tr("personal.nextDays", ["days": "3"])).tag(3)
-                        Text(tr("personal.nextDays", ["days": "5"])).tag(5)
-                    }.pickerStyle(.segmented)
-                    Picker(tr("workspace.title"), selection: $project) {
-                        Text(tr("personal.allProjects")).tag("")
-                        ForEach(projects) { event in Text(event.projectName).tag(event.projectIdentity) }
-                    }
-                    Toggle(tr("personal.reminders"), isOn: Binding(get: { reminders.enabled }, set: { value in
-                        Task { if value { notificationError = !((await reminders.allow())); reminders.replace(model.calendar?.events ?? []) } else { reminders.clear() } }
-                    }))
-                    if !CalendarRemotePush.shared.registered { Text(tr("personal.remindersHint")).font(.caption).foregroundStyle(.secondary) }
-                    if notificationError { Text(tr("personal.remindersUnavailable")).font(.caption).foregroundStyle(T.S.failed) }
-                    if events.isEmpty { Text(tr("personal.noEvents")).foregroundStyle(.secondary) }
-                    ForEach(events) { event in
-                        Button { selected = event } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(event.title).font(.headline).foregroundStyle(.primary)
-                                Text(event.dueDate + " " + (event.dueTime ?? "") + " · " + event.timeZone).font(.caption)
-                                Text(event.projectName).font(.caption).foregroundStyle(.secondary)
-                            }.padding(.vertical, 6)
-                        }.id(event.id)
-                    }
-                }
-                if let error = model.calendarError { Text(error).foregroundStyle(T.S.failed); Button(tr("project.retry")) { Task { await model.load() } } }
-                if model.loading { ProgressView() }
-                if let sync = PersonalDates.display(model.calendar?.syncedAt) { Text(sync).font(.caption2).foregroundStyle(.secondary) }
-            }.navigationTitle(tr("personal.calendar"))
+                .listRowBackground(T.LD.surface)
+            }.paperList()
+            .navigationTitle(tr("personal.calendar"))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showSettings = true } label: { AccountAvatar() }
@@ -422,12 +426,16 @@ private struct PersonalCalendarView: View {
             .sheet(item: $selected) { event in
                 NavigationStack {
                     List {
-                        Text(event.title).font(.title2)
-                        Text(event.dueDate + " " + (event.dueTime ?? "") + " · " + event.timeZone)
-                        Text(event.projectName)
-                        ForEach(event.files, id: \.fileId) { file in Text(file.fileName) }
-                        NavigationLink(tr("project.files")) { ProjectContentsView(project: event.project, client: account.workspaceFiles()).navigationTitle(event.projectName) }
-                    }.toolbar { Button(tr("common.close")) { selected = nil } }
+                        Group {
+                            Text(event.title).font(.title2)
+                            Text(event.dueDate + " " + (event.dueTime ?? "") + " · " + event.timeZone)
+                            Text(event.projectName)
+                            ForEach(event.files, id: \.fileId) { file in Text(file.fileName) }
+                            NavigationLink(tr("project.files")) { ProjectContentsView(project: event.project, client: account.workspaceFiles()).navigationTitle(event.projectName) }
+                        }
+                        .listRowBackground(T.LD.surface)
+                    }.paperList()
+                    .toolbar { Button(tr("common.close")) { selected = nil } }
                 }
             }
         }
