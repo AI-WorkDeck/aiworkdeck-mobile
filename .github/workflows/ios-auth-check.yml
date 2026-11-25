@@ -6,16 +6,21 @@ on:
     branches: [main]
     paths: ['ios/**', 'contract/**', 'fastlane/Fastfile', 'fastlane/tests/**', 'scripts/check-ios-*.py', 'scripts/create-ios-ci-simulator.py', 'scripts/tests/test_ios_*.py', '.github/workflows/ios-auth-check.yml', '.github/workflows/appstore-build.yml']
   pull_request:
+    # Simulators on a PR only when it carries the `full-build` label (adding the label starts the run);
+    # every push to main and the App Store gate always run them.
+    types: [opened, synchronize, reopened, labeled]
     paths: ['ios/**', 'contract/**', 'fastlane/Fastfile', 'fastlane/tests/**', 'scripts/check-ios-*.py', 'scripts/create-ios-ci-simulator.py', 'scripts/tests/test_ios_*.py', '.github/workflows/ios-auth-check.yml', '.github/workflows/appstore-build.yml']
 permissions:
   contents: read
-# macOS jobs are limited per organization, so a run of three simulators blocks every other PR.
-# A newer push to the same PR cancels the older run; main and release calls never cancel.
+# macOS jobs are limited per organization. A newer push to the same PR cancels the older run; pending
+# main pushes collapse to the newest. When appstore-build calls this as its release gate, github.workflow
+# is the caller's name, so the gate gets its own group and is never collapsed or cancelled.
 concurrency:
-  group: ios-auth-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  group: ios-auth-${{ github.event.pull_request.number || (github.workflow == 'ios-auth-check' && github.ref) || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   simulator:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-build')
     runs-on: xcode-27
     timeout-minutes: 100
     # The large-iPhone runner fails for environmental reasons (empty accessibility
