@@ -577,7 +577,7 @@
   "subscription.store.closed": "Las suscripciones aún no están abiertas. Vuelve más tarde.",
   "subscription.wxpay.title": "Pro personal",
   "subscription.wxpay.intro": "Los primeros {months} meses a {price}/mes, después {standard}/mes.",
-  "subscription.wxpay.term": "Cada pago añade 30 días de Pro. No se renueva automáticamente.",
+  "subscription.wxpay.term": "Cada pago añade {days} días de Pro. No se renueva automáticamente.",
   "subscription.wxpay.pay": "Pagar {price} con WeChat",
   "subscription.wxpay.paid": "Pago recibido. Pro está activo.",
   "subscription.wxpay.appleActive": "Ya tienes una suscripción Pro de Apple. Gestiónala en tu cuenta de Apple.",

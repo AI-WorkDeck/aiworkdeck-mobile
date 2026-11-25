@@ -84,7 +84,7 @@ fun showsSubscriptionRow(flavor: String, active: Boolean): Boolean = active || f
 fun showsWxpayPro(
     flavor: String,
     region: AccountRegion,
-    enabled: Boolean = ContractCapabilities.androidWxpayPro,
+    enabled: Boolean = ContractCapabilities.androidWxpayPro || com.aiworkdeck.mobile.BuildConfig.WXPAY_PRO_TEST,
 ): Boolean = flavor == "cn" && region == AccountRegion.cn && enabled
 
 /** Google Play 消耗型内购仅在 intl flavor + 国际区账号下开放（dev-board#665）。 */

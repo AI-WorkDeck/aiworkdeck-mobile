@@ -211,7 +211,7 @@ fun ProScreen(onClose: (paid: Boolean) -> Unit) {
                             )),
                             style = Fonts.small(), color = Tk.L.fgMuted,
                         )
-                        Text(tr("subscription.wxpay.term"), style = Fonts.small(), color = Tk.L.fgMuted)
+                        Text(tr("subscription.wxpay.term", mapOf("days" to q.days)), style = Fonts.small(), color = Tk.L.fgMuted)
                         PrimaryButton(
                             tr("subscription.wxpay.pay", mapOf("price" to formatMoney(q.amountCents, PRO_CURRENCY))),
                             onClick = { run { flow(skuId).purchase(q.amountCents) } },

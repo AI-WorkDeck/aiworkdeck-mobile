@@ -577,7 +577,7 @@
   "subscription.store.closed": "Chưa mở đăng ký. Vui lòng quay lại sau.",
   "subscription.wxpay.title": "Pro cá nhân",
   "subscription.wxpay.intro": "{months} tháng đầu {price}/tháng, sau đó {standard}/tháng.",
-  "subscription.wxpay.term": "Mỗi lần thanh toán thêm 30 ngày Pro. Không tự động gia hạn.",
+  "subscription.wxpay.term": "Mỗi lần thanh toán thêm {days} ngày Pro. Không tự động gia hạn.",
   "subscription.wxpay.pay": "Thanh toán {price} bằng WeChat",
   "subscription.wxpay.paid": "Đã nhận thanh toán. Pro đã được kích hoạt.",
   "subscription.wxpay.appleActive": "Bạn đã có gói Pro qua Apple. Hãy quản lý trong tài khoản Apple của bạn.",

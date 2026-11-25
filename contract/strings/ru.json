@@ -577,7 +577,7 @@
   "subscription.store.closed": "Подписка пока недоступна. Загляните позже.",
   "subscription.wxpay.title": "Личный Pro",
   "subscription.wxpay.intro": "Первые {months} мес. — {price}/мес., затем {standard}/мес.",
-  "subscription.wxpay.term": "Каждый платёж добавляет 30 дней Pro. Автоматического продления нет.",
+  "subscription.wxpay.term": "Каждый платёж добавляет {days} дней Pro. Автоматического продления нет.",
   "subscription.wxpay.pay": "Оплатить {price} через WeChat",
   "subscription.wxpay.paid": "Платёж получен. Pro активен.",
   "subscription.wxpay.appleActive": "У вас уже есть подписка Pro через Apple. Управляйте ею в аккаунте Apple.",

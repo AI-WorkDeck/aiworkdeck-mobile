@@ -577,7 +577,7 @@
   "subscription.store.closed": "Langganan belum dibuka. Coba lagi nanti.",
   "subscription.wxpay.title": "Pro Pribadi",
   "subscription.wxpay.intro": "{months} bulan pertama {price}/bulan, lalu {standard}/bulan.",
-  "subscription.wxpay.term": "Setiap pembayaran menambah 30 hari Pro. Tidak diperpanjang otomatis.",
+  "subscription.wxpay.term": "Setiap pembayaran menambah {days} hari Pro. Tidak diperpanjang otomatis.",
   "subscription.wxpay.pay": "Bayar {price} dengan WeChat",
   "subscription.wxpay.paid": "Pembayaran diterima. Pro sudah aktif.",
   "subscription.wxpay.appleActive": "Anda sudah memiliki langganan Pro Apple. Kelola di akun Apple Anda.",

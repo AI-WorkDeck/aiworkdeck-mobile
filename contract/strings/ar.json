@@ -577,7 +577,7 @@
   "subscription.store.closed": "الاشتراكات غير متاحة بعد. تحقّق لاحقاً.",
   "subscription.wxpay.title": "Pro الشخصي",
   "subscription.wxpay.intro": "أول {months} أشهر بسعر {price}/شهر، ثم {standard}/شهر.",
-  "subscription.wxpay.term": "كل دفعة تضيف 30 يومًا من Pro. لا يتجدد تلقائيًا.",
+  "subscription.wxpay.term": "كل دفعة تضيف {days} يومًا من Pro. لا يتجدد تلقائيًا.",
   "subscription.wxpay.pay": "ادفع {price} عبر WeChat",
   "subscription.wxpay.paid": "تم استلام الدفعة. Pro مفعّل.",
   "subscription.wxpay.appleActive": "لديك بالفعل اشتراك Pro عبر Apple. يمكنك إدارته من حساب Apple.",

@@ -577,7 +577,7 @@
   "subscription.store.closed": "Οι συνδρομές δεν είναι ακόμη διαθέσιμες. Ελέγξτε ξανά αργότερα.",
   "subscription.wxpay.title": "Προσωπικό Pro",
   "subscription.wxpay.intro": "Τους πρώτους {months} μήνες {price}/μήνα, μετά {standard}/μήνα.",
-  "subscription.wxpay.term": "Κάθε πληρωμή προσθέτει 30 ημέρες Pro. Δεν ανανεώνεται αυτόματα.",
+  "subscription.wxpay.term": "Κάθε πληρωμή προσθέτει {days} ημέρες Pro. Δεν ανανεώνεται αυτόματα.",
   "subscription.wxpay.pay": "Πληρωμή {price} με WeChat",
   "subscription.wxpay.paid": "Η πληρωμή ελήφθη. Το Pro είναι ενεργό.",
   "subscription.wxpay.appleActive": "Έχετε ήδη συνδρομή Pro μέσω Apple. Διαχειριστείτε τη στον λογαριασμό σας Apple.",

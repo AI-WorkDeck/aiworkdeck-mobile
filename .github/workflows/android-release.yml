@@ -19,6 +19,11 @@ on:
           - ""
           - internal
           - production
+      wxpayProTest:
+        description: "Owner-approved 1-fen WeChat Pro payment test: cn APK only, Pro sheet on, artifact kept 2 days, no store upload"
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 jobs:
@@ -71,6 +76,10 @@ jobs:
           args=()
           if [ -n "${{ inputs.versionCode }}" ]; then args+=("-PversionCode=${{ inputs.versionCode }}"); fi
           if [ -n "${{ inputs.versionName }}" ]; then args+=("-PversionName=${{ inputs.versionName }}"); fi
+          if [ "${{ inputs.wxpayProTest }}" = "true" ]; then
+            if [ -n "${{ inputs.playTrack }}" ]; then echo "::error::the payment-test build is never uploaded to a store" >&2; exit 1; fi
+            args+=("-Pawd.wxpayProTest=true")
+          fi
           ./gradlew :app:bundleIntlRelease :app:assembleCnRelease --console=plain "${args[@]}"
 
       - name: 定位产物、校验签名、打印指纹
@@ -99,11 +108,19 @@ jobs:
           md5sum intl-release.aab cn-release.apk
 
       - uses: actions/upload-artifact@v4
+        if: ${{ inputs.wxpayProTest }}
+        with:
+          name: cn-pro-payment-test-apk
+          path: android/cn-release.apk
+          retention-days: 2
+      - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.wxpayProTest }}
         with:
           name: intl-release-aab
           path: android/intl-release.aab
           retention-days: 30
       - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.wxpayProTest }}
         with:
           name: cn-release-apk
           path: android/cn-release.apk

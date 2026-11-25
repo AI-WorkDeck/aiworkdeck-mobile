@@ -577,7 +577,7 @@
   "subscription.store.closed": "Subscriptions aren't open yet. Check back later.",
   "subscription.wxpay.title": "Personal Pro",
   "subscription.wxpay.intro": "First {months} months at {price}/month, then {standard}/month.",
-  "subscription.wxpay.term": "Each payment adds 30 days of Pro. It does not renew automatically.",
+  "subscription.wxpay.term": "Each payment adds {days} days of Pro. It does not renew automatically.",
   "subscription.wxpay.pay": "Pay {price} with WeChat",
   "subscription.wxpay.paid": "Payment received. Pro is active.",
   "subscription.wxpay.appleActive": "You already have an Apple Pro subscription. Manage it in your Apple account.",

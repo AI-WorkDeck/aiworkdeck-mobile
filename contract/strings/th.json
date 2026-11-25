@@ -577,7 +577,7 @@
   "subscription.store.closed": "ยังไม่เปิดให้สมัครสมาชิก โปรดกลับมาใหม่ภายหลัง",
   "subscription.wxpay.title": "Pro ส่วนบุคคล",
   "subscription.wxpay.intro": "{months} เดือนแรก {price}/เดือน จากนั้น {standard}/เดือน",
-  "subscription.wxpay.term": "ชำระแต่ละครั้งเพิ่ม Pro 30 วัน และไม่ต่ออายุอัตโนมัติ",
+  "subscription.wxpay.term": "ชำระแต่ละครั้งเพิ่ม Pro {days} วัน และไม่ต่ออายุอัตโนมัติ",
   "subscription.wxpay.pay": "ชำระ {price} ด้วย WeChat",
   "subscription.wxpay.paid": "ได้รับการชำระเงินแล้ว Pro เปิดใช้งานแล้ว",
   "subscription.wxpay.appleActive": "คุณมีการสมัคร Pro ผ่าน Apple อยู่แล้ว โปรดจัดการในบัญชี Apple ของคุณ",
