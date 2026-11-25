@@ -1,6 +1,6 @@
 # 权限、第三方组件与数据流核对表
 
-> 本页基于 2026-10-29 的 1.3.1 / code 6 首次上架记录。应用宝其后已上架（现为 1.7.1，见 [README](README.md)「现状」）；复用到其余五店前须按当前包重新核对。
+> 本页基于 2026-10-29 的 1.3.1 / code 6 首次上架记录。应用宝其后已上架（现为 1.7.1，见 [README](README.md)「现状」）。自 2026-11-17 起国内 Android 只维护应用宝（dev-board#1775），其余五店的内容仅作历史保留；用于应用宝更新前须按当前包重新核对。
 >
 > **1.3.1 之后的变化（2026-11-25 按 `android/app/build.gradle.kts` 与清单核对）：** 国内版（cn flavor）新增 **微信开放平台 SDK** `com.tencent.mm.opensdk:wechat-sdk-android` 6.8.40，仅用于微信 APP 支付（积分充值；个人 Pro 订阅待开），并在清单 `<queries>` 中声明 `com.tencent.mm` 以检测微信是否安装。国际版（intl flavor）新增 Google Play Billing，国内版不含。权限与下表一致、未新增（当前清单：INTERNET、CAMERA、RECORD_AUDIO、ACCESS_FINE/COARSE_LOCATION、POST_NOTIFICATIONS、FOREGROUND_SERVICE(_DATA_SYNC/_MICROPHONE)）。下方「未声明微信 SDK」一句仅对 1.3.1 成立。
 

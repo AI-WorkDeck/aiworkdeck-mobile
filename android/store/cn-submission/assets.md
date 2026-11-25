@@ -1,6 +1,6 @@
 # 国内素材检查
 
-> 本页基于 2026-10-29 的 1.3.1 / code 6 首次上架记录。应用宝其后已上架（现为 1.7.1，见 [README](README.md)「现状」）；复用到其余五店前须按当前包重新核对。
+> 本页基于 2026-10-29 的 1.3.1 / code 6 首次上架记录。应用宝其后已上架（现为 1.7.1，见 [README](README.md)「现状」）。自 2026-11-17 起国内 Android 只维护应用宝（dev-board#1775），其余五店的内容仅作历史保留；用于应用宝更新前须按当前包重新核对。
 
 检查日期：2026-10-29。本次提交截图的像素、字节数和哈希见 [current-asset-inventory.tsv](current-asset-inventory.tsv)；旧素材记录见 [asset-inventory.tsv](asset-inventory.tsv)，旧表路径相对 `android/store/`。本次没有重绘、裁剪或压缩图片。
 
