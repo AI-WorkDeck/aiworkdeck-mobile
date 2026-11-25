@@ -4,6 +4,7 @@ import SwiftUI
 struct WorkdeckApp: App {
     @UIApplicationDelegateAdaptor(CalendarPushDelegate.self) private var pushDelegate
     @State private var model = AppModel()
+    @State private var privacyAccepted = PrivacyConsent.initiallyAccepted()
 
     init() {
         _ = CloudEpoch.launchAt
@@ -20,17 +21,22 @@ struct WorkdeckApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(model)
-                .task { await model.bootstrap() }
-                // 内购的双通道重放（design §4）：挂上 Transaction.updates 听进程外完成的交易，
-                // 再补一次 Transaction.unfinished——钱已经付了、上次没入成账的就躺在那里。
-                // 两件事都放在这个 .task 里：起监听写进 App 的属性初始化式会被 SwiftUI 反复执行，
-                // 起出无数个监听把主线程拖死在启动屏（见 IAP.startObservingUpdates 的注释）。
-                .task {
-                    IAP.startObservingUpdates()
-                    await IAP.replayUnfinished()
-                }
+            if !privacyAccepted {
+                // Before restoring the session or touching any permission (same gate as Android).
+                PrivacyConsentView { PrivacyConsent.accept(); privacyAccepted = true }
+            } else {
+                RootView()
+                    .environment(model)
+                    .task { await model.bootstrap() }
+                    // 内购的双通道重放（design §4）：挂上 Transaction.updates 听进程外完成的交易，
+                    // 再补一次 Transaction.unfinished——钱已经付了、上次没入成账的就躺在那里。
+                    // 两件事都放在这个 .task 里：起监听写进 App 的属性初始化式会被 SwiftUI 反复执行，
+                    // 起出无数个监听把主线程拖死在启动屏（见 IAP.startObservingUpdates 的注释）。
+                    .task {
+                        IAP.startObservingUpdates()
+                        await IAP.replayUnfinished()
+                    }
+            }
         }
     }
 }

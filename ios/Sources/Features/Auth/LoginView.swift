@@ -38,6 +38,8 @@ struct LoginView: View {
     @State private var password = ""
     @State private var busy = false
     @State private var error: String?
+    /// User Agreement and Privacy Policy, ticked by the user on every sign-in (same as Android).
+    @State private var agreed = false
 
     var body: some View {
         ScrollView {
@@ -78,7 +80,8 @@ struct LoginView: View {
                 SecureField(tr("login.passwordPlaceholder"), text: $password)
                     .textContentType(.password).disabled(busy).accessibilityIdentifier("login.password")
                 Hairline()
-                if let error { Text(error).font(T.F.micro()).foregroundStyle(T.S.failed) }
+                agreementRow
+                if let error { Text(error).font(T.F.micro()).foregroundStyle(T.S.failed).accessibilityIdentifier("login.error") }
                 Button { Task { await signIn() } } label: {
                     HStack { Text(tr(busy ? "login.working" : "login.title")); Spacer(); if busy { ProgressView() } }
                         .frame(minHeight: T.touchMin)
@@ -102,6 +105,35 @@ struct LoginView: View {
         .onChange(of: method) { _, _ in clearInputs() }
     }
 
+    /// One line when it fits; otherwise the links wrap under the checkbox (long languages, large text).
+    private var agreementRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: T.Sp.s2) { agreeToggle; agreementLinks }
+            VStack(alignment: .leading, spacing: 0) { agreeToggle; HStack(spacing: T.Sp.s3) { agreementLinks }.padding(.leading, 28) }
+        }
+    }
+
+    private var agreeToggle: some View {
+        Button { agreed.toggle(); if agreed { error = nil } } label: {
+            HStack(spacing: T.Sp.s2) {
+                Image(systemName: agreed ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 20)).foregroundStyle(agreed ? T.L.accent : T.L.fgFaint)
+                Text(tr("login.consent")).font(T.F.micro()).foregroundStyle(T.L.fgMuted)
+            }
+            .frame(minHeight: T.touchMin).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).disabled(busy)
+        .accessibilityAddTraits(agreed ? .isSelected : [])
+        .accessibilityIdentifier("login.agree")
+    }
+
+    @ViewBuilder private var agreementLinks: some View {
+        Button(tr("login.terms")) { openURL(region.termsURL) }.font(T.F.micro()).foregroundStyle(T.L.accent)
+            .frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.terms")
+        Button(tr("privacy.policy")) { openURL(region.privacyURL) }.font(T.F.micro()).foregroundStyle(T.L.accent)
+            .frame(minHeight: T.touchMin).disabled(busy).accessibilityIdentifier("login.privacy")
+    }
+
     private func clearInputs() { identity = ""; password = ""; error = nil }
 
     private func openAccountFlow(_ flow: String) {
@@ -112,6 +144,7 @@ struct LoginView: View {
 
     private func signIn() async {
         guard !busy else { return }
+        guard agreed else { error = tr("login.consentRequired"); return }
         busy = true; error = nil
         defer { busy = false }
         do {
