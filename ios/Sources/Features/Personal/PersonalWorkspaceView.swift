@@ -12,6 +12,11 @@ final class PersonalWorkspaceModel {
         selectedTab = tab
     }
 
+    /// The Reviews tab exists only while firm access is approved; if it goes away while selected, fall back to Capture.
+    func firmTabAvailable(_ available: Bool) {
+        if !available, selectedTab == "firm" { selectedTab = "capture" }
+    }
+
     func requestCalendarEvent(_ id: String?, cameraBusy: Bool) {
         pendingCalendarEventID = id
         resumeCalendarNavigation(cameraBusy: cameraBusy)
@@ -205,6 +210,7 @@ struct PersonalWorkspaceView: View {
             model.requestCalendarEvent(value, cameraBusy: cameraBusy)
         }
         .onChange(of: cameraBusy) { _, value in model.resumeCalendarNavigation(cameraBusy: value) }
+        .onChange(of: firm.access == .approved) { _, value in model.firmTabAvailable(value) }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 Task {

@@ -309,6 +309,26 @@ final class FirmReviewTests: XCTestCase {
         XCTAssertEqual(FirmPortal.combined([]), .none)
     }
 
+    func testInboxShowsLoadingBeforeTheFirstListAndEmptyOnlyAfterIt() {
+        XCTAssertEqual(FirmInbox.placeholder(hasMatters: false, listed: false, failed: false), .loading)
+        XCTAssertEqual(FirmInbox.placeholder(hasMatters: false, listed: true, failed: false), .empty)
+        XCTAssertNil(FirmInbox.placeholder(hasMatters: false, listed: false, failed: true), "an error is not 'nothing here'")
+        XCTAssertNil(FirmInbox.placeholder(hasMatters: true, listed: true, failed: false))
+    }
+
+    @MainActor func testALinkIsListedOnlyAfterItsMattersLoad() async {
+        let t = RoutingTransport()
+        t.routes["/sv/api/portal/me"] = #"{"kind":"lawyer","name":"Han","status":"approved"}"#
+        let link = FirmLink(portalID: "ai-firm.aiworkdeck.com/sv", trialCode: nil, session: { "s" }, transport: { t })
+        XCTAssertFalse(link.listed)
+        await link.check()
+        XCTAssertFalse(link.listed, "the matter list failed to load")
+        t.routes["/sv/api/portal/matters"] = #"{"matters":[]}"#
+        await link.refresh()
+        XCTAssertTrue(link.listed)
+        XCTAssertTrue(link.matters.isEmpty)
+    }
+
     func testEveryFirmStringExistsInAllLocales() {
         let keys = ContractStrings.table.keys.filter { $0.hasPrefix("firm.") }
         XCTAssertGreaterThan(keys.count, 60)

@@ -249,6 +249,18 @@ final class PersonalWorkspaceTests: XCTestCase {
         model.newConversation(); XCTAssertNil(model.desktopCopy)
     }
 
+    @MainActor func testLosingFirmAccessLeavesTheReviewsTab() {
+        let model = PersonalWorkspaceModel()
+        model.selectTab("firm", cameraBusy: false)
+        model.firmTabAvailable(true)
+        XCTAssertEqual(model.selectedTab, "firm")
+        model.firmTabAvailable(false)
+        XCTAssertEqual(model.selectedTab, "capture", "a removed tab must not stay selected")
+        model.selectTab("assistant", cameraBusy: false)
+        model.firmTabAvailable(false)
+        XCTAssertEqual(model.selectedTab, "assistant", "other tabs are untouched")
+    }
+
     @MainActor func testManualTabsAndReminderNavigationShareCameraBusyGuard() throws {
         let model = PersonalWorkspaceModel()
         // Photo capture, recording startup, and video recording all feed the

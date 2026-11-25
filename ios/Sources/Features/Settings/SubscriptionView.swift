@@ -77,7 +77,7 @@ struct SubscriptionView: View {
                     }
                     HStack(spacing: T.Sp.s5) {
                         Link(tr("subscription.store.terms"), destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
-                        Link(tr("privacy.policy"), destination: URL(string: "https://www.aiworkdeck.com/zh/legal/mobile-privacy")!)
+                        Link(tr("privacy.policy"), destination: AccountRegion.current.privacyURL)
                     }
                     .font(T.F.small()).foregroundStyle(T.L.fgMuted)
                 }

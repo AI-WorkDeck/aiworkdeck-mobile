@@ -3,6 +3,7 @@ import WatchConnectivity
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openURL) private var openURL
     @State private var confirmDelete = false
     @State private var showFirm = false
     @State private var deleting = false
@@ -250,6 +251,10 @@ struct SettingsView: View {
                         }
                         .frame(minHeight: T.touchMin)
                         infoRow(tr("settings.server"), Backend.baseURL.host ?? "—")
+                        navRow(tr("privacy.policy")) { openURL(AccountRegion.current.privacyURL) }
+                            .accessibilityIdentifier("settings.privacy")
+                        navRow(tr("login.terms")) { openURL(AccountRegion.current.termsURL) }
+                            .accessibilityIdentifier("settings.terms")
                     }
 
                     Button(tr("common.signOut")) { model.signOut(); onClose() }
