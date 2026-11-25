@@ -159,7 +159,7 @@ final class AppModel {
                     try await ArchiveMoveQueue.shared.retry(item.id)
                     await refresh()
                     await ArchiveMoveQueue.shared.kick()
-                } catch { lastError = error.localizedDescription }
+                } catch { lastError = userFacingMessage(for: error) }
             }
             return
         }
@@ -421,7 +421,7 @@ final class AppModel {
             kickUpload()
             await saveToAlbumIfEnabled()
         } catch {
-            lastError = tr("error.saveFailed", ["reason": error.localizedDescription])
+            lastError = tr("error.saveFailed", ["reason": userFacingMessage(for: error)])
         }
     }
 
@@ -438,7 +438,7 @@ final class AppModel {
             } catch {
                 // 不打断、不弹窗。相册失败最常见的原因是没给权限，
                 // 设置页里已经把这件事说清楚了，这里再弹一次是噪音。
-                albumWarning = error.localizedDescription
+                albumWarning = userFacingMessage(for: error)
             }
         }
         await refresh()

@@ -54,7 +54,7 @@ struct ArchiveMoveAccount: Equatable, Sendable {
     }
 }
 
-struct ArchiveMoveRegistrationRejected: LocalizedError {
+struct ArchiveMoveRegistrationRejected: UserFacingError {
     let message: String
     var errorDescription: String? { message }
 }

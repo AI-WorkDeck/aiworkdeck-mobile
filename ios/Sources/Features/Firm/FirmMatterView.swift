@@ -251,7 +251,7 @@ struct FirmMatterView: View {
             } else { edits = [] }
             matter = m; error = nil
         }
-        catch { self.error = error.localizedDescription }
+        catch { self.error = userFacingMessage(for: error) }
     }
 
     /// Runs one portal action, then reloads the matter (fresh state before any next step) and the inbox.
@@ -265,7 +265,7 @@ struct FirmMatterView: View {
             done?()
             return true
         } catch {
-            show(error.localizedDescription)
+            show(userFacingMessage(for: error))
             await load()
             return false
         }

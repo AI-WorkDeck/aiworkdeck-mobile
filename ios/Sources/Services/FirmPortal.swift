@@ -372,7 +372,7 @@ enum FirmTrialStore {
 
 // MARK: - Portal client
 
-struct FirmPortalError: LocalizedError, Equatable {
+struct FirmPortalError: UserFacingError, Equatable {
     let code: String
     let status: Int
     var errorDescription: String? {

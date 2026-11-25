@@ -33,7 +33,7 @@ struct ConversationCopyView: View {
                                     onCloudCopied()
                                 }
                                 onClose()
-                            } catch { self.error = target.desktop == nil ? error.localizedDescription : tr("personal.copy.unknown") }
+                            } catch { self.error = target.desktop == nil ? userFacingMessage(for: error) : tr("personal.copy.unknown") }
                         }
                     } label: { VStack(alignment: .leading) { Text(target.project.name); Text(target.locationName).font(.caption) } }
                     .accessibilityIdentifier(target.desktop == nil ? "projectPicker.project.\(target.project.key)" : "personal.copy.desktop.\(target.desktop!.deviceId).\(target.desktop!.key)")
@@ -45,7 +45,7 @@ struct ConversationCopyView: View {
             .task {
                 defer { loading = false }
                 do { let projects = try await files.projects(); targets = PersonalCopyDestination.targets(projects); upgrade = PersonalCopyDestination.needsUpgrade(projects) }
-                catch { self.error = error.localizedDescription }
+                catch { self.error = userFacingMessage(for: error) }
             }
         }
     }

@@ -109,7 +109,7 @@ let sessionLog = Logger(subsystem: "com.aiworkdeck.mobile", category: "session")
 
 /// 写 Keychain 失败。登录接口已经成功，但本机存不住会话——不能当登录成功，
 /// 否则用户进了主界面，下一个请求就是「请先登录」（QA 2026-11-13 B3）。
-struct SessionSaveError: LocalizedError {
+struct SessionSaveError: UserFacingError {
     let status: OSStatus
     var errorDescription: String? { tr("error.sessionSaveFailed") }
 }
@@ -205,7 +205,12 @@ enum SessionStore {
 
 // MARK: - 客户端
 
-struct APIError: LocalizedError {
+/// App-defined errors whose `errorDescription` is already text for the user (a `tr()` string or the
+/// server's message). `userFacingMessage(for:)` shows these as they are; anything else (system,
+/// Foundation, decoding) is mapped to a dictionary message so raw system text never reaches the UI (X24).
+protocol UserFacingError: LocalizedError {}
+
+struct APIError: UserFacingError {
     let message: String
     var errorDescription: String? { message }
 }
@@ -214,19 +219,24 @@ private let networkLog = Logger(subsystem: "com.aiworkdeck.mobile", category: "n
 
 /// 队列行等处给用户看的失败原因。系统网络错误的原文（如「TLS 错误导致安全连接失败。」）
 /// 用户没法据此行动，换成词典里的说法；原文与错误码留在日志里供排查。
-func userFacingMessage(for error: Error) -> String {
-    if let api = error as? APIError { return api.message }
-    guard let url = error as? URLError else { return error.localizedDescription }
-    networkLog.error("Request failed: URLError \(url.code.rawValue, privacy: .public) \(url.localizedDescription, privacy: .public)")
-    switch url.code {
-    case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .secureConnectionFailed,
-         .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid,
-         .serverCertificateHasUnknownRoot, .clientCertificateRejected, .clientCertificateRequired,
-         .badServerResponse, .appTransportSecurityRequiresSecureConnection:
-        return tr("error.unreachable")
-    default:
-        return tr("error.network")
+func userFacingMessage(for error: Error, fallback: String = tr("error.network")) -> String {
+    if let known = error as? UserFacingError, let text = known.errorDescription, !text.isEmpty { return text }
+    if let url = error as? URLError {
+        networkLog.error("Request failed: URLError \(url.code.rawValue, privacy: .public) \(url.localizedDescription, privacy: .public)")
+        switch url.code {
+        case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .secureConnectionFailed,
+             .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid,
+             .serverCertificateHasUnknownRoot, .clientCertificateRejected, .clientCertificateRequired,
+             .badServerResponse, .appTransportSecurityRequiresSecureConnection:
+            return tr("error.unreachable")
+        default:
+            return tr("error.network")
+        }
     }
+    if error is DecodingError { return tr("error.badResponse") }
+    // Same rule as Android's userFacingMessage: unknown errors get the dictionary fallback, the raw text goes to the log.
+    networkLog.error("Unmapped error shown as fallback: \(String(describing: error), privacy: .public)")
+    return fallback
 }
 
 /// 后端返回的统一信封：{ code, message, data }。code 0 才是成功。
@@ -744,7 +754,7 @@ actor API: ArchiveMoveServing {
 
     /// 业务失败信封（code 1 + kind）。`kind` 是**机器可读判别位**，调用方一律按它分支；
     /// `message` 已由服务端 LangText 出成可读话术，原样展示即可，绝不按措辞匹配。
-    struct BillingError: LocalizedError, Sendable {
+    struct BillingError: UserFacingError, Sendable {
         let message: String
         let kind: BillingKind?
         /// 只有 ALREADY_PAID / IDEMPOTENCY_CONFLICT 会带：App 被杀、本地没存下单号时靠它恢复。

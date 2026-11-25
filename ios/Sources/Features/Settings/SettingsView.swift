@@ -363,7 +363,7 @@ struct SettingsView: View {
             onClose()
         } catch {
             deleting = false
-            deleteError = error.localizedDescription
+            deleteError = userFacingMessage(for: error)
         }
     }
 

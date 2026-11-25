@@ -16,7 +16,7 @@ import Photos
 /// （dev-board#101，iPhone 17 Pro Max / iOS 26 实测）。
 /// 要恢复自建相册必须同时声明读权限并申请 .readWrite，那是产品决策，不在这里偷偷做。
 enum AlbumSaver {
-    enum SaveError: LocalizedError {
+    enum SaveError: UserFacingError {
         case denied
         case failed(String)
 
@@ -56,7 +56,7 @@ enum AlbumSaver {
                 }
             }
         } catch {
-            throw SaveError.failed(error.localizedDescription)
+            throw SaveError.failed(userFacingMessage(for: error, fallback: tr("error.generic")))
         }
     }
 }

@@ -119,7 +119,7 @@ struct ProjectPickerView: View {
                         let cloud = try await model.selectDefaultProject()
                         if cloud, let onBrowse { onBrowse() } else { onClose() }
                     }
-                    catch { self.error = error.localizedDescription }
+                    catch { self.error = userFacingMessage(for: error) }
                     choosing = false
                 }
             } label: {
@@ -143,7 +143,7 @@ struct ProjectPickerView: View {
                         else { await model.selectProject(p) }
                         RecentProjects.use(p.id)
                         onClose()
-                    } catch { self.error = error.localizedDescription }
+                    } catch { self.error = userFacingMessage(for: error) }
                     choosing = false
                 }
             } label: {
@@ -225,7 +225,7 @@ struct ProjectPickerView: View {
             let loaded = try await model.workspaceFiles().projects()
             projects = projectFilter.map { filter in loaded.filter(filter) } ?? loaded
         } catch {
-            self.error = error.localizedDescription
+            self.error = userFacingMessage(for: error)
         }
         loading = false
     }

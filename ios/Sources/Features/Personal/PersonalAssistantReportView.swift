@@ -37,7 +37,7 @@ final class PersonalAssistantReportModel: Identifiable {
             let id = try await service.reportAssistant(conversationID, description: description)
             guard isCurrent else { busy = false; return }
             reportID = id
-        } catch is CancellationError {} catch { if isCurrent { self.error = error.localizedDescription } }
+        } catch is CancellationError {} catch { if isCurrent { self.error = userFacingMessage(for: error) } }
         busy = false
         if reportID != nil { await refresh() }
     }
@@ -50,7 +50,7 @@ final class PersonalAssistantReportModel: Identifiable {
             guard isCurrent else { return }
             guard let result else { throw APIError(message: tr("error.badResponse")) }
             progress = result
-        } catch is CancellationError {} catch { if isCurrent { self.error = error.localizedDescription } }
+        } catch is CancellationError {} catch { if isCurrent { self.error = userFacingMessage(for: error) } }
     }
 }
 

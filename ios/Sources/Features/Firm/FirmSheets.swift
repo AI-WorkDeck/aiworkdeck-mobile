@@ -220,7 +220,7 @@ struct FirmSignoffSheet: View {
             reviewed = false
             onStale()
         } catch {
-            self.error = error.localizedDescription
+            self.error = userFacingMessage(for: error)
         }
     }
 }

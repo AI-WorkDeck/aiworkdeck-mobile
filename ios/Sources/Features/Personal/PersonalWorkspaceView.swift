@@ -70,7 +70,7 @@ final class PersonalWorkspaceModel {
         do {
             status = try await service.status(); error = nil
             if status?.consentEnabled == false { messages = []; sources = []; conversationID = nil; pending = nil; desktopCopy = nil; draft = ""; PersonalConversationStore.clear() }
-        } catch is CancellationError { return } catch { self.error = error.localizedDescription }
+        } catch is CancellationError { return } catch { self.error = userFacingMessage(for: error) }
         do {
             calendar = try await service.calendar(); calendarError = nil
             // Only a successful response can prove that the requested event is gone.
@@ -82,7 +82,7 @@ final class PersonalWorkspaceModel {
             if allowed && CalendarReminders.shared.enabled { await CalendarRemotePush.shared.prepare() }
             if !allowed { CalendarRemotePush.shared.clear() }
             CalendarReminders.shared.replace(allowed ? (calendar?.events ?? []) : [])
-        } catch is CancellationError {} catch { calendarError = error.localizedDescription }
+        } catch is CancellationError {} catch { calendarError = userFacingMessage(for: error) }
     }
     func send() async {
         guard !busy, status?.enabled == true else { return }
@@ -98,7 +98,7 @@ final class PersonalWorkspaceModel {
             messages.append(PersonalMessage(role: "user", content: question.message, createdAt: question.requestId))
             messages.append(PersonalMessage(role: "assistant", content: reply.answer, createdAt: reply.requestId))
             conversationID = reply.conversationId; sources = reply.sources; pending = nil; draft = ""; save()
-        } catch is CancellationError {} catch { self.error = error.localizedDescription }
+        } catch is CancellationError {} catch { self.error = userFacingMessage(for: error) }
     }
     private func save() { PersonalConversationStore.write(SavedPersonalConversation(conversationId: conversationID, pending: pending, desktopCopy: desktopCopy), scope: storageScope) }
     func newConversation() {
@@ -168,7 +168,7 @@ final class PersonalWorkspaceModel {
                 }
             }
             restored = true
-        } catch is CancellationError {} catch { self.error = error.localizedDescription }
+        } catch is CancellationError {} catch { self.error = userFacingMessage(for: error) }
     }
     func configure(_ feature: String, enabled: Bool) async {
         guard !loading, !busy else { return }; loading = true
@@ -178,7 +178,7 @@ final class PersonalWorkspaceModel {
             if feature == "assistant" && !enabled { messages = []; sources = []; conversationID = nil; pending = nil; desktopCopy = nil; draft = ""; PersonalConversationStore.clear() }
             await fetch()
         }
-        catch { if feature == "calendar" { calendarError = error.localizedDescription } else { self.error = error.localizedDescription }; loading = false }
+        catch { if feature == "calendar" { calendarError = userFacingMessage(for: error) } else { self.error = userFacingMessage(for: error) }; loading = false }
     }
 }
 
