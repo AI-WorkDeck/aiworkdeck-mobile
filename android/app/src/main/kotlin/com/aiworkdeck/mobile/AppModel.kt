@@ -343,6 +343,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * 登出就删是灾难性的默认。
      */
     fun signOut() {
+        com.aiworkdeck.mobile.services.ServiceLocator.firmOrNull()?.reset()
         val organizationScope = backend.personalAccountScope()
         synchronized(prefs) {
             backend.logout()
@@ -371,6 +372,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     suspend fun deleteAccount() {
         val scope = backend.personalAccountScope()
         backend.deleteAccount()
+        // Links and trial codes leave the device with the account (firm review spec).
+        com.aiworkdeck.mobile.services.ServiceLocator.firmOrNull()?.disconnectAll()
         signOut()
         prefs.clearOrganization(scope)
     }
