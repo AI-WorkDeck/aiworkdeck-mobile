@@ -50,7 +50,7 @@ class L10nTest {
         L10n.locale = "ar"
         assertTrue(L10n.isRtl)
         assertEquals("ar-SA", L10n.wireCode)
-        assertEquals("Unassigned", tr("library.unknownProject"))
+        assertEquals("غير مُصنّف", tr("library.unknownProject"))
         L10n.locale = "zh-Hant"
         assertFalse(L10n.isRtl)
         assertEquals("zh-TW", L10n.wireCode)
