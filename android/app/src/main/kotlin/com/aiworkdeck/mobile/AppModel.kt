@@ -101,6 +101,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var albumSaver: ((CaptureItem) -> Unit)? = null
 
     private var lastProjectsSeenAt: Long? = null
+    /** When the selected project's desktop was last seen online; kept while it is offline (iOS 'waiting {t}'). */
+    private val _desktopLastSeen = MutableStateFlow<Long?>(null)
+    val desktopLastSeen: StateFlow<Long?> = _desktopLastSeen.asStateFlow()
     private var heartbeat: Job? = null
 
     init {
@@ -205,6 +208,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         } catch (_: Exception) {
             // 读不到不等于对面不在——网络抖一下就宣布离线是噪音，交给三分钟窗口自己过期
         }
+        lastProjectsSeenAt?.let { _desktopLastSeen.value = it }
         _desktopOnline.value = isDesktopOnline(lastProjectsSeenAt, System.currentTimeMillis())
     }
 
@@ -294,6 +298,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         _selectedProject.value = null
         _desktopOnline.value = false
         lastProjectsSeenAt = null
+        _desktopLastSeen.value = null
     }
 
     fun selectProject(project: RelayProject) {
@@ -301,6 +306,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         _selectedProject.value = project
         val online = project.locations.orEmpty().any { it.kind == "desktop" && it.deviceId == project.deviceId && it.online == true }
         lastProjectsSeenAt = if (online) System.currentTimeMillis() else null
+        _desktopLastSeen.value = lastProjectsSeenAt
         _desktopOnline.value = online
         viewModelScope.launch {
             refresh()
@@ -319,6 +325,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         _selectedProject.value = null
         _desktopOnline.value = false
         lastProjectsSeenAt = null
+        _desktopLastSeen.value = null
         viewModelScope.launch { refresh() }
         return next
     }
@@ -353,6 +360,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         _selectedProject.value = null
         _desktopOnline.value = false
         lastProjectsSeenAt = null
+        _desktopLastSeen.value = null
         viewModelScope.launch { refresh() }
     }
 

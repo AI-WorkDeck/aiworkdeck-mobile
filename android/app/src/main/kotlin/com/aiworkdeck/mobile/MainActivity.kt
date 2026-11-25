@@ -98,7 +98,14 @@ class MainActivity : ComponentActivity() {
                     if (AlbumSaver.save(applicationContext, item.localFile, item.kind)) {
                         ServiceLocator.store.markSavedToAlbum(item.id)
                     }
-                }.onFailure { albumLogger.warning("存相册失败: ${it.message}") }
+                }.onFailure {
+                    albumLogger.warning("存相册失败: ${it.message}")
+                    // Say so instead of failing silently (iOS shows its album message); the capture itself is safe.
+                    runOnUiThread {
+                        android.widget.Toast.makeText(this@MainActivity,
+                            tr("error.saveFailed", mapOf("reason" to tr("home.album.short"))), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
         // 上架截图模式（debug-only，见 ScreenshotMode）。必须在 bootstrap 之前定下来。

@@ -45,4 +45,14 @@ class AppModelLogicTest {
         // 时钟被改到过去：宁可说离线，也不要让人以为照片已经在往电脑走
         assertFalse(isDesktopOnline(now + 60_000, now))
     }
+
+    @Test
+    fun `offline desktop says how long it has been away`() {
+        val now = 10_000_000L
+        assertEquals("time.secondsAgo" to 5L, relativeShortKey(now - 5_000, now))
+        assertEquals("time.minutesAgo" to 4L, relativeShortKey(now - 4 * 60_000, now))
+        assertEquals("time.hoursAgo" to 2L, relativeShortKey(now - 2 * 3_600_000, now))
+        assertEquals("time.daysAgo" to 1L, relativeShortKey(now - 86_400_000, now))
+        assertEquals("never in the future", "time.secondsAgo" to 0L, relativeShortKey(now + 5_000, now))
+    }
 }

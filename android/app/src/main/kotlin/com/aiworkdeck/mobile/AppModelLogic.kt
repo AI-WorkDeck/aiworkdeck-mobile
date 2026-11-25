@@ -24,3 +24,14 @@ fun otherPendingCount(items: List<CaptureItem>, selected: RelayProject?): Int =
  */
 fun isDesktopOnline(lastSeenMs: Long?, nowMs: Long): Boolean =
     lastSeenMs != null && nowMs - lastSeenMs in 0 until DESKTOP_ONLINE_WINDOW_MS
+
+/** "waiting 5 min" style label for how long the desktop has been away, as a contract key and number (iOS RelativeTime.short). */
+fun relativeShortKey(sinceMs: Long, nowMs: Long): Pair<String, Long> {
+    val s = maxOf(0L, (nowMs - sinceMs) / 1000)
+    return when {
+        s < 60 -> "time.secondsAgo" to s
+        s < 3600 -> "time.minutesAgo" to s / 60
+        s < 86400 -> "time.hoursAgo" to s / 3600
+        else -> "time.daysAgo" to s / 86400
+    }
+}
