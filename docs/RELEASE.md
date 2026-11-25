@@ -15,6 +15,10 @@
 其他商店退出日常维护、适配和更新范围。历史上架材料继续保留供查证，不据此自动下架已有应用。
 后续发版清单、渠道资质维护和验收均以这五个渠道为范围。
 
+**撤回在审版本须先经协调会话同意（2026-11-24 起）。** App Store 与 Google Play 的每次撤回都会让版本重新排队；
+1.13.0 曾因连续三次撤回重提，一周没有过审。新版本等在审版本过审后另建版本提交，不要用
+`appstore-submit` 的 `withdraw` 输入或 Play 回撤去「替换」在审版本，除非协调会话明确同意。
+
 本页介绍 iOS 与微信小程序的商店流程。Android 签名交付见 [android/README.md](../android/README.md)，
 鸿蒙见 [harmony/README.md](../harmony/README.md)。iOS 走 App Store 审核，小程序走微信公众平台审核。
 TestFlight / 体验版的日常发布见 `fastlane/Fastfile` 的 `beta` 与

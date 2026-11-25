@@ -16,7 +16,7 @@ on:
         default: false
         type: boolean
       withdraw:
-        description: "Version currently in review to withdraw first, so this release reuses its record (e.g. 1.12.3; empty = none)"
+        description: "Version currently in review to withdraw first, so this release reuses its record (e.g. 1.12.3; empty = none). Needs the coordinator's OK: every withdraw puts the app back at the end of the review queue"
         required: false
         default: ""
         type: string
