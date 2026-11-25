@@ -1,5 +1,8 @@
 # 商店文案字段映射
 
+**当前文案以本目录为准（2026-11-24 起）。** `../play-submission/listing-*.txt` 是 2026-10-29 首次上架时提交的
+存档（1.3.1），不再更新；下次在 Play Console / 国内商店改文案时，从本目录复制。
+
 来源：`fastlane/metadata/zh-Hans/*.txt`（中文）与
 `fastlane/metadata/en-US/*.txt`（英文），按 Android 各商店的字段结构拆分、核对字数上限后落地。
 改动顺序照抄 iOS 那份：先改 iOS `fastlane/metadata/`，再回来同步这里——不要在这里单独改词。

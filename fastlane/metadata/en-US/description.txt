@@ -20,8 +20,11 @@ All three capture modes share one screen and file into the same project folder. 
 One phone, every matter you're on
 Switch projects and each capture files itself into the right folder.
 
+Firm review on your phone
+If your firm runs an AI firm portal, join it in Settings > Firm review. Once the firm approves you, a Reviews tab shows what needs you: read the client's questions and red flags, reply, confirm a call, and sign off a draft after Face ID, Touch ID or your passcode. Several firms or partner offices share one inbox.
+
 Apple Watch recording
-Start and stop recording on your watch. Recordings automatically transfer to your paired iPhone and follow the existing project upload workflow. Pending recordings stay on the watch while disconnected. Change the project on iPhone before the first upload attempt. Requires watchOS 10 or later.
+Start and stop recording on your watch; recordings transfer to your paired iPhone and upload into the project. Pending recordings stay on the watch while disconnected. Requires watchOS 10 or later.
 
 Who it's for
 Due diligence and site visits for law firms, audit stocktakes for accounting firms, supply-chain factory inspections, site acceptance for engineering, insurance surveys, and anyone whose work is document-driven and needs what happens on site brought back into the project.
