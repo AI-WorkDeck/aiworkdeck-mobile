@@ -236,6 +236,9 @@ object FirmText {
 object FirmMarkdown {
     data class Block(val level: Int, val text: String)
 
+    /** The draft's first heading: the document's name when the portal has no template name for it. */
+    fun firstHeading(markdown: String?): String? = blocks(markdown ?: "").firstOrNull { it.level > 0 }?.text?.let(::plain)?.takeIf { it.isNotEmpty() }
+
     /** Text without emphasis or heading marks, for plain display. */
     fun plain(block: String): String = block.replace("**", "").replace("#", "").trim(' ', '\t')
 

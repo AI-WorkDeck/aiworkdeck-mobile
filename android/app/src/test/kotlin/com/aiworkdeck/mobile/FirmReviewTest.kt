@@ -274,6 +274,8 @@ class FirmReviewTest {
         assertEquals("Acme · Ada", FirmText.title("Ada", "Acme", "NDA"))
         assertEquals("Mutual NDA", FirmText.title("", null, "Mutual NDA"))
         assertEquals("—", FirmText.title(null, "", " "))
+        assertEquals("Mutual NDA", FirmMarkdown.firstHeading("# **Mutual NDA**\n\n## 1. Terms\n\nBody"))
+        assertNull(FirmMarkdown.firstHeading("No heading here"))
         assertEquals("firm.reason.call" to emptyMap<String, Any>(), FirmText.callLine(""))
         assertEquals("firm.matter.call" to mapOf<String, Any>("times" to "Tue 3pm"), FirmText.callLine("Tue 3pm"))
     }
