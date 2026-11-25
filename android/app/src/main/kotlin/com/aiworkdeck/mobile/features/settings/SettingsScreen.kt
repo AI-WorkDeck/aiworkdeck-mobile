@@ -279,6 +279,8 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                             colors = SwitchDefaults.colors(checkedTrackColor = Tk.L.accent),
                         )
                     }
+                    // Local originals are not a switch but a note (iOS SettingsView): a footnote, not another toggle.
+                    Text(tr("settings.originals") + " · " + tr("settings.originals.hint"), style = Fonts.nano(), color = Tk.L.fgFaint)
                 }
 
                 Group(tr("settings.general")) {

@@ -1,5 +1,7 @@
 package com.aiworkdeck.mobile.features.home
 
+import com.aiworkdeck.mobile.relativeShortKey
+
 import com.aiworkdeck.mobile.services.ServiceLocator
 import android.Manifest
 import android.content.Context
@@ -111,6 +113,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
     val items by model.currentItems.collectAsStateWithLifecycle()
     val tally by model.tally.collectAsStateWithLifecycle()
     val desktopOnline by model.desktopOnline.collectAsStateWithLifecycle()
+    val desktopLastSeen by model.desktopLastSeen.collectAsStateWithLifecycle()
 
     val camera = remember { CameraService(context, lifecycleOwner) }
     val stamper = remember { LocationStamper(context) }
@@ -376,7 +379,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
                         Text(tr("rec.discardUnreadable"), color = Tk.S.failed)
                     }
                 }
-                !hasCamera -> PermissionStage(tr("home.permission.camera"), context)
+                !hasCamera -> PermissionStage(tr("home.permission.camera"), tr("home.permission.cameraHint"), context)
                 cameraError -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(tr("camera.error.start"), color = Tk.D.fg)
                     androidx.compose.material3.TextButton(onClick = { cameraRetry++ }) { Text(tr("project.retry"), color = Tk.D.fg) }
@@ -413,6 +416,7 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
             elapsed = elapsed,
             recent = items.firstOrNull(),
             desktopOnline = desktopOnline,
+            desktopLastSeen = desktopLastSeen,
             assigned = project != null,
             onShoot = ::shootWithNotificationPermission,
             onRecordAudio = { if (!capturing) { mode = CapMode.audio; shootWithNotificationPermission() } },
@@ -480,7 +484,7 @@ private fun IconAction(icon: Int, label: String, enabled: Boolean, onClick: () -
 @Composable
 private fun AudioStage(hasMic: Boolean, recording: Boolean, paused: Boolean, elapsed: Long, context: Context) {
     if (!hasMic) {
-        PermissionStage(tr("home.permission.mic"), context)
+        PermissionStage(tr("home.permission.mic"), tr("home.permission.micHint"), context)
         return
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
@@ -499,13 +503,14 @@ private fun AudioStage(hasMic: Boolean, recording: Boolean, paused: Boolean, ela
 
 /** 权限缺失：说清楚缺什么，给一个能直接去开的入口。不在这里重复系统的措辞。 */
 @Composable
-private fun PermissionStage(title: String, context: Context) {
+private fun PermissionStage(title: String, hint: String, context: Context) {
     Column(
         Modifier.padding(Tk.Sp.s8),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3),
     ) {
         Text(title, style = Fonts.heading(), color = Color.White, textAlign = TextAlign.Center)
+        Text(hint, style = Fonts.small(), color = Color.White.copy(alpha = 0.7f), textAlign = TextAlign.Center)
         Text(
             tr("home.permission.open"), style = Fonts.small(), color = Tk.S.movingOnDark,
             modifier = Modifier.heightIn(min = Tk.touchMin).clickable { openAppSettings(context) }.wrapContentHeight(),
@@ -526,6 +531,7 @@ private fun Controls(
     elapsed: Long,
     recent: CaptureItem?,
     desktopOnline: Boolean,
+    desktopLastSeen: Long?,
     assigned: Boolean,
     onShoot: () -> Unit,
     onRecordAudio: () -> Unit,
@@ -586,7 +592,11 @@ private fun Controls(
                     .background(if (desktopOnline) Tk.S.arrivedOnDark else Color.White.copy(alpha = 0.3f)),
             )
             Text(
-                if (!assigned) tr("project.noneHint") else if (desktopOnline) tr("home.desktop.online") else tr("home.desktop.offline"),
+                if (!assigned) tr("project.noneHint") else if (desktopOnline) tr("home.desktop.online")
+                // Offline: say how long the desktop has been away; photos waiting on the relay are not hidden.
+                else desktopLastSeen?.let { t -> relativeShortKey(t, System.currentTimeMillis()).let { (k, n) ->
+                    tr("home.desktop.offline") + " · " + tr("home.desktop.waited", mapOf("t" to tr(k, mapOf("n" to n)))) } }
+                    ?: tr("home.desktop.offline"),
                 style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             Text(tr("home.stampFeatures"), style = Fonts.nano(), color = Color.White.copy(alpha = 0.4f), maxLines = 1)
