@@ -329,6 +329,16 @@ final class FirmReviewTests: XCTestCase {
         XCTAssertTrue(link.matters.isEmpty)
     }
 
+    /// POLISH M25: a rejected trial code used to stay as a dead "revoked" link; it is refused as invalid.
+    @MainActor func testARejectedTrialCodeIsRefusedNotKept() {
+        XCTAssertEqual(FirmPortal.joinRefusal(access: .revoked, lastErrorCode: "unauthorized", withCode: true, loadError: nil), tr("firm.trial.invalid"))
+        XCTAssertEqual(FirmPortal.joinRefusal(access: .revoked, lastErrorCode: "trial_expired", withCode: true, loadError: nil), tr("firm.trial.invalid"))
+        XCTAssertNil(FirmPortal.joinRefusal(access: .revoked, lastErrorCode: "access_revoked", withCode: false, loadError: nil), "a revoked account link stays visible to retry or leave")
+        XCTAssertEqual(FirmPortal.joinRefusal(access: .failed, lastErrorCode: "network", withCode: false, loadError: nil), tr("firm.error.network"))
+        XCTAssertNil(FirmPortal.joinRefusal(access: .pending, lastErrorCode: nil, withCode: true, loadError: nil))
+        XCTAssertNil(FirmPortal.joinRefusal(access: .approved, lastErrorCode: nil, withCode: true, loadError: nil))
+    }
+
     func testEveryFirmStringExistsInAllLocales() {
         let keys = ContractStrings.table.keys.filter { $0.hasPrefix("firm.") }
         XCTAssertGreaterThan(keys.count, 60)

@@ -679,11 +679,18 @@ final class FirmPortal {
         save()
         await link.check()
         guard self.scope == scope else { return nil }
-        if link.access == .failed || link.access == .none {
-            let message = code != nil && ["unauthorized", "trial_expired"].contains(link.lastErrorCode ?? "") ? tr("firm.trial.invalid") : (link.loadError ?? tr("firm.error.network"))
+        if let message = Self.joinRefusal(access: link.access, lastErrorCode: link.lastErrorCode, withCode: code != nil, loadError: link.loadError) {
             disconnect(portal)
             return message
         }
+        return nil
+    }
+
+    /// Why a just-made link is not kept, or nil to keep it. A rejected trial code ends as `.revoked` on its first
+    /// check; it is refused as an invalid code rather than kept as a dead link (same as Android).
+    static func joinRefusal(access: Access, lastErrorCode: String?, withCode: Bool, loadError: String?) -> String? {
+        if withCode, ["unauthorized", "trial_expired"].contains(lastErrorCode ?? "") { return tr("firm.trial.invalid") }
+        if access == .failed || access == .none { return loadError ?? tr("firm.error.network") }
         return nil
     }
 
