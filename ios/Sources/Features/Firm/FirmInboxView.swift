@@ -6,6 +6,9 @@ import SwiftUI
 struct FirmInboxView: View {
     @State private var portal = FirmPortal.shared
     @State private var path: [FirmMatterRef] = []
+    /// Same account button as the Calendar and Assistant tabs, so firm links are managed without switching tabs (POLISH M20).
+    @State private var showSettings = false
+    @Environment(AppModel.self) private var account
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -44,6 +47,16 @@ struct FirmInboxView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle(tr("firm.tab"))
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showSettings = true } label: { AccountAvatar() }
+                        .accessibilityLabel(tr("home.settings"))
+                        .accessibilityIdentifier("firm.settings")
+                }
+            }
+            .sheet(isPresented: $showSettings, onDismiss: { Task { await portal.refresh() } }) {
+                SettingsView(onClose: { showSettings = false }).environment(account)
+            }
             .navigationDestination(for: FirmMatterRef.self) { ref in FirmMatterView(ref: ref) }
             .refreshable { await portal.refresh() }
             // Polls while the tab is on screen; instant delivery needs the server push (see the spec).
