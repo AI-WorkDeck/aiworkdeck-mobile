@@ -327,6 +327,7 @@ function renderSwiftCaps(c) {
     static let ddClientPortalURL = ${q(c.caps.ddClientPortalUrl)}
     static let firmPortals: [String] = ${q(c.caps.firmPortals)}
     static let backupConsentVersion = ${q(c.caps.backupConsentVersion)}
+    static let privacyPolicyVersion = ${q(c.caps.privacyPolicyVersion)}
     static let personalConsentVersion = ${q(c.caps.personalConsentVersion)}
     static let previewExtensions: [String] = ${q(c.caps.previewExtensions.ios)}
     static let client = "ios"

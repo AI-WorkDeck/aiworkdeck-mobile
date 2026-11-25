@@ -32,4 +32,53 @@ final class LoginFlowTests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
+    /// First launch asks for privacy consent; sign-in then needs the agreement box ticked (same as Android).
+    @MainActor
+    func testFirstLaunchConsentThenAgreementBeforeSignIn() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.terminate()
+        app.launchArguments = ["-AWDLoginUITest", "-AWDPrivacyConsentUITest"]
+        app.launch()
+        let accept = app.buttons["privacy.accept"]
+        XCTAssertTrue(accept.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["privacy.policy"].exists)
+        XCTAssertTrue(app.buttons["privacy.terms"].exists)
+        XCTAssertFalse(app.textFields["login.identity"].exists, "nothing behind the notice yet")
+        keep("First-launch privacy notice", app)
+        accept.tap()
+        dismissEarlierRecordingNotice(in: app)
+
+        let identity = app.textFields["login.identity"]
+        XCTAssertTrue(identity.waitForExistence(timeout: 10))
+        identity.tap()
+        identity.typeText("synthetic@example.com")
+        let password = app.secureTextFields["login.password"]
+        password.tap()
+        if !app.keyboards.firstMatch.waitForExistence(timeout: 5) { password.tap() }
+        password.typeText("synthetic-password")
+        let agree = app.buttons["login.agree"]
+        XCTAssertTrue(agree.exists)
+        XCTAssertTrue(app.buttons["login.terms"].exists)
+        XCTAssertTrue(app.buttons["login.privacy"].exists)
+        // Without the box ticked, submitting only explains why; nothing is sent.
+        let submit = app.buttons["login.submit"]
+        for _ in 0..<3 where !submit.isHittable { app.swipeUp() }
+        submit.tap()
+        let error = app.staticTexts["login.error"]
+        XCTAssertTrue(error.waitForExistence(timeout: 5))
+        keep("Sign-in asks to accept the agreement first", app)
+        agree.tap()
+        XCTAssertTrue(agree.isSelected)
+        XCTAssertFalse(error.exists, "ticking the box clears the message")
+    }
+
+    @MainActor private func keep(_ name: String, _ app: XCUIApplication) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }
