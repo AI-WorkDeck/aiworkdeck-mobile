@@ -10142,7 +10142,7 @@ export const ContractStrings: Record<string, Record<string, string>> = {
   "personal.assistant": {
     "zh-Hans": "助理",
     "zh-Hant": "助理",
-    "en": "Personal assistant",
+    "en": "Assistant",
     "ja": "パーソナルアシスタント",
     "ko": "개인 도우미",
     "th": "ผู้ช่วยส่วนตัว",
@@ -13550,7 +13550,7 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "ar": "قيد التنفيذ"
   },
   "firm.inbox.done": {
-    "zh-Hans": "已审定与已结案",
+    "zh-Hans": "已审定并结案",
     "zh-Hant": "已審定並結案",
     "en": "Finalised and closed",
     "ja": "確定済み・完了",
@@ -14562,9 +14562,9 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "ar": "اعتماد الإصدار {n}"
   },
   "firm.signoff.conflicts": {
-    "zh-Hans": "利益冲突检查已通过",
-    "zh-Hant": "利益衝突檢查已通過",
-    "en": "The conflict check is clear",
+    "zh-Hans": "我已确认利益冲突检查通过",
+    "zh-Hant": "我已確認利益衝突檢查通過",
+    "en": "I've confirmed there's no conflict of interest",
     "ja": "利益相反チェックは完了しています",
     "ko": "이해충돌 확인이 완료되었습니다",
     "th": "ผ่านการตรวจสอบผลประโยชน์ทับซ้อนแล้ว",
@@ -14584,9 +14584,9 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "ar": "فحص تضارب المصالح سليم"
   },
   "firm.signoff.engagement": {
-    "zh-Hans": "委托关系已确立",
-    "zh-Hant": "委任關係已確立",
-    "en": "The engagement is in place",
+    "zh-Hans": "我已确认本事项的委托关系已建立",
+    "zh-Hant": "我已確認本案的委任關係已建立",
+    "en": "I've confirmed an engagement is in place for this matter",
     "ja": "委任契約は成立しています",
     "ko": "위임 계약이 체결되었습니다",
     "th": "การว่าจ้างมีผลเรียบร้อยแล้ว",
@@ -14606,9 +14606,9 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "ar": "التوكيل قائم"
   },
   "firm.signoff.reviewed": {
-    "zh-Hans": "我已审阅第 {n} 版",
-    "zh-Hant": "我已審閱第 {n} 版",
-    "en": "I reviewed version {n}",
+    "zh-Hans": "我已完整审阅第 {n} 版",
+    "zh-Hant": "我已完整審閱第 {n} 版",
+    "en": "I've reviewed version {n} in full",
     "ja": "バージョン{n}を確認しました",
     "ko": "버전 {n}을 검토했습니다",
     "th": "ฉันได้ตรวจทานเวอร์ชัน {n} แล้ว",
