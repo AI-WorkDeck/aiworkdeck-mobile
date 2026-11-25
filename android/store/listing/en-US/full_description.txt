@@ -12,7 +12,7 @@ Nothing lost to a dropped connection
 Uploading, staged and delivered are shown as separate states. Losing signal or quitting the app doesn't lose a file — it picks back up when you return.
 
 The cloud is only a relay
-The relayed copy is deleted as soon as the desktop app confirms the file has landed on disk; the 7-day expiry is a backstop, not the main mechanism.
+The relayed copy is deleted as soon as the desktop app confirms the file has landed on disk; uncollected relay files are kept for 30 days.
 
 Photo, video and audio in one viewfinder
 All three capture modes share one screen and file into the same project folder. Audio recording keeps going in the background and resumes automatically after a call interrupts it.

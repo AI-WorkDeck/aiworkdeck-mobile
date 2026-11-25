@@ -246,6 +246,8 @@ const ALLOWED_CJK_LINE_PATTERNS = [
 ]
 
 const CJK_ALLOWED_LOCALES = new Set(['zh-Hans', 'zh-Hant', 'ja'])
+/** Characters that only exist in Simplified Chinese; none may appear in zh-Hant (Taiwan) strings. */
+const SIMPLIFIED_ONLY = new Set('项专设档网络换关开录视频机览删户账号码处务请选择时间载传输证认应该发现为这们个来对说话让还进过动图页书签归显简单状态实际错误么会从与东买卖电读写门问题种类线级当将无预缩帮联确继续闭启双击头风声响计费订阅价钱额优惠区语体华罗马给张拥护标导战报场节样产业丢创办备复够块坏坚总惊惯戏扩扫拟挂据损摄乱亲亿仅仓伤侧债倾儿兑兴养册农冻减凭则别剂剧劝劳势医协卫厅压县参变叶叹吓员团园围圆圣坛垫壳夸夹夺奋奖妆妇妈娱孙学宁宝审宽宾寻寿尔尘尝层属岁岛币师帐带库庙废异弃弹径忆怀恋恶恼悦惧惨愤愿扬扰抚抢担拢拣拦挡挣挤挥搁搂搅摆摇摊撑敌数斋旧晒晓晕暂术杀杂权条杨杰极构枪柜栏树桥梦检楼欢欧毁毕气汇汉汤沟没泪泼泽洁洒浅测济浏浓涂涨渐温湾湿满滤滚灭灯灵灾炉点炼烂烟烦烧热爱爷牵犹狭独猎献环玛琐画畅疗盘础碍礼祸离积称稳穷窃竞笔粮紧纠红纤约纪纯纱纲纳纵纷纸纹练组细织终绍经绑结绕绘绝统绩绪维综绿缓编缘缴罚职聪肃肤胁胆胜脑舰艰艺苏苹荐荡荣药获营蓝虑虽补装规觉触讨训议讯讲许论访评识诉诊词译试诚询详诺课谁调谈谢谨贝负贡财责败货质贪贫购贯贴贵贷贸贺资赏赔赖赚赛赞赠赶趋跃践踪轨转轮软轻较辅辆辑辞边达迁迈运远违连迟适逊递逻遗邮邻释针钟钢钥钻铁银链销锁键镇镜长闪闲队阳阴阵阶陆险随隐难雾静顶顺须顾顿领颜飞饭饰馆驱驶验骤鱼鲜鸟鸡黄齐龙')
 const TARGET_SCRIPT_RE = {
   'zh-Hant': /\p{Script=Han}/gu,
   ja: /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/gu,
@@ -325,6 +327,10 @@ function checkStrings(c, problems) {
       }
       if (typeof zh === 'string' && placeholders(text) !== zhPh) {
         problems.push(`strings/${code}.json 的 ${k} 占位符不一致：zh-Hans={${zhPh}} vs ${code}={${placeholders(text)}}`)
+      }
+      if (code === 'zh-Hant') {
+        const simplified = [...new Set([...text].filter((ch) => SIMPLIFIED_ONLY.has(ch)))].join('')
+        if (simplified) problems.push(`strings/zh-Hant.json 的 ${k} 含有简体字「${simplified}」：${text}`)
       }
       if (!CJK_ALLOWED_LOCALES.has(code) && CJK.test(text)) {
         problems.push(`strings/${code}.json 的 ${k} 含有未翻译汉字：${text}`)
