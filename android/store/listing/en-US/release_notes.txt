@@ -1,1 +1,1 @@
-Traditional Chinese text corrected throughout the app. Permission prompts now name AI WorkDeck. The relay-retention note now says 30 days, matching how the service works.
+Clearer buttons to turn the Assistant and Calendar on or off. Calendar reminders now show the event, its project and when it is due. When your computer is offline, the capture screen shows how long it has been away. Traditional Chinese text corrected throughout. Permission prompts name AI WorkDeck. The relay note now says 30 days, matching how the service works.
