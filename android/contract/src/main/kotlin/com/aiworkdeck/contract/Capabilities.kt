@@ -8,6 +8,8 @@ object ContractCapabilities {
     const val audioPause: Boolean = true
     const val videoPause: String = "native"
     const val ddClientPortalUrl: String = "https://case.aiworkdeck.com/client/"
+    /** Firm review portals (host or host/office) that may receive the account session. */
+    val firmPortals: List<String> = listOf("aifirm.aiworkdeck.com/all", "aifirm.aiworkdeck.com/sv", "aifirm.aiworkdeck.com/tw", "aifirm.aiworkdeck.com/jp", "aifirm.aiworkdeck.com/sg", "ai-firm.aiworkdeck.com/sv", "ai-firm.aiworkdeck.com/tw")
     const val backupConsentVersion: String = "2026-10-11"
     const val personalConsentVersion: String = "2026-10-27"
     const val privacyPolicyVersion: String = "2026-10-29"
