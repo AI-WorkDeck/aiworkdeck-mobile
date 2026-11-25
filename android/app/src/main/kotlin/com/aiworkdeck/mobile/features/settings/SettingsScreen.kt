@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -245,6 +246,21 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     // 不计费区域也照旧渲染后付费段（它自己决定显示什么），参数不变。
                     if (!region.showsBilling) {
                         PostpaidSection(canRepay = showsExternalRecharge(BuildConfig.FLAVOR, region, RECHARGE_CHANNEL), repay = openRecharge)
+                    }
+                }
+
+                // Firm review: a lawyer joins the firm's portal here; the Reviews tab appears once approved (iOS SettingsView).
+                if (BuildConfig.FIRM_REVIEW) {
+                    val firm = com.aiworkdeck.mobile.services.ServiceLocator.firm
+                    val firmLinks by firm.overview.collectAsState(initial = emptyList())
+                    LaunchedEffect(Unit) { if (firm.scope == null) firm.restore() }
+                    val value = com.aiworkdeck.mobile.services.firm.FirmStatus.settings(firmLinks.map { (l, s) -> s.access to (s.me?.firm?.text?.takeIf { it.isNotEmpty() } ?: l.portalID) })
+                    Group(tr("firm.settings.title")) {
+                        NavRow(tr("firm.settings.title"), when (value) {
+                            is com.aiworkdeck.mobile.services.firm.FirmStatus.SettingsValue.Text -> value.text
+                            is com.aiworkdeck.mobile.services.firm.FirmStatus.SettingsValue.Key -> tr(value.key, value.vars)
+                            null -> null
+                        }) { onOpen(com.aiworkdeck.mobile.Overlay.Firm) }
                     }
                 }
 

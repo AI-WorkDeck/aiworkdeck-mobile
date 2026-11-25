@@ -236,11 +236,26 @@ class FirmReviewTest {
         assertEquals("firm.own.s|p.", FirmIdentity.detailsKey("s", "p"))
     }
 
+    @Test fun statusTextForLinkedPortalsAndSettings() {
+        assertEquals("firm.status.pending" to mapOf<String, Any>("firm" to "Draft AI"), FirmStatus.link(FirmAccess.checking, "Draft AI"))
+        assertEquals("firm.status.revoked", FirmStatus.link(FirmAccess.revoked, "X")!!.first)
+        assertEquals("firm.status.approved", FirmStatus.link(FirmAccess.approved, "X")!!.first)
+        assertNull("unreachable: just the firm name", FirmStatus.link(FirmAccess.failed, "X"))
+        assertEquals(FirmStatus.SettingsValue.Text("Venture AI, Draft AI"),
+            FirmStatus.settings(listOf(FirmAccess.approved to "Venture AI", FirmAccess.pending to "KWM", FirmAccess.approved to "Draft AI")))
+        assertEquals(FirmStatus.SettingsValue.Key("firm.status.pending", mapOf("firm" to "KWM")), FirmStatus.settings(listOf(FirmAccess.pending to "KWM")))
+        assertNull(FirmStatus.settings(listOf(FirmAccess.revoked to "KWM")))
+        assertNull(FirmStatus.settings(emptyList()))
+    }
+
     @Test fun everyFirmStringKeyUsedHereExists() {
         val keys = FirmInbox.Group.entries.map(FirmInbox::titleKey) +
             listOf("call_requested", "client_replied", "review_requested").map(FirmInbox::reasonKey) +
             listOf("noted", "kept", "lawyer", null).map(FirmIdentity::settlementKey) +
-            listOf("version_changed", "already_signed", "unauthorized", "x").map { FirmPortalError(it, 0).messageKey }
+            listOf("version_changed", "already_signed", "unauthorized", "x").map { FirmPortalError(it, 0).messageKey } +
+            FirmAccess.entries.mapNotNull { FirmStatus.link(it, "f")?.first } +
+            listOf("firm.settings.title", "firm.join.title", "firm.join.body", "firm.join.link", "firm.join.badHost", "firm.join.connect",
+                "firm.trial.use", "firm.trial.code", "firm.trial.until", "firm.trial.invalid", "firm.status.check", "firm.leave", "error.sessionSaveFailed")
         for (k in keys) assertTrue(k, com.aiworkdeck.contract.ContractStrings.table.containsKey(k))
     }
 }

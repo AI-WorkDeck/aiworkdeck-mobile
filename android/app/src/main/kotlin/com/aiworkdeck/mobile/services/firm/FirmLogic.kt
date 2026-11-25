@@ -231,3 +231,25 @@ object FirmMarkdown {
         return out
     }
 }
+
+/** What a linked portal's row and the Settings entry say (iOS FirmJoinView.status / SettingsView.firmStatus). */
+object FirmStatus {
+    /** Contract key and variables for one linked portal, or null when only the firm name is shown. */
+    fun link(access: FirmAccess, firmName: String): Pair<String, Map<String, Any>>? = when (access) {
+        FirmAccess.pending, FirmAccess.checking -> "firm.status.pending" to mapOf("firm" to firmName)
+        FirmAccess.revoked -> "firm.status.revoked" to mapOf("firm" to firmName)
+        FirmAccess.failed, FirmAccess.none -> null
+        FirmAccess.approved -> "firm.status.approved" to mapOf("firm" to firmName)
+    }
+
+    /**
+     * Settings value from each linked portal's (access, firm name): the approved firms' names, else the first
+     * linked firm as pending, else nothing. Returns plain text or a contract key with variables.
+     */
+    fun settings(links: List<Pair<FirmAccess, String>>): SettingsValue? = when (FirmAccess.combined(links.map { it.first })) {
+        FirmAccess.approved -> SettingsValue.Text(links.filter { it.first == FirmAccess.approved }.joinToString(", ") { it.second })
+        FirmAccess.pending, FirmAccess.checking -> links.firstOrNull()?.let { SettingsValue.Key("firm.status.pending", mapOf("firm" to it.second)) }
+        else -> null
+    }
+    sealed class SettingsValue { data class Text(val text: String) : SettingsValue(); data class Key(val key: String, val vars: Map<String, Any>) : SettingsValue() }
+}
