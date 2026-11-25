@@ -1,37 +1,40 @@
 # 国内 Android 六店提交材料包
 
-核对日期：2026-10-29；任务：dev-board #1614。状态是**本地材料已整理，六店后台草稿和企业认证均未核实，尚未提交审核**。
+## 现状（2026-11-25 核对）
 
-## 打包交付
+| 渠道 | 状态 | 依据 |
+| --- | --- | --- |
+| 应用宝 | **在架 1.7.1**，2026-11-18 更新；分类「办公」；开发者 北京公富信息技术有限公司，运营者 北京京微资易科技有限公司；备案号 京ICP备2024096997号-13A（京微资易） | 应用宝公开详情页 `sj.qq.com/appdetail/com.aiworkdeck.mobile.cn`，2026-11-25 无登录读取 |
+| 华为、小米、OPPO、vivo、荣耀 | 未见提交记录；后台状态未核实 | 本仓与 readiness 台账均无送审记录 |
+| 官网直装 | 随每次 Android 发版更新 | `android-release` 工作流产物 |
 
-完整准备包含国内 APK、512 图标、5 张正式中文截图、可直接粘贴的商店字段、完整中文政策、权限 / SDK 表、审核说明、签名与素材校验清单、缺项清单，共 25 个文件，不含审核凭据或企业证件。
+- 源码当前版本：`android/version.properties` 为 **1.7.1 / versionCode 13**，与应用宝在架版本一致。
+- 应用宝的开发者（公富）与备案主体（京微资易）不一致，见 readiness `qa/Q17-publisher/mobile-stores.md`；主体迁移前其余五店按备案主体填写。
+- 现行商店文案以应用宝在架内容为准，见 [listing-zh.md](listing-zh.md)。
+- 下方「首次上架材料（2026-10-29）」是 1.3.1 / code 6 首次提交时的记录，保留作为历史与五店首提的清单底稿；其中的版本、哈希、截图和权限核对都针对 1.3.1，复用到 1.7.x 前须按当前包重新核对。
 
-- [打开材料包说明](</Users/zewei/.codex/artifacts/2026-10-29-android-launch-1613/cn-submission-package/README.md>)
-- [下载 ZIP](</Users/zewei/.codex/artifacts/2026-10-29-android-launch-1613/cn-submission-package.zip>)：15,583,007 字节。
-- ZIP SHA-256：`d3a51d24d9041bad4ed8bc6b87d8d0f01d9d47083e2798dd7b846982aef69171`。
+## 首次上架材料（2026-10-29，1.3.1 / code 6）
 
-本轮已逐个读取压缩包条目并与原文件哈希比对，全部一致；包内相对文档链接无缺失。打包完成不等于后台草稿已保存或已送审。
+任务：dev-board #1614。当时状态：本地材料已整理，六店后台草稿和企业认证均未核实，尚未提交审核。
 
-## 本次版本与证据
+完整准备包（国内 APK、512 图标、5 张中文截图、商店字段、政策、权限 / SDK 表、审核说明、签名与素材校验清单、缺项清单，共 25 个文件）存放在当时任务的本地产物目录，不在本仓库。ZIP 15,583,007 字节，SHA-256 `d3a51d24d9041bad4ed8bc6b87d8d0f01d9d47083e2798dd7b846982aef69171`。
 
-- 应用：AI WorkDeck；国内包名：`com.aiworkdeck.mobile.cn`；拟申报主体：北京京微资易科技有限公司。后台主体、软著权利人、APP 备案主体和最终安装包必须一致，不能由旧总表推定一致。
-- 当前已签名候选包：**1.3.1 / versionCode 6**，源码 `436358f4c4f936de4cc855900b4c5d7a7620c835`，以 `ef0cb213` 为稳定基线加入 #1615 修复。
-- APK 文件、SHA-256、签名证书指纹及核验范围统一见 [签名包记录](release-package.md)。文件大小及哈希已独立重算，与核验记录一致；国内签名与上一正式包一致，备案后台签名尚未核对。
-- 本包文案按上述 Android 功能范围整理，不包含当前主线后续 iOS 功能或新个人助理。Android 中国区有外部尽调网页入口；网页内具体流程不能仅据旧版本说明认定已验证。
-- 用户于本次会话确认：软著 **2026-09-22 已受理，目前审查中**；继续正常审查，不加急、不另购电子认证。未取得正式证书，未获得可作为证书上传的受理材料。
+- 应用：AI WorkDeck；国内包名：`com.aiworkdeck.mobile.cn`。后台主体、软著权利人、APP 备案主体和最终安装包必须一致，不能由旧总表推定一致。
+- 当时的签名候选包：1.3.1 / versionCode 6，源码 `436358f4c4f936de4cc855900b4c5d7a7620c835`（以 `ef0cb213` 为稳定基线加入 #1615 修复）。版本、哈希和签名指纹见 [签名包记录](release-package.md)。
+- 软著：2026-09-22 已受理，当时在审查中。
 
 ## 可复用文件
 
 | 文件 | 用法 |
 | --- | --- |
 | [missing-items.md](missing-items.md) | 软著、后台认证、备案签名、盖章材料、检测和审核环境的剩余动作 |
-| [release-package.md](release-package.md) | 本次签名包版本、哈希、签名指纹、网页状态及验证边界 |
-| [listing-zh.md](listing-zh.md) | 应用名称、简短介绍、完整介绍、首次上架说明；直接取对应字段正文 |
+| [release-package.md](release-package.md) | 1.3.1 签名包版本、哈希、签名指纹、网页状态及验证边界（历史） |
+| [listing-zh.md](listing-zh.md) | 应用名称、简短介绍、完整介绍（应用宝在架现行文案）、首次上架说明 |
 | [review-notes.md](review-notes.md) | 审核说明与操作路径；登录凭据单独填入平台保密字段 |
 | [permissions-sdk.md](permissions-sdk.md) | 权限用途、SDK / 本地组件、数据流核对依据 |
 | [channel-matrix.md](channel-matrix.md) | 六店官方规则、登录状态和逐家待办 |
 | [assets.md](assets.md) | 图标、截图实际存在性、尺寸与内容缺口 |
-| [current-asset-inventory.tsv](current-asset-inventory.tsv) | 本次正式中文五图的源路径、包内路径、尺寸、字节数及哈希 |
+| [current-asset-inventory.tsv](current-asset-inventory.tsv) | 1.3.1 正式中文五图的源路径、包内路径、尺寸、字节数及哈希 |
 | [asset-inventory.tsv](asset-inventory.tsv) | 历史素材路径、像素、字节数与 SHA-256 清单 |
 
 ## 提交前必须补齐
@@ -52,10 +55,10 @@
 
 ## 来源与边界
 
-服务与账号入口以 `/Users/zewei/Documents/2024-2044/5-Tech/EXTERNAL_SERVICES.md` 第 7 节为准；证件、密钥、签名口令不复制。本次读取共享入口及规则，对应 shared commit `3d2ea089309e4b6c1cddb4352c41708088c99b30`。规则引用及当前登录观察见逐家表。源代码依据为 `ef0cb213` 加 #1615 的 `436358f`，与当前签名候选包对应；后续补丁需更新签名包记录。
+服务与账号入口见运维文档，证件、密钥、签名口令不复制进本仓库。源代码依据为 `ef0cb213` 加 #1615 的 `436358f`，与 1.3.1 候选包对应；后续版本需另行核对。
 
 ### Android 备案原始证据补核
 
-原始会话文件 `/Users/zewei/.claude/projects/-Users-zewei-Documents-2024-2044-5-Tech-1-3-aiworkdeck-mobile/570295d0-2c0a-4481-8678-05b1d188501b.jsonl` 第 1263 行，时间 `2026-09-10T08:13:35.303Z`，用户明确说：“安卓备案OK了，鸿蒙备案要的资料你给我一下那几个字段”。历史 `mobile-store-distribution.md` 记的是同一 `-13A` 下先加安卓、再加鸿蒙。总表 7.2 的 9 月 3 日“审核中”早于该确认，不能作为当前阻塞依据。
+用户于 2026-09-10 明确确认 Android 备案变更已通过（“安卓备案OK了”）。历史 `mobile-store-distribution.md` 记的是同一 `-13A` 下先加安卓、再加鸿蒙。总表 7.2 的 9 月 3 日“审核中”早于该确认，不能作为当前阻塞依据。
 
-因此可以按“用户确认 Android 备案变更已通过”准备现有应用备案号；仍需在送审前核对后台当前名称、包名、公钥 / 证书指纹。登记的本地填报文件 `/Users/zewei/.aiworkdeck/android/beian-android.txt` 本次未找到，尚未独立核对原始签名字段或备案后台结果。
+因此可以按“用户确认 Android 备案变更已通过”准备现有应用备案号；仍需在送审前核对后台当前名称、包名、公钥 / 证书指纹。原始备案填报文件未在本仓库，尚未独立核对原始签名字段或备案后台结果。
