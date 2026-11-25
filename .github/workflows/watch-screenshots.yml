@@ -4,6 +4,11 @@ on:
     branches: ["**"]
 permissions:
   contents: read
+# Org runners are shared: a newer push to the same PR cancels the older run; on main a burst of pending
+# runs collapses to the newest, and a run already in progress on main is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   screenshots:
     if: contains(github.event.head_commit.message, '[watch-screenshots]')
