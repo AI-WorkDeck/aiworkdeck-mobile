@@ -152,6 +152,6 @@ struct LoginView: View {
             let result = try await API.shared.accountLogin(account: account, password: password)
             password = ""
             await model.didLogin(result)
-        } catch { self.error = error.localizedDescription }
+        } catch { self.error = userFacingMessage(for: error) }
     }
 }

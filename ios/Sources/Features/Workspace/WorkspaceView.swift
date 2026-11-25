@@ -181,7 +181,7 @@ struct WorkspaceView: View {
             if selected == nil { selected = model.selectedProject }
         } catch is CancellationError {
         } catch {
-            self.error = error.localizedDescription
+            self.error = userFacingMessage(for: error)
             if projects.isEmpty, let current = model.selectedProject {
                 projects = [current]; selected = current
             }
@@ -466,7 +466,7 @@ struct ProjectContentsView: View {
             guard generation == request else { return }
         } catch {
             guard generation == request else { return }
-            self.error = error.localizedDescription
+            self.error = userFacingMessage(for: error)
         }
         loading = false
     }
@@ -537,7 +537,7 @@ private struct FileDownloadView: View {
         guard file.supportsPreview, quote == nil, url == nil, !busy else { return }
         busy = true; error = nil
         do { quote = try await client.quote(for: file, in: project) }
-        catch { self.error = error.localizedDescription }
+        catch { self.error = userFacingMessage(for: error) }
         busy = false
     }
 
@@ -547,10 +547,10 @@ private struct FileDownloadView: View {
         do {
             preview = try await client.preview(project: project, file: file)
         } catch let error as ProjectFileTerminalError {
-            self.error = error.localizedDescription
+            self.error = userFacingMessage(for: error)
             approved = false; quote = nil
         } catch {
-            self.error = error.localizedDescription
+            self.error = userFacingMessage(for: error)
             if project.isCloud || file.source == "backup" || file.source == "cloud" { approved = false; quote = nil }
         }
         busy = false

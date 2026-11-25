@@ -56,7 +56,7 @@ struct ProjectFileQuote: Decodable, Sendable {
 }
 
 /// Confirmed server terminal state: a later transfer needs a new quote and explicit consent.
-struct ProjectFileTerminalError: LocalizedError, Sendable {
+struct ProjectFileTerminalError: UserFacingError, Sendable {
     let message: String
     var errorDescription: String? { message }
 }
