@@ -55,6 +55,23 @@ data class BillingBalance(val balanceCents: Long, val currency: String, val plan
     val billingLine: String? = null)
 
 /**
+ * GET /api/mobile/billing/subscription/wxpay/quote (POLISH M3). available=false carries only [reason]
+ * (disabled / channel_unavailable / appstore_subscription_active / not_connected); the server picks the SKU
+ * and price, the client sends both back unchanged when ordering.
+ */
+@Serializable
+data class ProQuote(
+    val available: Boolean,
+    val reason: String? = null,
+    val skuId: String? = null,
+    val amountCents: Long = 0,
+    val standardAmountCents: Long = 0,
+    val introEligible: Boolean = false,
+    val introRemainingMonths: Int = 0,
+    val days: Int = 0,
+)
+
+/**
  * 信封 code=1 时 /api/mobile/billing 系列接口附带的机器可读判别位（dev-board#425 复审 C2）。
  * 四端一律按它分支，禁止匹配 message 措辞——message 经服务端 LangText 按语言产文案，
  * 英文部署下会整条变英文，硬编码中文串必然全部落空。取值与 contract/api/mobile-v1.yaml

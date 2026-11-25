@@ -59,6 +59,7 @@ import com.aiworkdeck.mobile.services.ApiError
 import com.aiworkdeck.mobile.services.EnvelopeKind
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 import com.aiworkdeck.mobile.services.showsSubscriptionRow
+import com.aiworkdeck.mobile.services.showsWxpayPro
 import com.aiworkdeck.mobile.services.showsExternalRecharge
 import com.aiworkdeck.mobile.services.showsPlayRecharge
 import com.aiworkdeck.mobile.services.WxPayChannel
@@ -115,6 +116,8 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
     var rechargeOpen by remember { mutableStateOf(false) }
     // Google Play 消耗型内购（dev-board#665）：仅 intl flavor + 国际区账号
     var playRechargeOpen by remember { mutableStateOf(false) }
+    // Personal Pro with WeChat pay (POLISH M3): cn flavor + mainland account + contract flag
+    var proOpen by remember { mutableStateOf(false) }
     var balanceKind by remember { mutableStateOf<EnvelopeKind?>(null) }
     // 充值确认到账后 +1：重拉余额、重建后付费段（欠款随之刷新）
     var billingReload by remember { mutableStateOf(0) }
@@ -211,7 +214,12 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                             Text(tr("recharge.openHint"), style = Fonts.nano(), color = Tk.L.fgFaint)
                         }
                         // 订阅状态与 iOS 同一行；安卓尚无商店内购通道，只读、不放购买入口（《上架和渠道》）。
-                        if (balance != null && showsSubscriptionRow(BuildConfig.FLAVOR, balance?.subscription?.active == true)) InfoRow(tr("subscription.store.title"), tr(if (balance?.subscription?.active == true) "subscription.status.active" else "subscription.status.none"))
+                        if (balance != null && showsSubscriptionRow(BuildConfig.FLAVOR, balance?.subscription?.active == true)) {
+                            val active = balance?.subscription?.active == true
+                            val status = tr(if (active) "subscription.status.active" else "subscription.status.none")
+                            if (!active && showsWxpayPro(BuildConfig.FLAVOR, region)) NavRow(tr("subscription.store.title"), status) { proOpen = true }
+                            else InfoRow(tr("subscription.store.title"), status)
+                        }
                         balance?.subscription?.takeIf { it.active }?.let { sub ->
                             InfoRow(tr("subscription.available"), creditsCaption(sub.availableCents))
                             InfoRow(tr("subscription.weekly"), "${creditsCaption(sub.weeklyUsedCents)} / ${creditsCaption(sub.weeklyLimitCents)}")
@@ -344,6 +352,10 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                 onClose = { paid -> rechargeOpen = false; if (paid) billingReload++ },
                 onChannelUnavailable = { WxPayChannel.serverUnavailable = true; rechargeOpen = false; showRechargeNotice = true },
             )
+        }
+
+        if (proOpen) {
+            ProScreen(onClose = { paid -> proOpen = false; if (paid) billingReload++ })
         }
 
         if (playRechargeOpen) {

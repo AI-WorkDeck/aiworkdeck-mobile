@@ -474,6 +474,7 @@ object ContractCapabilities {
     const val personalConsentVersion: String = ${kq(c.caps.personalConsentVersion)}
     const val privacyPolicyVersion: String = ${kq(c.caps.privacyPolicyVersion)}
     const val androidPlayRecharge: Boolean = ${c.caps.androidPlayRecharge}
+    const val androidWxpayPro: Boolean = ${c.caps.androidWxpayPro}
     const val androidAppFiling: String = ${kq(c.caps.androidAppFiling)}
     val previewExtensions: List<String> = listOf(${(c.caps.previewExtensions.android ?? []).map(kq).join(', ')})
     const val backgroundUpload: Boolean = ${caps.backgroundUpload.android}

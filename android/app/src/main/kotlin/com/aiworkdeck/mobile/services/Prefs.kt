@@ -122,6 +122,12 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
         write = { v -> prefs.edit().apply { if (v == null) remove(KEY_PENDING_RECHARGE) else putString(KEY_PENDING_RECHARGE, v) }.commit() },
     )
 
+    /** Personal Pro WeChat orders: own slot so Pro and top-up idempotency keys never mix. */
+    val pendingPro: PendingRechargeStore = PendingRechargeStore(
+        read = { prefs.getString(KEY_PENDING_PRO, null) },
+        write = { v -> prefs.edit().apply { if (v == null) remove(KEY_PENDING_PRO) else putString(KEY_PENDING_PRO, v) }.commit() },
+    )
+
     var appLocale: String
         get() = prefs.getString(KEY_APP_LOCALE, null) ?: "system"
         set(value) {
@@ -153,5 +159,6 @@ class Prefs(context: Context, private val defaultRegion: AccountRegion) : Region
         const val KEY_APP_LOCALE = "appLocale"
         const val KEY_RECENT_PROJECTS = "recentProjectIds"
         const val KEY_PENDING_RECHARGE = "wxpayPendingRecharge"
+        const val KEY_PENDING_PRO = "wxpayPendingPro"
     }
 }

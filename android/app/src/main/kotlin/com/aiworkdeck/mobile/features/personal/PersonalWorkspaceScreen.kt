@@ -37,6 +37,7 @@ import com.aiworkdeck.mobile.design.ReadableWidth
 import com.aiworkdeck.mobile.model.RelayProject
 import com.aiworkdeck.mobile.services.*
 import com.aiworkdeck.mobile.BuildConfig
+import com.aiworkdeck.mobile.features.settings.ProScreen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -288,6 +289,9 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
     var project by remember { mutableStateOf("") }
     var reminders by remember { mutableStateOf(CalendarReminders.enabled(context)) }
     var notificationError by remember { mutableStateOf(false) }
+    // Personal Pro with WeChat pay (POLISH M3); after a payment the notices reload from the server
+    val wxpayPro = remember { showsWxpayPro(BuildConfig.FLAVOR, ServiceLocator.prefs.accountRegion) }
+    var proOpen by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         notificationError = !granted; reminders = granted && CalendarReminders.enable(context)
         if (reminders) scope.launch { CalendarReminders.replace(context, state.calendar?.events ?: emptyList()) }
@@ -309,6 +313,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
             state.status?.let { status ->
                 if (!status.enabled || !status.canUseCloud) Notice(tr(if (status.canUseCloud) "personal.assistantConsent" else if (status.cloudAccess?.frozen == true) "postpaid.restricted" else subscriptionNoticeKey(BuildConfig.FLAVOR))) {
                     if (status.canUseCloud && !status.backupEnabled) Link(tr("backup.title")) { onOpen(Overlay.Backup) }
+                    if (!status.canUseCloud && status.cloudAccess?.frozen != true && wxpayPro) Link(tr("subscription.wxpay.title")) { proOpen = true }
                     if (!status.canUseCloud && subscriptionNoticeLinksAccount(BuildConfig.FLAVOR)) Link(tr("settings.account")) { onOpen(Overlay.Settings) }
                     if (status.canUseCloud && status.backupEnabled) Link(tr("personal.turnOn")) { consent = "assistant" }
                 }
@@ -367,6 +372,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
         } else {
             val calendar = state.calendar
             if (calendar != null && (!calendar.enabled || !calendar.canReadCloud)) Notice(tr(if (calendar.canReadCloud) "personal.calendarConsent" else if (calendar.cloudAccess?.frozen == true) "postpaid.restricted" else subscriptionNoticeKey(BuildConfig.FLAVOR))) {
+                if (!calendar.canReadCloud && calendar.cloudAccess?.frozen != true && wxpayPro) Link(tr("subscription.wxpay.title")) { proOpen = true }
                 if (!calendar.canReadCloud && subscriptionNoticeLinksAccount(BuildConfig.FLAVOR)) Link(tr("settings.account")) { onOpen(Overlay.Settings) }
                 if (calendar.canWriteCloud) Link(tr("personal.turnOn")) { consent = "calendar" }
             }
@@ -459,6 +465,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
             text = { Column { Text(tr("personal.copy.hint")); if (state.copyNeedsUpgrade) Text(tr("personal.copy.upgrade")); state.error?.let { Text(it, color = Tk.S.failed) }; if (targets.isEmpty()) Text(tr("project.emptyTitle")); LazyColumn { items(targets) { target -> TextButton(enabled = !state.loading, onClick = { scope.launch { state.copyTo(target) } }) { Text(target.label) } } } } },
             confirmButton = {}, dismissButton = { TextButton(enabled = !state.loading, onClick = { state.copyTargets = null }) { Text(tr("common.cancel")) } })
     }
+    if (proOpen) ProScreen(onClose = { paid -> proOpen = false; if (paid) scope.launch { state.load(context) } })
     consent?.let { feature -> AlertDialog(onDismissRequest = { consent = null }, title = { Text(tr("personal." + feature)) }, text = { Text(tr("personal." + feature + "Consent")) }, confirmButton = { TextButton(onClick = { consent = null; scope.launch { state.configure(feature, true, context) } }) { Text(tr("common.ok")) } }, dismissButton = { TextButton(onClick = { consent = null }) { Text(tr("common.cancel")) } }) }
     state.selected?.let { event -> AlertDialog(onDismissRequest = { state.selected = null }, title = { Text(event.title) }, text = { Column { Text(event.dueDate + " " + (event.dueTime ?: "") + " · " + event.timeZone); Text(event.projectName); event.files.forEach { Text(it.fileName) } } }, confirmButton = { TextButton(onClick = { state.selected = null; onProject(RelayProject(event.deviceId, null, event.projectKey, event.projectName, event.projectUid)) }) { Text(tr("project.files")) } }, dismissButton = { TextButton(onClick = { state.selected = null }) { Text(tr("common.close")) } }) }
 }
