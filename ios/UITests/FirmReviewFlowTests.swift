@@ -76,6 +76,8 @@ final class FirmReviewFlowTests: XCTestCase {
         let review = app.buttons["firm.row.mtr-review"]
         XCTAssertTrue(review.waitForExistence(timeout: 15))
         XCTAssertTrue(app.staticTexts["Needs you"].exists)
+        // POLISH M20: the account button is on the Reviews tab too.
+        XCTAssertTrue(app.buttons["firm.settings"].exists)
         XCTAssertTrue(app.staticTexts["Finalised and closed"].exists)
         shot("03-inbox", app)
 
