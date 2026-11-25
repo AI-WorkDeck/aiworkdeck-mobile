@@ -54,6 +54,12 @@ fun formatMoney(cents: Long, currency: String): String {
  *
  * 纯函数，不碰 Android，JVM 单测直接调。
  */
+/** Play top-up failures show contract text, never the server's raw message (it is only in zh/en). */
+fun playRechargeErrorKey(kind: EnvelopeKind?): String = when (kind) {
+    EnvelopeKind.DISABLED, EnvelopeKind.UNAVAILABLE -> "error.serviceUnavailable"
+    else -> "recharge.failed"
+}
+
 fun balanceFailureKey(kind: EnvelopeKind?): String? = when (kind) {
     EnvelopeKind.NOT_CONNECTED, EnvelopeKind.DISABLED, EnvelopeKind.REVIEW_ACCOUNT -> null
     else -> "balance.unavailable"

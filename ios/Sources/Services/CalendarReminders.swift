@@ -27,6 +27,12 @@ final class CalendarReminders: NSObject, UNUserNotificationCenterDelegate {
         events.filter { $0.status == "OPEN" && ($0.reminderDate ?? .distantPast) > now }
             .sorted { $0.reminderDate! < $1.reminderDate! }.prefix(50).map { $0 }
     }
+    /// Reminder text: the event title, then project and due date, so it reads without opening the app.
+    static func text(for event: PersonalCalendarEvent) -> (title: String, body: String) {
+        let title = event.title.trimmingCharacters(in: .whitespaces).isEmpty ? tr("personal.reminders") : event.title
+        let due = [event.dueDate, event.dueTime ?? ""].filter { !$0.isEmpty }.joined(separator: " ")
+        return (title, [event.projectName, due].filter { !$0.isEmpty }.joined(separator: " · "))
+    }
     // Keep notification synchronization ordered without holding page loading or
     // account settings open while the system notification service responds.
     func replace(_ events: [PersonalCalendarEvent]) {
@@ -48,7 +54,7 @@ final class CalendarReminders: NSObject, UNUserNotificationCenterDelegate {
         for event in Self.upcoming(events) {
             guard generation == version else { return }
             let content = UNMutableNotificationContent()
-            content.body = tr("personal.reminders")
+            (content.title, content.body) = Self.text(for: event)
             content.sound = .default
             content.userInfo = ["calendarEventId": event.id]
             var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!

@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.*
 import com.aiworkdeck.mobile.MainActivity
+import com.aiworkdeck.mobile.R
 import com.aiworkdeck.mobile.design.tr
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -42,7 +43,7 @@ object CalendarReminders {
             if (ServiceLocator.backend.personalAccountScope() != scope || !enabled(context)) return@withLock
             val request = OneTimeWorkRequestBuilder<CalendarReminderWorker>()
                 .setInitialDelay(Duration.between(Instant.now(), event.reminder).toMillis().coerceAtLeast(1), TimeUnit.MILLISECONDS)
-                .setInputData(workDataOf("scope" to scope, "eventId" to event.id))
+                .setInputData(reminderText(event).let { (title, body) -> workDataOf("scope" to scope, "eventId" to event.id, "title" to title, "body" to body) })
                 .addTag(TAG).build()
             manager.enqueueUniqueWork(TAG + ":" + event.id, ExistingWorkPolicy.REPLACE, request).result.get()
         }
@@ -61,8 +62,9 @@ object CalendarReminders {
         val intent = Intent(context, MainActivity::class.java).putExtra("calendarEventId", id)
             .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pending = PendingIntent.getActivity(context, id.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification = NotificationCompat.Builder(context, CHANNEL).setSmallIcon(android.R.drawable.ic_menu_my_calendar)
-            .setContentText(tr("personal.reminders")).setContentIntent(pending).setAutoCancel(true).build()
+        val notification = NotificationCompat.Builder(context, CHANNEL).setSmallIcon(R.drawable.ic_tab_calendar)
+            .setContentTitle(data.getString("title") ?: tr("personal.reminders"))
+            .setContentText(data.getString("body")).setStyle(NotificationCompat.BigTextStyle().bigText(data.getString("body"))).setContentIntent(pending).setAutoCancel(true).build()
         if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
             try { NotificationManagerCompat.from(context).notify(TAG, id.hashCode(), notification) } catch (_: SecurityException) { }
         }

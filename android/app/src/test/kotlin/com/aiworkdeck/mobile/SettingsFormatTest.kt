@@ -2,6 +2,7 @@ package com.aiworkdeck.mobile
 
 import com.aiworkdeck.mobile.features.queue.expiryDaysLeft
 import com.aiworkdeck.mobile.features.settings.balanceFailureKey
+import com.aiworkdeck.mobile.features.settings.playRechargeErrorKey
 import com.aiworkdeck.mobile.features.settings.formatBytes
 import com.aiworkdeck.mobile.features.settings.formatDateTime
 import com.aiworkdeck.mobile.features.settings.formatMoney
@@ -22,6 +23,13 @@ class SettingsFormatTest {
         val b = formatDateTime("2026-11-20T00:00:00Z", Locale.US, shanghai)
         assert(a.contains("12:00") && b.contains("8:00")) { "$a / $b" }
         assertEquals("not a date", formatDateTime("not a date", Locale.US, utc))
+    }
+
+    @Test fun playRechargeErrorsUseContractTextNotServerMessages() {
+        assertEquals("error.serviceUnavailable", playRechargeErrorKey(EnvelopeKind.DISABLED))
+        assertEquals("error.serviceUnavailable", playRechargeErrorKey(EnvelopeKind.UNAVAILABLE))
+        assertEquals("recharge.failed", playRechargeErrorKey(EnvelopeKind.REJECTED))
+        assertEquals("recharge.failed", playRechargeErrorKey(null))
     }
 
     @Test fun formatsBytesWithBinaryStepsAndOneDecimalUnderTen() {

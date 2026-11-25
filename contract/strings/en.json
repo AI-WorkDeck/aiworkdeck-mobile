@@ -464,6 +464,8 @@
   "personal.subscription": "An active cloud subscription is required. Check your account benefits.",
   "personal.summaries": "{count} project summaries available",
   "personal.reminders": "Phone reminders",
+  "personal.turnOn": "Turn on",
+  "personal.turnOff": "Turn off",
   "personal.remindersHint": "Reminders use the last sync, up to the next 50 events. Open Calendar regularly to refresh. These are local reminders, not remote push.",
   "personal.remindersUnavailable": "Background calendar reminders are not connected on this client. Check Calendar for upcoming events.",
   "personal.noEvents": "No upcoming events in this period",

@@ -464,6 +464,8 @@
   "personal.subscription": "需要有效的雲端訂閱。請在帳戶中查看權益。",
   "personal.summaries": "已有 {count} 個專案摘要",
   "personal.reminders": "手機提醒",
+  "personal.turnOn": "開啟",
+  "personal.turnOff": "關閉",
   "personal.remindersHint": "提醒依據最近一次同步，最多保留最近 50 條。請定期開啟日程重新整理；這不是遠端推播。",
   "personal.remindersUnavailable": "此用戶端尚未接通背景日程提醒，請在日程中查看。",
   "personal.noEvents": "這段時間沒有待辦事項",

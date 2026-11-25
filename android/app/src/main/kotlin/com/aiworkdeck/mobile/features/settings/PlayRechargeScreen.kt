@@ -124,7 +124,7 @@ fun PlayRechargeScreen(onClose: () -> Unit) {
                                         } catch (e: CancellationException) {
                                             throw e
                                         } catch (e: ApiError) {
-                                            hint = e.message ?: tr("recharge.failed")
+                                            hint = tr(playRechargeErrorKey(e.kind))
                                         } catch (_: Exception) {
                                             hint = tr("recharge.failed")
                                         } finally {

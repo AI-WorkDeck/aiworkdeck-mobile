@@ -249,7 +249,7 @@ private struct AssistantView: View {
                         Button(tr("subscription.store.title")) { showSubscription = true }
                     }
                     if !status.canUseCloud { Button(tr("settings.account")) { showSettings = true } }
-                    if status.canUseCloud && status.backupEnabled { Button(tr("common.on")) { showConsent = true }.disabled(model.loading) }
+                    if status.canUseCloud && status.backupEnabled { Button(tr("personal.turnOn")) { showConsent = true }.disabled(model.loading) }
                 }
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20) {
@@ -307,7 +307,7 @@ private struct AssistantView: View {
                         .disabled(model.conversationID == nil || !model.messages.contains { $0.role == "assistant" })
                         .accessibilityIdentifier("personal.reportConversation")
                         Button(tr("personal.newChat")) { model.newConversation() }.disabled(model.busy || model.copyBusy || model.pending != nil)
-                        if model.status?.enabled == true { Button(tr("common.off")) { Task { await model.configure("assistant", enabled: false) } }.disabled(model.loading || model.busy) }
+                        if model.status?.enabled == true { Button(tr("personal.turnOff")) { Task { await model.configure("assistant", enabled: false) } }.disabled(model.loading || model.busy) }
                     } label: { Image(systemName: "ellipsis.circle").accessibilityLabel(tr("personal.assistant")) }
                     .accessibilityIdentifier("personal.actions")
                 }
@@ -356,7 +356,7 @@ private struct PersonalCalendarView: View {
                         Button(tr("subscription.store.title")) { showSubscription = true }
                     }
                     if !calendar.canReadCloud { Button(tr("settings.account")) { showSettings = true } }
-                    if calendar.canWriteCloud { Button(tr("common.on")) { showConsent = true }.disabled(model.loading) }
+                    if calendar.canWriteCloud { Button(tr("personal.turnOn")) { showConsent = true }.disabled(model.loading) }
                 }
                 if model.calendar?.enabled == true {
                     Picker(tr("personal.calendar"), selection: $days) {
@@ -397,7 +397,7 @@ private struct PersonalCalendarView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Button(tr("common.refresh")) { Task { await model.load() } }.disabled(model.loading)
-                        if model.calendar?.enabled == true { Button(tr("common.off")) { Task { await model.configure("calendar", enabled: false); reminders.clear() } }.disabled(model.loading) }
+                        if model.calendar?.enabled == true { Button(tr("personal.turnOff")) { Task { await model.configure("calendar", enabled: false); reminders.clear() } }.disabled(model.loading) }
                     } label: { Image(systemName: "ellipsis.circle").accessibilityLabel(tr("personal.calendar")) }
                 }
             }

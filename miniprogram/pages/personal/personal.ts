@@ -37,7 +37,7 @@ Page({
     const labels: Record<string, string> = {}
     for (const key of ['assistant', 'calendar', 'ask', 'send', 'processing', 'newChat', 'assistantConsent', 'calendarConsent', 'subscription', 'remindersUnavailable', 'noEvents', 'today', 'sources']) labels[key] = t('personal.' + key)
     labels.postpaidRestricted = t('postpaid.restricted')
-    Object.assign(labels, { copyTitle: t('personal.copy.title'), copyHint: t('personal.copy.hint'), copyUpgrade: t('personal.copy.upgrade'), emptyProjects: t('project.emptyTitle'), backup: t('backup.title'), account: t('settings.account'), projects: t('workspace.title'), capture: t('workspace.capture'), on: t('common.on'), off: t('common.off'), retry: t('project.retry'), refresh: t('common.refresh'), settings: t('home.settings'), next3: t('personal.nextDays', { days: 3 }), next5: t('personal.nextDays', { days: 5 }), files: t('project.files') })
+    Object.assign(labels, { copyTitle: t('personal.copy.title'), copyHint: t('personal.copy.hint'), copyUpgrade: t('personal.copy.upgrade'), emptyProjects: t('project.emptyTitle'), backup: t('backup.title'), account: t('settings.account'), projects: t('workspace.title'), capture: t('workspace.capture'), on: t('personal.turnOn'), off: t('personal.turnOff'), retry: t('project.retry'), refresh: t('common.refresh'), settings: t('home.settings'), next3: t('personal.nextDays', { days: 3 }), next5: t('personal.nextDays', { days: 5 }), files: t('project.files') })
     this.setData({ labels, direction: isRtl() ? 'rtl' : 'ltr', sources: this.displaySources(this.conversation.sources) }); this.renderCopy(); this.load()
   },
   onUnload() { this.active = false },

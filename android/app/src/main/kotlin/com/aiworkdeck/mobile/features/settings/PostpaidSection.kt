@@ -26,6 +26,10 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.Currency
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.aiworkdeck.mobile.R
+import androidx.compose.foundation.layout.size
 
 private fun amount(cents: Long, currency: String): String = NumberFormat.getCurrencyInstance().apply { this.currency = Currency.getInstance(currency) }.format(BigDecimal.valueOf(cents, 2))
 
@@ -75,7 +79,7 @@ fun PostpaidSection(canRepay: Boolean, repay: () -> Unit) {
             status.orEmpty(), style = Fonts.small(), color = statusColor, maxLines = 1, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End, modifier = Modifier.weight(1f),
         )
-        Text("›", style = Fonts.body(), color = Tk.L.fgFaint)
+        Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = Tk.L.fgFaint, modifier = Modifier.size(20.dp))
     }
 
     if (open) {
