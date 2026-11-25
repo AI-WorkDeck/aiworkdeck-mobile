@@ -1,1 +1,1 @@
-Updated copyright information to BEIJING GONG FU INFORMATION TECHNOLOGY LIMITED.
+Clearer buttons to turn the Assistant and Calendar on or off. Calendar reminders now show the event, its project and when it is due. Traditional Chinese uses Taiwan terms throughout. Permission hints name the app as it appears in Settings. In Arabic, settings arrows point the right way, and top-up errors are easier to understand.
