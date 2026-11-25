@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "Bezig",
   "firm.inbox.done": "Definitief en gesloten",
   "firm.inbox.empty": "Er is nu niets dat je aandacht nodig heeft.",
+  "firm.inbox.updated": "Bijgewerkt {t}",
   "firm.reason.review": "Beoordeling gevraagd",
   "firm.reason.call": "Gesprek gevraagd",
   "firm.reason.reply": "Cliënt heeft gereageerd",

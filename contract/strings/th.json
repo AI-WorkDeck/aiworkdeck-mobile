@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "กำลังดำเนินการ",
   "firm.inbox.done": "ยืนยันฉบับสุดท้ายและปิดแล้ว",
   "firm.inbox.empty": "ขณะนี้ไม่มีรายการที่รอคุณดำเนินการ",
+  "firm.inbox.updated": "อัปเดตเมื่อ {t}",
   "firm.reason.review": "ขอให้ตรวจทาน",
   "firm.reason.call": "ขอให้โทร",
   "firm.reason.reply": "ลูกความตอบกลับแล้ว",

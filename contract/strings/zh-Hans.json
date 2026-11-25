@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "进行中",
   "firm.inbox.done": "已审定与已结案",
   "firm.inbox.empty": "目前没有待你处理的事项。",
+  "firm.inbox.updated": "更新于{t}",
   "firm.reason.review": "请求审阅",
   "firm.reason.call": "请求通话",
   "firm.reason.reply": "客户已回复",

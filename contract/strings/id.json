@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "Sedang berjalan",
   "firm.inbox.done": "Difinalkan dan ditutup",
   "firm.inbox.empty": "Tidak ada yang perlu Anda tangani saat ini.",
+  "firm.inbox.updated": "Diperbarui {t}",
   "firm.reason.review": "Tinjauan diminta",
   "firm.reason.call": "Panggilan diminta",
   "firm.reason.reply": "Klien membalas",

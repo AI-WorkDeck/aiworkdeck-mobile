@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "प्रगति में",
   "firm.inbox.done": "अंतिम और बंद",
   "firm.inbox.empty": "अभी आपकी किसी कार्रवाई की ज़रूरत नहीं है।",
+  "firm.inbox.updated": "{t} अपडेट किया गया",
   "firm.reason.review": "समीक्षा का अनुरोध",
   "firm.reason.call": "कॉल का अनुरोध",
   "firm.reason.reply": "क्लाइंट ने उत्तर दिया",

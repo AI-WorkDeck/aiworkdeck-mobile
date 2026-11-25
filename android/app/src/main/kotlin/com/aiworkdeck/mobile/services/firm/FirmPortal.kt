@@ -137,6 +137,8 @@ data class FirmLinkState(
     val lastErrorCode: String? = null,
     /** True once the matter list has loaded at least once. */
     val listed: Boolean = false,
+    /** When the matter list last loaded successfully (epoch ms), shown as "Updated …" in the inbox. */
+    val refreshedAt: Long? = null,
 )
 
 /** One linked portal for the signed-in account. */
@@ -187,7 +189,7 @@ class FirmLink(
         try {
             val list = c.matters().matters.map { it.copy(linkID = portalID) }
             if (closed) return
-            _state.update { it.copy(matters = list, listed = true, loadErrorKey = null) }
+            _state.update { it.copy(matters = list, listed = true, loadErrorKey = null, refreshedAt = System.currentTimeMillis()) }
         } catch (e: CancellationException) { throw e } catch (e: FirmPortalError) {
             if (closed) return
             val access = FirmAccess.after(e.code, _state.value.access)

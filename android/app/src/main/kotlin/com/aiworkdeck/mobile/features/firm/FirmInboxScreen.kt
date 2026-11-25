@@ -66,7 +66,18 @@ fun FirmInboxScreen(portal: FirmPortal, onOpenSettings: () -> Unit, onOpenMatter
                     item(key = "h-" + group.name) { Eyebrow(tr(FirmInbox.titleKey(group)), Modifier.padding(top = Tk.Sp.s4)) }
                     items(items, key = { it.uid }) { m -> MatterRow(m, if (approved.size > 1) names[m.linkID] else null) { onOpenMatter(m) } }
                 }
-                error?.let { item { Text(tr(it), style = Fonts.small(), color = Tk.S.failed) } }
+                // Errors say what happened, when the list was last good, and offer Retry (desktop AwdInlineError pattern).
+                error?.let { key -> item {
+                    Column(Modifier.fillMaxWidth().testTag("firm.inbox.error"), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
+                        Text(tr(key), style = Fonts.small(), color = Tk.S.failed)
+                        approved.mapNotNull { it.second.refreshedAt }.minOrNull()?.let { at ->
+                            val (k, n) = FirmTabs.agoKey(java.time.Instant.ofEpochMilli(at))
+                            Text(tr("firm.inbox.updated", mapOf("t" to tr(k, mapOf("n" to n)))), style = Fonts.small(), color = Tk.L.fgMuted)
+                        }
+                        TextButton(onClick = { scope.launch { refreshing = true; portal.retry(); portal.refresh(); refreshing = false } },
+                            enabled = !refreshing, modifier = Modifier.testTag("firm.inbox.retry")) { Text(tr("project.retry"), color = Tk.L.accent) }
+                    }
+                } }
             }
         }
     }

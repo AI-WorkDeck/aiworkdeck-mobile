@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "В работе",
   "firm.inbox.done": "Утверждены и закрыты",
   "firm.inbox.empty": "Сейчас ничего не требует вашего внимания.",
+  "firm.inbox.updated": "Обновлено {t}",
   "firm.reason.review": "Запрошена проверка",
   "firm.reason.call": "Запрошен звонок",
   "firm.reason.reply": "Клиент ответил",

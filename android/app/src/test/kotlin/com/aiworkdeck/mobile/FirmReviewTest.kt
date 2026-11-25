@@ -288,7 +288,7 @@ class FirmReviewTest {
             FirmAccess.entries.mapNotNull { FirmStatus.link(it, "f")?.first } +
             listOf("firm.settings.title", "firm.join.title", "firm.join.body", "firm.join.link", "firm.join.badHost", "firm.join.connect",
                 "firm.trial.use", "firm.trial.code", "firm.trial.until", "firm.trial.invalid", "firm.status.check", "firm.leave", "error.sessionSaveFailed",
-                "firm.tab", "firm.inbox.empty", "firm.forLawyerCount", "time.secondsAgo", "time.minutesAgo", "time.hoursAgo", "time.daysAgo",
+                "firm.tab", "firm.inbox.empty", "firm.inbox.updated", "project.retry", "firm.forLawyerCount", "time.secondsAgo", "time.minutesAgo", "time.hoursAgo", "time.daysAgo",
                 "firm.matter.conversation", "firm.matter.requestedLawyer", "firm.matter.callScheduled", "firm.matter.call", "firm.matter.forLawyer",
                 "firm.matter.forLawyerEmpty", "firm.matter.flags", "firm.matter.version", "firm.matter.flagsNew", "firm.matter.changes", "firm.matter.firstVersion",
                 "firm.matter.document", "firm.matter.pdf", "firm.matter.noDraft", "firm.action.reply", "firm.action.signoff", "firm.call.confirm", "firm.call.done",

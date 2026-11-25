@@ -132,6 +132,7 @@ class FirmPortalTest {
         assertEquals(FirmAccess.approved, p.access)
         assertEquals("firm.error.network", p.loadErrorKey)
         assertEquals(1, p.matters.size)
+        assertNotNull("the last good load time survives a failed refresh (inbox shows 'Updated …')", p.links.value.single().state.value.refreshedAt)
         p.disconnectAll()
         assertTrue(p.links.value.isEmpty()); assertTrue(trials.values.isEmpty()); assertTrue(settings.values.isEmpty())
     }

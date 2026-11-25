@@ -97,6 +97,16 @@ fun FirmMatterScreen(portal: FirmPortal, ref: FirmMatterSummary, onClose: () -> 
             val m = matter
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s4),
                 verticalArrangement = Arrangement.spacedBy(Tk.Sp.s6)) {
+                // A failed reload keeps the last content and says so, with Retry; a first load that fails still shows
+                // which matter this is, never a blank page.
+                error?.let { msg ->
+                    Column(Modifier.fillMaxWidth().testTag("firm.matter.error"), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
+                        if (m == null) Text(FirmText.title(ref.client, ref.company, ref.template?.text), style = Fonts.title(), color = Tk.L.fg)
+                        Text(msg, style = Fonts.body(), color = Tk.S.failed)
+                        TextButton(onClick = { scope.launch { busy = true; try { load() } finally { busy = false } } }, enabled = !busy,
+                            modifier = Modifier.testTag("firm.matter.retry")) { Text(tr("project.retry"), color = Tk.L.accent) }
+                    }
+                }
                 when {
                     m != null -> {
                         Header(m)
@@ -109,7 +119,7 @@ fun FirmMatterScreen(portal: FirmPortal, ref: FirmMatterSummary, onClose: () -> 
                             Text(tr("firm.matter.conversation", mapOf("count" to count)), style = Fonts.body(), color = Tk.L.accent, modifier = Modifier.weight(1f))
                         }
                     }
-                    error != null -> Text(error!!, style = Fonts.body(), color = Tk.S.failed)
+                    error != null -> {}
                     else -> Box(Modifier.fillMaxWidth().padding(Tk.Sp.s10), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Tk.L.accent) }
                 }
             }
