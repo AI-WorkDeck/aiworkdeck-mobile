@@ -29,7 +29,25 @@ import org.junit.Test
 
 /** dev-board#837：账号区域的解析、主机映射、可用登录方式，以及 Backend 跟着区域换主机。 */
 class AccountRegionTest {
-    @After fun resetLocale() { L10n.locale = "zh-Hans" }
+    // A phone language the app doesn't support: "Follow system" falls back to the account region's language.
+    private val savedTag = L10n.systemTag
+    @org.junit.Before fun unsupportedPhoneLanguage() { L10n.systemTag = { "sw-KE" } }
+    @After fun resetLocale() { L10n.locale = "zh-Hans"; L10n.systemTag = savedTag; L10n.applyPreference(null, AccountRegion.cn) }
+
+    @Test fun followSystemFollowsThePhoneAndOnlyFallsBackToTheRegion() {
+        L10n.systemTag = { "zh-Hant-TW" }
+        L10n.applyPreference(null, AccountRegion.intl)
+        assertEquals("a zh-TW phone on the Play build opens in zh-Hant", "zh-Hant", L10n.locale)
+        L10n.systemTag = { "de-DE" }
+        L10n.follow(AccountRegion.cn)
+        assertEquals("de", L10n.locale)
+        L10n.systemTag = { "sw-KE" }
+        L10n.follow(AccountRegion.intl)
+        assertEquals("unsupported phone language: the region's language", "en", L10n.locale)
+        L10n.systemTag = { "ja-JP" }
+        L10n.applyPreference("fr", AccountRegion.cn)
+        assertEquals("an explicit choice still wins", "fr", L10n.locale)
+    }
 
     @Test fun languageFollowsRegion() {
         L10n.follow(AccountRegion.intl)

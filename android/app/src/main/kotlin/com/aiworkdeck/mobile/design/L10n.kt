@@ -63,10 +63,11 @@ object L10n {
         return fallback
     }
 
-    fun resolveSystemLocale(fallback: String = "zh-Hans"): String {
-        val tag = java.util.Locale.getDefault().toLanguageTag()
-        return normalize(tag, fallback)
-    }
+    /** The phone's language tag; tests replace it. */
+    @Volatile var systemTag: () -> String = { java.util.Locale.getDefault().toLanguageTag() }
+
+    /** The phone's language when the app supports it, else [fallback] (the account region's language). */
+    fun resolveSystemLocale(fallback: String = "zh-Hans"): String = normalize(systemTag(), fallback)
 
     private val countryToLocale: Map<String, String> = mapOf(
         "CN" to "zh-Hans", "SG" to "zh-Hans",
@@ -98,12 +99,14 @@ object L10n {
             normalize(pref, region.locale)
         }
         preference = valid
-        locale = if (valid == SYSTEM_PREFERENCE) region.locale else valid
+        // "Follow system" follows the phone (a zh-TW phone opens in zh-Hant); the account region's language is only the
+        // fallback for phone languages the app doesn't support (X48).
+        locale = if (valid == SYSTEM_PREFERENCE) resolveSystemLocale(region.locale) else valid
     }
 
-    /** 启动时与登录页切区域时调：当偏好为 system 时界面语言跟随区域。 */
+    /** 启动时与登录页切区域时调：偏好为 system 时跟随手机语言，手机语言不支持时才落到区域语言。 */
     fun follow(region: AccountRegion) {
-        locale = if (preference == SYSTEM_PREFERENCE) region.locale else normalize(preference, region.locale)
+        locale = if (preference == SYSTEM_PREFERENCE) resolveSystemLocale(region.locale) else normalize(preference, region.locale)
     }
 }
 

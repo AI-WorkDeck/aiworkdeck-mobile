@@ -57,8 +57,12 @@ enum L10n {
         return fallback
     }
 
+    /// The phone's preferred languages; tests replace it.
+    nonisolated(unsafe) static var systemLanguages: () -> [String] = { Locale.preferredLanguages }
+
+    /// The phone's language when the app supports it, else `fallback` (the account region's language).
     static func resolveSystemLocale(fallback: String = "zh-Hans") -> String {
-        if let preferred = Locale.preferredLanguages.first {
+        if let preferred = systemLanguages().first {
             return normalize(preferred, fallback: fallback)
         }
         return fallback
@@ -106,7 +110,8 @@ enum L10n {
             defaults.set(validPref, forKey: defaultsKey)
         }
         preference = validPref
-        let nextLocale = validPref == systemPreference ? regionFallback : validPref
+        // "Follow system" follows the phone; the region's language is only the fallback (X48).
+        let nextLocale = validPref == systemPreference ? resolveSystemLocale(fallback: regionFallback) : validPref
         if locale != nextLocale { locale = nextLocale }
     }
 
