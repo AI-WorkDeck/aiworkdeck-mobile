@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -238,7 +239,12 @@ class FirmPortal(
     private fun save() { linksKey?.let { settings.setLinks(it, _links.value.map(FirmLink::portalID)) } }
 
     /** Restores the account's saved links and checks access. Offline: stays hidden until the next retry. */
-    suspend fun restore() {
+    private val restoring = kotlinx.coroutines.sync.Mutex()
+
+    /** Concurrent callers (sign-in, Settings, Join) run one after another, never interleaved. */
+    suspend fun restore() = restoring.withLock { restoreLocked() }
+
+    private suspend fun restoreLocked() {
         reset()
         val (base, session) = identity() ?: return
         val id = runCatching { verifiedUserId() }.getOrDefault(0)

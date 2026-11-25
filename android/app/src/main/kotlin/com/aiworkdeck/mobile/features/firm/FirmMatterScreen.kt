@@ -147,7 +147,7 @@ fun FirmMatterScreen(portal: FirmPortal, ref: FirmMatterSummary, onClose: () -> 
             onSigned = { pdf -> scope.launch { load(); portal.refresh() }; if (pdf != null) { pdfUrl = pdf; layer = Layer.Pdf } else layer = Layer.None },
             onStale = { scope.launch { load() } }) } }
         Layer.Conversation -> FirmConversationLayer(m) { layer = Layer.None }
-        Layer.Pdf -> pdfUrl?.let { FirmPdfLayer(it) { layer = Layer.None } }
+        Layer.Pdf -> pdfUrl?.let { FirmPdfLayer(it, portal.scope) { layer = Layer.None } }
         Layer.None -> {}
     }
     if (confirmSendBack) AlertDialog(onDismissRequest = { confirmSendBack = false }, containerColor = Tk.L.bg,
@@ -249,11 +249,13 @@ private fun Document(m: FirmMatter, onPdf: (String) -> Unit) {
 
 /** Full-screen layer over the matter with a title row: Cancel/Close on the left, an action on the right. */
 @Composable
-private fun LayerScaffold(title: String, cancel: String, onCancel: () -> Unit, action: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
-    BackHandler(onBack = onCancel)
+private fun LayerScaffold(title: String, cancel: String, onCancel: () -> Unit, action: (@Composable () -> Unit)? = null,
+                          busy: Boolean = false, backDismisses: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+    // Back never drops work in flight; a dirty draft is left only through Cancel (iOS blocks swipe-dismiss the same way).
+    BackHandler(enabled = true) { if (!busy && backDismisses) onCancel() }
     Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = Tk.Sp.s2), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onCancel) { Text(cancel, color = Tk.L.accent) }
+            TextButton(onClick = onCancel, enabled = !busy) { Text(cancel, color = Tk.L.accent) }
             Text(title, style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, modifier = Modifier.weight(1f))
             action?.invoke()
         }
@@ -267,7 +269,7 @@ private fun FirmReplyLayer(matter: FirmMatter, onCancel: () -> Unit, send: suspe
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
-    LayerScaffold(FirmText.who(matter.client, matter.company), tr("common.cancel"), onCancel, action = {
+    LayerScaffold(FirmText.who(matter.client, matter.company), tr("common.cancel"), onCancel, busy = sending, backDismisses = text.isBlank(), action = {
         TextButton(onClick = { sending = true; scope.launch { send(text.trim()); sending = false } }, enabled = !sending && text.isNotBlank(),
             modifier = Modifier.testTag("firm.reply.send")) { Text(tr("firm.reply.send"), color = Tk.L.accent, fontWeight = FontWeight.SemiBold) }
     }) {
@@ -286,7 +288,7 @@ private fun FirmEditLayer(version: FirmVersion, onCancel: () -> Unit, save: susp
     var markdown by remember { mutableStateOf(version.markdown) }
     var note by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
-    LayerScaffold(tr("firm.edit.title"), tr("common.cancel"), onCancel, action = {
+    LayerScaffold(tr("firm.edit.title"), tr("common.cancel"), onCancel, busy = saving, backDismisses = markdown == version.markdown && note.isBlank(), action = {
         TextButton(onClick = { saving = true; scope.launch { save(markdown, note); saving = false } }, enabled = !saving && markdown != version.markdown,
             modifier = Modifier.testTag("firm.edit.save")) { Text(tr("firm.edit.save", mapOf("n" to version.n + 1)), color = Tk.L.accent, fontWeight = FontWeight.SemiBold) }
     }) {
@@ -325,8 +327,8 @@ private fun FirmSignoffLayer(portal: FirmPortal, link: FirmLink, matter: FirmMat
     val ready = FirmIdentity.signoffReady(conflicts, engagement, reviewed, signer)
     val asks = link.asksDetails
     suspend fun sign() {
-        val s = signer ?: return
-        val client = link.client() ?: return
+        val s = signer ?: run { error = tr("firm.error.access"); return }
+        val client = link.client() ?: run { error = tr("firm.error.access"); return }
         try {
             val given = if (asks) details.mapValues { it.value.trim() } else emptyMap()
             val pdf = client.signoff(matter.id, version.n, s.name, given)
@@ -363,7 +365,7 @@ private fun FirmSignoffLayer(portal: FirmPortal, link: FirmLink, matter: FirmMat
         Button(onClick = {
             signing = true; error = null
             // Device-owner confirmation before an irreversible professional act; no screen lock means the confirmations alone (as on iOS).
-            val intent = ownerCheckIntent(context)
+            val intent = ownerCheckIntent(context, version.n)
             if (intent != null) ownerCheck.launch(intent) else scope.launch { sign(); signing = false }
         }, enabled = ready && !signing, modifier = Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).testTag("firm.signoff.confirm"),
             colors = ButtonDefaults.buttonColors(containerColor = Tk.L.accent)) {
@@ -374,10 +376,10 @@ private fun FirmSignoffLayer(portal: FirmPortal, link: FirmLink, matter: FirmMat
 }
 
 @Suppress("DEPRECATION")
-private fun ownerCheckIntent(context: Context): Intent? {
+private fun ownerCheckIntent(context: Context, version: Int): Intent? {
     val km = context.getSystemService(KeyguardManager::class.java) ?: return null
     if (!km.isDeviceSecure) return null
-    return km.createConfirmDeviceCredentialIntent(tr("firm.signoff.title", mapOf("n" to "")).trim(), tr("firm.signoff.reason"))
+    return km.createConfirmDeviceCredentialIntent(tr("firm.signoff.title", mapOf("n" to version)), tr("firm.signoff.reason"))
 }
 
 @Composable
@@ -391,13 +393,13 @@ private fun Check(title: String, on: Boolean, tag: String, onChange: (Boolean) -
 
 /** Downloads a signed PDF from an allowlisted portal host only (no account credential sent) and shows it. */
 @Composable
-private fun FirmPdfLayer(url: String, onClose: () -> Unit) {
+private fun FirmPdfLayer(url: String, scope: String?, onClose: () -> Unit) {
     val context = LocalContext.current
     var file by remember(url) { mutableStateOf<File?>(null) }
     var failed by remember(url) { mutableStateOf(false) }
     LaunchedEffect(url) {
         if (!FirmPortalLink.isPortalUrl(url)) { failed = true; return@LaunchedEffect }
-        file = runCatching { withContext(Dispatchers.IO) { downloadPdf(context, url) } }.getOrNull()
+        file = runCatching { withContext(Dispatchers.IO) { downloadPdf(context, url, scope) } }.getOrNull()
         failed = file == null
     }
     LayerScaffold(tr("firm.matter.pdf"), tr("common.close"), onClose, action = {
@@ -415,12 +417,16 @@ private fun FirmPdfLayer(url: String, onClose: () -> Unit) {
     }
 }
 
-/** Blocking; call on Dispatchers.IO. Saved under the preview FileProvider path so it can be opened in another app. */
-private fun downloadPdf(context: Context, url: String): File? {
-    val dir = File(context.filesDir, "project-previews/firm").apply { mkdirs() }
+/**
+ * Blocking; call on Dispatchers.IO. Saved under the preview FileProvider path (per account scope, so another account
+ * never sees it; the whole folder is removed on sign-out, see [FirmPdf.folder]) so it can be opened in another app.
+ * Redirects are not followed: only the allowlisted URL itself may serve the signed PDF.
+ */
+private fun downloadPdf(context: Context, url: String, scope: String?): File? {
+    val dir = File(FirmPdf.folder(context.filesDir), scope ?: return null).apply { mkdirs() }
     val name = MessageDigest.getInstance("SHA-256").digest(url.toByteArray()).take(12).joinToString("") { "%02x".format(it) } + ".pdf"
-    val body = OkHttpFirmTransport.defaultClient.newCall(Request.Builder().url(url).get().build()).execute()
-        .use { r -> if (r.isSuccessful) r.body?.bytes() else null } ?: return null
+    val body = FirmPdf.client.newCall(Request.Builder().url(url).get().build()).execute()
+        .use { r -> if (r.isSuccessful && r.request.url.toString() == url) r.body?.bytes() else null } ?: return null
     if (!FirmPdf.looksLikePdf(body)) return null
     return File(dir, name).apply { writeBytes(body) }
 }

@@ -129,6 +129,12 @@ class MainActivity : ComponentActivity() {
             screen = intent.getStringExtra(ScreenshotMode.EXTRA_SCREEN),
             filesDir = filesDir,
         )
+        // Debug-only firm review seed (FirmSeed): local portal server + synthetic session, with screenshot mode.
+        com.aiworkdeck.mobile.services.firm.FirmSeed.base(intent.getStringExtra(com.aiworkdeck.mobile.services.firm.FirmSeed.EXTRA_BASE))
+            ?.takeIf { ScreenshotMode.enabled }?.let { base ->
+                ServiceLocator.firm = com.aiworkdeck.mobile.services.firm.FirmSeed.portal(base,
+                    com.aiworkdeck.mobile.services.firm.MemoryFirmTrialStore(), com.aiworkdeck.mobile.services.firm.MemoryFirmSettings())
+            }
         calendarEventId = intent.getStringExtra("calendarEventId")
         setContent {
             var accepted by remember { mutableStateOf(ServiceLocator.prefs.hasPrivacyConsent) }
@@ -190,6 +196,8 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
     val firmBadge = firmOverview.filter { it.second.access == com.aiworkdeck.mobile.services.firm.FirmAccess.approved }
         .sumOf { (_, s) -> s.matters.count { com.aiworkdeck.mobile.services.firm.FirmInbox.group(it) == com.aiworkdeck.mobile.services.firm.FirmInbox.Group.needsYou } }
     LaunchedEffect(firmApproved) { tab = com.aiworkdeck.mobile.services.firm.FirmTabs.keep(tab, MainTab.firm, MainTab.capture, firmApproved) }
+    // An open matter belongs to this session and this tab: never kept across sign-out or into another tab.
+    LaunchedEffect(isSignedIn, tab) { if (!isSignedIn || tab != MainTab.firm) firmMatter = null }
     LaunchedEffect(notificationEventId) { if (notificationEventId != null && !captureBusy) { overlay = Overlay.None; tab = MainTab.calendar } }
     // 全屏看大图的目标：同一天的件 + 起始下标。它盖在图集之上，图集盖在取景器之上。
     var viewer by remember { mutableStateOf<Pair<List<CaptureItem>, Int>?>(null) }
@@ -201,6 +209,7 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
             "queue" -> overlay = Overlay.Queue
             "library" -> overlay = Overlay.Library
             "settings" -> overlay = Overlay.Settings
+            "firm" -> overlay = Overlay.Firm
             "viewer" -> {
                 overlay = Overlay.Library
                 val shown = shotItems.filter { it.kind != com.aiworkdeck.mobile.model.MediaKind.audio }

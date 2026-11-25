@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.repeatOnLifecycle
 import com.aiworkdeck.mobile.design.*
 import com.aiworkdeck.mobile.features.auth.Eyebrow
 import com.aiworkdeck.mobile.services.firm.FirmInbox
@@ -38,7 +39,10 @@ fun FirmInboxScreen(portal: FirmPortal, onOpenSettings: () -> Unit, onOpenMatter
     val overview by portal.overview.collectAsState(initial = emptyList())
     var refreshing by remember { mutableStateOf(false) }
     // Polls while the tab is on screen; instant delivery needs a server push (see the spec).
-    LaunchedEffect(Unit) { while (true) { portal.refresh(); delay(30_000) } }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { while (true) { portal.refresh(); delay(30_000) } }
+    }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { scope.launch { portal.retry(); portal.refresh() } }
     val approved = overview.filter { it.second.access == com.aiworkdeck.mobile.services.firm.FirmAccess.approved }
     val matters = approved.flatMap { it.second.matters }

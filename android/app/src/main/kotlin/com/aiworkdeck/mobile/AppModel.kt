@@ -344,6 +344,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      */
     fun signOut() {
         com.aiworkdeck.mobile.services.ServiceLocator.firmOrNull()?.reset()
+        // Signed client PDFs never outlive the session that opened them.
+        com.aiworkdeck.mobile.services.firm.FirmPdf.folder(getApplication<Application>().filesDir).deleteRecursively()
         val organizationScope = backend.personalAccountScope()
         synchronized(prefs) {
             backend.logout()

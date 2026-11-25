@@ -116,9 +116,13 @@ object FirmPortalLink {
         return p[0] to (if (p.size > 1) "/" + p[1] else "")
     }
 
+    /** Debug builds only: a local portal server for journeys without production accounts (see FirmSeed). */
+    @Volatile var debugBase: URI? = null
+
     /** PDFs and other portal links open only when they point at an allowlisted https host. */
     fun isPortalUrl(url: String, allowed: List<String> = ContractCapabilities.firmPortals): Boolean {
         val uri = runCatching { URI(url) }.getOrNull() ?: return false
+        debugBase?.let { b -> if (uri.host == b.host && uri.port == b.port && uri.rawUserInfo == null) return true }
         return uri.scheme == "https" && uri.rawUserInfo == null && allowed.map { parts(it).first }.contains(uri.host)
     }
 }
@@ -275,6 +279,14 @@ object FirmTabs {
 }
 
 object FirmPdf {
+    /** Signed PDFs on this device; the app deletes this folder on sign-out and account deletion. */
+    fun folder(filesDir: java.io.File) = java.io.File(filesDir, "project-previews/firm")
+
+    /** PDF downloads never follow redirects: only the allowlisted URL may serve the signed document. */
+    val client: okhttp3.OkHttpClient by lazy {
+        OkHttpFirmTransport.defaultClient.newBuilder().followRedirects(false).followSslRedirects(false).build()
+    }
+
     /** A portal reply is shown as a PDF only if it is one (an error page must not be saved as the signed document). */
     fun looksLikePdf(bytes: ByteArray): Boolean = bytes.size >= 5 && String(bytes, 0, 5, Charsets.US_ASCII) == "%PDF-"
 }
