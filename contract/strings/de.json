@@ -575,7 +575,7 @@
   "subscription.status.active": "Aktiv",
   "subscription.store.price": "{price} / Monat",
   "subscription.store.closed": "Abonnements sind noch nicht verfügbar. Schau später wieder vorbei.",
-  "subscription.wxpay.title": "Personal Pro",
+  "subscription.wxpay.title": "Persönliches Pro",
   "subscription.wxpay.intro": "Die ersten {months} Monate für {price}/Monat, danach {standard}/Monat.",
   "subscription.wxpay.term": "Jede Zahlung fügt 30 Tage Pro hinzu. Es gibt keine automatische Verlängerung.",
   "subscription.wxpay.pay": "{price} mit WeChat bezahlen",

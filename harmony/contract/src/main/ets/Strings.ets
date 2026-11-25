@@ -12834,7 +12834,7 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "id": "Pro Pribadi",
     "vi": "Pro cá nhân",
     "fr": "Pro personnel",
-    "de": "Personal Pro",
+    "de": "Persönliches Pro",
     "es": "Pro personal",
     "pt-BR": "Pro pessoal",
     "it": "Pro personale",
