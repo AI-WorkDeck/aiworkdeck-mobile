@@ -467,6 +467,8 @@ object ContractCapabilities {
     const val audioPause: Boolean = ${caps.audioPause?.android}
     const val videoPause: String = ${kq(caps.videoPause?.android)}
     const val ddClientPortalUrl: String = ${kq(c.caps.ddClientPortalUrl)}
+    /** Firm review portals (host or host/office) that may receive the account session. */
+    val firmPortals: List<String> = listOf(${(c.caps.firmPortals ?? []).map(kq).join(', ')})
     const val backupConsentVersion: String = ${kq(c.caps.backupConsentVersion)}
     const val personalConsentVersion: String = ${kq(c.caps.personalConsentVersion)}
     const val privacyPolicyVersion: String = ${kq(c.caps.privacyPolicyVersion)}
