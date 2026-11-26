@@ -19,6 +19,29 @@ concurrency:
   group: ios-auth-${{ github.event.pull_request.number || (github.workflow == 'ios-auth-check' && github.ref) || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  # Every PR that reaches this workflow (it touches ios/** or contract/**, see paths above) runs the iOS unit
+  # tests on one iPhone simulator. They are fast and catch contract-string expectations (mobile#168 broke main
+  # unseen because PRs skipped iOS). The UI suites stay behind the `full-build` label and on main.
+  unit:
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-build') && github.event.action != 'labeled'
+    runs-on: xcode-27
+    timeout-minutes: 40
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Unit tests on an isolated compatible simulator
+        working-directory: ios
+        run: |
+          DEVICE_ID=$(python3 ../scripts/create-ios-ci-simulator.py iphone)
+          trap 'xcrun simctl delete "$DEVICE_ID"' EXIT
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -collect-test-diagnostics never -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:WorkdeckTests CODE_SIGNING_ALLOWED=NO
   simulator:
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-build')
     runs-on: xcode-27
