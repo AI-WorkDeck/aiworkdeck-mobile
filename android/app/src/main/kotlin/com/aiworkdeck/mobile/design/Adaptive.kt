@@ -36,6 +36,15 @@ fun layoutFor(widthDp: Float, heightDp: Float): WindowLayout {
     return WindowLayout(navRail = medium, splitPanes = expanded || (medium && widthDp > heightDp))
 }
 
+/**
+ * Library grid columns: the user's 2/3/4 choice is a density step, scaled by how many 400dp bands the pane spans,
+ * so tiles stay about phone-sized on a tablet instead of four huge ones.
+ */
+fun libraryColumns(choice: Int, paneWidthDp: Float): Int = choice * maxOf(1, (paneWidthDp / 400f).toInt())
+
+/** Width of the project list beside the Library grid on [WindowLayout.splitPanes]. */
+val LibraryProjectPaneWidth: Dp = 280.dp
+
 /** Phone layout by default: previews and screens outside the shell keep today's behaviour. */
 val LocalWindowLayout = staticCompositionLocalOf { WindowLayout.Phone }
 
