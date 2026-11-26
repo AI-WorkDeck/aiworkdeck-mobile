@@ -3,7 +3,7 @@
 Never uploads, edits or submits. Play: opens an edit only to read tracks, then deletes it (never commits).
 env: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH (App Store); PLAY_SERVICE_ACCOUNT_JSON (Google Play, optional).
 """
-import importlib.util, json, os, sys, time, urllib.parse, urllib.request
+import importlib.util, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 import jwt
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +26,13 @@ def appstore():
     for b in r["data"]:
         a = b["attributes"]; pv = (b.get("relationships", {}).get("preReleaseVersion", {}).get("data") or {}).get("id")
         print(f"| {pre.get(pv, '?')} | {a.get('version')} | {a.get('processingState')} | {(a.get('uploadedDate') or '')[:16]} |")
+    # When the current submission entered review (a version's createdDate is not that; see mobile-lane-checks).
+    r = asc.call(tok, "GET", f"/reviewSubmissions?filter[app]={asc.APP_ID}&limit=5")
+    if isinstance(r, dict) and "data" in r:
+        print("\n| review submission | state | submitted |\n|---|---|---|")
+        for sub in r["data"]:
+            a = sub["attributes"]
+            print(f"| {sub['id'][:8]} | {a.get('state')} | {(a.get('submittedDate') or '')[:16]} |")
 
 def play(pkg="com.aiworkdeck.mobile"):
     raw = os.environ.get("PLAY_SERVICE_ACCOUNT_JSON")
@@ -50,15 +57,32 @@ def play(pkg="com.aiworkdeck.mobile"):
                 print(f"| {t['track']} | {rel.get('status')} | {','.join(rel.get('versionCodes', []))} | {rel.get('name', '')} |")
     finally:
         req("DELETE", f"{base}/{edit}")  # read-only: discard the edit
+    # One-time products via the monetization API; the legacy inappproducts API answers
+    # 403 "Please migrate to the new publishing API" (POLISH M22), it is not a permission problem.
     try:
-        prods = req("GET", f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{pkg}/inappproducts").get("inappproduct", [])
-        print(f"\n| in-app product | status | default price |\n|---|---|---|")
+        prods = req("GET", f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{pkg}/oneTimeProducts?pageSize=100").get("oneTimeProducts", [])
+        print(f"\n| one-time product | purchase options (state) | example price |\n|---|---|---|")
         for pr in prods:
-            dp = pr.get("defaultPrice", {})
-            print(f"| {pr.get('sku')} | {pr.get('status')} | {dp.get('priceMicros', '')} {dp.get('currency', '')} |")
+            opts = pr.get("purchaseOptions", [])
+            states = ", ".join(f"{o.get('purchaseOptionId')}: {o.get('state')}" for o in opts)
+            cfgs = [c for o in opts for c in o.get("regionalPricingAndAvailabilityConfigs", [])]
+            ex = next((c for c in cfgs if c.get("regionCode") == "US"), cfgs[0] if cfgs else None)
+            price = ""
+            if ex:
+                m = ex.get("price", {}); price = f"{ex.get('regionCode')} {m.get('units', '0')}.{int(m.get('nanos', 0)) // 10_000_000:02d} {m.get('currencyCode', '')}"
+            print(f"| {pr.get('productId')} | {states} | {price} |")
         if not prods: print("| (none) | | |")
+    except urllib.error.HTTPError as e:
+        try:
+            err = json.loads(e.read().decode("utf-8", "replace")).get("error", {})
+            detail = f"{err.get('status')}: {err.get('message')}"
+        except Exception:
+            detail = "(no JSON body)"
+        import re as _re
+        detail = _re.sub(r"[\w.+-]+@[\w.-]+", "<account>", detail).replace("\n", " ")[:300]
+        print(f"\none-time products query failed: HTTP {e.code}: {detail}")
     except Exception as e:
-        print(f"\nin-app products query failed: {type(e).__name__}: {e}")
+        print(f"\none-time products query failed: {type(e).__name__}: {e}")
 
 if __name__ == "__main__":
     appstore()
