@@ -57,6 +57,7 @@ import androidx.compose.foundation.layout.width
 import com.aiworkdeck.mobile.design.LocalWindowLayout
 import com.aiworkdeck.mobile.design.LibraryProjectPaneWidth
 import com.aiworkdeck.mobile.design.libraryColumns
+import com.aiworkdeck.mobile.design.libraryProjectPane
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -134,7 +135,8 @@ fun LibraryScreen(
     val density = LocalDensity.current
 
     // Tablet / unfolded / landscape split: the project list sits beside the grid, as on iPad (M17 step 5).
-    val pane = LocalWindowLayout.current.splitPanes && fixedProject == null && projects.size > 1
+    val pane = libraryProjectPane(LocalWindowLayout.current, androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.toFloat()) &&
+        fixedProject == null && projects.size > 1
     WorkdeckTheme(dark = true) {
         Box(Modifier.fillMaxSize().background(Tk.D.bg).safeDrawingPadding()) {
           Row(Modifier.fillMaxSize()) {
