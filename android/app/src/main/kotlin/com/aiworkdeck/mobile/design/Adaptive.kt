@@ -45,6 +45,12 @@ fun libraryColumns(choice: Int, paneWidthDp: Float): Int = choice * maxOf(1, (pa
 /** Width of the project list beside the Library grid on [WindowLayout.splitPanes]. */
 val LibraryProjectPaneWidth: Dp = 280.dp
 
+/**
+ * The Library's project list needs a split layout **and** a tall window: a phone in landscape is Expanded width but
+ * is used for capture, and a 280dp list there would eat the grid (CEO, 11-26). Same 480dp line as the capture screen.
+ */
+fun libraryProjectPane(layout: WindowLayout, heightDp: Float): Boolean = layout.splitPanes && heightDp >= 480f
+
 /** Phone layout by default: previews and screens outside the shell keep today's behaviour. */
 val LocalWindowLayout = staticCompositionLocalOf { WindowLayout.Phone }
 
