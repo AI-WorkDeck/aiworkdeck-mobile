@@ -40,9 +40,12 @@ class App : Application() {
         val store = EvidenceStore(File(filesDir, "FieldEvidence"), deviceFacts())
         com.aiworkdeck.mobile.services.CloudEpoch.configure(File(filesDir, "CloudEpoch"), store)
         // 主机跟着账号区域现取，不在这里定死：登录页换区后同一个 Backend 下一个请求就打新主机
+        // Debug builds may point account traffic at a loopback staging server (DebugAccountBase, POLISH M38).
+        com.aiworkdeck.mobile.services.DebugAccountBase.load(this)
         val backend = Backend(
-            baseUrlProvider = { prefs.accountRegion.baseUrl },
+            baseUrlProvider = { com.aiworkdeck.mobile.services.DebugAccountBase.base ?: prefs.accountRegion.baseUrl },
             session = SessionStores.create(this),
+            client = com.aiworkdeck.mobile.services.DebugAccountBase.client(filesDir),
             languageProvider = { L10n.wireCode },
             accountActive = { prefs.hasPrivacyConsent },
         )
