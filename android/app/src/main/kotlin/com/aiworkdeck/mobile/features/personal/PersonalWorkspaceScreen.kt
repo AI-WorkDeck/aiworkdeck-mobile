@@ -33,6 +33,7 @@ import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.tr
+import com.aiworkdeck.mobile.design.ReadableWidth
 import com.aiworkdeck.mobile.model.RelayProject
 import com.aiworkdeck.mobile.services.*
 import kotlinx.coroutines.CancellationException
@@ -343,7 +344,8 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
                 if (copy.canRetry) Link(tr("project.retry"), !state.loading && !state.busy) { scope.launch { state.retryDesktopCopy() } }
             } }
             if (state.copySuccess) Text(tr("personal.copy.success"), style = Fonts.small(), color = Tk.L.fgMuted)
-            Row(Modifier.fillMaxWidth().padding(vertical = Tk.Sp.s2), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
+            // Capped at the readable width and kept at the start edge, under the left-aligned conversation.
+            Row(Modifier.widthIn(max = ReadableWidth).fillMaxWidth().padding(vertical = Tk.Sp.s2), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
                 OutlinedTextField(value = state.draft, onValueChange = { state.draft = it }, enabled = !state.busy && !state.loading,
                     placeholder = { Text(tr("personal.ask"), style = Fonts.body()) }, textStyle = Fonts.body(), shape = RoundedCornerShape(22.dp),
                     modifier = Modifier.weight(1f), maxLines = 5)

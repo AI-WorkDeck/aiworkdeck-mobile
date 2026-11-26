@@ -40,8 +40,9 @@ fun layoutFor(widthDp: Float, heightDp: Float): WindowLayout {
 val LocalWindowLayout = staticCompositionLocalOf { WindowLayout.Phone }
 
 /**
- * Caps the content at [ReadableWidth] and centres it. Put it after `background(...)` and the insets padding,
- * so the background still fills the window. On a phone (narrower than [ReadableWidth]) nothing changes.
+ * Caps the content at [ReadableWidth] and centres it. Put it after `fillMaxSize()`/`fillMaxWidth()`, `background(...)`
+ * and the insets padding, so the background still fills the window (without a fill before it, the content is
+ * capped but stays at the start edge). On a phone (narrower than [ReadableWidth]) nothing changes.
  */
 fun Modifier.readableWidth(): Modifier =
     wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = ReadableWidth).fillMaxWidth()

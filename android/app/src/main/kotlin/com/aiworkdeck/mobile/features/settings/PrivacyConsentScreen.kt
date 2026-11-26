@@ -20,6 +20,7 @@ import com.aiworkdeck.mobile.BuildConfig
 import com.aiworkdeck.mobile.design.LightStatusBar
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Tk
+import com.aiworkdeck.mobile.design.readableWidth
 import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 import com.aiworkdeck.mobile.services.mobileTermsUrl
@@ -30,7 +31,7 @@ fun PrivacyConsentScreen(onAccept: () -> Unit, onDecline: () -> Unit) {
     LightStatusBar()
     val uriHandler = LocalUriHandler.current
     Column(
-        modifier = Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()
+        modifier = Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().readableWidth()
             .verticalScroll(rememberScrollState()).padding(Tk.Sp.gutter),
         verticalArrangement = Arrangement.spacedBy(Tk.Sp.s6),
     ) {

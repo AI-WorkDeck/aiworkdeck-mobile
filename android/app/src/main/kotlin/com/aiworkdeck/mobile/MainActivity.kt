@@ -19,6 +19,7 @@ import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -37,6 +38,8 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.tr
@@ -330,7 +333,9 @@ private fun MainTabRail(selected: MainTab, dark: Boolean, enabled: Boolean, show
                         if (t == MainTab.firm && firmBadge > 0) BadgedBox(badge = { Badge { Text(firmBadge.toString()) } }) { Icon(painterResource(t.icon), contentDescription = null) }
                         else Icon(painterResource(t.icon), contentDescription = null)
                     },
-                    label = { Text(tr(t.labelKey), style = Fonts.small()) },
+                    // Rail items are 80dp wide: long labels (other languages) wrap to two centred lines instead of widening the rail.
+                    label = { Text(tr(t.labelKey), style = Fonts.small(), textAlign = TextAlign.Center, maxLines = 2,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 72.dp)) },
                     colors = NavigationRailItemDefaults.colors(
                         selectedIconColor = on, selectedTextColor = on,
                         unselectedIconColor = off, unselectedTextColor = off,
