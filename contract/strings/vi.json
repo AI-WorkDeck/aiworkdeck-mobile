@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "Đang xử lý",
   "firm.inbox.done": "Đã chốt bản cuối và đóng",
   "firm.inbox.empty": "Hiện không có việc nào cần bạn xử lý.",
+  "firm.inbox.updated": "Cập nhật {t}",
   "firm.reason.review": "Yêu cầu xem xét",
   "firm.reason.call": "Yêu cầu gọi",
   "firm.reason.reply": "Khách hàng đã trả lời",

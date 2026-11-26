@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "In Bearbeitung",
   "firm.inbox.done": "Finalisiert und abgeschlossen",
   "firm.inbox.empty": "Derzeit wartet nichts auf Sie.",
+  "firm.inbox.updated": "Aktualisiert {t}",
   "firm.reason.review": "Prüfung angefragt",
   "firm.reason.call": "Anruf angefragt",
   "firm.reason.reply": "Mandant hat geantwortet",

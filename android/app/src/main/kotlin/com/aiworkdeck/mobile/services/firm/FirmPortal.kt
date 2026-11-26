@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -136,6 +137,8 @@ data class FirmLinkState(
     val lastErrorCode: String? = null,
     /** True once the matter list has loaded at least once. */
     val listed: Boolean = false,
+    /** When the matter list last loaded successfully (epoch ms), shown as "Updated …" in the inbox. */
+    val refreshedAt: Long? = null,
 )
 
 /** One linked portal for the signed-in account. */
@@ -186,7 +189,7 @@ class FirmLink(
         try {
             val list = c.matters().matters.map { it.copy(linkID = portalID) }
             if (closed) return
-            _state.update { it.copy(matters = list, listed = true, loadErrorKey = null) }
+            _state.update { it.copy(matters = list, listed = true, loadErrorKey = null, refreshedAt = System.currentTimeMillis()) }
         } catch (e: CancellationException) { throw e } catch (e: FirmPortalError) {
             if (closed) return
             val access = FirmAccess.after(e.code, _state.value.access)
@@ -238,7 +241,12 @@ class FirmPortal(
     private fun save() { linksKey?.let { settings.setLinks(it, _links.value.map(FirmLink::portalID)) } }
 
     /** Restores the account's saved links and checks access. Offline: stays hidden until the next retry. */
-    suspend fun restore() {
+    private val restoring = kotlinx.coroutines.sync.Mutex()
+
+    /** Concurrent callers (sign-in, Settings, Join) run one after another, never interleaved. */
+    suspend fun restore() = restoring.withLock { restoreLocked() }
+
+    private suspend fun restoreLocked() {
         reset()
         val (base, session) = identity() ?: return
         val id = runCatching { verifiedUserId() }.getOrDefault(0)

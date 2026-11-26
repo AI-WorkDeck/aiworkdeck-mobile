@@ -3,6 +3,7 @@
 package com.aiworkdeck.mobile
 
 import com.aiworkdeck.mobile.services.firm.*
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -131,6 +132,7 @@ class FirmPortalTest {
         assertEquals(FirmAccess.approved, p.access)
         assertEquals("firm.error.network", p.loadErrorKey)
         assertEquals(1, p.matters.size)
+        assertNotNull("the last good load time survives a failed refresh (inbox shows 'Updated …')", p.links.value.single().state.value.refreshedAt)
         p.disconnectAll()
         assertTrue(p.links.value.isEmpty()); assertTrue(trials.values.isEmpty()); assertTrue(settings.values.isEmpty())
     }
@@ -141,5 +143,45 @@ class FirmPortalTest {
         link.closed = true
         link.check()
         assertEquals(FirmAccess.none, link.state.value.access)
+    }
+
+    @Test fun debugSeedTalksOnlyToTheLocalPortalAndReleaseNeverSeeds() = runTest {
+        assertNull(FirmSeed.base("http://10.0.2.2:8787", debug = false))
+        assertNull(FirmSeed.base(null, debug = true))
+        val base = FirmSeed.base(server.url("/").toString(), debug = true)!!
+        routes["/all/api/portal/me"] = 200 to """{"kind":"trial","status":"approved","firm":{"en":"Demo Firm"}}"""
+        routes["/all/api/portal/matters"] = 200 to matters
+        val p = FirmSeed.portal(base, MemoryFirmTrialStore(), MemoryFirmSettings())
+        try {
+            p.restore()
+            assertEquals(FirmIdentity.accountScope(FirmSeed.USER_ID, base.toString().trimEnd('/')), p.scope)
+            assertNull(p.connect("aifirm.aiworkdeck.com/all", "LOCAL-TRIAL"))
+            assertEquals(FirmAccess.approved, p.access)
+            assertEquals("Bearer LOCAL-TRIAL", server.takeRequest().getHeader("Authorization"))
+            assertTrue("local PDFs open", FirmPortalLink.isPortalUrl(base.resolve("/m/1.pdf").toString()))
+            assertEquals("a production portal link is fetched from the seed portal",
+                base.resolve("/all/m/tok/2.pdf").toString(), FirmPortalLink.localize("https://aifirm.aiworkdeck.com/all/m/tok/2.pdf"))
+            assertEquals("https://evil.example/x.pdf", FirmPortalLink.localize("https://evil.example/x.pdf"))
+        } finally { FirmPortalLink.debugBase = null }
+        assertEquals("outside seed mode nothing is rewritten", "https://aifirm.aiworkdeck.com/all/m/tok/2.pdf",
+            FirmPortalLink.localize("https://aifirm.aiworkdeck.com/all/m/tok/2.pdf"))
+        assertFalse(FirmPortalLink.isPortalUrl(base.resolve("/m/1.pdf").toString()))
+    }
+
+    @Test fun signedPdfFetchFollowsNoRedirectAndLivesInOneFolder() {
+        assertFalse(FirmPdf.client.followRedirects)
+        assertFalse(FirmPdf.client.followSslRedirects)
+        assertEquals(java.io.File("/data/files/project-previews/firm"), FirmPdf.folder(java.io.File("/data/files")))
+    }
+
+    @Test fun concurrentRestoresDoNotInterleave() = runTest {
+        routes["/sv/api/portal/me"] = 200 to """{"kind":"lawyer","name":"Han","status":"approved"}"""
+        routes["/sv/api/portal/matters"] = 200 to matters
+        val settings = MemoryFirmSettings(); val trials = MemoryFirmTrialStore()
+        portal(trials, settings).apply { restore(); connect("ai-firm.aiworkdeck.com/sv") }
+        val p = portal(trials, settings)
+        kotlinx.coroutines.coroutineScope { repeat(3) { launch { p.restore() } } }
+        assertEquals(listOf("ai-firm.aiworkdeck.com/sv"), p.links.value.map { it.portalID })
+        assertEquals(FirmAccess.approved, p.access)
     }
 }

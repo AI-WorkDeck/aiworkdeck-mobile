@@ -270,6 +270,16 @@ class FirmReviewTest {
         assertEquals("第1条 商号", FirmMarkdown.plain("## **第1条** 商号"))
     }
 
+    @Test fun unnamedMattersShowTheDocumentAndCallsWithoutTimesHaveNoDanglingSeparator() {
+        assertEquals("Acme · Ada", FirmText.title("Ada", "Acme", "NDA"))
+        assertEquals("Mutual NDA", FirmText.title("", null, "Mutual NDA"))
+        assertEquals("—", FirmText.title(null, "", " "))
+        assertEquals("Mutual NDA", FirmMarkdown.firstHeading("# **Mutual NDA**\n\n## 1. Terms\n\nBody"))
+        assertNull(FirmMarkdown.firstHeading("No heading here"))
+        assertEquals("firm.reason.call" to emptyMap<String, Any>(), FirmText.callLine(""))
+        assertEquals("firm.matter.call" to mapOf<String, Any>("times" to "Tue 3pm"), FirmText.callLine("Tue 3pm"))
+    }
+
     @Test fun everyFirmStringKeyUsedHereExists() {
         val keys = FirmInbox.Group.entries.map(FirmInbox::titleKey) +
             listOf("call_requested", "client_replied", "review_requested").map(FirmInbox::reasonKey) +
@@ -278,7 +288,7 @@ class FirmReviewTest {
             FirmAccess.entries.mapNotNull { FirmStatus.link(it, "f")?.first } +
             listOf("firm.settings.title", "firm.join.title", "firm.join.body", "firm.join.link", "firm.join.badHost", "firm.join.connect",
                 "firm.trial.use", "firm.trial.code", "firm.trial.until", "firm.trial.invalid", "firm.status.check", "firm.leave", "error.sessionSaveFailed",
-                "firm.tab", "firm.inbox.empty", "firm.forLawyerCount", "time.secondsAgo", "time.minutesAgo", "time.hoursAgo", "time.daysAgo",
+                "firm.tab", "firm.inbox.empty", "firm.inbox.updated", "project.retry", "firm.forLawyerCount", "time.secondsAgo", "time.minutesAgo", "time.hoursAgo", "time.daysAgo",
                 "firm.matter.conversation", "firm.matter.requestedLawyer", "firm.matter.callScheduled", "firm.matter.call", "firm.matter.forLawyer",
                 "firm.matter.forLawyerEmpty", "firm.matter.flags", "firm.matter.version", "firm.matter.flagsNew", "firm.matter.changes", "firm.matter.firstVersion",
                 "firm.matter.document", "firm.matter.pdf", "firm.matter.noDraft", "firm.action.reply", "firm.action.signoff", "firm.call.confirm", "firm.call.done",

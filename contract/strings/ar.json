@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "قيد التنفيذ",
   "firm.inbox.done": "معتمدة ومغلقة",
   "firm.inbox.empty": "لا شيء يحتاج إلى إجرائك الآن.",
+  "firm.inbox.updated": "تم التحديث {t}",
   "firm.reason.review": "طُلبت مراجعة",
   "firm.reason.call": "طُلبت مكالمة",
   "firm.reason.reply": "ردّ العميل",

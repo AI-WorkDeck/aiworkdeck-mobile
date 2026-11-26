@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "진행 중",
   "firm.inbox.done": "확정 및 종료",
   "firm.inbox.empty": "지금 확인할 항목이 없습니다.",
+  "firm.inbox.updated": "{t} 업데이트됨",
   "firm.reason.review": "검토 요청",
   "firm.reason.call": "통화 요청",
   "firm.reason.reply": "고객이 답변함",

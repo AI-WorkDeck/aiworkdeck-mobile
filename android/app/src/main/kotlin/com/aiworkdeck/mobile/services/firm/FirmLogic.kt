@@ -116,9 +116,24 @@ object FirmPortalLink {
         return p[0] to (if (p.size > 1) "/" + p[1] else "")
     }
 
+    /** Debug builds only: a local portal server for journeys without production accounts (see FirmSeed). */
+    @Volatile var debugBase: URI? = null
+
+    /**
+     * Seed mode only: a portal URL (the server writes absolute https://<portal host>/... links) is fetched from the
+     * local seed portal instead, so nothing reaches production. Outside seed mode the URL is returned unchanged.
+     */
+    fun localize(url: String, allowed: List<String> = ContractCapabilities.firmPortals): String {
+        val b = debugBase ?: return url
+        val uri = runCatching { URI(url) }.getOrNull() ?: return url
+        if (uri.scheme != "https" || uri.host !in allowed.map { parts(it).first }) return url
+        return URI(b.scheme, null, b.host, b.port, uri.rawPath, uri.rawQuery, null).toString()
+    }
+
     /** PDFs and other portal links open only when they point at an allowlisted https host. */
     fun isPortalUrl(url: String, allowed: List<String> = ContractCapabilities.firmPortals): Boolean {
         val uri = runCatching { URI(url) }.getOrNull() ?: return false
+        debugBase?.let { b -> if (uri.host == b.host && uri.port == b.port && uri.rawUserInfo == null) return true }
         return uri.scheme == "https" && uri.rawUserInfo == null && allowed.map { parts(it).first }.contains(uri.host)
     }
 }
@@ -201,6 +216,14 @@ object FirmText {
     /** "2" → "§2"; named sections stay as they are. */
     fun section(s: String?): String? = s?.takeIf { it.isNotEmpty() }?.let { if (it.first().isDigit()) "§$it" else it }
 
+    /** Who the matter is for, else the document's name, else a dash (synthetic or unnamed matters). */
+    fun title(client: String?, company: String?, document: String?): String =
+        who(client, company).takeIf { it != "—" } ?: document?.takeIf { it.isNotBlank() } ?: "—"
+
+    /** The call line: with the proposed times when the client gave some, without a dangling separator otherwise. */
+    fun callLine(times: String?): Pair<String, Map<String, Any>> =
+        if (times.isNullOrBlank()) "firm.reason.call" to emptyMap() else "firm.matter.call" to mapOf("times" to times)
+
     fun who(client: String?, company: String?): String =
         listOfNotNull(company, client).filter { it.isNotEmpty() }.joinToString(" · ").ifEmpty { "—" }
 
@@ -212,6 +235,9 @@ object FirmText {
 
 object FirmMarkdown {
     data class Block(val level: Int, val text: String)
+
+    /** The draft's first heading: the document's name when the portal has no template name for it. */
+    fun firstHeading(markdown: String?): String? = blocks(markdown ?: "").firstOrNull { it.level > 0 }?.text?.let(::plain)?.takeIf { it.isNotEmpty() }
 
     /** Text without emphasis or heading marks, for plain display. */
     fun plain(block: String): String = block.replace("**", "").replace("#", "").trim(' ', '\t')
@@ -275,6 +301,14 @@ object FirmTabs {
 }
 
 object FirmPdf {
+    /** Signed PDFs on this device; the app deletes this folder on sign-out and account deletion. */
+    fun folder(filesDir: java.io.File) = java.io.File(filesDir, "project-previews/firm")
+
+    /** PDF downloads never follow redirects: only the allowlisted URL may serve the signed document. */
+    val client: okhttp3.OkHttpClient by lazy {
+        OkHttpFirmTransport.defaultClient.newBuilder().followRedirects(false).followSslRedirects(false).build()
+    }
+
     /** A portal reply is shown as a PDF only if it is one (an error page must not be saved as the signed document). */
     fun looksLikePdf(bytes: ByteArray): Boolean = bytes.size >= 5 && String(bytes, 0, 5, Charsets.US_ASCII) == "%PDF-"
 }

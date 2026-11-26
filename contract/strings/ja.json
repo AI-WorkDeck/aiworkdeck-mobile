@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "進行中",
   "firm.inbox.done": "確定済み・完了",
   "firm.inbox.empty": "現在、対応が必要な案件はありません。",
+  "firm.inbox.updated": "{t}に更新",
   "firm.reason.review": "レビュー依頼",
   "firm.reason.call": "通話依頼",
   "firm.reason.reply": "クライアントが返信",

@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "Σε εξέλιξη",
   "firm.inbox.done": "Οριστικοποιημένες και κλειστές",
   "firm.inbox.empty": "Τίποτα δεν χρειάζεται την προσοχή σας αυτή τη στιγμή.",
+  "firm.inbox.updated": "Ενημερώθηκε {t}",
   "firm.reason.review": "Ζητήθηκε αναθεώρηση",
   "firm.reason.call": "Ζητήθηκε κλήση",
   "firm.reason.reply": "Ο πελάτης απάντησε",

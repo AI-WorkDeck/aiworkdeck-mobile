@@ -603,6 +603,7 @@
   "firm.inbox.inProgress": "Devam ediyor",
   "firm.inbox.done": "Kesinleştirildi ve kapandı",
   "firm.inbox.empty": "Şu anda sizi bekleyen bir şey yok.",
+  "firm.inbox.updated": "{t} güncellendi",
   "firm.reason.review": "İnceleme istendi",
   "firm.reason.call": "Görüşme istendi",
   "firm.reason.reply": "Müvekkil yanıtladı",

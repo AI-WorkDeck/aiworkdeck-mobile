@@ -13439,6 +13439,28 @@ export const ContractStrings: Record<string, Record<string, string>> = {
     "hi": "अभी आपकी किसी कार्रवाई की ज़रूरत नहीं है।",
     "ar": "لا شيء يحتاج إلى إجرائك الآن."
   },
+  "firm.inbox.updated": {
+    "zh-Hans": "更新于{t}",
+    "zh-Hant": "更新於{t}",
+    "en": "Updated {t}",
+    "ja": "{t}に更新",
+    "ko": "{t} 업데이트됨",
+    "th": "อัปเดตเมื่อ {t}",
+    "ms": "Dikemas kini {t}",
+    "id": "Diperbarui {t}",
+    "vi": "Cập nhật {t}",
+    "fr": "Mis à jour {t}",
+    "de": "Aktualisiert {t}",
+    "es": "Actualizado {t}",
+    "pt-BR": "Atualizado {t}",
+    "it": "Aggiornato {t}",
+    "ru": "Обновлено {t}",
+    "el": "Ενημερώθηκε {t}",
+    "tr": "{t} güncellendi",
+    "nl": "Bijgewerkt {t}",
+    "hi": "{t} अपडेट किया गया",
+    "ar": "تم التحديث {t}"
+  },
   "firm.reason.review": {
     "zh-Hans": "请求审阅",
     "zh-Hant": "請求審閱",

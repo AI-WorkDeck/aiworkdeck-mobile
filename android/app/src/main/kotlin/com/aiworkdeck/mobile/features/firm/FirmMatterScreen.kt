@@ -97,6 +97,16 @@ fun FirmMatterScreen(portal: FirmPortal, ref: FirmMatterSummary, onClose: () -> 
             val m = matter
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s4),
                 verticalArrangement = Arrangement.spacedBy(Tk.Sp.s6)) {
+                // A failed reload keeps the last content and says so, with Retry; a first load that fails still shows
+                // which matter this is, never a blank page.
+                error?.let { msg ->
+                    Column(Modifier.fillMaxWidth().testTag("firm.matter.error"), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
+                        if (m == null) Text(FirmText.title(ref.client, ref.company, ref.template?.text), style = Fonts.title(), color = Tk.L.fg)
+                        Text(msg, style = Fonts.body(), color = Tk.S.failed)
+                        TextButton(onClick = { scope.launch { busy = true; try { load() } finally { busy = false } } }, enabled = !busy,
+                            modifier = Modifier.testTag("firm.matter.retry")) { Text(tr("project.retry"), color = Tk.L.accent) }
+                    }
+                }
                 when {
                     m != null -> {
                         Header(m)
@@ -109,7 +119,7 @@ fun FirmMatterScreen(portal: FirmPortal, ref: FirmMatterSummary, onClose: () -> 
                             Text(tr("firm.matter.conversation", mapOf("count" to count)), style = Fonts.body(), color = Tk.L.accent, modifier = Modifier.weight(1f))
                         }
                     }
-                    error != null -> Text(error!!, style = Fonts.body(), color = Tk.S.failed)
+                    error != null -> {}
                     else -> Box(Modifier.fillMaxWidth().padding(Tk.Sp.s10), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Tk.L.accent) }
                 }
             }
@@ -147,7 +157,7 @@ fun FirmMatterScreen(portal: FirmPortal, ref: FirmMatterSummary, onClose: () -> 
             onSigned = { pdf -> scope.launch { load(); portal.refresh() }; if (pdf != null) { pdfUrl = pdf; layer = Layer.Pdf } else layer = Layer.None },
             onStale = { scope.launch { load() } }) } }
         Layer.Conversation -> FirmConversationLayer(m) { layer = Layer.None }
-        Layer.Pdf -> pdfUrl?.let { FirmPdfLayer(it) { layer = Layer.None } }
+        Layer.Pdf -> pdfUrl?.let { FirmPdfLayer(it, portal.scope) { layer = Layer.None } }
         Layer.None -> {}
     }
     if (confirmSendBack) AlertDialog(onDismissRequest = { confirmSendBack = false }, containerColor = Tk.L.bg,
@@ -160,10 +170,10 @@ fun FirmMatterScreen(portal: FirmPortal, ref: FirmMatterSummary, onClose: () -> 
 
 @Composable
 private fun Header(m: FirmMatter) = Column(verticalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
-    Text(FirmText.who(m.client, m.company), style = Fonts.title(), color = Tk.L.fg)
+    Text(FirmText.title(m.client, m.company, m.template?.text ?: FirmMarkdown.firstHeading(m.latest?.markdown)), style = Fonts.title(), color = Tk.L.fg)
     m.lawyerDisplayName?.let { Text(tr("firm.matter.requestedLawyer", mapOf("name" to it)), style = Fonts.small(), color = Tk.L.fgMuted) }
     m.consult?.takeIf { it.status == "requested" || it.status == "scheduled" }?.let { c ->
-        Text(if (c.status == "scheduled") tr("firm.matter.callScheduled") else tr("firm.matter.call", mapOf("times" to (c.times ?: ""))),
+        Text(if (c.status == "scheduled") tr("firm.matter.callScheduled") else FirmText.callLine(c.times).let { (k, v) -> tr(k, v) },
             style = Fonts.small(), color = if (c.status == "requested") Tk.S.failed else Tk.L.accent, modifier = Modifier.testTag("firm.call"))
     }
 }
@@ -206,7 +216,7 @@ private fun FlagRow(f: FirmFlag, settlement: String?) = Row(verticalAlignment = 
     Box(Modifier.size(7.dp).clip(CircleShape).background(if (f.level == "high") Tk.S.failed else Tk.S.waiting))
     Text(listOfNotNull(FirmText.section(f.section), f.title).filter { it.isNotEmpty() }.joinToString(" · "), style = Fonts.body(), color = Tk.L.fg, modifier = Modifier.weight(1f))
     val color = when (settlement) { "lawyer" -> Tk.S.waiting; null -> Tk.L.fgFaint; else -> Tk.L.accent }
-    Text(tr(FirmIdentity.settlementKey(settlement)), style = Fonts.nano(), color = color,
+    Text(tr(FirmIdentity.settlementKey(settlement)), style = Fonts.micro().copy(fontWeight = FontWeight.Medium), color = color,
         modifier = Modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.12f)).padding(horizontal = Tk.Sp.s2, vertical = 2.dp))
 }
 
@@ -249,11 +259,13 @@ private fun Document(m: FirmMatter, onPdf: (String) -> Unit) {
 
 /** Full-screen layer over the matter with a title row: Cancel/Close on the left, an action on the right. */
 @Composable
-private fun LayerScaffold(title: String, cancel: String, onCancel: () -> Unit, action: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
-    BackHandler(onBack = onCancel)
+private fun LayerScaffold(title: String, cancel: String, onCancel: () -> Unit, action: (@Composable () -> Unit)? = null,
+                          busy: Boolean = false, backDismisses: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+    // Back never drops work in flight; a dirty draft is left only through Cancel (iOS blocks swipe-dismiss the same way).
+    BackHandler(enabled = true) { if (!busy && backDismisses) onCancel() }
     Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = Tk.Sp.s2), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onCancel) { Text(cancel, color = Tk.L.accent) }
+            TextButton(onClick = onCancel, enabled = !busy) { Text(cancel, color = Tk.L.accent) }
             Text(title, style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, modifier = Modifier.weight(1f))
             action?.invoke()
         }
@@ -267,7 +279,7 @@ private fun FirmReplyLayer(matter: FirmMatter, onCancel: () -> Unit, send: suspe
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
-    LayerScaffold(FirmText.who(matter.client, matter.company), tr("common.cancel"), onCancel, action = {
+    LayerScaffold(FirmText.title(matter.client, matter.company, matter.template?.text ?: FirmMarkdown.firstHeading(matter.latest?.markdown)), tr("common.cancel"), onCancel, busy = sending, backDismisses = text.isBlank(), action = {
         TextButton(onClick = { sending = true; scope.launch { send(text.trim()); sending = false } }, enabled = !sending && text.isNotBlank(),
             modifier = Modifier.testTag("firm.reply.send")) { Text(tr("firm.reply.send"), color = Tk.L.accent, fontWeight = FontWeight.SemiBold) }
     }) {
@@ -286,7 +298,7 @@ private fun FirmEditLayer(version: FirmVersion, onCancel: () -> Unit, save: susp
     var markdown by remember { mutableStateOf(version.markdown) }
     var note by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
-    LayerScaffold(tr("firm.edit.title"), tr("common.cancel"), onCancel, action = {
+    LayerScaffold(tr("firm.edit.title"), tr("common.cancel"), onCancel, busy = saving, backDismisses = markdown == version.markdown && note.isBlank(), action = {
         TextButton(onClick = { saving = true; scope.launch { save(markdown, note); saving = false } }, enabled = !saving && markdown != version.markdown,
             modifier = Modifier.testTag("firm.edit.save")) { Text(tr("firm.edit.save", mapOf("n" to version.n + 1)), color = Tk.L.accent, fontWeight = FontWeight.SemiBold) }
     }) {
@@ -302,7 +314,7 @@ private fun FirmConversationLayer(matter: FirmMatter, onClose: () -> Unit) {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
             for (e in entries) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val who = when (e.role) { "user" -> tr("firm.who.client"); "lawyer" -> e.name?.takeIf { it.isNotEmpty() } ?: tr("firm.tab"); else -> tr("firm.who.assistant") }
-                Text(who, style = Fonts.nano(), color = if (e.role == "lawyer") Tk.L.accent else Tk.L.fgFaint)
+                Text(who, style = Fonts.micro().copy(fontWeight = FontWeight.Medium), color = if (e.role == "lawyer") Tk.L.accent else Tk.L.fgMuted)
                 Text(FirmMarkdown.plain(e.content), style = Fonts.body(), color = Tk.L.fg)
             }
         }
@@ -325,8 +337,8 @@ private fun FirmSignoffLayer(portal: FirmPortal, link: FirmLink, matter: FirmMat
     val ready = FirmIdentity.signoffReady(conflicts, engagement, reviewed, signer)
     val asks = link.asksDetails
     suspend fun sign() {
-        val s = signer ?: return
-        val client = link.client() ?: return
+        val s = signer ?: run { error = tr("firm.error.access"); return }
+        val client = link.client() ?: run { error = tr("firm.error.access"); return }
         try {
             val given = if (asks) details.mapValues { it.value.trim() } else emptyMap()
             val pdf = client.signoff(matter.id, version.n, s.name, given)
@@ -342,7 +354,7 @@ private fun FirmSignoffLayer(portal: FirmPortal, link: FirmLink, matter: FirmMat
     }
     LayerScaffold(tr("firm.signoff.title", mapOf("n" to version.n)), tr("common.cancel"), { if (!signing) onCancel() }) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
-            Text(FirmText.who(matter.client, matter.company), style = Fonts.heading(), color = Tk.L.fg)
+            Text(FirmText.title(matter.client, matter.company, matter.template?.text ?: FirmMarkdown.firstHeading(matter.latest?.markdown)), style = Fonts.heading(), color = Tk.L.fg)
             matter.template?.text?.let { Text(it, color = Tk.L.fgMuted) }
             SectionTitle(tr("firm.signoff.signer"))
             Column(Modifier.testTag("firm.signoff.signer")) {
@@ -363,7 +375,7 @@ private fun FirmSignoffLayer(portal: FirmPortal, link: FirmLink, matter: FirmMat
         Button(onClick = {
             signing = true; error = null
             // Device-owner confirmation before an irreversible professional act; no screen lock means the confirmations alone (as on iOS).
-            val intent = ownerCheckIntent(context)
+            val intent = ownerCheckIntent(context, version.n)
             if (intent != null) ownerCheck.launch(intent) else scope.launch { sign(); signing = false }
         }, enabled = ready && !signing, modifier = Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).testTag("firm.signoff.confirm"),
             colors = ButtonDefaults.buttonColors(containerColor = Tk.L.accent)) {
@@ -374,10 +386,10 @@ private fun FirmSignoffLayer(portal: FirmPortal, link: FirmLink, matter: FirmMat
 }
 
 @Suppress("DEPRECATION")
-private fun ownerCheckIntent(context: Context): Intent? {
+private fun ownerCheckIntent(context: Context, version: Int): Intent? {
     val km = context.getSystemService(KeyguardManager::class.java) ?: return null
     if (!km.isDeviceSecure) return null
-    return km.createConfirmDeviceCredentialIntent(tr("firm.signoff.title", mapOf("n" to "")).trim(), tr("firm.signoff.reason"))
+    return km.createConfirmDeviceCredentialIntent(tr("firm.signoff.title", mapOf("n" to version)), tr("firm.signoff.reason"))
 }
 
 @Composable
@@ -391,13 +403,13 @@ private fun Check(title: String, on: Boolean, tag: String, onChange: (Boolean) -
 
 /** Downloads a signed PDF from an allowlisted portal host only (no account credential sent) and shows it. */
 @Composable
-private fun FirmPdfLayer(url: String, onClose: () -> Unit) {
+private fun FirmPdfLayer(url: String, scope: String?, onClose: () -> Unit) {
     val context = LocalContext.current
     var file by remember(url) { mutableStateOf<File?>(null) }
     var failed by remember(url) { mutableStateOf(false) }
     LaunchedEffect(url) {
         if (!FirmPortalLink.isPortalUrl(url)) { failed = true; return@LaunchedEffect }
-        file = runCatching { withContext(Dispatchers.IO) { downloadPdf(context, url) } }.getOrNull()
+        file = runCatching { withContext(Dispatchers.IO) { downloadPdf(context, FirmPortalLink.localize(url), scope) } }.getOrNull()
         failed = file == null
     }
     LayerScaffold(tr("firm.matter.pdf"), tr("common.close"), onClose, action = {
@@ -415,12 +427,16 @@ private fun FirmPdfLayer(url: String, onClose: () -> Unit) {
     }
 }
 
-/** Blocking; call on Dispatchers.IO. Saved under the preview FileProvider path so it can be opened in another app. */
-private fun downloadPdf(context: Context, url: String): File? {
-    val dir = File(context.filesDir, "project-previews/firm").apply { mkdirs() }
+/**
+ * Blocking; call on Dispatchers.IO. Saved under the preview FileProvider path (per account scope, so another account
+ * never sees it; the whole folder is removed on sign-out, see [FirmPdf.folder]) so it can be opened in another app.
+ * Redirects are not followed: only the allowlisted URL itself may serve the signed PDF.
+ */
+private fun downloadPdf(context: Context, url: String, scope: String?): File? {
+    val dir = File(FirmPdf.folder(context.filesDir), scope ?: return null).apply { mkdirs() }
     val name = MessageDigest.getInstance("SHA-256").digest(url.toByteArray()).take(12).joinToString("") { "%02x".format(it) } + ".pdf"
-    val body = OkHttpFirmTransport.defaultClient.newCall(Request.Builder().url(url).get().build()).execute()
-        .use { r -> if (r.isSuccessful) r.body?.bytes() else null } ?: return null
+    val body = FirmPdf.client.newCall(Request.Builder().url(url).get().build()).execute()
+        .use { r -> if (r.isSuccessful && r.request.url.toString() == url) r.body?.bytes() else null } ?: return null
     if (!FirmPdf.looksLikePdf(body)) return null
     return File(dir, name).apply { writeBytes(body) }
 }
