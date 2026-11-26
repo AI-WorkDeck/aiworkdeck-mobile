@@ -57,15 +57,22 @@ def play(pkg="com.aiworkdeck.mobile"):
                 print(f"| {t['track']} | {rel.get('status')} | {','.join(rel.get('versionCodes', []))} | {rel.get('name', '')} |")
     finally:
         req("DELETE", f"{base}/{edit}")  # read-only: discard the edit
+    # One-time products via the monetization API; the legacy inappproducts API answers
+    # 403 "Please migrate to the new publishing API" (POLISH M22), it is not a permission problem.
     try:
-        prods = req("GET", f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{pkg}/inappproducts").get("inappproduct", [])
-        print(f"\n| in-app product | status | default price |\n|---|---|---|")
+        prods = req("GET", f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{pkg}/oneTimeProducts?pageSize=100").get("oneTimeProducts", [])
+        print(f"\n| one-time product | purchase options (state) | example price |\n|---|---|---|")
         for pr in prods:
-            dp = pr.get("defaultPrice", {})
-            print(f"| {pr.get('sku')} | {pr.get('status')} | {dp.get('priceMicros', '')} {dp.get('currency', '')} |")
+            opts = pr.get("purchaseOptions", [])
+            states = ", ".join(f"{o.get('purchaseOptionId')}: {o.get('state')}" for o in opts)
+            cfgs = [c for o in opts for c in o.get("regionalPricingAndAvailabilityConfigs", [])]
+            ex = next((c for c in cfgs if c.get("regionCode") == "US"), cfgs[0] if cfgs else None)
+            price = ""
+            if ex:
+                m = ex.get("price", {}); price = f"{ex.get('regionCode')} {m.get('units', '0')}.{int(m.get('nanos', 0)) // 10_000_000:02d} {m.get('currencyCode', '')}"
+            print(f"| {pr.get('productId')} | {states} | {price} |")
         if not prods: print("| (none) | | |")
     except urllib.error.HTTPError as e:
-        # Print Google's reason (missing Play Console permission vs. retired API) so the fix is clear.
         try:
             err = json.loads(e.read().decode("utf-8", "replace")).get("error", {})
             detail = f"{err.get('status')}: {err.get('message')}"
@@ -73,9 +80,9 @@ def play(pkg="com.aiworkdeck.mobile"):
             detail = "(no JSON body)"
         import re as _re
         detail = _re.sub(r"[\w.+-]+@[\w.-]+", "<account>", detail).replace("\n", " ")[:300]
-        print(f"\nin-app products query failed: HTTP {e.code}: {detail}")
+        print(f"\none-time products query failed: HTTP {e.code}: {detail}")
     except Exception as e:
-        print(f"\nin-app products query failed: {type(e).__name__}: {e}")
+        print(f"\none-time products query failed: {type(e).__name__}: {e}")
 
 if __name__ == "__main__":
     appstore()
