@@ -139,6 +139,8 @@ data class FirmLinkState(
     val listed: Boolean = false,
     /** When the matter list last loaded successfully (epoch ms), shown as "Updated …" in the inbox. */
     val refreshedAt: Long? = null,
+    /** Unnamed matters (no client, company or template): the draft's first heading by matter id, as the matter screen shows. */
+    val headings: Map<String, String> = emptyMap(),
 )
 
 /** One linked portal for the signed-in account. */
@@ -148,6 +150,7 @@ class FirmLink(
     private val session: () -> String?,
     private val client: (portal: String, credential: String) -> FirmPortalClient,
 ) {
+    private companion object { const val MAX_HEADING_FETCHES = 12 }
     private val _state = MutableStateFlow(FirmLinkState())
     val state: StateFlow<FirmLinkState> = _state.asStateFlow()
     /** Set when the link is dropped; a late reply for it is ignored. */
@@ -183,6 +186,17 @@ class FirmLink(
         }
     }
 
+    /** The list carries no draft text, so unnamed rows would read "—": fetch those few matters once for their heading. */
+    private suspend fun fillHeadings(c: FirmPortalClient, list: List<FirmMatterSummary>) {
+        val known = _state.value.headings
+        val missing = list.filter { FirmText.unnamed(it.client, it.company, it.template?.text) && it.id !in known }.take(MAX_HEADING_FETCHES)
+        for (m in missing) {
+            val heading = try { FirmMarkdown.firstHeading(c.matter(m.id).latest?.markdown) } catch (e: CancellationException) { throw e } catch (e: Exception) { null }
+            if (closed) return
+            if (!heading.isNullOrBlank()) _state.update { it.copy(headings = it.headings + (m.id to heading)) }
+        }
+    }
+
     suspend fun refresh() {
         val c = client()
         if (closed || _state.value.access != FirmAccess.approved || c == null) return
@@ -190,6 +204,7 @@ class FirmLink(
             val list = c.matters().matters.map { it.copy(linkID = portalID) }
             if (closed) return
             _state.update { it.copy(matters = list, listed = true, loadErrorKey = null, refreshedAt = System.currentTimeMillis()) }
+            fillHeadings(c, list)
         } catch (e: CancellationException) { throw e } catch (e: FirmPortalError) {
             if (closed) return
             val access = FirmAccess.after(e.code, _state.value.access)

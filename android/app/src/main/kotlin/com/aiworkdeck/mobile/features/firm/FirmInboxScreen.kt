@@ -48,6 +48,7 @@ fun FirmInboxScreen(portal: FirmPortal, onOpenSettings: () -> Unit, onOpenMatter
     val approved = overview.filter { it.second.access == com.aiworkdeck.mobile.services.firm.FirmAccess.approved }
     val matters = approved.flatMap { it.second.matters }
     val error = approved.firstNotNullOfOrNull { it.second.loadErrorKey }
+    val headings = approved.associate { (l, s) -> l.portalID to s.headings }
     val names = approved.associate { (l, s) -> l.portalID to (s.me?.firm?.text?.takeIf { it.isNotEmpty() } ?: l.portalID) }
     LightStatusBar()
     Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().padding(horizontal = Tk.Sp.gutter)) {
@@ -64,7 +65,7 @@ fun FirmInboxScreen(portal: FirmPortal, onOpenSettings: () -> Unit, onOpenMatter
                 }
                 for ((group, items) in FirmInbox.grouped(matters)) {
                     item(key = "h-" + group.name) { Eyebrow(tr(FirmInbox.titleKey(group)), Modifier.padding(top = Tk.Sp.s4)) }
-                    items(items, key = { it.uid }) { m -> MatterRow(m, if (approved.size > 1) names[m.linkID] else null) { onOpenMatter(m) } }
+                    items(items, key = { it.uid }) { m -> MatterRow(m, if (approved.size > 1) names[m.linkID] else null, headings[m.linkID]?.get(m.id)) { onOpenMatter(m) } }
                 }
                 // Errors say what happened, when the list was last good, and offer Retry (desktop AwdInlineError pattern).
                 error?.let { key -> item {
@@ -84,7 +85,7 @@ fun FirmInboxScreen(portal: FirmPortal, onOpenSettings: () -> Unit, onOpenMatter
 }
 
 @Composable
-private fun MatterRow(matter: FirmMatterSummary, firm: String?, onClick: () -> Unit) {
+private fun MatterRow(matter: FirmMatterSummary, firm: String?, heading: String?, onClick: () -> Unit) {
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(Tk.Sp.s3)).background(Tk.L.sunken).clickable(onClick = onClick)
             .padding(Tk.Sp.s4).testTag("firm.row." + matter.id),
@@ -92,7 +93,7 @@ private fun MatterRow(matter: FirmMatterSummary, firm: String?, onClick: () -> U
     ) {
         firm?.let { Text(it, style = Fonts.micro(), color = Tk.L.fgMuted, maxLines = 1) }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(FirmText.title(matter.client, matter.company, matter.template?.text), style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(FirmText.title(matter.client, matter.company, matter.template?.text ?: heading), style = Fonts.heading(), color = Tk.L.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             FirmText.instant(matter.updatedAt)?.let { FirmTabs.agoKey(it) }?.let { (key, n) ->
                 Text(tr(key, mapOf("n" to n)), style = Fonts.micro(), color = Tk.L.fgMuted)
             }
