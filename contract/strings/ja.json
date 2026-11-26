@@ -462,6 +462,7 @@
   "personal.assistantConsent": "バックアップを有効にした案件の要約をクラウド AI で処理し、案件を横断した支援に利用することを許可します。",
   "personal.calendarConsent": "デスクトップの予定をクラウドに同期し、この端末での閲覧と通知に利用することを許可します。",
   "personal.subscription": "有効なクラウド契約が必要です。アカウントの特典を確認してください。",
+  "personal.subscription.mainland": "アシスタントとカレンダーには Pro が必要です。Pro は現在、中国本土版でのみ提供されています。",
   "personal.summaries": "案件の要約が {count} 件あります",
   "personal.reminders": "端末のリマインダー",
   "personal.turnOn": "オンにする",

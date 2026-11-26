@@ -58,6 +58,7 @@ import com.aiworkdeck.mobile.features.queue.noRipple
 import com.aiworkdeck.mobile.services.ApiError
 import com.aiworkdeck.mobile.services.EnvelopeKind
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
+import com.aiworkdeck.mobile.services.showsSubscriptionRow
 import com.aiworkdeck.mobile.services.showsExternalRecharge
 import com.aiworkdeck.mobile.services.showsPlayRecharge
 import com.aiworkdeck.mobile.services.WxPayChannel
@@ -210,7 +211,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                             Text(tr("recharge.openHint"), style = Fonts.nano(), color = Tk.L.fgFaint)
                         }
                         // 订阅状态与 iOS 同一行；安卓尚无商店内购通道，只读、不放购买入口（《上架和渠道》）。
-                        if (balance != null) InfoRow(tr("subscription.store.title"), tr(if (balance?.subscription?.active == true) "subscription.status.active" else "subscription.status.none"))
+                        if (balance != null && showsSubscriptionRow(BuildConfig.FLAVOR, balance?.subscription?.active == true)) InfoRow(tr("subscription.store.title"), tr(if (balance?.subscription?.active == true) "subscription.status.active" else "subscription.status.none"))
                         balance?.subscription?.takeIf { it.active }?.let { sub ->
                             InfoRow(tr("subscription.available"), creditsCaption(sub.availableCents))
                             InfoRow(tr("subscription.weekly"), "${creditsCaption(sub.weeklyUsedCents)} / ${creditsCaption(sub.weeklyLimitCents)}")

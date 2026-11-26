@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Yedeklemesi açık projelerin özetlerinin projeler arası yardım için bulut yapay zekâsıyla işlenmesine izin verin.",
   "personal.calendarConsent": "Masaüstü etkinliklerinin bu telefonda görüntüleme ve hatırlatmalar için buluta eşitlenmesine izin verin.",
   "personal.subscription": "Etkin bir bulut aboneliği gerekiyor. Hesap avantajlarınızı kontrol edin.",
+  "personal.subscription.mainland": "Asistan ve Takvim için Pro gerekir; Pro şu anda yalnızca Çin anakarası sürümünde sunulmaktadır.",
   "personal.summaries": "{count} proje özeti mevcut",
   "personal.reminders": "Telefon hatırlatmaları",
   "personal.turnOn": "Etkinleştir",

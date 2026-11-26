@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Permitir que la IA en la nube procese resúmenes de proyectos con copia de seguridad para consultas entre proyectos.",
   "personal.calendarConsent": "Permitir sincronizar los eventos del escritorio con la nube para verlos y recibir recordatorios en este teléfono.",
   "personal.subscription": "Se requiere una suscripción activa a la nube. Consulta las ventajas de tu cuenta.",
+  "personal.subscription.mainland": "El asistente y el calendario requieren Pro, que por ahora solo está disponible en la edición para China continental.",
   "personal.summaries": "{count} resúmenes de proyectos disponibles",
   "personal.reminders": "Recordatorios del teléfono",
   "personal.turnOn": "Activar",

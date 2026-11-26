@@ -13,6 +13,9 @@ import com.aiworkdeck.mobile.services.MemorySessionStore
 import com.aiworkdeck.mobile.services.RegionPrefs
 import com.aiworkdeck.mobile.services.switchAccountRegion
 import com.aiworkdeck.mobile.services.showsExternalRecharge
+import com.aiworkdeck.mobile.services.showsSubscriptionRow
+import com.aiworkdeck.mobile.services.subscriptionNoticeKey
+import com.aiworkdeck.mobile.services.subscriptionNoticeLinksAccount
 import com.aiworkdeck.mobile.services.showsPlayRecharge
 import com.aiworkdeck.mobile.services.mobilePrivacyUrl
 import com.aiworkdeck.mobile.services.mobileTermsUrl
@@ -221,5 +224,15 @@ class AccountRegionTest {
             assertEquals("https://workdeck.ai/mobile-account/en?flow=$flow&site=intl", accountFlowUrl(AccountRegion.intl, Method.Email, flow, "intl"))
             assertEquals("https://www.aiworkdeck.com/mobile-account/zh?flow=$flow&legacyEmail=1&site=cn", accountFlowUrl(AccountRegion.cn, Method.Email, flow, "intl"))
         }
+    }
+
+    @Test fun playBuildExplainsProIsMainlandOnlyInsteadOfADeadEnd() {
+        assertEquals("personal.subscription.mainland", subscriptionNoticeKey("intl"))
+        assertEquals("personal.subscription", subscriptionNoticeKey("cn"))
+        assertFalse(subscriptionNoticeLinksAccount("intl"))
+        assertTrue(subscriptionNoticeLinksAccount("cn"))
+        assertFalse("no read-only 'not subscribed' row in the Play build", showsSubscriptionRow("intl", active = false))
+        assertTrue(showsSubscriptionRow("intl", active = true))
+        assertTrue(showsSubscriptionRow("cn", active = false))
     }
 }

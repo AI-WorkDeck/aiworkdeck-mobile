@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Sta cloud-AI toe om samenvattingen van projecten met back-up te verwerken voor hulp over projecten heen.",
   "personal.calendarConsent": "Sta toe dat desktopafspraken naar de cloud worden gesynchroniseerd voor weergave en herinneringen op deze telefoon.",
   "personal.subscription": "Een actief cloudabonnement is vereist. Bekijk uw accountvoordelen.",
+  "personal.subscription.mainland": "De assistent en de agenda hebben Pro nodig. Pro is momenteel alleen beschikbaar in de editie voor het Chinese vasteland.",
   "personal.summaries": "{count} projectsamenvattingen beschikbaar",
   "personal.reminders": "Telefoonherinneringen",
   "personal.turnOn": "Inschakelen",

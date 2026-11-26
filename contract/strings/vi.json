@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Cho phép AI đám mây xử lý tóm tắt các dự án đã bật sao lưu để hỗ trợ giữa các dự án.",
   "personal.calendarConsent": "Cho phép đồng bộ sự kiện từ máy tính lên đám mây để xem và nhắc trên điện thoại này.",
   "personal.subscription": "Cần đăng ký đám mây đang hoạt động. Hãy kiểm tra quyền lợi tài khoản.",
+  "personal.subscription.mainland": "Trợ lý và Lịch cần gói Pro, hiện chỉ có trong phiên bản dành cho Trung Quốc đại lục.",
   "personal.summaries": "Có {count} bản tóm tắt dự án",
   "personal.reminders": "Nhắc trên điện thoại",
   "personal.turnOn": "Bật",

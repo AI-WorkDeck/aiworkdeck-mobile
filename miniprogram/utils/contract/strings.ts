@@ -10337,6 +10337,28 @@ export const STRINGS: Record<string, Record<string, string>> = {
     "hi": "सक्रिय क्लाउड सदस्यता आवश्यक है। अपने खाते के लाभ देखें।",
     "ar": "يلزم اشتراك سحابي نشط. راجع مزايا حسابك."
   },
+  "personal.subscription.mainland": {
+    "zh-Hans": "个人助理和日程需要 Pro 订阅，目前仅在中国大陆版提供。",
+    "zh-Hant": "個人助理和行程需要 Pro 訂閱，目前僅在中國大陸版提供。",
+    "en": "The Assistant and Calendar need Pro, which is currently available only in the mainland China edition.",
+    "ja": "アシスタントとカレンダーには Pro が必要です。Pro は現在、中国本土版でのみ提供されています。",
+    "ko": "어시스턴트와 캘린더에는 Pro가 필요하며, Pro는 현재 중국 본토판에서만 제공됩니다.",
+    "th": "ผู้ช่วยและปฏิทินต้องใช้ Pro ซึ่งขณะนี้มีให้บริการเฉพาะในเวอร์ชันจีนแผ่นดินใหญ่เท่านั้น",
+    "ms": "Pembantu dan Kalendar memerlukan Pro, yang kini hanya tersedia dalam edisi tanah besar China.",
+    "id": "Asisten dan Kalender memerlukan Pro, yang saat ini hanya tersedia di edisi Tiongkok daratan.",
+    "vi": "Trợ lý và Lịch cần gói Pro, hiện chỉ có trong phiên bản dành cho Trung Quốc đại lục.",
+    "fr": "L'assistant et le calendrier nécessitent Pro, disponible pour l'instant uniquement dans l'édition Chine continentale.",
+    "de": "Assistent und Kalender benötigen Pro. Pro ist derzeit nur in der Ausgabe für Festlandchina erhältlich.",
+    "es": "El asistente y el calendario requieren Pro, que por ahora solo está disponible en la edición para China continental.",
+    "pt-BR": "O assistente e o calendário exigem o Pro, que no momento só está disponível na edição da China continental.",
+    "it": "L'assistente e il calendario richiedono Pro, al momento disponibile solo nell'edizione per la Cina continentale.",
+    "ru": "Для ассистента и календаря нужен Pro, который пока доступен только в версии для материкового Китая.",
+    "el": "Ο βοηθός και το ημερολόγιο απαιτούν Pro, που προς το παρόν διατίθεται μόνο στην έκδοση για την ηπειρωτική Κίνα.",
+    "tr": "Asistan ve Takvim için Pro gerekir; Pro şu anda yalnızca Çin anakarası sürümünde sunulmaktadır.",
+    "nl": "De assistent en de agenda hebben Pro nodig. Pro is momenteel alleen beschikbaar in de editie voor het Chinese vasteland.",
+    "hi": "सहायक और कैलेंडर के लिए Pro चाहिए, जो फ़िलहाल केवल मुख्य भूमि चीन संस्करण में उपलब्ध है।",
+    "ar": "يتطلب المساعد والتقويم اشتراك Pro، وهو متاح حاليًا في إصدار البر الرئيسي الصيني فقط."
+  },
   "personal.summaries": {
     "zh-Hans": "已有 {count} 个项目摘要",
     "zh-Hant": "已有 {count} 個專案摘要",

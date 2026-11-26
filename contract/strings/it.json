@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Consenti all’IA cloud di elaborare riepiloghi dei progetti con backup per assistenza tra progetti.",
   "personal.calendarConsent": "Consenti di sincronizzare gli eventi desktop nel cloud per consultarli e impostare promemoria su questo telefono.",
   "personal.subscription": "È necessario un abbonamento cloud attivo. Controlla i vantaggi del tuo account.",
+  "personal.subscription.mainland": "L'assistente e il calendario richiedono Pro, al momento disponibile solo nell'edizione per la Cina continentale.",
   "personal.summaries": "{count} riepiloghi di progetto disponibili",
   "personal.reminders": "Promemoria sul telefono",
   "personal.turnOn": "Attiva",

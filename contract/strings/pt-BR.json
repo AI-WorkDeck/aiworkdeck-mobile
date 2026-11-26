@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Permitir que a IA na nuvem processe resumos dos projetos com backup para assistência entre projetos.",
   "personal.calendarConsent": "Permitir sincronizar eventos do desktop com a nuvem para consulta e lembretes neste telefone.",
   "personal.subscription": "É necessária uma assinatura ativa da nuvem. Confira os benefícios da sua conta.",
+  "personal.subscription.mainland": "O assistente e o calendário exigem o Pro, que no momento só está disponível na edição da China continental.",
   "personal.summaries": "{count} resumos de projetos disponíveis",
   "personal.reminders": "Lembretes no telefone",
   "personal.turnOn": "Ativar",

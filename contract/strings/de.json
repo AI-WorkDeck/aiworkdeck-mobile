@@ -462,6 +462,7 @@
   "personal.assistantConsent": "Cloud-KI darf Zusammenfassungen gesicherter Projekte für projektübergreifende Hilfe verarbeiten.",
   "personal.calendarConsent": "Desktop-Termine dürfen zur Anzeige und Erinnerung auf diesem Telefon in die Cloud synchronisiert werden.",
   "personal.subscription": "Ein aktives Cloud-Abonnement ist erforderlich. Prüfen Sie Ihre Kontovorteile.",
+  "personal.subscription.mainland": "Assistent und Kalender benötigen Pro. Pro ist derzeit nur in der Ausgabe für Festlandchina erhältlich.",
   "personal.summaries": "{count} Projektzusammenfassungen verfügbar",
   "personal.reminders": "Telefonerinnerungen",
   "personal.turnOn": "Aktivieren",

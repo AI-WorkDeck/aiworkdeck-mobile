@@ -462,6 +462,7 @@
   "personal.assistantConsent": "同意在雲端使用 AI 處理已開啟備份的專案摘要，供個人助理跨專案檢索。",
   "personal.calendarConsent": "同意將桌面事項同步至雲端，在手機上查看並設定提醒。",
   "personal.subscription": "需要有效的雲端訂閱。請在帳戶中查看權益。",
+  "personal.subscription.mainland": "個人助理和行程需要 Pro 訂閱，目前僅在中國大陸版提供。",
   "personal.summaries": "已有 {count} 個專案摘要",
   "personal.reminders": "手機提醒",
   "personal.turnOn": "開啟",
