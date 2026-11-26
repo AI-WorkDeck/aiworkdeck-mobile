@@ -66,7 +66,13 @@ def play(pkg="com.aiworkdeck.mobile"):
         if not prods: print("| (none) | | |")
     except urllib.error.HTTPError as e:
         # Print Google's reason (missing Play Console permission vs. retired API) so the fix is clear.
-        detail = e.read().decode("utf-8", "replace")[:400]
+        try:
+            err = json.loads(e.read().decode("utf-8", "replace")).get("error", {})
+            detail = f"{err.get('status')}: {err.get('message')}"
+        except Exception:
+            detail = "(no JSON body)"
+        import re as _re
+        detail = _re.sub(r"[\w.+-]+@[\w.-]+", "<account>", detail).replace("\n", " ")[:300]
         print(f"\nin-app products query failed: HTTP {e.code}: {detail}")
     except Exception as e:
         print(f"\nin-app products query failed: {type(e).__name__}: {e}")
