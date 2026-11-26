@@ -1,0 +1,383 @@
+{
+  "note": "Strings that stay identical to English on purpose (product names, OK/PDF, words a language borrows) or not yet translated (debug-only screens, file-name prefixes, retired labels). check.mjs fails on any other non-English string equal to English, and on entries here that are no longer equal. Shrink, don't grow.",
+  "allow": {
+    "subscription.credits": [
+      "zh-Hans",
+      "zh-Hant"
+    ],
+    "login.codeTitle": [
+      "de",
+      "fr",
+      "nl"
+    ],
+    "login.email": [
+      "id",
+      "it",
+      "vi"
+    ],
+    "login.region.cn": [
+      "de",
+      "es",
+      "ms",
+      "nl",
+      "pt-BR"
+    ],
+    "login.region.intl": [
+      "de",
+      "es",
+      "id",
+      "ms",
+      "pt-BR"
+    ],
+    "archive.path": [
+      "el"
+    ],
+    "home.mode.photo": [
+      "fr"
+    ],
+    "home.mode.video": [
+      "de",
+      "id",
+      "it",
+      "ms",
+      "nl",
+      "tr",
+      "vi"
+    ],
+    "home.mode.audio": [
+      "de",
+      "es",
+      "fr",
+      "id",
+      "it",
+      "ms",
+      "nl"
+    ],
+    "home.desktop.online": [
+      "de",
+      "it",
+      "nl",
+      "pt-BR"
+    ],
+    "home.desktop.offline": [
+      "de",
+      "it",
+      "nl",
+      "pt-BR"
+    ],
+    "library.dayTitle": [
+      "nl"
+    ],
+    "library.viewGrid": [
+      "ms"
+    ],
+    "settings.media": [
+      "id",
+      "it",
+      "ms",
+      "nl"
+    ],
+    "settings.account": [
+      "it",
+      "nl"
+    ],
+    "settings.server": [
+      "de",
+      "id",
+      "it",
+      "nl"
+    ],
+    "settings.version": [
+      "de",
+      "fr"
+    ],
+    "notify.channel.upload": [
+      "de",
+      "nl"
+    ],
+    "download.ios": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "fr",
+      "hi",
+      "id",
+      "it",
+      "ja",
+      "ko",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr",
+      "vi",
+      "zh-Hans",
+      "zh-Hant"
+    ],
+    "download.android": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "fr",
+      "hi",
+      "id",
+      "it",
+      "ja",
+      "ko",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr",
+      "vi",
+      "zh-Hant"
+    ],
+    "download.harmony": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "fr",
+      "hi",
+      "id",
+      "it",
+      "ja",
+      "ko",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr",
+      "vi"
+    ],
+    "common.ok": [
+      "ar",
+      "de",
+      "fr",
+      "hi",
+      "id",
+      "it",
+      "ja",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "tr",
+      "vi"
+    ],
+    "library.audio": [
+      "de",
+      "es",
+      "fr",
+      "id",
+      "it",
+      "ms",
+      "nl"
+    ],
+    "player.pause": [
+      "de",
+      "fr"
+    ],
+    "dual.prototype.close": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "it",
+      "ko",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr"
+    ],
+    "dual.prototype.status": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "id",
+      "it",
+      "ko",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr"
+    ],
+    "dual.prototype.details": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "fr",
+      "it",
+      "ko",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr"
+    ],
+    "dual.prototype.ready": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "it",
+      "ko",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr"
+    ],
+    "dual.prototype.stopped": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "it",
+      "ko",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr"
+    ],
+    "project.unifiedIdentity": [
+      "nl"
+    ],
+    "login.password": [
+      "it"
+    ],
+    "home.album.short": [
+      "de",
+      "fr",
+      "id",
+      "it",
+      "ms",
+      "nl",
+      "tr"
+    ],
+    "time.minutesDuration": [
+      "es",
+      "fr",
+      "it",
+      "nl",
+      "pt-BR"
+    ],
+    "file.prefix.photo": [
+      "ar",
+      "el",
+      "es",
+      "fr",
+      "it",
+      "ja",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "tr"
+    ],
+    "file.prefix.video": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "id",
+      "it",
+      "ja",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "tr",
+      "vi"
+    ],
+    "file.prefix.voice": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "fr",
+      "id",
+      "it",
+      "ja",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "tr"
+    ],
+    "file.segmentSuffix": [
+      "ar",
+      "el",
+      "es",
+      "it",
+      "ja",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr"
+    ],
+    "personal.copy.cloud": [
+      "de",
+      "fr",
+      "id",
+      "it",
+      "nl"
+    ],
+    "project.recent": [
+      "nl"
+    ],
+    "settings.general": [
+      "es"
+    ],
+    "firm.matter.document": [
+      "fr",
+      "nl"
+    ],
+    "firm.matter.pdf": [
+      "ar",
+      "de",
+      "el",
+      "es",
+      "fr",
+      "hi",
+      "id",
+      "it",
+      "ja",
+      "ko",
+      "ms",
+      "nl",
+      "pt-BR",
+      "ru",
+      "th",
+      "tr",
+      "vi",
+      "zh-Hans",
+      "zh-Hant"
+    ],
+    "firm.matter.version": [
+      "de",
+      "fr"
+    ],
+    "firm.matter.conversation": [
+      "fr"
+    ],
+    "firm.who.client": [
+      "fr"
+    ],
+    "firm.who.assistant": [
+      "fr"
+    ],
+    "firm.reply.question": [
+      "fr"
+    ]
+  }
+}

@@ -259,6 +259,30 @@ const TARGET_SCRIPT_RE = {
   ar: /\p{Script=Arabic}/gu,
 }
 
+/**
+ * A non-English string identical to English is almost always untranslated ("Cancel" in Japanese). Each such
+ * pair must be listed in contract/strings-same-as-en.json (product names, borrowed words, known leftovers);
+ * listed pairs that are no longer identical must be removed, so the list only shrinks (POLISH M24).
+ */
+function checkSameAsEnglish(c, problems) {
+  const file = join(c.root, 'contract', 'strings-same-as-en.json')
+  const allow = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')).allow ?? {} : {}
+  const en = c.localeFiles?.en ?? {}
+  const latin = (s) => /[A-Za-z]{2,}/.test(String(s).replace(/\{[^{}]*\}/g, ''))
+  for (const [code, dict] of Object.entries(c.localeFiles ?? {})) {
+    if (code === 'en') continue
+    for (const [k, v] of Object.entries(en)) {
+      if (typeof v !== 'string' || !latin(v) || dict?.[k] !== v) continue
+      if (!(allow[k] ?? []).includes(code)) problems.push(`strings/${code}.json 的 ${k} 与英文相同（"${v}"）：请翻译，或在 contract/strings-same-as-en.json 说明保留原因`)
+    }
+  }
+  for (const [k, codes] of Object.entries(allow)) {
+    for (const code of codes) {
+      if (c.localeFiles?.[code]?.[k] !== en[k]) problems.push(`contract/strings-same-as-en.json 的 ${k}/${code} 已不再与英文相同，请从清单删除`)
+    }
+  }
+}
+
 function checkStrings(c, problems) {
   const locales = Array.isArray(c.locales) ? c.locales : []
   if (locales.length !== 20) {
@@ -441,6 +465,7 @@ export function runChecks(root, { quick = false } = {}) {
   try { c = loadContract(root) } catch (e) { return { ok: false, problems: [`contract/ 读不进来：${e.message}`], notes } }
   checkManifest(c, problems)
   checkStrings(c, problems)
+  checkSameAsEnglish(c, problems)
   checkReferences(c, problems)
   checkDataSchemas(c, problems)
   checkFixtures(c, problems)
