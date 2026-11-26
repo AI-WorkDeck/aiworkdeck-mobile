@@ -288,3 +288,13 @@ interface WxPayLauncher {
     /** sendReq 发出去了才回 true；回 true 之后等 [WxPayResults]。 */
     fun send(params: AppPayParams): Boolean
 }
+
+/**
+ * Personal Pro with WeChat APP pay (POLISH M3) rides on [WxPayRecharge] unchanged: the order call goes to the
+ * Pro endpoint with the quoted [skuId]; status polling is the same /recharge/status. Pair it with
+ * Prefs.pendingPro so Pro and top-up idempotency keys never mix.
+ */
+fun proRechargeApi(backend: Backend, skuId: String): RechargeApi = object : RechargeApi {
+    override suspend fun order(amountCents: Long, idempotencyKey: String) = backend.billingProOrder(skuId, amountCents, idempotencyKey)
+    override suspend fun status(outTradeNo: String) = backend.billingRechargeStatus(outTradeNo)
+}

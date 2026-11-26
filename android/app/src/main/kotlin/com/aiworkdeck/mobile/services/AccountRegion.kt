@@ -77,6 +77,16 @@ fun subscriptionNoticeLinksAccount(flavor: String): Boolean = flavor != "intl"
 /** Settings shows the subscription row when there is one, or when this edition can sell one. */
 fun showsSubscriptionRow(flavor: String, active: Boolean): Boolean = active || flavor != "intl"
 
+/**
+ * Personal Pro with WeChat APP pay (POLISH M3): mainland edition + mainland account, and only once the
+ * contract flag is flipped. The server has its own switch on top (the quote answers available=false).
+ */
+fun showsWxpayPro(
+    flavor: String,
+    region: AccountRegion,
+    enabled: Boolean = ContractCapabilities.androidWxpayPro || com.aiworkdeck.mobile.BuildConfig.WXPAY_PRO_TEST,
+): Boolean = flavor == "cn" && region == AccountRegion.cn && enabled
+
 /** Google Play 消耗型内购仅在 intl flavor + 国际区账号下开放（dev-board#665）。 */
 fun showsPlayRecharge(
     flavor: String,

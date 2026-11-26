@@ -44,6 +44,9 @@ android {
         versionCode = appVersionCode
         versionName = appVersionName
         vectorDrawables.useSupportLibrary = true
+        // Owner-approved 1-fen payment test only (POLISH M3): -Pawd.wxpayProTest=true shows the Pro sheet in that one
+        // signed test build (android-release workflow, artifact only, short retention). Normal builds: false.
+        buildConfigField("boolean", "WXPAY_PRO_TEST", (project.findProperty("awd.wxpayProTest") == "true").toString())
     }
     sourceSets.getByName("androidTest").assets.srcDir("../../third_party/libfvad/tests/data")
     flavorDimensions += "market"

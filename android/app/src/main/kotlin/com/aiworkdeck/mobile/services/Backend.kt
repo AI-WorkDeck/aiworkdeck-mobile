@@ -97,6 +97,18 @@ class Backend(
         checkEnvelopeCode(result)
         return json.decodeFromJsonElement(result)
     }
+    /** Personal Pro price for WeChat APP pay (POLISH M3). Bare object on success, envelope on error. */
+    suspend fun billingProQuote(): ProQuote = bare("/api/mobile/billing/subscription/wxpay/quote")
+    /** Personal Pro order: same reply as [billingRecharge] (present=app) plus skuId; status via [billingRechargeStatus]. */
+    suspend fun billingProOrder(skuId: String, amountCents: Long, idempotencyKey: String): RechargeOrder {
+        val result = json.parseToJsonElement(post("/api/mobile/billing/subscription/wxpay/order", buildJsonObject {
+            put("skuId", skuId)
+            put("amountCents", amountCents)
+            put("idempotencyKey", idempotencyKey)
+        })).jsonObject
+        checkEnvelopeCode(result)
+        return json.decodeFromJsonElement(result)
+    }
     /** Google Play 验单入账（dev-board#665）。只有 paid=true 端上才 consumeAsync。 */
     suspend fun billingConfirmGooglePlay(
         productId: String,
