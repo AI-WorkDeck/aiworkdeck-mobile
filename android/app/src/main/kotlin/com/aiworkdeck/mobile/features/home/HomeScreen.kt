@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -33,6 +34,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -354,8 +356,8 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
             onSettings = { onOpen(Overlay.Settings) },
         )
 
-        Box(
-            Modifier.weight(1f).fillMaxWidth().padding(horizontal = Tk.Sp.s2)
+        val viewfinder: @Composable (Modifier) -> Unit = { size -> Box(
+            size.padding(horizontal = Tk.Sp.s2)
                 .clip(RoundedCornerShape(2.dp)).background(Color.Black).border(1.dp, Tk.D.rule, RoundedCornerShape(2.dp)),
             contentAlignment = Alignment.Center,
         ) {
@@ -403,10 +405,12 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
                 modifier = Modifier.align(Alignment.Center).padding(Tk.Sp.s4).background(Color.Black.copy(alpha = 0.85f)).padding(Tk.Sp.s4))
             // 快门白闪：唯一的「拍到了」即时反馈，比任何提示都快
             if (flash) Box(Modifier.fillMaxSize().background(Color.White))
+        } }
+        val pauseNote: @Composable () -> Unit = {
+            pauseError?.let { Text(it, color = Tk.S.failed, style = Fonts.small(), modifier = Modifier.padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s1)) }
         }
-
-        pauseError?.let { Text(it, color = Tk.S.failed, style = Fonts.small(), modifier = Modifier.padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s1)) }
-        Controls(
+        val controls: @Composable (Boolean) -> Unit = { side -> Controls(
+            side = side,
             mode = mode,
             onMode = { mode = it },
             recording = recording,
@@ -429,10 +433,29 @@ fun HomeScreen(model: AppModel, active: Boolean = true, onBusy: (Boolean) -> Uni
             },
             onStop = ::shoot,
             onOpenLibrary = { onOpen(Overlay.Library) },
-        )
-        if (!landscape) RecentStrip(items.take(8), onOpenLibrary = { onOpen(Overlay.Library) })
+        ) }
+
+        // Phone landscape (short window): the viewfinder keeps the full height and the controls move to a column at
+        // the end edge (POLISH M36). Portrait and tall windows (tablets) keep the stacked layout.
+        if (landscape && configuration.screenHeightDp < 480) {
+            Row(Modifier.weight(1f).fillMaxWidth()) {
+                viewfinder(Modifier.weight(1f).fillMaxHeight())
+                Column(Modifier.width(SIDE_CONTROLS_WIDTH).fillMaxHeight()) {
+                    pauseNote()
+                    controls(true)
+                }
+            }
+        } else {
+            viewfinder(Modifier.weight(1f).fillMaxWidth())
+            pauseNote()
+            controls(false)
+            if (!landscape) RecentStrip(items.take(8), onOpenLibrary = { onOpen(Overlay.Library) })
+        }
     }
 }
+
+/** Width of the end-edge control column in phone landscape (M36): fits the shutter, two mode labels and a 2-line foot. */
+private val SIDE_CONTROLS_WIDTH = 232.dp
 
 // MARK: - 顶栏（与 iOS 同：项目下拉 · 项目文件 · 上传队列 · 账号）
 
@@ -522,6 +545,8 @@ private fun PermissionStage(title: String, hint: String, context: Context) {
 
 @Composable
 private fun Controls(
+    /** True: the end-edge column of phone landscape (M36); false: the stacked rows under the viewfinder. */
+    side: Boolean,
     mode: CapMode,
     onMode: (CapMode) -> Unit,
     recording: Boolean,
@@ -539,6 +564,49 @@ private fun Controls(
     onStop: () -> Unit,
     onOpenLibrary: () -> Unit,
 ) {
+    val pauseLabel = tr(if (paused) { if (recordingVideo) "rec.resume.video" else "rec.resume.audio" } else { if (recordingVideo) "rec.pause.video" else "rec.pause.audio" })
+    val statusLabel = if (paused) tr("rec.pause.status") else if (recordingVideo) tr("home.recording.video") else tr("home.recording.audio")
+    val desktopLine = if (!assigned) tr("project.noneHint") else if (desktopOnline) tr("home.desktop.online")
+        // Offline: say how long the desktop has been away; photos waiting on the relay are not hidden.
+        else desktopLastSeen?.let { t -> relativeShortKey(t, System.currentTimeMillis()).let { (k, n) ->
+            tr("home.desktop.offline") + " · " + tr("home.desktop.waited", mapOf("t" to tr(k, mapOf("n" to n)))) } }
+            ?: tr("home.desktop.offline")
+    if (side) {
+        // Same controls as the rows below, turned into a column: mode or recording state on top, then audio,
+        // shutter and library from top to bottom (shutter at the vertical centre), the desktop line at the foot.
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = Tk.Sp.s3, vertical = Tk.Sp.s2),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            if (recording) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
+                        if (!paused) Box(Modifier.size(7.dp).clip(CircleShape).background(Tk.S.failed))
+                        Text(WatermarkFormat.duration(elapsed), style = Fonts.mono(Tk.Ty.small), color = Color.White)
+                    }
+                    Text(statusLabel, style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f), textAlign = TextAlign.Center)
+                    Text(pauseLabel, style = Fonts.small(), color = if (canPause) Color.White else Color.White.copy(alpha = 0.4f), textAlign = TextAlign.Center,
+                        modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = canPause, role = Role.Button, onClick = onTogglePause).wrapContentHeight())
+                    if (paused) Text(tr("rec.silence.stop"), style = Fonts.small(), color = Tk.S.failed,
+                        modifier = Modifier.heightIn(min = Tk.touchMin).clickable(role = Role.Button, onClick = onStop).wrapContentHeight())
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2, Alignment.CenterHorizontally)) {
+                    ModeButton(tr("home.mode.photo"), mode == CapMode.photo) { onMode(CapMode.photo) }
+                    ModeButton(tr("home.mode.video"), mode == CapMode.video) { onMode(CapMode.video) }
+                }
+            }
+            if (!recording) AudioEntry(onRecordAudio)
+            Shutter(mode, recording, onShoot)
+            LibraryEntry(recent, onOpenLibrary)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s1)) {
+                Box(Modifier.size(5.dp).clip(CircleShape).background(if (desktopOnline) Tk.S.arrivedOnDark else Color.White.copy(alpha = 0.3f)))
+                Text(desktopLine, style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        return
+    }
     Column(
         Modifier.fillMaxWidth().padding(horizontal = Tk.Sp.gutter).padding(top = Tk.Sp.s3, bottom = Tk.Sp.s2),
         verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3),
@@ -551,14 +619,11 @@ private fun Controls(
             ) {
                 if (!paused) Box(Modifier.size(7.dp).clip(CircleShape).background(Tk.S.failed))
                 Text(WatermarkFormat.duration(elapsed), style = Fonts.mono(Tk.Ty.small), color = Color.White)
-                Text(
-                    if (paused) tr("rec.pause.status") else if (recordingVideo) tr("home.recording.video") else tr("home.recording.audio"),
-                    style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f),
-                )
+                Text(statusLabel, style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f))
                 if (paused) Text(tr("rec.silence.stop"), style = Fonts.small(), color = Tk.S.failed,
                     modifier = Modifier.padding(start = Tk.Sp.s3).heightIn(min = Tk.touchMin).clickable(role = Role.Button, onClick = onStop).wrapContentHeight())
                 Text(
-                    tr(if (paused) { if (recordingVideo) "rec.resume.video" else "rec.resume.audio" } else { if (recordingVideo) "rec.pause.video" else "rec.pause.audio" }),
+                    pauseLabel,
                     style = Fonts.small(), color = if (canPause) Color.White else Color.White.copy(alpha = 0.4f),
                     modifier = Modifier.padding(start = Tk.Sp.s3).heightIn(min = Tk.touchMin).clickable(enabled = canPause, role = Role.Button, onClick = onTogglePause).wrapContentHeight(),
                 )
@@ -592,11 +657,7 @@ private fun Controls(
                     .background(if (desktopOnline) Tk.S.arrivedOnDark else Color.White.copy(alpha = 0.3f)),
             )
             Text(
-                if (!assigned) tr("project.noneHint") else if (desktopOnline) tr("home.desktop.online")
-                // Offline: say how long the desktop has been away; photos waiting on the relay are not hidden.
-                else desktopLastSeen?.let { t -> relativeShortKey(t, System.currentTimeMillis()).let { (k, n) ->
-                    tr("home.desktop.offline") + " · " + tr("home.desktop.waited", mapOf("t" to tr(k, mapOf("n" to n)))) } }
-                    ?: tr("home.desktop.offline"),
+                desktopLine,
                 style = Fonts.nano(), color = Color.White.copy(alpha = 0.55f), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             Text(tr("home.stampFeatures"), style = Fonts.nano(), color = Color.White.copy(alpha = 0.4f), maxLines = 1)
@@ -638,7 +699,8 @@ private fun RecentStrip(items: List<CaptureItem>, onOpenLibrary: () -> Unit) {
 @Composable
 private fun ModeButton(label: String, selected: Boolean, onClick: () -> Unit) {
     Column(
-        Modifier.width(Tk.touchMin).heightIn(min = Tk.touchMin).clickable(onClick = onClick),
+        // At least a touch target wide, wider for long labels ("Photo" and longer words wrapped mid-word at a fixed 48dp).
+        Modifier.widthIn(min = Tk.touchMin).heightIn(min = Tk.touchMin).clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
     ) {
