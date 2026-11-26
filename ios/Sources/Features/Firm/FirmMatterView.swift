@@ -98,14 +98,14 @@ struct FirmMatterView: View {
 
     private func header(_ m: FirmMatter) -> some View {
         VStack(alignment: .leading, spacing: T.Sp.s2) {
-            Text(FirmText.who(m.client, m.company)).font(T.F.title()).foregroundStyle(Color.primary)
+            Text(FirmText.title(m.client, m.company, m.template?.text ?? FirmMarkdown.firstHeading(m.latest?.markdown))).font(T.F.title()).foregroundStyle(Color.primary)
             if let name = m.lawyerDisplayName {
                 Text(tr("firm.matter.requestedLawyer", ["name": name])).font(T.F.small()).foregroundStyle(Color.secondary)
             }
             if let c = m.consult, c.status == "requested" || c.status == "scheduled" {
                 HStack(spacing: T.Sp.s2) {
                     Image(systemName: "phone")
-                    Text(c.status == "scheduled" ? tr("firm.matter.callScheduled") : tr("firm.matter.call", ["times": c.times ?? ""]))
+                    Text(c.status == "scheduled" ? tr("firm.matter.callScheduled") : FirmText.callLine(c.times))
                 }
                 .font(T.F.small()).foregroundStyle(c.status == "requested" ? FirmColor.urgent : FirmColor.accent)
                 .accessibilityIdentifier("firm.call")
@@ -285,6 +285,12 @@ enum FirmMarkdown {
     }
     /// Display blocks: every `#` line is its own heading (level = number of #), body lines between them stay
     /// together, so "## 第1条\n本文…" is a heading followed by body text, not one heading block.
+    /// The first heading of a draft, as plain text (title fallback for unnamed matters).
+    static func firstHeading(_ markdown: String?) -> String? {
+        guard let markdown, let h = blocks(markdown).first(where: { $0.level > 0 }) else { return nil }
+        let t = plain(h.text)
+        return t.isEmpty ? nil : t
+    }
     static func blocks(_ markdown: String) -> [(level: Int, text: String)] {
         var out: [(level: Int, text: String)] = []
         for paragraph in FirmDiff.paragraphs(markdown) {

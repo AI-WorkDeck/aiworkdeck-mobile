@@ -33,7 +33,7 @@ struct FirmReplySheet: View {
                 Spacer()
             }
             .padding(T.Sp.gutter)
-            .navigationTitle(FirmText.who(matter.client, matter.company))
+            .navigationTitle(FirmText.title(matter.client, matter.company, matter.template?.text ?? FirmMarkdown.firstHeading(matter.latest?.markdown)))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(tr("common.cancel")) { dismiss() } }
@@ -125,7 +125,7 @@ struct FirmSignoffSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(FirmText.who(matter.client, matter.company)).font(T.F.heading())
+                    Text(FirmText.title(matter.client, matter.company, matter.template?.text ?? FirmMarkdown.firstHeading(matter.latest?.markdown))).font(T.F.heading())
                     if let doc = matter.template?.text { Text(doc).foregroundStyle(Color.secondary) }
                 }
                 // The signature is the signed-in identity: shown, not typed.

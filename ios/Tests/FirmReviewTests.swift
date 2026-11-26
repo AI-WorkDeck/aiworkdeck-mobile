@@ -17,6 +17,20 @@ final class FirmReviewTests: XCTestCase {
                           forLawyerCount: 2, wantsCall: false, attention: attention)
     }
 
+    func testUnnamedMattersFallBackToTheDocumentAndCallLineHasNoDanglingSeparator() {
+        XCTAssertEqual(FirmText.title("Ada", "Acme", "NDA"), "Acme · Ada")
+        XCTAssertEqual(FirmText.title(nil, "", "NDA"), "NDA")
+        XCTAssertEqual(FirmText.title("", nil, "  "), "—")
+        XCTAssertTrue(FirmText.unnamed("", "", nil))
+        XCTAssertFalse(FirmText.unnamed("Ada", nil, nil))
+        XCTAssertEqual(FirmMarkdown.firstHeading("# **保密协议**\n\n第一条"), "保密协议")
+        XCTAssertNil(FirmMarkdown.firstHeading("no heading here"))
+        XCTAssertNil(FirmMarkdown.firstHeading(nil))
+        XCTAssertEqual(FirmText.callLine(nil), tr("firm.reason.call"))
+        XCTAssertEqual(FirmText.callLine("  "), tr("firm.reason.call"))
+        XCTAssertEqual(FirmText.callLine("Mon 10:00"), tr("firm.matter.call", ["times": "Mon 10:00"]))
+    }
+
     func testInboxPutsWhatNeedsTheLawyerFirst() {
         let list = [
             summary("signed", status: "signed"),

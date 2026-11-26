@@ -33,7 +33,7 @@ struct FirmInboxView: View {
                     Section {
                         ForEach(items, id: \.uid) { m in
                             NavigationLink(value: FirmMatterRef(portal: m.linkID ?? "", id: m.id)) {
-                                FirmMatterRow(matter: m, firm: portal.links.count > 1 ? portal.link(m.linkID)?.firmName : nil)
+                                FirmMatterRow(matter: m, firm: portal.links.count > 1 ? portal.link(m.linkID)?.firmName : nil, heading: portal.link(m.linkID)?.headings[m.id])
                             }
                                 .accessibilityIdentifier("firm.row." + m.id)
                         }
@@ -85,12 +85,14 @@ struct FirmMatterRow: View {
     let matter: FirmMatterSummary
     /// Which firm, shown only when more than one portal is linked.
     var firm: String? = nil
+    /// The draft's first heading when the matter has no client, company or template (FirmLink.headings).
+    var heading: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: T.Sp.s1) {
             if let firm { Text(firm).font(T.F.micro()).foregroundStyle(Color.secondary).lineLimit(1) }
             HStack(alignment: .firstTextBaseline) {
-                Text(FirmText.who(matter.client, matter.company))
+                Text(FirmText.title(matter.client, matter.company, matter.template?.text ?? heading))
                     .font(T.F.heading()).foregroundStyle(Color.primary).lineLimit(1)
                 Spacer(minLength: T.Sp.s2)
                 Text(FirmText.ago(matter.updatedAt)).font(T.F.micro()).foregroundStyle(Color(.tertiaryLabel))
@@ -127,6 +129,23 @@ enum FirmText {
     static func section(_ s: String?) -> String? {
         guard let s, !s.isEmpty else { return nil }
         return s.first?.isNumber == true ? "§" + s : s
+    }
+
+    /// Who the matter is for; with no client or company, the document's name, else "—" (Android FirmText.title).
+    static func title(_ client: String?, _ company: String?, _ document: String?) -> String {
+        let w = who(client, company)
+        if w != "—" { return w }
+        if let document, !document.trimmingCharacters(in: .whitespaces).isEmpty { return document }
+        return "—"
+    }
+
+    /// No client, company or document name: [title] would be "—".
+    static func unnamed(_ client: String?, _ company: String?, _ document: String?) -> Bool { title(client, company, document) == "—" }
+
+    /// The call line: with the proposed times when the client gave some, without a dangling separator otherwise.
+    static func callLine(_ times: String?) -> String {
+        if let times, !times.trimmingCharacters(in: .whitespaces).isEmpty { return tr("firm.matter.call", ["times": times]) }
+        return tr("firm.reason.call")
     }
 
     static func who(_ client: String?, _ company: String?) -> String {
