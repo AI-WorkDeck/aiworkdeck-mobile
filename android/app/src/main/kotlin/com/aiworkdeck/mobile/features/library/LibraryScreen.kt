@@ -220,7 +220,7 @@ fun LibraryScreen(
             }) {
                 Column {
                     TopBar(
-                        viewingName = viewing?.name.orEmpty(),
+                        viewingName = viewing?.name ?: tr("project.none"),
                         projects = projects.map { it.id to it.name },
                         tally = TransferTally.of(items),
                         columns = columns,
