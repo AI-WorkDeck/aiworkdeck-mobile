@@ -29,6 +29,7 @@ object T {
         const val waitingOnDark: Long = 0xFFD19C3DL
         const val movingOnDark: Long = 0xFF93B3C6L
         const val arrivedOnDark: Long = 0xFF89A8A0L
+        const val failedOnDark: Long = 0xFFE8938AL
     }
     object Sp {
         const val s1: Int = 4

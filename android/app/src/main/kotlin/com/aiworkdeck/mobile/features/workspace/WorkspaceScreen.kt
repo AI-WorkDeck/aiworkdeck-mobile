@@ -197,7 +197,7 @@ private fun ProjectList(
                 }
                 error?.let { message -> item(key = "error") {
                     Column(Modifier.padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s2)) {
-                        Text(message, style = Fonts.small(), color = Tk.S.failed)
+                        Text(message, style = Fonts.small(), color = Tk.S.failedText)
                         TextAction(tr("project.retry"), onClick = onRefresh)
                     }
                 } }

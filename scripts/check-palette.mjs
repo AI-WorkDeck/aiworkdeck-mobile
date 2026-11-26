@@ -60,6 +60,7 @@ const ROLE_MAP = {
     waitingOnDark: 'dark/warning',
     movingOnDark: 'dark/info-text',  // T.S.movingOnDark 在 HomeView 里当正文色用，info 本体只有 4.4:1
     arrivedOnDark: 'dark/accent-text', // 竹月青，深色模式的强调文字色
+    failedOnDark: 'dark/danger-text',  // 深底的错误文字；dark/danger 只够图标、圆点、描边
   },
 }
 
@@ -98,6 +99,8 @@ const TOKEN_GATES = [
   ['S.waitingOnDark', 'D.bg', 4.5, '深底等待态文字'],
   ['S.movingOnDark', 'D.bg', 4.5, '深底传输态文字'],
   ['S.arrivedOnDark', 'D.bg', 4.5, '深底到达态文字'],
+  ['S.failedOnDark', 'D.bg', 4.5, '深底错误文字'],
+  ['S.failedOnDark', 'D.surface', 4.5, '深色凹面上的错误文字'],
   ['L.ruleStrong', 'L.bg', 1.2, '浅底重分隔线'],
 ]
 

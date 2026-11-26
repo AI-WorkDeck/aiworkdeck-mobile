@@ -21,6 +21,7 @@ page {
   --st-waiting-dk: #D19C3D;
   --st-moving-dk: #93B3C6;
   --st-arrived-dk: #89A8A0;
+  --st-failed-dk: #E8938A;
   --s1: 8rpx;
   --s2: 16rpx;
   --s3: 24rpx;

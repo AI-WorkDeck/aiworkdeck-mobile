@@ -139,7 +139,7 @@ fun ProjectPickerScreen(model: AppModel, onClose: () -> Unit = {}, markCurrent: 
                 )
                 error != null -> Column(verticalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {
                     PickerRow(tr("project.none"), tr("project.noneHint"), markCurrent && (current == null || current?.isDefault == true), pickNone)
-                    Text(error.orEmpty(), style = Fonts.small(), color = Tk.S.failed)
+                    Text(error.orEmpty(), style = Fonts.small(), color = Tk.S.failedText)
                     Action(tr("project.retry")) { scope.launch { load() } }
                 }
                 else -> LazyColumn {

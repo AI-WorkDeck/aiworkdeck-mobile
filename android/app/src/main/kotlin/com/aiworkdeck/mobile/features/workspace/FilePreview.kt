@@ -85,7 +85,7 @@ private fun ExternalPreview(file: File, modifier: Modifier) {
     // Offer the chooser once on arrival; the button stays for reopening.
     LaunchedEffect(file) { failed = !openExternally(context, file) }
     Column(modifier.padding(Tk.Sp.gutter), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
-        if (failed) Text(tr("files.noPreviewApp"), style = Fonts.small(), color = Tk.S.failed)
+        if (failed) Text(tr("files.noPreviewApp"), style = Fonts.small(), color = Tk.S.failedText)
         PrimaryButton(tr("files.openWith"), onClick = { failed = !openExternally(context, file) })
     }
 }
@@ -122,7 +122,7 @@ private fun PdfPages(file: File, modifier: Modifier) {
     val document = remember(file) { runCatching { PdfDocument(file) }.getOrNull() }
     DisposableEffect(document) { onDispose { document?.close() } }
     if (document == null) {
-        Box(modifier.padding(Tk.Sp.gutter)) { Text(tr("files.previewFailed"), style = Fonts.small(), color = Tk.S.failed) }
+        Box(modifier.padding(Tk.Sp.gutter)) { Text(tr("files.previewFailed"), style = Fonts.small(), color = Tk.S.failedText) }
         return
     }
     BoxWithConstraints(modifier.background(Tk.L.sunken)) {

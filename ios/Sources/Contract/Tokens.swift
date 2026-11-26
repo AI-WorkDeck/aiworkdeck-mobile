@@ -31,6 +31,7 @@ enum T {
         static let waitingOnDark = Color(hex: 0xD19C3D)
         static let movingOnDark = Color(hex: 0x93B3C6)
         static let arrivedOnDark = Color(hex: 0x89A8A0)
+        static let failedOnDark = Color(hex: 0xE8938A)
     }
 
     enum Sp {

@@ -69,7 +69,7 @@ fun PostpaidSection(canRepay: Boolean, repay: () -> Unit) {
         state?.cloudAccess?.canUse == true -> tr("postpaid.status.on")
         else -> tr("postpaid.status.restricted")
     }
-    val statusColor = if (b != null && (b.debtCents > 0 || (b.accepted && state?.cloudAccess?.canUse == false))) Tk.S.failed else Tk.L.fgMuted
+    val statusColor = if (b != null && (b.debtCents > 0 || (b.accepted && state?.cloudAccess?.canUse == false))) Tk.S.failedText else Tk.L.fgMuted
     Row(
         Modifier.fillMaxWidth().heightIn(min = Tk.touchMin).noRipple { open = true },
         verticalAlignment = Alignment.CenterVertically,
@@ -176,13 +176,13 @@ private fun DetailRow(key: String, value: String, alert: Boolean = false) {
     ) {
         Text(key, style = Fonts.small(), color = Tk.L.fg, maxLines = 1)
         Text(
-            value, style = Fonts.small(), color = if (alert) Tk.S.failed else Tk.L.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            value, style = Fonts.small(), color = if (alert) Tk.S.failedText else Tk.L.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End, modifier = Modifier.weight(1f),
         )
     }
 }
 
 @Composable
-private fun Notice(text: String, color: Color = Tk.S.failed) {
+private fun Notice(text: String, color: Color = Tk.S.failedText) {
     Text(text, style = Fonts.small(), color = color, modifier = Modifier.padding(top = Tk.Sp.s4))
 }

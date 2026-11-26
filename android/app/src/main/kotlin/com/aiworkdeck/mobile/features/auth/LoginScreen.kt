@@ -170,11 +170,11 @@ fun LoginScreen(model: AppModel) {
                 modifier = Modifier.heightIn(min = Tk.touchMin).clickable(enabled = !busy) { uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR)) }
                     .padding(horizontal = Tk.Sp.s1).wrapContentHeight(Alignment.CenterVertically))
         }
-        error?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+        error?.let { Text(it, style = Fonts.small(), color = Tk.S.failedText) }
         Box(contentAlignment = Alignment.Center) {
             PrimaryButton(text = tr(if (busy) "login.working" else "login.title"), onClick = ::signIn,
                 enabled = !busy && identity.isNotBlank() && password.isNotEmpty())
-            if (busy) CircularProgressIndicator(Modifier.align(Alignment.CenterEnd).padding(end = Tk.Sp.s4).size(18.dp), color = Tk.D.fg, strokeWidth = 2.dp)
+            if (busy) CircularProgressIndicator(Modifier.align(Alignment.CenterEnd).padding(end = Tk.Sp.s4).size(18.dp), color = Tk.L.onAccent, strokeWidth = 2.dp)
         }
         Column {
             LinkRow(tr("login.register"), !busy) { openFlow("register") }

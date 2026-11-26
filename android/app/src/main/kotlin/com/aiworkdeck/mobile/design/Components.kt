@@ -87,7 +87,7 @@ fun TallyRow(tally: TransferTally, onDark: Boolean = LocalOnDark.current, modifi
             if (!hideZero || tally.staged > 0) Pill(tally.staged, TransferPhase.staged.caption, dotColor(TransferState.uploaded, onDark))
             Pill(tally.landed, TransferPhase.landed.caption, dotColor(TransferState.arrived, onDark))
             if (tally.failed > 0) {
-                Text(text = tr("tally.failedSuffix", mapOf("m" to tally.failed)), style = Fonts.small(), color = Tk.S.failed)
+                Text(text = tr("tally.failedSuffix", mapOf("m" to tally.failed)), style = Fonts.small(), color = if (onDark) Tk.S.failedOnDark else Tk.S.failed)
             }
         }
     }
@@ -123,7 +123,7 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = text, style = Fonts.body(), color = Tk.D.fg)
+        Text(text = text, style = Fonts.body(), color = Tk.L.onAccent)
     }
 }
 

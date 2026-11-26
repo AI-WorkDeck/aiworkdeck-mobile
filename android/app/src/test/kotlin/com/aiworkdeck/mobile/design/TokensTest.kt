@@ -13,7 +13,7 @@ import org.junit.Test
  */
 class TokensTest {
     @Test fun colorsMapFromContractArgbLong() {
-        assertEquals(Color(T.L.accent), Tk.L.accent)
+        assertEquals(Color(T.L.accent), Tk.Paper.Day.accent)
         assertEquals(Color(T.D.surface), Tk.D.surface)
         assertEquals(Color(T.S.failed), Tk.S.failed)
         assertEquals(Color(T.S.movingOnDark), Tk.S.movingOnDark)

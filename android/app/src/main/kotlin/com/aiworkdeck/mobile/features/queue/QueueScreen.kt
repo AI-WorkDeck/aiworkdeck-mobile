@@ -63,6 +63,7 @@ import com.aiworkdeck.mobile.design.Fonts
 import com.aiworkdeck.mobile.design.Hairline
 import com.aiworkdeck.mobile.design.L10n
 import com.aiworkdeck.mobile.design.LightStatusBar
+import com.aiworkdeck.mobile.design.LocalOnDark
 import com.aiworkdeck.mobile.design.PrimaryButton
 import com.aiworkdeck.mobile.design.StatusDot
 import com.aiworkdeck.mobile.design.LocalWindowLayout
@@ -135,6 +136,9 @@ fun QueueScreen(model: AppModel, onClose: () -> Unit) {
                         onRetryAll = { model.retryFailedUploads() },
                         onClose = onClose,
                     )
+                    // LazyColumn's content isn't composable: read the theme-aware colours here
+                    val onDark = LocalOnDark.current
+                    val unassignedTint = Tk.L.fgMuted
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s2),
@@ -143,11 +147,11 @@ fun QueueScreen(model: AppModel, onClose: () -> Unit) {
                             selectedId = selectedId, expiry = expiry, progress = progress,
                             onSelect = { selectedId = it.id }, onRetry = retry, onAction = ::startAction,
                         )
-                        section(tr("queue.section.failed"), sections.failed, Tk.S.failed, rows)
-                        section(tr("library.unknownProject"), sections.unassigned, Tk.L.fgMuted, rows)
-                        section(tr("queue.section.uploading"), sections.active, Tk.S.waiting, rows)
-                        section(tr("queue.section.staged"), sections.staged, Tk.S.moving, rows)
-                        section(tr("queue.section.landed"), sections.landed, Tk.S.arrived, rows)
+                        section(tr("queue.section.failed"), sections.failed, if (onDark) Tk.S.failedOnDark else Tk.S.failed, rows)
+                        section(tr("library.unknownProject"), sections.unassigned, unassignedTint, rows)
+                        section(tr("queue.section.uploading"), sections.active, if (onDark) Tk.S.waitingOnDark else Tk.S.waiting, rows)
+                        section(tr("queue.section.staged"), sections.staged, if (onDark) Tk.S.movingOnDark else Tk.S.moving, rows)
+                        section(tr("queue.section.landed"), sections.landed, if (onDark) Tk.S.arrivedOnDark else Tk.S.arrived, rows)
                         if (all.isEmpty()) item(key = "empty") { Empty() }
                     }
                 }
@@ -278,7 +282,7 @@ private fun QueueRow(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s1),
                     ) {
-                        StatusDot(item.queueState, onDark = false)
+                        StatusDot(item.queueState)
                         Text(item.queueCaption, style = Fonts.small(), color = Tk.L.fg)
                         Text(LibraryTime.clock(item.capturedAt), style = Fonts.mono(Tk.Ty.small), color = Tk.L.fgFaint)
                     }
@@ -290,12 +294,12 @@ private fun QueueRow(
                     // 失败原因照实显示。区分「你的网络」与「我们这边」，用户才知道是该换个地方
                     // 重试还是该找人。
                     item.queueError?.takeIf { it.isNotEmpty() }?.let {
-                        Text(it, style = Fonts.nano(), color = Tk.S.failed)
+                        Text(it, style = Fonts.nano(), color = Tk.S.failedText)
                     }
                     // 中转区不是网盘：到期未被桌面端取走就会被清理。只在还剩不到 3 天时说话。
                     if (item.state == TransferState.uploaded && expiresSoon(expiresAt, Instant.now())) {
                         expiryDate(expiresAt)?.let {
-                            Text(tr("queue.expiresOn", mapOf("date" to it)), style = Fonts.nano(), color = Tk.S.waiting)
+                            Text(tr("queue.expiresOn", mapOf("date" to it)), style = Fonts.nano(), color = if (LocalOnDark.current) Tk.S.waitingOnDark else Tk.S.waiting)
                         }
                     }
                 }
@@ -336,7 +340,7 @@ private fun ProjectMenuItems(item: CaptureItem, onAction: (Boolean) -> Unit) {
 private fun ProgressLine(progress: Double) {
     // 进度条永远给一点起始宽度：0% 的条看起来像卡死了，实际是刚开始
     Box(Modifier.fillMaxWidth().padding(top = 2.dp).height(2.dp).background(Tk.L.sunken)) {
-        Box(Modifier.fillMaxWidth(progress.toFloat().coerceIn(0.05f, 1f)).height(2.dp).background(Tk.S.moving))
+        Box(Modifier.fillMaxWidth(progress.toFloat().coerceIn(0.05f, 1f)).height(2.dp).background(if (LocalOnDark.current) Tk.S.movingOnDark else Tk.S.moving))
     }
 }
 
@@ -384,8 +388,8 @@ private fun Details(
                     Text(move.target.name, style = Fonts.body(), color = Tk.L.fg)
                 }
                 val accountChanged = move.accountBinding != currentBinding
-                if (accountChanged) Text(tr("queue.moveAccountChanged"), style = Fonts.small(), color = Tk.S.failed)
-                move.lastError?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+                if (accountChanged) Text(tr("queue.moveAccountChanged"), style = Fonts.small(), color = Tk.S.failedText)
+                move.lastError?.let { Text(it, style = Fonts.small(), color = Tk.S.failedText) }
                 // 等目标的事务可能熬过中转有效期：显式重试同一个请求
                 IconAction(null, tr("queue.moveRetry"), enabled = !accountChanged, onClick = onRetry)
             }
@@ -403,7 +407,7 @@ private fun Details(
                 if (result.tags.isNotEmpty()) Text(result.tags.joinToString(" · "), style = Fonts.small(), color = Tk.L.fgMuted)
             }
             if (item.state == TransferState.failed && item.archiveMove == null) {
-                item.lastError?.takeIf { it.isNotEmpty() }?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
+                item.lastError?.takeIf { it.isNotEmpty() }?.let { Text(it, style = Fonts.small(), color = Tk.S.failedText) }
                 PrimaryButton(tr("project.retry"), onClick = onRetry)
             }
             if (item.state == TransferState.uploaded) {
