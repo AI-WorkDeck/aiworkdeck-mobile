@@ -316,7 +316,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
                     InfoRow(tr("settings.version"), BuildConfig.VERSION_NAME)
                     InfoRow(tr("settings.package"), BuildConfig.APPLICATION_ID)
                     NavRow(tr("settings.help"), HELP_EMAIL) { uriHandler.openUri("mailto:$HELP_EMAIL") }
-                    InfoRow(tr("settings.server"), Uri.parse(region.baseUrl).host ?: DASH)
+                    InfoRow(tr("settings.server"), Uri.parse(com.aiworkdeck.mobile.services.DebugAccountBase.base ?: region.baseUrl).host ?: DASH)
                     TextAction(tr("privacy.policy"), color = Tk.L.accent) {
                         uriHandler.openUri(mobilePrivacyUrl(BuildConfig.FLAVOR))
                     }

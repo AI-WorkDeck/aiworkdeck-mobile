@@ -129,6 +129,8 @@ class MainActivity : ComponentActivity() {
             screen = intent.getStringExtra(ScreenshotMode.EXTRA_SCREEN),
             filesDir = filesDir,
         )
+        // Debug-only staging host for account traffic; a different host means the stored session belongs elsewhere.
+        if (com.aiworkdeck.mobile.services.DebugAccountBase.apply(this, intent.getStringExtra(com.aiworkdeck.mobile.services.DebugAccountBase.EXTRA))) ServiceLocator.backend.logout()
         // Debug-only firm review seed (FirmSeed): local portal server + synthetic session, with screenshot mode.
         com.aiworkdeck.mobile.services.firm.FirmSeed.base(intent.getStringExtra(com.aiworkdeck.mobile.services.firm.FirmSeed.EXTRA_BASE))
             ?.takeIf { ScreenshotMode.enabled }?.let { base ->
