@@ -248,6 +248,21 @@ class FirmReviewTest {
         assertNull(FirmStatus.settings(emptyList()))
     }
 
+    @Test fun losingFirmAccessLeavesTheReviewsTab() {
+        assertEquals("capture", FirmTabs.keep("firm", "firm", "capture", firmVisible = false))
+        assertEquals("firm", FirmTabs.keep("firm", "firm", "capture", firmVisible = true))
+        assertEquals("assistant", FirmTabs.keep("assistant", "firm", "capture", firmVisible = false))
+        assertEquals(MainTab.capture, FirmTabs.keep(MainTab.firm, MainTab.firm, MainTab.capture, false))
+    }
+
+    @Test fun relativeTimeUsesContractStringsAndNeverTheFuture() {
+        val now = Instant.parse("2026-11-24T12:00:00Z")
+        assertEquals("time.secondsAgo" to 0L, FirmTabs.agoKey(Instant.parse("2026-11-24T12:00:05Z"), now))
+        assertEquals("time.minutesAgo" to 3L, FirmTabs.agoKey(Instant.parse("2026-11-24T11:57:00Z"), now))
+        assertEquals("time.hoursAgo" to 2L, FirmTabs.agoKey(Instant.parse("2026-11-24T10:00:00Z"), now))
+        assertEquals("time.daysAgo" to 3L, FirmTabs.agoKey(Instant.parse("2026-11-21T12:00:00Z"), now))
+    }
+
     @Test fun everyFirmStringKeyUsedHereExists() {
         val keys = FirmInbox.Group.entries.map(FirmInbox::titleKey) +
             listOf("call_requested", "client_replied", "review_requested").map(FirmInbox::reasonKey) +
@@ -255,7 +270,8 @@ class FirmReviewTest {
             listOf("version_changed", "already_signed", "unauthorized", "x").map { FirmPortalError(it, 0).messageKey } +
             FirmAccess.entries.mapNotNull { FirmStatus.link(it, "f")?.first } +
             listOf("firm.settings.title", "firm.join.title", "firm.join.body", "firm.join.link", "firm.join.badHost", "firm.join.connect",
-                "firm.trial.use", "firm.trial.code", "firm.trial.until", "firm.trial.invalid", "firm.status.check", "firm.leave", "error.sessionSaveFailed")
+                "firm.trial.use", "firm.trial.code", "firm.trial.until", "firm.trial.invalid", "firm.status.check", "firm.leave", "error.sessionSaveFailed",
+                "firm.tab", "firm.inbox.empty", "firm.forLawyerCount", "time.secondsAgo", "time.minutesAgo", "time.hoursAgo", "time.daysAgo")
         for (k in keys) assertTrue(k, com.aiworkdeck.contract.ContractStrings.table.containsKey(k))
     }
 }

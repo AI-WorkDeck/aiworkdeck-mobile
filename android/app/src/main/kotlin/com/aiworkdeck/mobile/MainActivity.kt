@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -142,6 +144,8 @@ enum class MainTab(val labelKey: String, val icon: Int) {
     capture("workspace.capture", R.drawable.ic_tab_capture),
     calendar("personal.calendar", R.drawable.ic_tab_calendar),
     assistant("personal.assistant", R.drawable.ic_tab_assistant),
+    /** Shown only while a firm has approved the account (iOS PersonalWorkspaceView). */
+    firm("firm.tab", R.drawable.ic_tab_firm),
 }
 
 /**
@@ -164,6 +168,14 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
     var personalFileProject by remember { mutableStateOf<com.aiworkdeck.mobile.model.RelayProject?>(null) }
     var captureBusy by remember { mutableStateOf(false) }
     val personal = remember(isSignedIn) { if (isSignedIn) PersonalWorkspaceState() else null }
+    // Firm review: restore linked portals per account; the Reviews tab appears once any firm approves.
+    val firmOverview by (if (BuildConfig.FIRM_REVIEW) ServiceLocator.firm.overview else kotlinx.coroutines.flow.flowOf(emptyList()))
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    LaunchedEffect(isSignedIn) { if (BuildConfig.FIRM_REVIEW) { if (isSignedIn) ServiceLocator.firm.restore() else ServiceLocator.firm.reset() } }
+    val firmApproved = firmOverview.any { it.second.access == com.aiworkdeck.mobile.services.firm.FirmAccess.approved }
+    val firmBadge = firmOverview.filter { it.second.access == com.aiworkdeck.mobile.services.firm.FirmAccess.approved }
+        .sumOf { (_, s) -> s.matters.count { com.aiworkdeck.mobile.services.firm.FirmInbox.group(it) == com.aiworkdeck.mobile.services.firm.FirmInbox.Group.needsYou } }
+    LaunchedEffect(firmApproved) { tab = com.aiworkdeck.mobile.services.firm.FirmTabs.keep(tab, MainTab.firm, MainTab.capture, firmApproved) }
     LaunchedEffect(notificationEventId) { if (notificationEventId != null && !captureBusy) { overlay = Overlay.None; tab = MainTab.calendar } }
     // 全屏看大图的目标：同一天的件 + 起始下标。它盖在图集之上，图集盖在取景器之上。
     var viewer by remember { mutableStateOf<Pair<List<CaptureItem>, Int>?>(null) }
@@ -221,11 +233,13 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
                                 HomeScreen(model, active = captureActive, onBusy = { captureBusy = it },
                                     onOpen = { returnOverlay = Overlay.None; personalFileProject = null; overlay = it })
                             }
-                            if (tab != MainTab.capture && personal != null) PersonalWorkspaceScreen(personal, tab.name, notificationEventId,
+                            if (tab == MainTab.firm) com.aiworkdeck.mobile.features.firm.FirmInboxScreen(ServiceLocator.firm,
+                                onOpenSettings = { returnOverlay = Overlay.None; overlay = Overlay.Settings }, onOpenMatter = { /* matter screen: M1 PR 5 */ })
+                            if ((tab == MainTab.calendar || tab == MainTab.assistant) && personal != null) PersonalWorkspaceScreen(personal, tab.name, notificationEventId,
                                 onOpen = { returnOverlay = Overlay.None; overlay = it },
                                 onProject = { returnOverlay = Overlay.None; personalFileProject = it; overlay = Overlay.Files })
                         }
-                        MainTabBar(tab, dark = tab == MainTab.capture, enabled = !captureBusy) { tab = it }
+                        MainTabBar(tab, dark = tab == MainTab.capture, enabled = !captureBusy, showFirm = firmApproved, firmBadge = firmBadge) { tab = it }
                     }
                     if (overlay == Overlay.Queue) {
                         QueueScreen(model, onClose = { overlay = returnOverlay })
@@ -273,19 +287,22 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
 
 /** 底部三栏。采集栏选中时用深色（与取景器连成一片），其余用浅色。 */
 @Composable
-private fun MainTabBar(selected: MainTab, dark: Boolean, enabled: Boolean, onSelect: (MainTab) -> Unit) {
+private fun MainTabBar(selected: MainTab, dark: Boolean, enabled: Boolean, showFirm: Boolean, firmBadge: Int, onSelect: (MainTab) -> Unit) {
     val bg = if (dark) Tk.D.bg else Tk.L.bg
     val on = if (dark) Tk.D.fg else Tk.L.accent
     val off = if (dark) Tk.D.fgMuted else Tk.L.fgMuted
     Column(Modifier.background(bg)) {
         HorizontalDivider(color = if (dark) Tk.D.rule else Tk.L.rule)
         NavigationBar(containerColor = bg, tonalElevation = 0.dp) {
-            for (t in MainTab.entries) {
+            for (t in MainTab.entries.filter { it != MainTab.firm || showFirm }) {
                 NavigationBarItem(
                     selected = t == selected,
                     enabled = enabled || t == selected,
                     onClick = { onSelect(t) },
-                    icon = { Icon(painterResource(t.icon), contentDescription = null) },
+                    icon = {
+                        if (t == MainTab.firm && firmBadge > 0) BadgedBox(badge = { Badge { Text(firmBadge.toString()) } }) { Icon(painterResource(t.icon), contentDescription = null) }
+                        else Icon(painterResource(t.icon), contentDescription = null)
+                    },
                     label = { Text(tr(t.labelKey), style = Fonts.small()) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = on, selectedTextColor = on,
