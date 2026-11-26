@@ -224,6 +224,9 @@ object FirmText {
     fun callLine(times: String?): Pair<String, Map<String, Any>> =
         if (times.isNullOrBlank()) "firm.reason.call" to emptyMap() else "firm.matter.call" to mapOf("times" to times)
 
+    /** No client, company or document name: [title] would be "—". */
+    fun unnamed(client: String?, company: String?, document: String?): Boolean = title(client, company, document) == "—"
+
     fun who(client: String?, company: String?): String =
         listOfNotNull(company, client).filter { it.isNotEmpty() }.joinToString(" · ").ifEmpty { "—" }
 

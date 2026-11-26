@@ -21,11 +21,13 @@ import org.junit.Test
 class FirmPortalTest {
     private val server = MockWebServer()
     private val routes = mutableMapOf<String, Pair<Int, String>>()
+    private val requested = java.util.Collections.synchronizedList(mutableListOf<String>())
     private val allowed = listOf("aifirm.aiworkdeck.com/all", "ai-firm.aiworkdeck.com/sv", "ai-firm.aiworkdeck.com/tw")
 
     @Before fun start() {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
+                requested += request.requestUrl!!.encodedPath + "?" + (request.requestUrl!!.query ?: "")
                 val (code, body) = routes[request.requestUrl!!.encodedPath] ?: (404 to """{"error":"not_found"}""")
                 return MockResponse().setResponseCode(code).setBody(body)
             }
@@ -87,6 +89,17 @@ class FirmPortalTest {
         assertEquals(1, p.needsYouCount)
         assertEquals("Venture AI · Silicon Valley", p.link("ai-firm.aiworkdeck.com/sv")!!.firmName)
         assertTrue("no roster: the lawyer may add title, firm and admission", p.link("ai-firm.aiworkdeck.com/sv")!!.asksDetails)
+    }
+
+    @Test fun unnamedMattersGetTheDraftHeadingForTheInbox() = runTest {
+        routes["/sv/api/portal/me"] = 200 to """{"kind":"lawyer","name":"Han","status":"approved"}"""
+        routes["/sv/api/portal/matters"] = 200 to """{"matters":[{"id":"m1","status":"review","updatedAt":"2026-11-21T00:00:00Z"},""" +
+            """{"id":"m2","status":"review","updatedAt":"2026-11-21T00:00:00Z","client":"Ada"}]}"""
+        routes["/sv/api/portal/matter"] = 200 to """{"id":"m1","status":"review","updatedAt":"2026-11-21T00:00:00Z","versions":[{"n":1,"markdown":"# 保密协议\n\n第一条"}]}"""
+        val p = portal(); p.restore()
+        assertNull(p.connect("ai-firm.aiworkdeck.com/sv"))
+        assertEquals(mapOf("m1" to "保密协议"), p.link("ai-firm.aiworkdeck.com/sv")!!.state.value.headings)
+        assertEquals("only the unnamed matter is fetched", listOf("/sv/api/portal/matter?id=m1"), requested.filter { it.startsWith("/sv/api/portal/matter?") })
     }
 
     @Test fun aFailedCodeSaveRefusesToJoinInsteadOfSendingTheSession() = runTest {
