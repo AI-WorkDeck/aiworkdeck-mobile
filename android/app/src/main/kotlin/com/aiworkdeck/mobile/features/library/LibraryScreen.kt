@@ -51,6 +51,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import com.aiworkdeck.mobile.design.LocalWindowLayout
+import com.aiworkdeck.mobile.design.LibraryProjectPaneWidth
+import com.aiworkdeck.mobile.design.libraryColumns
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -127,8 +133,19 @@ fun LibraryScreen(
     val isGrid = viewMode == VIEW_GRID
     val density = LocalDensity.current
 
+    // Tablet / unfolded / landscape split: the project list sits beside the grid, as on iPad (M17 step 5).
+    val pane = LocalWindowLayout.current.splitPanes && fixedProject == null && projects.size > 1
     WorkdeckTheme(dark = true) {
         Box(Modifier.fillMaxSize().background(Tk.D.bg).safeDrawingPadding()) {
+          Row(Modifier.fillMaxSize()) {
+            if (pane) ProjectPane(
+                projects = projects.map { p -> Triple(p.id, p.name, LibraryGrouping.itemsIn(all, p.id, current).size) },
+                viewingId = viewing?.id,
+                modifier = Modifier.width(LibraryProjectPaneWidth).fillMaxHeight().padding(top = barHeight),
+                onPick = { id -> viewingId = id; prefs.libraryViewingProject = id; selected = emptySet() },
+            )
+            BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
+            val gridColumns = libraryColumns(columns, maxWidth.value)
             if (items.isEmpty()) {
                 Column(
                     Modifier.fillMaxSize().padding(horizontal = Tk.Sp.gutter)
@@ -143,7 +160,7 @@ fun LibraryScreen(
                 // 顶栏的高度用 padding 让开而不是 contentPadding：粘性段头钉的是**视口**上沿，
                 // 用 contentPadding 的话段头会钉到顶栏底下去，看不见。
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(columns),
+                    columns = GridCells.Fixed(gridColumns),
                     modifier = Modifier.fillMaxSize().padding(top = barHeight),
                     contentPadding = PaddingValues(
                         bottom = if (selecting) Tk.Sp.s16 + Tk.touchMin else Tk.Sp.s8,
@@ -214,6 +231,9 @@ fun LibraryScreen(
                     }
                 }
             }
+
+            }
+          }
 
             GlassBar(Modifier.align(Alignment.TopCenter).fillMaxWidth().onSizeChanged {
                 barHeight = with(density) { it.height.toDp() }
@@ -317,6 +337,29 @@ fun LibraryScreen(
 }
 
 // MARK: - 顶栏
+
+/** Project list beside the grid on split layouts: name and capture count, the one being viewed highlighted. */
+@Composable
+private fun ProjectPane(projects: List<Triple<String, String, Int>>, viewingId: String?, modifier: Modifier, onPick: (String) -> Unit) {
+    Row(modifier) {
+        LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(vertical = Tk.Sp.s2)) {
+            items(projects, key = { it.first }) { (id, name, count) ->
+                val on = id == viewingId
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = Tk.touchMin)
+                        .background(if (on) Tk.D.fg.copy(alpha = 0.10f) else Color.Transparent)
+                        .clickable(role = androidx.compose.ui.semantics.Role.Tab) { onPick(id) }
+                        .padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s2),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(name, style = Fonts.body(), color = if (on) Tk.D.fg else Tk.D.fgMuted, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(count.toString(), style = Fonts.micro(), color = Tk.D.fgMuted)
+                }
+            }
+        }
+        Box(Modifier.width(1.dp).fillMaxHeight().background(Tk.D.rule))
+    }
+}
 
 @Composable
 private fun TopBar(
