@@ -85,7 +85,14 @@ android {
             productFlavors.getByName("intl").signingConfig = signingConfigs.findByName("release-intl")
         }
         debug {
-            resValue("string", "app_label", "AI WorkDeck Dev")
+            // -PawdDev=true: ".dev" package and its own name, so a debug build installs next to the
+            // store apps on a real phone instead of replacing them. WeChat Pay/Open SDK won't work in it.
+            if (project.findProperty("awdDev") == "true") {
+                applicationIdSuffix = ".dev"
+                resValue("string", "app_label", "AWD Dev")
+            } else {
+                resValue("string", "app_label", "AI WorkDeck Dev")
+            }
             buildConfigField("boolean", "FIRM_REVIEW", "true")
         }
     }
