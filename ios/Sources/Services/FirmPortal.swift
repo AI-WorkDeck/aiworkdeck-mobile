@@ -472,6 +472,8 @@ final class FirmLink {
     private(set) var listed = false
     /// Portal error code of the last failed access check (e.g. `unauthorized`, `network`).
     private(set) var lastErrorCode: String?
+    /// Unnamed matters (no client, company or template): the draft's first heading by matter id, as the matter screen shows.
+    private(set) var headings: [String: String] = [:]
     /// Trial code for this portal, read from the Keychain once rather than per request.
     let trialCode: String?
     private let session: () -> String?
@@ -541,6 +543,16 @@ final class FirmLink {
         }
     }
 
+    /// The list carries no draft text, so unnamed rows would read "—": fetch those few matters once for their heading.
+    private func fillHeadings(_ client: FirmPortalClient, _ list: [FirmMatterSummary]) async {
+        let missing = list.filter { FirmText.unnamed($0.client, $0.company, $0.template?.text) && headings[$0.id] == nil }.prefix(12)
+        for m in missing {
+            let heading = FirmMarkdown.firstHeading((try? await client.matter(m.id))?.latest?.markdown)
+            guard !closed else { return }
+            if let heading { headings[m.id] = heading }
+        }
+    }
+
     func refresh() async {
         guard !closed, access == .approved, let client else { return }
         do {
@@ -550,6 +562,7 @@ final class FirmLink {
             matters = list
             listed = true
             loadError = nil
+            await fillHeadings(client, list)
         } catch let e as FirmPortalError {
             guard !closed else { return }
             access = FirmPortal.access(after: e, previous: access)
