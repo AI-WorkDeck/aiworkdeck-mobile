@@ -200,7 +200,7 @@ final class AccountRegionTests: XCTestCase {
         L10n.locale = "ar"
         XCTAssertTrue(L10n.isRTL)
         XCTAssertEqual(L10n.wireCode, "ar-SA")
-        XCTAssertEqual(tr("login.region.cn"), "China")
+        XCTAssertEqual(tr("login.region.cn"), "الصين")
         L10n.locale = "zh-Hant"
         XCTAssertFalse(L10n.isRTL)
         XCTAssertEqual(L10n.wireCode, "zh-TW")
