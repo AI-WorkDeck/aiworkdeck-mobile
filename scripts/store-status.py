@@ -3,7 +3,7 @@
 Never uploads, edits or submits. Play: opens an edit only to read tracks, then deletes it (never commits).
 env: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH (App Store); PLAY_SERVICE_ACCOUNT_JSON (Google Play, optional).
 """
-import importlib.util, json, os, sys, time, urllib.parse, urllib.request
+import importlib.util, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 import jwt
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +26,13 @@ def appstore():
     for b in r["data"]:
         a = b["attributes"]; pv = (b.get("relationships", {}).get("preReleaseVersion", {}).get("data") or {}).get("id")
         print(f"| {pre.get(pv, '?')} | {a.get('version')} | {a.get('processingState')} | {(a.get('uploadedDate') or '')[:16]} |")
+    # When the current submission entered review (a version's createdDate is not that; see mobile-lane-checks).
+    r = asc.call(tok, "GET", f"/reviewSubmissions?filter[app]={asc.APP_ID}&limit=5")
+    if isinstance(r, dict) and "data" in r:
+        print("\n| review submission | state | submitted |\n|---|---|---|")
+        for sub in r["data"]:
+            a = sub["attributes"]
+            print(f"| {sub['id'][:8]} | {a.get('state')} | {(a.get('submittedDate') or '')[:16]} |")
 
 def play(pkg="com.aiworkdeck.mobile"):
     raw = os.environ.get("PLAY_SERVICE_ACCOUNT_JSON")
@@ -57,6 +64,10 @@ def play(pkg="com.aiworkdeck.mobile"):
             dp = pr.get("defaultPrice", {})
             print(f"| {pr.get('sku')} | {pr.get('status')} | {dp.get('priceMicros', '')} {dp.get('currency', '')} |")
         if not prods: print("| (none) | | |")
+    except urllib.error.HTTPError as e:
+        # Print Google's reason (missing Play Console permission vs. retired API) so the fix is clear.
+        detail = e.read().decode("utf-8", "replace")[:400]
+        print(f"\nin-app products query failed: HTTP {e.code}: {detail}")
     except Exception as e:
         print(f"\nin-app products query failed: {type(e).__name__}: {e}")
 
