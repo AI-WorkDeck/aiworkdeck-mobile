@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package com.aiworkdeck.mobile
 import com.aiworkdeck.mobile.services.*
+import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.features.personal.PersonalWorkspaceState
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -121,6 +122,13 @@ class PersonalWorkspaceTest {
             assertNull(saved); assertTrue(state.messages.isEmpty()); assertEquals(1, server.requestCount)
         } finally { server.shutdown() }
     }
+    @Test fun reminderNotificationNamesTheEventProjectAndDueTime() {
+        val event = PersonalCalendarEvent("1", "desktop", "alpha", projectName = "Acme diligence", title = "File the reply", dueDate = "2026-11-28", dueTime = "14:00", timeZone = "Asia/Shanghai", remindAt = "2026-11-28T05:00:00Z", status = "OPEN")
+        assertEquals("File the reply" to "Acme diligence · 2026-11-28 14:00", reminderText(event))
+        assertEquals("Acme diligence · 2026-11-28", reminderText(event.copy(dueTime = null)).second)
+        assertEquals(tr("personal.reminders"), reminderText(event.copy(title = " ")).first)
+    }
+
     @Test fun remindersExcludeDonePastAndMissingDatesAndLimitNext50() {
         val now = Instant.parse("2026-10-27T20:00:00Z")
         val event = PersonalCalendarEvent("1", "desktop", "alpha", projectName = "Synthetic", title = "Event", dueDate = "2026-10-28", timeZone = "Asia/Shanghai", remindAt = "2026-10-28T00:00:00Z", status = "OPEN")

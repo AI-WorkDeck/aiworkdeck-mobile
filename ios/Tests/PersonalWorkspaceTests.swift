@@ -261,6 +261,19 @@ final class PersonalWorkspaceTests: XCTestCase {
         XCTAssertEqual(model.selectedTab, "assistant", "other tabs are untouched")
     }
 
+    @MainActor func testReminderNotificationNamesTheEventProjectAndDueTime() throws {
+        func event(title: String, dueTime: String?) throws -> PersonalCalendarEvent {
+            let time = dueTime.map { #""dueTime":"\#($0)","# } ?? ""
+            let json = #"{"id":"1","deviceId":"d","projectKey":"k","projectName":"Acme diligence","title":"\#(title)","dueDate":"2026-11-28",\#(time)"timeZone":"Asia/Shanghai","status":"OPEN","files":[]}"#
+            return try JSONDecoder().decode(PersonalCalendarEvent.self, from: Data(json.utf8))
+        }
+        let full = CalendarReminders.text(for: try event(title: "File the reply", dueTime: "14:00"))
+        XCTAssertEqual(full.title, "File the reply")
+        XCTAssertEqual(full.body, "Acme diligence · 2026-11-28 14:00")
+        XCTAssertEqual(CalendarReminders.text(for: try event(title: "File the reply", dueTime: nil)).body, "Acme diligence · 2026-11-28")
+        XCTAssertEqual(CalendarReminders.text(for: try event(title: " ", dueTime: nil)).title, tr("personal.reminders"))
+    }
+
     @MainActor func testManualTabsAndReminderNavigationShareCameraBusyGuard() throws {
         let model = PersonalWorkspaceModel()
         // Photo capture, recording startup, and video recording all feed the

@@ -308,7 +308,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
                 if (!status.enabled || !status.canUseCloud) Notice(tr(if (status.canUseCloud) "personal.assistantConsent" else if (status.cloudAccess?.frozen == true) "postpaid.restricted" else "personal.subscription")) {
                     if (status.canUseCloud && !status.backupEnabled) Link(tr("backup.title")) { onOpen(Overlay.Backup) }
                     if (!status.canUseCloud) Link(tr("settings.account")) { onOpen(Overlay.Settings) }
-                    if (status.canUseCloud && status.backupEnabled) Link(tr("common.on")) { consent = "assistant" }
+                    if (status.canUseCloud && status.backupEnabled) Link(tr("personal.turnOn")) { consent = "assistant" }
                 }
             }
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Tk.Sp.s5), contentPadding = PaddingValues(vertical = Tk.Sp.s4)) {
@@ -359,13 +359,13 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
                 Link(tr("personal.newChat"), !state.busy && !state.loading && state.pending == null) { state.newConversation() }
                 Link(tr("personal.copy.title"), !state.busy && !state.loading && state.pending == null && state.messages.isNotEmpty()) { scope.launch { state.prepareCopy() } }
                 if (state.messages.any { it.first == "assistant" }) Link(tr("personal.report.conversation"), !state.reporting && state.conversationId != null) { state.openReport() }
-                if (state.status?.enabled == true) Link(tr("common.off"), !state.busy && !state.loading, muted = true) { scope.launch { state.configure("assistant", false, context) } }
+                if (state.status?.enabled == true) Link(tr("personal.turnOff"), !state.busy && !state.loading, muted = true) { scope.launch { state.configure("assistant", false, context) } }
             }
         } else {
             val calendar = state.calendar
             if (calendar != null && (!calendar.enabled || !calendar.canReadCloud)) Notice(tr(if (calendar.canReadCloud) "personal.calendarConsent" else if (calendar.cloudAccess?.frozen == true) "postpaid.restricted" else "personal.subscription")) {
                 if (!calendar.canReadCloud) Link(tr("settings.account")) { onOpen(Overlay.Settings) }
-                if (calendar.canWriteCloud) Link(tr("common.on")) { consent = "calendar" }
+                if (calendar.canWriteCloud) Link(tr("personal.turnOn")) { consent = "calendar" }
             }
             Row(Modifier.fillMaxWidth().padding(top = Tk.Sp.s2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
                 Segmented(listOf(1, 3, 5).map { it to (if (it == 1) tr("personal.today") else tr("personal.nextDays", mapOf("days" to it))) }, days,
@@ -409,7 +409,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
                 }
             }
             state.calendarError?.let { Text(it, style = Fonts.small(), color = Tk.S.failed) }
-            if (calendar?.enabled == true) Link(tr("common.off"), muted = true) { scope.launch { state.configure("calendar", false, context); CalendarReminders.clear(context); reminders = false } }
+            if (calendar?.enabled == true) Link(tr("personal.turnOff"), muted = true) { scope.launch { state.configure("calendar", false, context); CalendarReminders.clear(context); reminders = false } }
         }
     }
     if (state.reportConversationId != null) {

@@ -66,6 +66,9 @@ import com.aiworkdeck.mobile.services.MediaUsage
 import com.aiworkdeck.mobile.services.ServiceLocator
 import com.aiworkdeck.mobile.services.userFacingMessage
 import kotlinx.coroutines.launch
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.aiworkdeck.mobile.R
 
 /** 用量读不到时的占位。一条「—」比一行报错更符合这行信息的分量。 */
 private const val DASH = "—"
@@ -527,6 +530,6 @@ private fun NavRow(title: String, value: String?, onClick: () -> Unit) {
             value.orEmpty(), style = Fonts.small(), color = Tk.L.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End, modifier = Modifier.weight(1f),
         )
-        Text("›", style = Fonts.body(), color = Tk.L.fgFaint)
+        Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = Tk.L.fgFaint, modifier = Modifier.size(20.dp))
     }
 }

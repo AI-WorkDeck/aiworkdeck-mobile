@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package com.aiworkdeck.mobile.services
 
+import com.aiworkdeck.mobile.design.tr
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import java.time.Instant
@@ -34,6 +35,13 @@ import java.util.UUID
     }.getOrDefault(false)
 }
 @Serializable data class PersonalCalendar(val enabled: Boolean, val subscriptionActive: Boolean, val events: List<PersonalCalendarEvent> = emptyList(), val syncedAt: String? = null, val cloudAccess: CloudAccess? = null) { val canReadCloud: Boolean get() = cloudAccess?.canRead ?: subscriptionActive; val canWriteCloud: Boolean get() = cloudAccess?.canWrite ?: subscriptionActive }
+
+/** Reminder notification text: the event title, then project and due date, so it reads without opening the app. */
+fun reminderText(event: PersonalCalendarEvent): Pair<String, String> {
+    val title = event.title.ifBlank { tr("personal.reminders") }
+    val due = listOfNotNull(event.dueDate.ifBlank { null }, event.dueTime?.ifBlank { null }).joinToString(" ")
+    return title to listOf(event.projectName, due).filter { it.isNotBlank() }.joinToString(" · ")
+}
 
 fun reminderEvents(events: List<PersonalCalendarEvent>, now: Instant = Instant.now()): List<PersonalCalendarEvent> =
     events.filter { it.status == "OPEN" && it.reminder?.isAfter(now) == true }.sortedBy { it.reminder }.take(50)
