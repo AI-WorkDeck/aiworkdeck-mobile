@@ -1,5 +1,6 @@
 package com.aiworkdeck.mobile.features.settings
 
+import com.aiworkdeck.mobile.design.readableWidth
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -169,7 +170,7 @@ fun SettingsScreen(model: AppModel, onClose: () -> Unit, onOpen: (com.aiworkdeck
 
     LightStatusBar()
     WorkdeckTheme(dark = false) {
-        Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().readableWidth()) {
             TopBar(onClose)
 
             Column(

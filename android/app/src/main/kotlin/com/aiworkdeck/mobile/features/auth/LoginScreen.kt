@@ -1,5 +1,6 @@
 package com.aiworkdeck.mobile.features.auth
 
+import com.aiworkdeck.mobile.design.readableWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
@@ -120,7 +121,7 @@ fun LoginScreen(model: AppModel) {
         }
     }
     LightStatusBar()
-    Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().imePadding()
+    Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().readableWidth().imePadding()
         .verticalScroll(rememberScrollState()).padding(horizontal = Tk.Sp.gutter, vertical = Tk.Sp.s4),
         verticalArrangement = Arrangement.spacedBy(Tk.Sp.s4)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s3)) {

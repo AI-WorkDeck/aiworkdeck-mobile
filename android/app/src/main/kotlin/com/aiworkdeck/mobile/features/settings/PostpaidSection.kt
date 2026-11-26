@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package com.aiworkdeck.mobile.features.settings
 
+import com.aiworkdeck.mobile.design.readableWidth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -103,7 +104,7 @@ private fun PostpaidDetail(
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         LightStatusBar()
         WorkdeckTheme(dark = false) {
-            Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding()) {
+            Column(Modifier.fillMaxSize().background(Tk.L.bg).safeDrawingPadding().readableWidth()) {
                 Column {
                     Row(
                         Modifier.fillMaxWidth().padding(start = Tk.Sp.s2, end = Tk.Sp.gutter, bottom = Tk.Sp.s2),

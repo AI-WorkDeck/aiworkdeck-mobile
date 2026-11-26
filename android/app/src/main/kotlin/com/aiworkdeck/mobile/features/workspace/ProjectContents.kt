@@ -49,6 +49,7 @@ import com.aiworkdeck.mobile.design.Hairline
 import com.aiworkdeck.mobile.design.PrimaryButton
 import com.aiworkdeck.mobile.design.RowItem
 import com.aiworkdeck.mobile.design.Segmented
+import com.aiworkdeck.mobile.design.LocalWindowLayout
 import com.aiworkdeck.mobile.design.Tk
 import com.aiworkdeck.mobile.design.tr
 import com.aiworkdeck.mobile.features.library.LibraryScreen
@@ -191,8 +192,8 @@ internal fun ProjectContents(
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val reading = selection
-            // iOS FilePaneGeometry, minus fold handling: a wide landscape window reads beside the list.
-            val split = reading != null && !focus && !showList && maxWidth >= 720.dp && maxWidth > maxHeight
+            // iOS FilePaneGeometry, minus fold handling: a wide window (size class, M17) reads beside the list.
+            val split = reading != null && !focus && !showList && LocalWindowLayout.current.splitPanes
             val listVisible = reading == null || showList || split
             val readerVisible = reading != null && !showList
             val listWidth = min(320.dp, maxWidth * 0.34f)
