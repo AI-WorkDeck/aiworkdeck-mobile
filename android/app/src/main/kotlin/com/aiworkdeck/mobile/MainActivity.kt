@@ -167,6 +167,7 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
     var returnOverlay by remember { mutableStateOf(Overlay.None) }
     var personalFileProject by remember { mutableStateOf<com.aiworkdeck.mobile.model.RelayProject?>(null) }
     var captureBusy by remember { mutableStateOf(false) }
+    var firmMatter by remember { mutableStateOf<com.aiworkdeck.mobile.services.firm.FirmMatterSummary?>(null) }
     val personal = remember(isSignedIn) { if (isSignedIn) PersonalWorkspaceState() else null }
     // Firm review: restore linked portals per account; the Reviews tab appears once any firm approves.
     val firmOverview by (if (BuildConfig.FIRM_REVIEW) ServiceLocator.firm.overview else kotlinx.coroutines.flow.flowOf(emptyList()))
@@ -234,7 +235,7 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
                                     onOpen = { returnOverlay = Overlay.None; personalFileProject = null; overlay = it })
                             }
                             if (tab == MainTab.firm) com.aiworkdeck.mobile.features.firm.FirmInboxScreen(ServiceLocator.firm,
-                                onOpenSettings = { returnOverlay = Overlay.None; overlay = Overlay.Settings }, onOpenMatter = { /* matter screen: M1 PR 5 */ })
+                                onOpenSettings = { returnOverlay = Overlay.None; overlay = Overlay.Settings }, onOpenMatter = { firmMatter = it })
                             if ((tab == MainTab.calendar || tab == MainTab.assistant) && personal != null) PersonalWorkspaceScreen(personal, tab.name, notificationEventId,
                                 onOpen = { returnOverlay = Overlay.None; overlay = it },
                                 onProject = { returnOverlay = Overlay.None; personalFileProject = it; overlay = Overlay.Files })
@@ -258,6 +259,10 @@ fun Root(model: AppModel, notificationEventId: String? = null) {
                             onClose = { overlay = returnOverlay }, onOpen = { returnOverlay = Overlay.None; overlay = it })
                     }
                     if (overlay == Overlay.Backup) BackupConsentScreen(onClose = { overlay = returnOverlay })
+                    // A matter is a focused task: it covers the tab bar, with its own action bar (iOS hides the tab bar).
+                    firmMatter?.takeIf { tab == MainTab.firm && overlay == Overlay.None }?.let { m ->
+                        com.aiworkdeck.mobile.features.firm.FirmMatterScreen(ServiceLocator.firm, m, onClose = { firmMatter = null })
+                    }
                     if (overlay == Overlay.Firm) com.aiworkdeck.mobile.features.firm.FirmJoinScreen(ServiceLocator.firm, onClose = { overlay = Overlay.Settings })
                     if (overlay == Overlay.Library) {
                         LibraryScreen(

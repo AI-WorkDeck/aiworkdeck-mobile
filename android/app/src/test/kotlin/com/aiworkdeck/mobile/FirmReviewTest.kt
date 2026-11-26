@@ -263,6 +263,13 @@ class FirmReviewTest {
         assertEquals("time.daysAgo" to 3L, FirmTabs.agoKey(Instant.parse("2026-11-21T12:00:00Z"), now))
     }
 
+    @Test fun onlyRealPdfsAreShownAsTheSignedDocument() {
+        assertTrue(FirmPdf.looksLikePdf("%PDF-1.7 ...".toByteArray()))
+        assertFalse(FirmPdf.looksLikePdf("<html>error</html>".toByteArray()))
+        assertFalse(FirmPdf.looksLikePdf(ByteArray(0)))
+        assertEquals("第1条 商号", FirmMarkdown.plain("## **第1条** 商号"))
+    }
+
     @Test fun everyFirmStringKeyUsedHereExists() {
         val keys = FirmInbox.Group.entries.map(FirmInbox::titleKey) +
             listOf("call_requested", "client_replied", "review_requested").map(FirmInbox::reasonKey) +
@@ -271,7 +278,15 @@ class FirmReviewTest {
             FirmAccess.entries.mapNotNull { FirmStatus.link(it, "f")?.first } +
             listOf("firm.settings.title", "firm.join.title", "firm.join.body", "firm.join.link", "firm.join.badHost", "firm.join.connect",
                 "firm.trial.use", "firm.trial.code", "firm.trial.until", "firm.trial.invalid", "firm.status.check", "firm.leave", "error.sessionSaveFailed",
-                "firm.tab", "firm.inbox.empty", "firm.forLawyerCount", "time.secondsAgo", "time.minutesAgo", "time.hoursAgo", "time.daysAgo")
+                "firm.tab", "firm.inbox.empty", "firm.forLawyerCount", "time.secondsAgo", "time.minutesAgo", "time.hoursAgo", "time.daysAgo",
+                "firm.matter.conversation", "firm.matter.requestedLawyer", "firm.matter.callScheduled", "firm.matter.call", "firm.matter.forLawyer",
+                "firm.matter.forLawyerEmpty", "firm.matter.flags", "firm.matter.version", "firm.matter.flagsNew", "firm.matter.changes", "firm.matter.firstVersion",
+                "firm.matter.document", "firm.matter.pdf", "firm.matter.noDraft", "firm.action.reply", "firm.action.signoff", "firm.call.confirm", "firm.call.done",
+                "firm.edit.title", "firm.edit.save", "firm.edit.note", "firm.sendBack", "firm.sendBack.confirm", "firm.reply.sent", "firm.reply.send",
+                "firm.reply.placeholder", "firm.reply.question", "firm.reply.question.text", "firm.reply.terms", "firm.reply.terms.text", "firm.reply.callTime",
+                "firm.reply.callTime.text", "firm.who.client", "firm.who.assistant", "firm.signoff.title", "firm.signoff.signer", "firm.signoff.lawyerTitle",
+                "firm.signoff.firm", "firm.signoff.admission", "firm.signoff.demo", "firm.signoff.firmHint", "firm.signoff.conflicts", "firm.signoff.engagement",
+                "firm.signoff.reviewed", "firm.signoff.footer", "firm.signoff.confirm", "firm.signoff.reason", "files.openWith", "common.back")
         for (k in keys) assertTrue(k, com.aiworkdeck.contract.ContractStrings.table.containsKey(k))
     }
 }
