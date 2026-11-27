@@ -122,7 +122,10 @@ struct FirmChip: View {
     var body: some View {
         Text(text).font(T.F.nano()).foregroundStyle(color)
             .padding(.horizontal, T.Sp.s2).padding(.vertical, 3)
-            .background(color.opacity(0.1), in: Capsule())
+            // A light tint over the card surface, not the page: at 10% on the sunken page the amber and red inks
+            // fell to 4.1-4.5:1 (X review of #200); 6% over the surface keeps them at 4.7:1 or more.
+            .background(color.opacity(0.06), in: Capsule())
+            .background(T.LD.surface, in: Capsule())
     }
 }
 

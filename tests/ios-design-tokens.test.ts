@@ -14,6 +14,7 @@ const VIEWS = [
   'Sources/Features/Workspace/WorkspaceView.swift',
   'Sources/Features/Firm/FirmInboxView.swift',
   'Sources/Features/Firm/FirmSheets.swift',
+  'Sources/Features/Firm/FirmMatterView.swift',
   'Sources/Features/Home/HomeView.swift',
 ]
 

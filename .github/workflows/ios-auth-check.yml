@@ -84,6 +84,8 @@ jobs:
           trap 'xcrun simctl delete "$DEVICE_ID"' EXIT
           xcrun simctl boot "$DEVICE_ID"
           xcrun simctl bootstatus "$DEVICE_ID" -b
+          # Appearance is set here, not with XCUIDevice.appearance (that did not switch the CI simulator).
+          xcrun simctl ui "$DEVICE_ID" appearance light
           TESTS=(
             -only-testing:WorkdeckUITests/SubscriptionFlowTests
             -only-testing:WorkdeckTests
@@ -117,11 +119,17 @@ jobs:
             )
           fi
           xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -retry-tests-on-failure -test-iterations 2 -collect-test-diagnostics never -test-timeouts-enabled YES -default-test-execution-time-allowance 900 -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$DEVICE_ID" "${TESTS[@]}" CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests.xcresult"
+          # Dark pass for the design-review shots (Personal tabs and Firm follow the system; POLISH M42).
+          xcrun simctl ui "$DEVICE_ID" appearance dark
+          TEST_RUNNER_AWD_APPEARANCE=dark xcodebuild test -scheme Workdeck -parallel-testing-enabled NO -retry-tests-on-failure -test-iterations 2 -collect-test-diagnostics never -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:WorkdeckUITests/FirmFixtureShotsTests CODE_SIGNING_ALLOWED=NO -resultBundlePath "$RUNNER_TEMP/auth-tests-dark.xcresult"
       - name: Export simulator screenshots and recordings
         if: always()
         run: |
           if [ -d "$RUNNER_TEMP/auth-tests.xcresult" ]; then
             xcrun xcresulttool export attachments --path "$RUNNER_TEMP/auth-tests.xcresult" --output-path "$RUNNER_TEMP/auth-attachments"
+          fi
+          if [ -d "$RUNNER_TEMP/auth-tests-dark.xcresult" ]; then
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/auth-tests-dark.xcresult" --output-path "$RUNNER_TEMP/auth-attachments/dark"
           fi
       - uses: actions/upload-artifact@v4
         if: always()
@@ -132,4 +140,6 @@ jobs:
         if: always()
         with:
           name: ios-auth-tests-${{ matrix.device }}
-          path: ${{ runner.temp }}/auth-tests.xcresult
+          path: |
+            ${{ runner.temp }}/auth-tests.xcresult
+            ${{ runner.temp }}/auth-tests-dark.xcresult

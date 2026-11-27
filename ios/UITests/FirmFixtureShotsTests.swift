@@ -14,31 +14,30 @@ final class FirmFixtureShotsTests: XCTestCase {
         let a = XCTAttachment(screenshot: app.screenshot()); a.name = name; a.lifetime = .keepAlways; add(a)
     }
 
+    /// The system appearance is set by the workflow (`simctl ui <device> appearance`), which passes it as
+    /// AWD_APPEARANCE; XCUIDevice.appearance did not change the CI simulator (X review of #200).
+    private var mode: String { ProcessInfo.processInfo.environment["AWD_APPEARANCE"] ?? "light" }
+
     @MainActor func testReviewsInboxAndMatter() throws {
-        // CI simulators boot in dark appearance; X27 reviews the Reviews tab in light first.
-        let app = try launchJoined(.light)
+        let app = try launchJoined()
         let tab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Reviews"))
             .containing(NSPredicate(format: "identifier IN %@", ["signature"])).firstMatch
         XCTAssertTrue(tab.waitForExistence(timeout: 15)); tab.tap()
         let review = app.buttons["firm.row.mtr-review"]
         XCTAssertTrue(review.waitForExistence(timeout: 15))
-        shot("Firm inbox", app)
+        shot("Firm inbox \(mode)", app)
 
         review.tap()
         XCTAssertTrue(app.staticTexts["Is a $10M post-money cap reasonable for a seed robotics company?"].waitForExistence(timeout: 10))
-        shot("Firm matter", app)
+        shot("Firm matter \(mode)", app)
         app.swipeUp()
-        shot("Firm matter flags and changes", app)
-
-        XCUIDevice.shared.appearance = .dark
-        shot("Firm matter dark", app)
+        shot("Firm matter flags and changes \(mode)", app)
     }
 
     /// POLISH M42: Capture is dark by function; Calendar, Assistant and Reviews follow the system appearance.
     @MainActor func testPersonalTabsFollowTheSystemExceptCapture() throws {
-        for appearance in [XCUIDevice.Appearance.light, .dark] {
-            let app = try launchJoined(appearance)
-            let mode = appearance == .light ? "light" : "dark"
+        do {
+            let app = try launchJoined()
             let reviews = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Reviews"))
                 .containing(NSPredicate(format: "identifier IN %@", ["signature"])).firstMatch
             for (name, tab) in [("Calendar", personalTab(app, .calendar)), ("Assistant", personalTab(app, .assistant)),
@@ -47,21 +46,22 @@ final class FirmFixtureShotsTests: XCTestCase {
                 Thread.sleep(forTimeInterval: 1)
                 shot("Tab \(name) \(mode)", app)
             }
-            if appearance == .light {
-                // The switch out of the dark viewfinder: right after the tap, then settled.
-                personalTab(app, .assistant).tap()
-                shot("Switch Capture to Assistant light immediate", app)
-                Thread.sleep(forTimeInterval: 1)
-                shot("Switch Capture to Assistant light settled", app)
-            }
+            // The switch out of the dark viewfinder and back: right after the tap, then settled.
+            personalTab(app, .assistant).tap()
+            shot("Switch Capture to Assistant \(mode) immediate", app)
+            Thread.sleep(forTimeInterval: 1)
+            shot("Switch Capture to Assistant \(mode) settled", app)
+            personalTab(app, .capture).tap()
+            shot("Switch Assistant to Capture \(mode) immediate", app)
+            Thread.sleep(forTimeInterval: 1)
+            shot("Switch Assistant to Capture \(mode) settled", app)
             app.terminate()
         }
     }
 
-    @MainActor private func launchJoined(_ appearance: XCUIDevice.Appearance) throws -> XCUIApplication {
+    @MainActor private func launchJoined() throws -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
-        XCUIDevice.shared.appearance = appearance
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest", "-AWDPersonalUITest", "-AWDFirmUITest", "-AWDFirmFixture"]
         app.launch()
