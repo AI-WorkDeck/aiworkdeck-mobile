@@ -353,7 +353,7 @@ fun PersonalWorkspaceScreen(state: PersonalWorkspaceState, tab: String, notifica
             // Capped at the readable width and kept at the start edge, under the left-aligned conversation.
             Row(Modifier.widthIn(max = ReadableWidth).fillMaxWidth().padding(vertical = Tk.Sp.s2), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Tk.Sp.s2)) {
                 OutlinedTextField(value = state.draft, onValueChange = { state.draft = it }, enabled = !state.busy && !state.loading,
-                    placeholder = { Text(tr("personal.ask"), style = Fonts.body()) }, textStyle = Fonts.body(), shape = RoundedCornerShape(22.dp),
+                    placeholder = { Text(tr("personal.askShort"), style = Fonts.body()) }, textStyle = Fonts.body(), shape = RoundedCornerShape(22.dp),
                     modifier = Modifier.weight(1f), maxLines = 5)
                 val canSend = !state.busy && !state.loading && state.draft.isNotBlank() && state.status?.canUseCloud == true
                 Box(Modifier.size(Tk.touchMin + 4.dp).clip(CircleShape).background(if (canSend) Tk.L.accent else Tk.L.sunken)

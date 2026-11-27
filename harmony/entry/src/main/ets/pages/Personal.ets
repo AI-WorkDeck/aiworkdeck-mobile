@@ -410,7 +410,7 @@ export struct Personal {
             if (this.copyTargets.length === 0) Text(this.t('project.emptyTitle')).fontColor(Tk.L.fgMuted)
             Select(this.copyTargets.map((project: PersonalCopyTarget): SelectOption => { return { value: this.copyTargetLabel(project) } })).value(this.t('personal.copy.title')).enabled(!this.busy && !this.loading).onSelect((index: number): void => { if (index >= 0 && index < this.copyTargets.length) this.confirmCopy(this.copyTargets[index]) })
           }
-          Row() { TextArea({ text: this.draft, placeholder: this.t('personal.ask') }).enabled(!this.busy && !this.loading).layoutWeight(1).maxLines(5).onChange((value: string): void => { this.draft = value }); Button(this.t('personal.send')).enabled(!this.busy && !this.loading && this.draft.trim().length > 0 && this.assistantEnabled && this.assistantSubscribed).onClick((): void => { this.send() }) }
+          Row() { TextArea({ text: this.draft, placeholder: this.t('personal.askShort') }).enabled(!this.busy && !this.loading).layoutWeight(1).maxLines(5).onChange((value: string): void => { this.draft = value }); Button(this.t('personal.send')).enabled(!this.busy && !this.loading && this.draft.trim().length > 0 && this.assistantEnabled && this.assistantSubscribed).onClick((): void => { this.send() }) }
           Row() { Button(this.t('personal.newChat')).enabled(!this.busy && !this.loading && this.pendingId.length === 0).onClick((): void => { this.resetConversation(); this.saveConversation() }); if (this.assistantEnabled) Button(this.t('personal.turnOff')).enabled(!this.busy).onClick((): void => { this.configure('assistant', false) }) }
         } else {
           if (!this.calendarEnabled || !this.calendarSubscribed) {
