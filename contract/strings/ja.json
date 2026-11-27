@@ -456,6 +456,7 @@
   "personal.assistant": "パーソナルアシスタント",
   "personal.calendar": "予定",
   "personal.ask": "そのまま質問できます。アクセス可能な案件をアシスタントが検索します。",
+  "personal.askShort": "案件について質問",
   "personal.send": "送信",
   "personal.processing": "案件情報を検索しています…",
   "personal.newChat": "新しい会話",

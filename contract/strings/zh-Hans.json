@@ -456,6 +456,7 @@
   "personal.assistant": "助理",
   "personal.calendar": "日程",
   "personal.ask": "直接问，助理会查找有权限的项目资料",
+  "personal.askShort": "问问你的项目",
   "personal.send": "发送",
   "personal.processing": "正在查找项目资料…",
   "personal.newChat": "新对话",

@@ -456,6 +456,7 @@
   "personal.assistant": "Assistant personnel",
   "personal.calendar": "Calendrier",
   "personal.ask": "Posez votre question. L’assistant cherche dans les projets accessibles.",
+  "personal.askShort": "Une question sur vos projets",
   "personal.send": "Envoyer",
   "personal.processing": "Recherche des informations du projet…",
   "personal.newChat": "Nouvelle conversation",

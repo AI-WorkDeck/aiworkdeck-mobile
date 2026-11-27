@@ -456,6 +456,7 @@
   "personal.assistant": "개인 도우미",
   "personal.calendar": "일정",
   "personal.ask": "바로 질문하세요. 도우미가 접근 가능한 프로젝트를 찾습니다.",
+  "personal.askShort": "프로젝트에 대해 질문",
   "personal.send": "보내기",
   "personal.processing": "프로젝트 정보를 찾는 중…",
   "personal.newChat": "새 대화",

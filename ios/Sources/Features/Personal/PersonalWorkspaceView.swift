@@ -203,7 +203,7 @@ struct PersonalWorkspaceView: View {
                     .badge(firm.needsYouCount)
             }
         }
-        .tint(T.L.accent)
+        .tint(T.LD.accent)
         .task { await model.load() }
         .task(id: account.account?.id) { await firm.restore(userID: account.account?.id) }
         .onChange(of: reminders.selectedEventID, initial: true) { _, value in
@@ -280,7 +280,7 @@ private struct AssistantView: View {
                     }
                 }
                 HStack(alignment: .bottom) {
-                    TextField(tr("personal.ask"), text: $model.draft, prompt: Text(tr("personal.ask")).foregroundStyle(colorScheme == .dark ? T.D.fgMuted : T.L.fgMuted), axis: .vertical)
+                    TextField(tr("personal.askShort"), text: $model.draft, prompt: Text(tr("personal.askShort")).foregroundStyle(colorScheme == .dark ? T.D.fgMuted : T.L.fgMuted), axis: .vertical)
                         .foregroundStyle(colorScheme == .dark ? T.D.fg : T.L.fg)
                         .lineLimit(1...5).focused($inputFocused).disabled(model.busy).accessibilityIdentifier("personal.input")
                     Button(tr("personal.send")) { inputFocused = false; Task { await model.send() } }.disabled(model.busy || model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.status?.enabled != true || model.status?.canUseCloud != true).accessibilityIdentifier("personal.send")

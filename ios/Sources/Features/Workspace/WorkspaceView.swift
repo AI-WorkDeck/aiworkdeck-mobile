@@ -141,7 +141,7 @@ struct WorkspaceView: View {
             readingBusy = false
             columnVisibility = .all
         }
-        .tint(T.L.accent)
+        .tint(T.LD.accent)
         .task {
             client = model.workspaceFiles()
             if selected == nil, let initialProject { selected = initialProject; compactColumn = .detail }
@@ -371,12 +371,18 @@ struct ProjectContentsView: View {
                 .accessibilityIdentifier("workspace.storageLocation")
                 .disabled(downloadBusy)
             }
-            TextField(tr("workspace.searchFiles"), text: $query)
-                .focused($searchFocused)
-                .submitLabel(.search)
-                .onSubmit { searchFocused = false }
-                .textFieldStyle(.roundedBorder).padding(.horizontal)
-                .accessibilityIdentifier("workspace.fileSearch")
+            // Same look as the project list's system search field: pill with a magnifier (lane X review of #177).
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(T.LD.fgMuted).accessibilityHidden(true)
+                TextField(tr("workspace.searchFiles"), text: $query)
+                    .focused($searchFocused)
+                    .submitLabel(.search)
+                    .onSubmit { searchFocused = false }
+                    .accessibilityIdentifier("workspace.fileSearch")
+            }
+            .padding(.horizontal, 10).padding(.vertical, 8)
+            .background(T.LD.field, in: Capsule())
+            .padding(.horizontal)
             if query.isEmpty {
                 HStack {
                     Button(tr("workspace.folderRoot")) { directory = ""; scrollID = nil }

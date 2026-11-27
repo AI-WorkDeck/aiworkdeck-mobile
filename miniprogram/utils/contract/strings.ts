@@ -10205,6 +10205,28 @@ export const STRINGS: Record<string, Record<string, string>> = {
     "hi": "सीधे पूछें। सहायक आपके लिए उपलब्ध परियोजनाओं में खोजेगा।",
     "ar": "اسأل مباشرة. يبحث المساعد في المشاريع المتاحة لك."
   },
+  "personal.askShort": {
+    "zh-Hans": "问问你的项目",
+    "zh-Hant": "問問你的專案",
+    "en": "Ask about your projects",
+    "ja": "案件について質問",
+    "ko": "프로젝트에 대해 질문",
+    "th": "ถามเกี่ยวกับโครงการ",
+    "ms": "Tanya tentang projek anda",
+    "id": "Tanya tentang proyek Anda",
+    "vi": "Hỏi về dự án của bạn",
+    "fr": "Une question sur vos projets",
+    "de": "Fragen zu Ihren Projekten",
+    "es": "Pregunta sobre tus proyectos",
+    "pt-BR": "Pergunte sobre seus projetos",
+    "it": "Chiedi dei tuoi progetti",
+    "ru": "Спросите о проектах",
+    "el": "Ρωτήστε για τα έργα σας",
+    "tr": "Projeleriniz hakkında sorun",
+    "nl": "Vraag over je projecten",
+    "hi": "अपनी परियोजनाओं के बारे में पूछें",
+    "ar": "اسأل عن مشاريعك"
+  },
   "personal.send": {
     "zh-Hans": "发送",
     "zh-Hant": "傳送",

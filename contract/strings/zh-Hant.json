@@ -456,6 +456,7 @@
   "personal.assistant": "助理",
   "personal.calendar": "行程",
   "personal.ask": "直接提問，助理會查找有權限的專案資料",
+  "personal.askShort": "問問你的專案",
   "personal.send": "傳送",
   "personal.processing": "正在查找專案資料…",
   "personal.newChat": "新對話",
