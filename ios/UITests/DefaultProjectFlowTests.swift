@@ -53,7 +53,7 @@ final class DefaultProjectFlowTests: XCTestCase {
         app.buttons["personal.send"].tap()
         let answer = app.staticTexts["Review the evidence checklist today. The source is Alpha project."]
         XCTAssertTrue(answer.waitForExistence(timeout: 10))
-        app.buttons.matching(NSPredicate(format: "label == %@", "Personal assistant"))
+        app.buttons.matching(NSPredicate(format: "label == %@", "Assistant"))
             .containing(NSPredicate(format: "identifier == %@", "ellipsis.circle")).firstMatch.tap()
         app.buttons["personal.copyToProject"].tap()
         let target = app.buttons["projectPicker.project.12"]
@@ -77,7 +77,7 @@ final class DefaultProjectFlowTests: XCTestCase {
         XCTAssertTrue(input.waitForExistence(timeout: 15)); input.tap(); input.typeText("Copy this to my computer")
         app.buttons["personal.send"].tap()
         XCTAssertTrue(app.staticTexts["Review the evidence checklist today. The source is Alpha project."].waitForExistence(timeout: 10))
-        app.buttons.matching(NSPredicate(format: "label == %@", "Personal assistant"))
+        app.buttons.matching(NSPredicate(format: "label == %@", "Assistant"))
             .containing(NSPredicate(format: "identifier == %@", "ellipsis.circle")).firstMatch.tap()
         app.buttons["personal.copyToProject"].tap()
         let target = app.buttons["personal.copy.desktop.mac-a.local-17"]
