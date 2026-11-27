@@ -24,6 +24,9 @@ extension T {
         static let fgFaint = pair(T.L.fgFaint, T.D.fgMuted)
         static let rule = pair(T.L.rule, T.D.rule)
         static let accent = pair(T.L.accent, T.S.arrivedOnDark)
+        /// Label on a filled accent button: white on the light accent, dark ink on the pale dark accent
+        /// (white on #89A8A0 is 2.57:1; #191713 on it is about 7:1).
+        static let onAccent = pair(.white, T.D.bg)
 
         static func pair(_ light: Color, _ dark: Color) -> Color {
             Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light) })

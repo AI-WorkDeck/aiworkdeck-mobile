@@ -94,3 +94,17 @@ test('text that carries information is never in the faint (decoration-only) colo
     assert.deepEqual(bad, [], `${f}: use fgMuted for text (fgFaint is about 2.5:1)`)
   }
 })
+
+test('filled buttons on the adaptive accent use the on-accent label colour (white on the dark accent is 2.57:1)', () => {
+  const files = [
+    'Sources/Features/Workspace/WorkspaceView.swift', 'Sources/Features/Firm/FirmMatterView.swift',
+    'Sources/Features/Firm/FirmSheets.swift', 'Sources/Features/Queue/QueueView.swift',
+    'Sources/Features/Settings/BackupConsentView.swift',
+  ]
+  for (const f of files) {
+    const lines = read(f).split('\n')
+    const bad = lines.map((l, i) => [i + 1, l] as const)
+      .filter(([, l]) => l.includes('.borderedProminent') && !l.includes('T.LD.onAccent'))
+    assert.deepEqual(bad, [], `${f}: add .foregroundStyle(T.LD.onAccent)`)
+  }
+})

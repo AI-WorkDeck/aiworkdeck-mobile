@@ -156,7 +156,7 @@ struct QueueView: View {
                 if let error = item.lastError, item.state == .failed, item.archiveMove == nil {
                     Text(error).foregroundStyle(T.S.failed)
                     Button(tr("project.retry")) { model.retry(item) }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.borderedProminent).foregroundStyle(T.LD.onAccent)
                         .accessibilityIdentifier("queue.retrySelected")
                 }
                 if item.state == .uploaded,

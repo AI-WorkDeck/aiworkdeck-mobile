@@ -523,7 +523,7 @@ private struct FileDownloadView: View {
                                     Text(tr("postpaid.partialCharge"))
                                 } else { Text(tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)])) }
                                 Button(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudOpen" : "workspace.download")) { approved = true; Task { await download() } }
-                                    .buttonStyle(.borderedProminent)
+                                    .buttonStyle(.borderedProminent).foregroundStyle(T.LD.onAccent)
                                     .accessibilityIdentifier("workspace.confirmDownload")
                                     .disabled(busy)
                             } else if approved, !busy {

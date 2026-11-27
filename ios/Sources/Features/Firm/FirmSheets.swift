@@ -170,7 +170,7 @@ struct FirmSignoffSheet: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: T.touchMin)
                 }
-                .buttonStyle(.borderedProminent).controlSize(.large).tint(FirmColor.accent)
+                .buttonStyle(.borderedProminent).controlSize(.large).tint(FirmColor.accent).foregroundStyle(T.LD.onAccent)
                 .disabled(!ready || signing)
                 .accessibilityIdentifier("firm.signoff.confirm")
                 .padding(.horizontal, T.Sp.gutter).padding(.vertical, T.Sp.s3)
