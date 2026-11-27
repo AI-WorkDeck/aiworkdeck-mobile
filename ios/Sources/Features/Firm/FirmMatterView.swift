@@ -98,9 +98,9 @@ struct FirmMatterView: View {
 
     private func header(_ m: FirmMatter) -> some View {
         VStack(alignment: .leading, spacing: T.Sp.s2) {
-            Text(FirmText.title(m.client, m.company, m.template?.text ?? FirmMarkdown.firstHeading(m.latest?.markdown))).font(T.F.title()).foregroundStyle(Color.primary)
+            Text(FirmText.title(m.client, m.company, m.template?.text ?? FirmMarkdown.firstHeading(m.latest?.markdown))).font(T.F.title()).foregroundStyle(T.LD.fg)
             if let name = m.lawyerDisplayName {
-                Text(tr("firm.matter.requestedLawyer", ["name": name])).font(T.F.small()).foregroundStyle(Color.secondary)
+                Text(tr("firm.matter.requestedLawyer", ["name": name])).font(T.F.small()).foregroundStyle(T.LD.fgMuted)
             }
             if let c = m.consult, c.status == "requested" || c.status == "scheduled" {
                 HStack(spacing: T.Sp.s2) {
@@ -117,16 +117,16 @@ struct FirmMatterView: View {
         let items = m.forLawyer ?? []
         return section(tr("firm.matter.forLawyer") + (items.isEmpty ? "" : " · \(items.count)")) {
             if items.isEmpty {
-                Text(tr("firm.matter.forLawyerEmpty")).font(T.F.body()).foregroundStyle(Color.secondary)
+                Text(tr("firm.matter.forLawyerEmpty")).font(T.F.body()).foregroundStyle(T.LD.fgMuted)
             }
             ForEach(Array(items.enumerated()), id: \.offset) { i, q in
                 HStack(alignment: .firstTextBaseline, spacing: T.Sp.s3) {
                     Text("\(i + 1)").font(T.F.mono(T.Ty.small, .semibold)).foregroundStyle(FirmColor.accent)
                     VStack(alignment: .leading, spacing: 2) {
                         if let s = FirmText.section(q.section), !q.text.hasPrefix(q.section ?? "") {
-                            Text(s).font(T.F.small().weight(.semibold)).foregroundStyle(Color.secondary)
+                            Text(s).font(T.F.small().weight(.semibold)).foregroundStyle(T.LD.fgMuted)
                         }
-                        Text(q.text).font(.body).foregroundStyle(Color.primary).fixedSize(horizontal: false, vertical: true)
+                        Text(q.text).font(.body).foregroundStyle(T.LD.fg).fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .padding(T.Sp.s3).frame(maxWidth: .infinity, alignment: .leading)
@@ -157,9 +157,9 @@ struct FirmMatterView: View {
         HStack(alignment: .firstTextBaseline, spacing: T.Sp.s3) {
             Circle().fill(f.level == "high" ? FirmColor.urgent : FirmColor.waiting).frame(width: 7, height: 7)
             Text([FirmText.section(f.section), f.title].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
-                .font(T.F.body()).foregroundStyle(Color.primary).fixedSize(horizontal: false, vertical: true)
+                .font(T.F.body()).foregroundStyle(T.LD.fg).fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: T.Sp.s2)
-            FirmChip(text: tr(Self.settlementKey(s)), color: s == "lawyer" ? FirmColor.waiting : s == nil ? Color(.tertiaryLabel) : FirmColor.accent)
+            FirmChip(text: tr(Self.settlementKey(s)), color: s == "lawyer" ? FirmColor.waiting : s == nil ? T.LD.fgMuted : FirmColor.accent)
         }
     }
 
@@ -177,7 +177,7 @@ struct FirmMatterView: View {
             section(tr("firm.matter.changes", ["n": String(v.n)])) {
                 if m.previous != nil {
                     let notes = v.notes?.changes ?? []
-                    ForEach(notes, id: \.self) { Text("• " + $0).font(T.F.body()).foregroundStyle(Color.primary) }
+                    ForEach(notes, id: \.self) { Text("• " + $0).font(T.F.body()).foregroundStyle(T.LD.fg) }
                     ForEach(Array(edits.prefix(12).enumerated()), id: \.offset) { _, e in
                         switch e {
                         case .removed(let t): Text(FirmMarkdown.plain(t)).strikethrough().foregroundStyle(FirmColor.urgent).font(T.F.small())
@@ -186,7 +186,7 @@ struct FirmMatterView: View {
                         }
                     }
                 } else {
-                    Text(tr("firm.matter.firstVersion")).font(T.F.body()).foregroundStyle(Color.secondary)
+                    Text(tr("firm.matter.firstVersion")).font(T.F.body()).foregroundStyle(T.LD.fgMuted)
                 }
             }
             .accessibilityIdentifier("firm.changes")
@@ -206,10 +206,10 @@ struct FirmMatterView: View {
                 FirmMarkdownView(markdown: v.markdown)
                     .padding(T.Sp.s4)
                     .background(FirmColor.card, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(.separator)))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(T.LD.rule))
             }
         } else {
-            section(tr("firm.matter.document")) { Text(tr("firm.matter.noDraft")).foregroundStyle(Color.secondary) }
+            section(tr("firm.matter.document")) { Text(tr("firm.matter.noDraft")).foregroundStyle(T.LD.fgMuted) }
         }
     }
 
@@ -326,7 +326,7 @@ struct FirmMarkdownView: View {
                 }
             }
         }
-        .foregroundStyle(Color.primary)
+        .foregroundStyle(T.LD.fg)
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("firm.document")
@@ -337,7 +337,7 @@ struct FirmMarkdownView: View {
 struct FirmSectionTitle: View {
     let text: String
     var body: some View {
-        Text(text).font(.footnote.weight(.semibold)).foregroundStyle(Color.secondary)
+        Text(text).font(.footnote.weight(.semibold)).foregroundStyle(T.LD.fgMuted)
             .accessibilityAddTraits(.isHeader)
     }
 }
