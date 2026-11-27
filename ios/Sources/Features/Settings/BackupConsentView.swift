@@ -26,7 +26,7 @@ struct BackupConsentView: View {
                                 .accessibilityIdentifier("backup.disable")
                         } else if consent.canWriteCloud {
                             Button(tr("backup.enable")) { save(true) }
-                                .buttonStyle(.borderedProminent)
+                                .buttonStyle(.borderedProminent).foregroundStyle(T.LD.onAccent)
                                 .accessibilityIdentifier("backup.enable")
                         }
                         if !consent.decided {

@@ -22,7 +22,7 @@ struct FirmInboxView: View {
                         .accessibilityIdentifier("firm.inbox.loading")
                 case .empty:
                     Text(tr("firm.inbox.empty"))
-                        .font(T.F.body()).foregroundStyle(Color.secondary)
+                        .font(T.F.body()).foregroundStyle(T.LD.fgMuted)
                         .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, T.Sp.s10)
                         .listRowBackground(Color.clear)
                         .accessibilityIdentifier("firm.inbox.empty")
@@ -36,6 +36,7 @@ struct FirmInboxView: View {
                                 FirmMatterRow(matter: m, firm: portal.links.count > 1 ? portal.link(m.linkID)?.firmName : nil, heading: portal.link(m.linkID)?.headings[m.id])
                             }
                                 .accessibilityIdentifier("firm.row." + m.id)
+                                .listRowBackground(T.LD.surface)
                         }
                     } header: {
                         Text(tr(Self.titleKey(group)))
@@ -46,6 +47,7 @@ struct FirmInboxView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .paperList()
             .navigationTitle(tr("firm.tab"))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -90,15 +92,15 @@ struct FirmMatterRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: T.Sp.s1) {
-            if let firm { Text(firm).font(T.F.micro()).foregroundStyle(Color.secondary).lineLimit(1) }
+            if let firm { Text(firm).font(T.F.micro()).foregroundStyle(T.LD.fgMuted).lineLimit(1) }
             HStack(alignment: .firstTextBaseline) {
                 Text(FirmText.title(matter.client, matter.company, matter.template?.text ?? heading))
-                    .font(T.F.heading()).foregroundStyle(Color.primary).lineLimit(1)
+                    .font(T.F.heading()).foregroundStyle(T.LD.fg).lineLimit(1)
                 Spacer(minLength: T.Sp.s2)
-                Text(FirmText.ago(matter.updatedAt)).font(T.F.micro()).foregroundStyle(Color(.tertiaryLabel))
+                Text(FirmText.ago(matter.updatedAt)).font(T.F.micro()).foregroundStyle(T.LD.fgMuted)
             }
             if let doc = matter.template?.text, !doc.isEmpty {
-                Text(doc).font(T.F.small()).foregroundStyle(Color.secondary).lineLimit(1)
+                Text(doc).font(T.F.small()).foregroundStyle(T.LD.fgMuted).lineLimit(1)
             }
             HStack(spacing: T.Sp.s2) {
                 if let reason = FirmInbox.reason(matter) {
@@ -173,13 +175,10 @@ enum FirmText {
 
 /// Colors that follow light and dark mode (the Reviews tab is used at night as often as by day).
 enum FirmColor {
-    private static func adaptive(_ light: Color, _ dark: Color) -> Color {
-        Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light) })
-    }
-    static let accent = adaptive(T.L.accent, T.S.arrivedOnDark)
-    static let waiting = adaptive(T.S.waiting, T.S.waitingOnDark)
-    static let urgent = adaptive(T.S.failed, Color(hex: 0xE07A6E))
-    static let card = Color(.secondarySystemGroupedBackground)
-    static let background = Color(.systemGroupedBackground)
-    static let field = Color(.tertiarySystemFill)
+    static let accent = T.LD.accent
+    static let waiting = T.LD.pair(T.S.waiting, T.S.waitingOnDark)
+    static let urgent = T.LD.pair(T.S.failed, Color(hex: 0xE07A6E))
+    static let card = T.LD.surface
+    static let background = T.LD.groupedPage
+    static let field = T.LD.field
 }

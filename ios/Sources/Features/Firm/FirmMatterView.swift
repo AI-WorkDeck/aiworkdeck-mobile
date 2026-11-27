@@ -234,7 +234,7 @@ struct FirmMatterView: View {
             } label: { Label(tr("firm.action.more"), systemImage: "ellipsis").labelStyle(.iconOnly).frame(width: T.touchMin, height: T.touchMin) }
                 .buttonStyle(.bordered).accessibilityIdentifier("firm.more").accessibilityLabel(tr("firm.action.more"))
             Button { sheet = .signoff } label: { Text(tr("firm.action.signoff")).fontWeight(.semibold).frame(maxWidth: .infinity, minHeight: T.touchMin) }
-                .buttonStyle(.borderedProminent).disabled(m.latest == nil).accessibilityIdentifier("firm.signoff")
+                .buttonStyle(.borderedProminent).foregroundStyle(T.LD.onAccent).disabled(m.latest == nil).accessibilityIdentifier("firm.signoff")
         }
         .controlSize(.large)
         .disabled(busy)

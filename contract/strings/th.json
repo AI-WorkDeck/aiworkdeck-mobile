@@ -456,6 +456,7 @@
   "personal.assistant": "ผู้ช่วยส่วนตัว",
   "personal.calendar": "ปฏิทิน",
   "personal.ask": "ถามได้โดยตรง ผู้ช่วยจะค้นหาโครงการที่คุณเข้าถึงได้",
+  "personal.askShort": "ถามเกี่ยวกับโครงการ",
   "personal.send": "ส่ง",
   "personal.processing": "กำลังค้นหาข้อมูลโครงการ…",
   "personal.newChat": "การสนทนาใหม่",

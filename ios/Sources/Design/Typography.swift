@@ -1,21 +1,49 @@
 import SwiftUI
+import UIKit
 
 /// 字体与动效不是纯数据（含字重、弹簧参数），手写在这里；尺寸与时长引用生成的 T.Ty / T.Motion。
 extension T {
+    /// 尺寸保持 T.Ty 的默认值，但随 Dynamic Type 缩放（relativeTo:），辅助功能大字号不再被截断。
     enum F {
         /// 只给关键数字
-        static func hero() -> Font { .system(size: T.Ty.hero, weight: .light, design: .monospaced) }
-        static func display() -> Font { .system(size: T.Ty.display, weight: .semibold) }
-        static func title() -> Font { .system(size: T.Ty.title, weight: .semibold) }
-        static func heading() -> Font { .system(size: T.Ty.heading, weight: .semibold) }
-        static func body() -> Font { .system(size: T.Ty.body) }
-        static func small() -> Font { .system(size: T.Ty.small) }
-        static func micro() -> Font { .system(size: T.Ty.micro) }
+        static func hero() -> Font { scaled(T.Ty.hero, .largeTitle, .light).monospaced() }
+        static func display() -> Font { scaled(T.Ty.display, .title, .semibold) }
+        static func title() -> Font { scaled(T.Ty.title, .title2, .semibold) }
+        static func heading() -> Font { scaled(T.Ty.heading, .headline, .semibold) }
+        static func body() -> Font { scaled(T.Ty.body, .body) }
+        static func small() -> Font { scaled(T.Ty.small, .footnote) }
+        static func micro() -> Font { scaled(T.Ty.micro, .caption2) }
         /// 全大写字距拉开的小标签。字距是这套排版的签名。
-        static func nano() -> Font { .system(size: T.Ty.nano, weight: .medium) }
+        static func nano() -> Font { scaled(T.Ty.nano, .caption2, .medium) }
         /// 哈希、时间、坐标、计数一律等宽 —— 取证信息要能逐字符核对
         static func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
-            .system(size: size, weight: weight, design: .monospaced)
+            scaled(size, style(for: size), weight).monospaced()
+        }
+
+        /// SwiftUI 没有 `.system(size:relativeTo:)`；只有 `.custom(_:size:relativeTo:)` 能既保留自定尺寸又跟随 Dynamic Type。
+        /// 系统字体的族名在运行时取，并核对确实解析回系统字体；万一解析不到（CoreText 会悄悄换成别的字体），
+        /// 退回固定尺寸的系统字体，宁可不缩放也不换字体。
+        private static let systemFamily: String? = {
+            let family = UIFont.systemFont(ofSize: T.Ty.body).familyName
+            return UIFont(name: family, size: T.Ty.body)?.familyName == family ? family : nil
+        }()
+
+        private static func scaled(_ size: CGFloat, _ style: Font.TextStyle, _ weight: Font.Weight = .regular) -> Font {
+            guard let systemFamily else { return .system(size: size, weight: weight) }
+            return .custom(systemFamily, size: size, relativeTo: style).weight(weight)
+        }
+
+        /// 默认尺寸最接近的系统文字样式，决定缩放曲线。
+        private static func style(for size: CGFloat) -> Font.TextStyle {
+            switch size {
+            case ..<12: .caption2
+            case ..<14: .footnote
+            case ..<16.5: .body
+            case ..<20: .headline
+            case ..<26: .title2
+            case ..<32: .title
+            default: .largeTitle
+            }
         }
     }
 

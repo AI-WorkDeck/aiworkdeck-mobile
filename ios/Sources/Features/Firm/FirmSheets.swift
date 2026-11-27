@@ -126,13 +126,13 @@ struct FirmSignoffSheet: View {
             Form {
                 Section {
                     Text(FirmText.title(matter.client, matter.company, matter.template?.text ?? FirmMarkdown.firstHeading(matter.latest?.markdown))).font(T.F.heading())
-                    if let doc = matter.template?.text { Text(doc).foregroundStyle(Color.secondary) }
-                }
+                    if let doc = matter.template?.text { Text(doc).foregroundStyle(T.LD.fgMuted) }
+                }.listRowBackground(T.LD.surface)
                 // The signature is the signed-in identity: shown, not typed.
                 Section {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(signer?.name ?? "—").font(.body.weight(.semibold)).foregroundStyle(Color.primary)
-                        if let detail = signer?.detail { Text(detail).font(.subheadline).foregroundStyle(Color.secondary) }
+                        Text(signer?.name ?? "—").font(.body.weight(.semibold)).foregroundStyle(T.LD.fg)
+                        if let detail = signer?.detail { Text(detail).font(.subheadline).foregroundStyle(T.LD.fgMuted) }
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("firm.signoff.signer")
@@ -146,7 +146,7 @@ struct FirmSignoffSheet: View {
                 } footer: {
                     if signer?.demo == true { Text(tr("firm.signoff.demo")) }
                     else if link?.asksDetails == true { Text(tr("firm.signoff.firmHint")) }
-                }
+                }.listRowBackground(T.LD.surface)
                 // Attestations, not settings: checklist rows rather than switches.
                 Section {
                     check(tr("firm.signoff.conflicts"), $conflicts, id: "firm.signoff.conflicts")
@@ -154,11 +154,12 @@ struct FirmSignoffSheet: View {
                     check(tr("firm.signoff.reviewed", ["n": String(version.n)]), $reviewed, id: "firm.signoff.reviewed")
                 } footer: {
                     Text(tr("firm.signoff.footer"))
-                }
+                }.listRowBackground(T.LD.surface)
                 if let error {
-                    Section { Text(error).foregroundStyle(FirmColor.urgent).accessibilityIdentifier("firm.signoff.error") }
+                    Section { Text(error).foregroundStyle(FirmColor.urgent).accessibilityIdentifier("firm.signoff.error") }.listRowBackground(T.LD.surface)
                 }
             }
+            .paperList()
             .safeAreaInset(edge: .bottom) {
                 Button { Task { await sign() } } label: {
                     HStack(spacing: T.Sp.s2) {
@@ -169,7 +170,7 @@ struct FirmSignoffSheet: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: T.touchMin)
                 }
-                .buttonStyle(.borderedProminent).controlSize(.large).tint(FirmColor.accent)
+                .buttonStyle(.borderedProminent).controlSize(.large).tint(FirmColor.accent).foregroundStyle(T.LD.onAccent)
                 .disabled(!ready || signing)
                 .accessibilityIdentifier("firm.signoff.confirm")
                 .padding(.horizontal, T.Sp.gutter).padding(.vertical, T.Sp.s3)
@@ -193,8 +194,8 @@ struct FirmSignoffSheet: View {
         Button { on.wrappedValue.toggle() } label: {
             HStack(spacing: T.Sp.s3) {
                 Image(systemName: on.wrappedValue ? "checkmark.circle.fill" : "circle")
-                    .font(.title3).foregroundStyle(on.wrappedValue ? FirmColor.accent : Color(.tertiaryLabel))
-                Text(title).foregroundStyle(Color.primary)
+                    .font(.title3).foregroundStyle(on.wrappedValue ? FirmColor.accent : T.LD.fgMuted)
+                Text(title).foregroundStyle(T.LD.fg)
                 Spacer(minLength: 0)
             }
             .contentShape(Rectangle())
@@ -299,12 +300,14 @@ struct FirmConversationSheet: View {
         NavigationStack {
             List(Array(matter.transcript.filter { $0.role != "event" }.enumerated()), id: \.offset) { _, e in
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(who(e)).font(T.F.nano()).foregroundStyle(e.role == "lawyer" ? FirmColor.accent : Color(.tertiaryLabel))
-                    Text(FirmMarkdown.inline(e.content)).font(.callout).foregroundStyle(Color.primary)
+                    Text(who(e)).font(T.F.nano()).foregroundStyle(e.role == "lawyer" ? FirmColor.accent : T.LD.fgMuted)
+                    Text(FirmMarkdown.inline(e.content)).font(.callout).foregroundStyle(T.LD.fg)
                 }
                 .padding(.vertical, 2)
+                .listRowBackground(T.LD.surface)
             }
             .listStyle(.plain)
+            .scrollContentBackground(.hidden).background(T.LD.surface)
             .navigationTitle(tr("firm.matter.conversation", ["count": String(matter.transcript.filter { $0.role != "event" }.count)]))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(tr("common.close")) { dismiss() } } }
@@ -338,15 +341,15 @@ struct FirmJoinView: View {
                     Section {
                         Text(Self.status(l)).accessibilityIdentifier("firm.join.status")
                         if l.access == .failed { Text(tr("firm.error.network")).foregroundStyle(FirmColor.urgent) }
-                        if let until = l.me?.trialUntil { Text(tr("firm.trial.until", ["date": String(until.prefix(10))])).foregroundStyle(Color.secondary) }
+                        if let until = l.me?.trialUntil { Text(tr("firm.trial.until", ["date": String(until.prefix(10))])).foregroundStyle(T.LD.fgMuted) }
                         if [.pending, .checking, .failed].contains(l.access) {
                             Button(tr("firm.status.check")) { Task { await l.check() } }
                         }
                         Button(tr("firm.leave"), role: .destructive) { portal.disconnect(l.portalID) }.accessibilityIdentifier("firm.leave")
-                    }
+                    }.listRowBackground(T.LD.surface)
                 }
                 Section {
-                    Text(tr("firm.join.body")).foregroundStyle(Color.secondary)
+                    Text(tr("firm.join.body")).foregroundStyle(T.LD.fgMuted)
                     TextField(tr("firm.join.link"), text: $link)
                         .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                         .accessibilityIdentifier("firm.join.link")
@@ -357,14 +360,15 @@ struct FirmJoinView: View {
                     }
                 } header: {
                     if !portal.links.isEmpty { Text(tr("firm.join.title")) }
-                }
-                if let error { Section { Text(error).foregroundStyle(FirmColor.urgent).accessibilityIdentifier("firm.join.error") } }
+                }.listRowBackground(T.LD.surface)
+                if let error { Section { Text(error).foregroundStyle(FirmColor.urgent).accessibilityIdentifier("firm.join.error") }.listRowBackground(T.LD.surface) }
                 Section {
                     Button { Task { await join() } } label: { HStack { Spacer(); if working { ProgressView() } else { Text(tr("firm.join.connect")).fontWeight(.semibold) }; Spacer() } }
                         .disabled(working || link.trimmingCharacters(in: .whitespaces).isEmpty)
                         .accessibilityIdentifier("firm.join.connect")
-                }
+                }.listRowBackground(T.LD.surface)
             }
+            .paperList()
             .navigationTitle(tr("firm.settings.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(tr("common.close")) { dismiss() }.accessibilityIdentifier("firm.join.close") } }

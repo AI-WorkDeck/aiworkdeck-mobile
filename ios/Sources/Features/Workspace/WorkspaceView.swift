@@ -31,33 +31,38 @@ struct WorkspaceView: View {
             set: { columnVisibility = selected == nil ? .all : $0 }
         ), preferredCompactColumn: $compactColumn) {
             List(selection: $selected) {
-                if loading { ProgressView().accessibilityIdentifier("workspace.loading") }
-                if let error {
-                    Text(error).foregroundStyle(T.S.failed)
-                    Button(tr("project.retry")) { Task { await load() } }
-                }
-                if AccountRegion.current == .cn {
-                    Button { route = .dueDiligence } label: {
-                        Label(tr("dd.title"), systemImage: "checklist")
+                Group {
+                    if loading { ProgressView().accessibilityIdentifier("workspace.loading") }
+                    if let error {
+                        Text(error).foregroundStyle(T.S.failed)
+                        Button(tr("project.retry")) { Task { await load() } }
                     }
-                    .accessibilityIdentifier("workspace.dueDiligence")
-                }
-                ForEach(projects.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }) { project in
-                    NavigationLink(value: project) {
-                        VStack(alignment: .leading) {
-                            Text(project.name)
-                            // 电脑名只在项目分布在多台电脑上时才帮得上忙；内部 id 不给用户看。
-                            if Set(projects.compactMap(\.deviceName)).count > 1, let device = project.deviceName {
-                                Text(device).font(.caption).foregroundStyle(.secondary)
+                    if AccountRegion.current == .cn {
+                        Button { route = .dueDiligence } label: {
+                            Label(tr("dd.title"), systemImage: "checklist")
+                        }
+                        .accessibilityIdentifier("workspace.dueDiligence")
+                    }
+                    ForEach(projects.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }) { project in
+                        NavigationLink(value: project) {
+                            VStack(alignment: .leading) {
+                                Text(project.name)
+                                // 电脑名只在项目分布在多台电脑上时才帮得上忙；内部 id 不给用户看。
+                                if Set(projects.compactMap(\.deviceName)).count > 1, let device = project.deviceName {
+                                    Text(device).font(.caption).foregroundStyle(T.LD.fgMuted)
+                                }
                             }
                         }
+                        .accessibilityIdentifier("workspace.project.\(project.key)")
+                        .listRowBackground(selected == project ? T.LD.selection : T.LD.surface)
                     }
-                    .accessibilityIdentifier("workspace.project.\(project.key)")
+                    if !loading, error == nil, projects.isEmpty {
+                        Text(tr("project.emptyHint")).foregroundStyle(T.LD.fgMuted)
+                    }
                 }
-                if !loading, error == nil, projects.isEmpty {
-                    Text(tr("project.emptyHint")).foregroundStyle(.secondary)
-                }
+                .listRowBackground(T.LD.surface)
             }
+            .paperList()
             .disabled(readingBusy)
             .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: tr("workspace.searchProjects"))
             .navigationTitle(tr("workspace.title"))
@@ -136,7 +141,7 @@ struct WorkspaceView: View {
             readingBusy = false
             columnVisibility = .all
         }
-        .tint(T.L.accent)
+        .tint(T.LD.accent)
         .task {
             client = model.workspaceFiles()
             if selected == nil, let initialProject { selected = initialProject; compactColumn = .detail }
@@ -301,6 +306,7 @@ struct ProjectContentsView: View {
                 }
             }
         }
+        .background(T.LD.page)
         .safeAreaInset(edge: .top, spacing: 0) {
             if download != nil {
                 HStack {
@@ -365,12 +371,18 @@ struct ProjectContentsView: View {
                 .accessibilityIdentifier("workspace.storageLocation")
                 .disabled(downloadBusy)
             }
-            TextField(tr("workspace.searchFiles"), text: $query)
-                .focused($searchFocused)
-                .submitLabel(.search)
-                .onSubmit { searchFocused = false }
-                .textFieldStyle(.roundedBorder).padding(.horizontal)
-                .accessibilityIdentifier("workspace.fileSearch")
+            // Same look as the project list's system search field: pill with a magnifier (lane X review of #177).
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(T.LD.fgMuted).accessibilityHidden(true)
+                TextField(tr("workspace.searchFiles"), text: $query)
+                    .focused($searchFocused)
+                    .submitLabel(.search)
+                    .onSubmit { searchFocused = false }
+                    .accessibilityIdentifier("workspace.fileSearch")
+            }
+            .padding(.horizontal, 10).padding(.vertical, 8)
+            .background(T.LD.field, in: Capsule())
+            .padding(.horizontal)
             if query.isEmpty {
                 HStack {
                     Button(tr("workspace.folderRoot")) { directory = ""; scrollID = nil }
@@ -388,7 +400,7 @@ struct ProjectContentsView: View {
                 }.padding()
             }
             if listing?.truncated == true, loadedProjectID == storageKey {
-                Text(tr("workspace.limit")).font(.caption).foregroundStyle(.secondary).padding()
+                Text(tr("workspace.limit")).font(.caption).foregroundStyle(T.LD.fgMuted).padding()
             }
             if loading { ProgressView(tr("workspace.loading")).padding() }
             if let error {
@@ -409,7 +421,7 @@ struct ProjectContentsView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("workspace.folder.\(folder.path)")
-                        Divider()
+                        Hairline(color: T.LD.rule)
                     }
                     ForEach(visibleFiles, id: \.rowID) { file in
                         Button {
@@ -421,23 +433,23 @@ struct ProjectContentsView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "doc")
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(file.name).foregroundStyle(.primary)
-                                    Text(file.path).font(.caption).foregroundStyle(.secondary)
+                                    Text(file.name).foregroundStyle(T.LD.fg)
+                                    Text(file.path).font(.caption).foregroundStyle(T.LD.fgMuted)
                                         .lineLimit(2)
                                 }
                                 Spacer()
                                 Text(ByteCountFormatter.string(fromByteCount: file.size, countStyle: .file))
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.caption).foregroundStyle(T.LD.fgMuted)
                             }
                             .padding().frame(maxWidth: .infinity, minHeight: T.touchMin, alignment: .leading)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .disabled(downloadBusy)
-                        .background(download?.file.rowID == file.rowID ? T.L.accentWash : Color.clear)
+                        .background(download?.file.rowID == file.rowID ? T.LD.selection : Color.clear)
                         .id(file.rowID)
                         .accessibilityIdentifier("workspace.file.\(file.id)")
-                        Divider()
+                        Hairline(color: T.LD.rule)
                     }
                     if !loading, error == nil, visibleFiles.isEmpty, visibleFolders.isEmpty {
                         ContentUnavailableView(tr(query.isEmpty ? "workspace.noFiles" : "workspace.noMatches"), systemImage: "doc", description: Text(tr(storageProject.isCloud ? "workspace.cloudHint" : "workspace.desktopHint")))
@@ -501,7 +513,7 @@ private struct FileDownloadView: View {
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: T.Sp.s4) {
-                            Text(file.path).font(.subheadline).foregroundStyle(.secondary)
+                            Text(file.path).font(.subheadline).foregroundStyle(T.LD.fgMuted)
                             if !file.supportsPreview { Text(tr("workspace.unsupportedPreview")).accessibilityIdentifier("workspace.unsupported") }
                             if busy { ProgressView(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudDownload" : "workspace.downloading")) }
                             if let error { Text(error).foregroundStyle(T.S.failed) }
@@ -511,7 +523,7 @@ private struct FileDownloadView: View {
                                     Text(tr("postpaid.partialCharge"))
                                 } else { Text(tr("workspace.quote", ["name": file.name, "credits": String(quote.credits)])) }
                                 Button(tr((project.isCloud || file.source == "backup" || file.source == "cloud") ? "workspace.cloudOpen" : "workspace.download")) { approved = true; Task { await download() } }
-                                    .buttonStyle(.borderedProminent)
+                                    .buttonStyle(.borderedProminent).foregroundStyle(T.LD.onAccent)
                                     .accessibilityIdentifier("workspace.confirmDownload")
                                     .disabled(busy)
                             } else if approved, !busy {

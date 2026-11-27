@@ -583,7 +583,12 @@ final class FirmPortal {
 
     enum Access: Equatable { case none, checking, pending, approved, revoked, failed }
     private(set) var links: [FirmLink] = []
-    var transport: any FirmTransport = URLSessionFirmTransport()
+    var transport: any FirmTransport = {
+#if DEBUG
+        if FirmUITestFixture.isOn { return FirmUITestFixture() }
+#endif
+        return URLSessionFirmTransport()
+    }()
 
     /// Approved when any linked portal is: that is what shows the Reviews tab.
     var access: Access { Self.combined(links.map(\.access)) }
