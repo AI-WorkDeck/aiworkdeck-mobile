@@ -17,6 +17,8 @@ final class FirmFixtureShotsTests: XCTestCase {
     @MainActor func testReviewsInboxAndMatter() throws {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
+        // CI simulators boot in dark appearance; X27 reviews the Reviews tab in light first.
+        XCUIDevice.shared.appearance = .light
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest", "-AWDPersonalUITest", "-AWDFirmUITest", "-AWDFirmFixture"]
         app.launch()
@@ -50,5 +52,8 @@ final class FirmFixtureShotsTests: XCTestCase {
         shot("Firm matter", app)
         app.swipeUp()
         shot("Firm matter flags and changes", app)
+
+        XCUIDevice.shared.appearance = .dark
+        shot("Firm matter dark", app)
     }
 }
