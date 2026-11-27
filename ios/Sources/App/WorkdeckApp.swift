@@ -235,7 +235,12 @@ struct CaptureFlowView: View {
         .alert(tr("error.generic"), isPresented: Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })) {
             Button(tr("common.close")) { model.lastError = nil }
         } message: { Text(model.lastError ?? "") }
-        .preferredColorScheme(.dark)
+        // The viewfinder is dark by function, not by theme. Scope it to this subtree: preferredColorScheme is
+        // window-wide, so inside the Personal TabView it forced Assistant, Calendar and Reviews dark too (POLISH M42).
+        // The TabView sets the window dark only while Capture is selected; as Workspace's full-screen cover this
+        // view is its own presentation and may set it.
+        .environment(\.colorScheme, .dark)
+        .preferredColorScheme(onClose == nil ? nil : .dark)
         .onDisappear {
             if !CameraService.shared.isRecording { CameraService.shared.stop() }
             LocationStamper.shared.end()
@@ -254,6 +259,6 @@ struct CaptureFlowView: View {
             projectContents: { AnyView(CaptureProjectContentsView(project: $0)) }
         )
         .environment(model)
-        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)
     }
 }

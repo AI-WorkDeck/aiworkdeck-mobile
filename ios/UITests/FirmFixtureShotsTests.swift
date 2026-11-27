@@ -15,10 +15,53 @@ final class FirmFixtureShotsTests: XCTestCase {
     }
 
     @MainActor func testReviewsInboxAndMatter() throws {
+        // CI simulators boot in dark appearance; X27 reviews the Reviews tab in light first.
+        let app = try launchJoined(.light)
+        let tab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Reviews"))
+            .containing(NSPredicate(format: "identifier IN %@", ["signature"])).firstMatch
+        XCTAssertTrue(tab.waitForExistence(timeout: 15)); tab.tap()
+        let review = app.buttons["firm.row.mtr-review"]
+        XCTAssertTrue(review.waitForExistence(timeout: 15))
+        shot("Firm inbox", app)
+
+        review.tap()
+        XCTAssertTrue(app.staticTexts["Is a $10M post-money cap reasonable for a seed robotics company?"].waitForExistence(timeout: 10))
+        shot("Firm matter", app)
+        app.swipeUp()
+        shot("Firm matter flags and changes", app)
+
+        XCUIDevice.shared.appearance = .dark
+        shot("Firm matter dark", app)
+    }
+
+    /// POLISH M42: Capture is dark by function; Calendar, Assistant and Reviews follow the system appearance.
+    @MainActor func testPersonalTabsFollowTheSystemExceptCapture() throws {
+        for appearance in [XCUIDevice.Appearance.light, .dark] {
+            let app = try launchJoined(appearance)
+            let mode = appearance == .light ? "light" : "dark"
+            let reviews = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Reviews"))
+                .containing(NSPredicate(format: "identifier IN %@", ["signature"])).firstMatch
+            for (name, tab) in [("Calendar", personalTab(app, .calendar)), ("Assistant", personalTab(app, .assistant)),
+                                ("Reviews", reviews), ("Capture", personalTab(app, .capture))] {
+                XCTAssertTrue(tab.waitForExistence(timeout: 15), name); tab.tap()
+                Thread.sleep(forTimeInterval: 1)
+                shot("Tab \(name) \(mode)", app)
+            }
+            if appearance == .light {
+                // The switch out of the dark viewfinder: right after the tap, then settled.
+                personalTab(app, .assistant).tap()
+                shot("Switch Capture to Assistant light immediate", app)
+                Thread.sleep(forTimeInterval: 1)
+                shot("Switch Capture to Assistant light settled", app)
+            }
+            app.terminate()
+        }
+    }
+
+    @MainActor private func launchJoined(_ appearance: XCUIDevice.Appearance) throws -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
-        // CI simulators boot in dark appearance; X27 reviews the Reviews tab in light first.
-        XCUIDevice.shared.appearance = .light
+        XCUIDevice.shared.appearance = appearance
         let app = XCUIApplication()
         app.launchArguments = ["-AWDWorkspaceUITest", "-AWDPersonalUITest", "-AWDFirmUITest", "-AWDFirmFixture"]
         app.launch()
@@ -39,21 +82,6 @@ final class FirmFixtureShotsTests: XCTestCase {
         app.buttons["firm.join.close"].tap()
         let close = app.buttons["settings.close"]
         XCTAssertTrue(close.waitForExistence(timeout: 5)); close.tap()
-
-        let tab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Reviews"))
-            .containing(NSPredicate(format: "identifier IN %@", ["signature"])).firstMatch
-        XCTAssertTrue(tab.waitForExistence(timeout: 15)); tab.tap()
-        let review = app.buttons["firm.row.mtr-review"]
-        XCTAssertTrue(review.waitForExistence(timeout: 15))
-        shot("Firm inbox", app)
-
-        review.tap()
-        XCTAssertTrue(app.staticTexts["Is a $10M post-money cap reasonable for a seed robotics company?"].waitForExistence(timeout: 10))
-        shot("Firm matter", app)
-        app.swipeUp()
-        shot("Firm matter flags and changes", app)
-
-        XCUIDevice.shared.appearance = .dark
-        shot("Firm matter dark", app)
+        return app
     }
 }

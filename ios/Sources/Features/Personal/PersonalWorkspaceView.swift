@@ -204,6 +204,8 @@ struct PersonalWorkspaceView: View {
             }
         }
         .tint(T.LD.accent)
+        // Status bar and tab bar go dark with the viewfinder only; the other tabs follow the system (POLISH M42).
+        .preferredColorScheme(model.selectedTab == "capture" ? .dark : nil)
         .task { await model.load() }
         .task(id: account.account?.id) { await firm.restore(userID: account.account?.id) }
         .onChange(of: reminders.selectedEventID, initial: true) { _, value in

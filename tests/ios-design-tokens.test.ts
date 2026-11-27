@@ -108,3 +108,20 @@ test('filled buttons on the adaptive accent use the on-accent label colour (whit
     assert.deepEqual(bad, [], `${f}: add .foregroundStyle(T.LD.onAccent)`)
   }
 })
+
+test('only the Personal TabView sets the window colour scheme, and only for Capture (POLISH M42)', () => {
+  // preferredColorScheme is window-wide: one inside a tab forced every tab dark.
+  const personal = read('Sources/Features/Personal/PersonalWorkspaceView.swift')
+  const uses = personal.match(/\.preferredColorScheme\([^)]*\)/g) ?? []
+  assert.deepEqual(uses, ['.preferredColorScheme(model.selectedTab == "capture" ? .dark : nil)'])
+  const app = read('Sources/App/WorkdeckApp.swift')
+  const flow = app.slice(app.indexOf('struct CaptureFlowView'))
+  const inFlow = (flow.match(/\.preferredColorScheme\([^)]*\)/g) ?? [])
+  // Routes in its full-screen covers are their own presentations and may set it; the flow itself only as a cover.
+  const body = flow.slice(0, flow.indexOf('.fullScreenCover')) + flow.slice(flow.indexOf('.toolbar('))
+  assert.deepEqual(body.match(/\.preferredColorScheme\([^)]*\)/g) ?? [], ['.preferredColorScheme(onClose == nil ? nil : .dark)'])
+  assert.ok(inFlow.length >= 1)
+  for (const f of ['Sources/Features/Firm/FirmInboxView.swift', 'Sources/Features/Firm/FirmMatterView.swift', 'Sources/Features/Firm/FirmSheets.swift']) {
+    assert.doesNotMatch(read(f), /\.preferredColorScheme\(/, f)
+  }
+})
