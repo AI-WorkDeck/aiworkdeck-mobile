@@ -99,6 +99,8 @@ jobs:
             TESTS+=(
               -only-testing:WorkdeckUITests/RecordingFlowTests
               -only-testing:WorkdeckUITests/CrossScreenRotationTests
+              # Quarantined flake, tracked in mobile#198: remove this skip when it is fixed.
+              -skip-testing:WorkdeckUITests/CrossScreenRotationTests/testLibrarySurvivesRepeatedRotation
               -only-testing:WorkdeckUITests/CaptureContinuityTests
               -only-testing:WorkdeckUITests/WorkspaceFlowTests/testCaptureLayoutSurvivesRepeatedRotationAndProjectEntry
               -only-testing:WorkdeckUITests/WorkspaceFlowTests/testLandscapeLoginControlsRemainReachableAfterShowingKeyboard
