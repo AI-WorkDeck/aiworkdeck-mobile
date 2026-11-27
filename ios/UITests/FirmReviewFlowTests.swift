@@ -78,7 +78,7 @@ final class FirmReviewFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Needs you"].exists)
         // POLISH M20: the account button is on the Reviews tab too.
         XCTAssertTrue(app.buttons["firm.settings"].exists)
-        XCTAssertTrue(app.staticTexts["Finalised and closed"].exists)
+        XCTAssertTrue(app.staticTexts["Finalized and closed"].exists)
         shot("03-inbox", app)
 
         // Matter: the client's list for the lawyer, red flags settled, what changed, the document.
